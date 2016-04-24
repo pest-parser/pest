@@ -1,0 +1,10 @@
+[package]
+name = "pest"
+description = "Smart PEGs in Rust"
+version = "0.0.1"
+authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
+repository = "https://github.com/dragostis/pest"
+keywords = ["pest", "parser", "peg", "grammar"]
+license = "MPL-2.0"
+
+[dependencies]
