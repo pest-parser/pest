@@ -100,6 +100,38 @@ macro_rules! grammar {
             grammar!(@process $slf [(( result )) $( $tail )* ] [ $( $optail )* ])
         }
     };
+    ( @process $slf:ident [ $a:tt $( $tail:tt )* ] [ * $( $optail:tt )* ] ) => {
+        {
+            let result = {
+                loop {
+                    if !grammar!(@mtc $slf $a) {
+                        break
+                    }
+                }
+
+                true
+            };
+
+            grammar!(@process $slf [(( result )) $( $tail )* ] [ $( $optail )* ])
+        }
+    };
+    ( @process $slf:ident [ $a:tt $( $tail:tt )* ] [ + $( $optail:tt )* ] ) => {
+        {
+            let result = if grammar!(@mtc $slf $a) {
+                loop {
+                    if !grammar!(@mtc $slf $a) {
+                        break
+                    }
+                }
+
+                true
+            } else {
+                false
+            };
+
+            grammar!(@process $slf [(( result )) $( $tail )* ] [ $( $optail )* ])
+        }
+    };
     ( @process $slf:ident [] [ $single:tt ] ) => {
         grammar!(@mtc $slf $single)
     };
@@ -131,6 +163,8 @@ mod tests {
         grammar! {
             exp = { paren ~ exp | [""] }
             paren = { ["("] ~ exp ~ [")"] }
+            rep_zero = { ["a"]* }
+            rep_one = { ["a"]+ }
         }
     }
 
@@ -147,6 +181,53 @@ mod tests {
         let mut parser = MyRdp::new(Box::new(StringInput::new("(())((())())(")));
 
         assert!(parser.exp());
+        assert!(!parser.end());
+    }
+
+    #[test]
+    fn rep_zero_empty() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("")));
+
+        assert!(parser.rep_zero());
+        assert!(parser.end());
+    }
+
+    #[test]
+    fn rep_zero_long() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("aaaa")));
+
+        assert!(parser.rep_zero());
+        assert!(parser.end());
+    }
+
+    #[test]
+    fn rep_zero_wrong() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("aaaab")));
+
+        assert!(parser.rep_zero());
+        assert!(!parser.end());
+    }
+
+    #[test]
+    fn rep_one_empty() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("")));
+
+        assert!(!parser.rep_one());
+    }
+
+    #[test]
+    fn rep_one_long() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("aaaa")));
+
+        assert!(parser.rep_one());
+        assert!(parser.end());
+    }
+
+    #[test]
+    fn rep_one_wrong() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("b")));
+
+        assert!(!parser.rep_one());
         assert!(!parser.end());
     }
 }
