@@ -132,6 +132,17 @@ macro_rules! grammar {
             grammar!(@process $slf [(( result )) $( $tail )* ] [ $( $optail )* ])
         }
     };
+    ( @process $slf:ident [ $a:tt $( $tail:tt )* ] [ ? $( $optail:tt )* ] ) => {
+        {
+            let result = {
+                grammar!(@mtc $slf $a);
+
+                true
+            };
+
+            grammar!(@process $slf [(( result )) $( $tail )* ] [ $( $optail )* ])
+        }
+    };
     ( @process $slf:ident [] [ $single:tt ] ) => {
         grammar!(@mtc $slf $single)
     };
@@ -165,6 +176,7 @@ mod tests {
             paren = { ["("] ~ exp ~ [")"] }
             rep_zero = { ["a"]* }
             rep_one = { ["a"]+ }
+            opt = { ["a"]? }
         }
     }
 
@@ -228,6 +240,30 @@ mod tests {
         let mut parser = MyRdp::new(Box::new(StringInput::new("b")));
 
         assert!(!parser.rep_one());
+        assert!(!parser.end());
+    }
+
+    #[test]
+    fn opt_empty() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("")));
+
+        assert!(parser.opt());
+        assert!(parser.end());
+    }
+
+    #[test]
+    fn opt_right() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("a")));
+
+        assert!(parser.opt());
+        assert!(parser.end());
+    }
+
+    #[test]
+    fn opt_wrong() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("b")));
+
+        assert!(parser.opt());
         assert!(!parser.end());
     }
 }
