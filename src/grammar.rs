@@ -34,77 +34,77 @@
 #[macro_export]
 macro_rules! grammar {
     // handle parens
-    (@conv $slf:ident ( ( $( $head:tt )* ) $( $tail:tt )* ) ( $( $optail:tt )* )
-     ( $( $output:tt )* )) => {
-        grammar!(@conv $slf ( $( $head )* @rp $( $tail )* ) ( @lp $( $optail )* )
-                 ( $( $output )* ))
+    ( @conv $slf:ident [ ( $( $head:tt )* ) $( $tail:tt )* ] [ $( $optail:tt )* ]
+      [ $( $output:tt )* ] ) => {
+        grammar!(@conv $slf [ $( $head )* @rp $( $tail )* ] [ @lp $( $optail )* ]
+                 [ $( $output )* ])
     };
-    (@conv $slf:ident ( @rp $( $tail:tt )* ) ( @lp $( $optail:tt )* ) ( $( $output:tt )* )) => {
-        grammar!(@conv $slf ( $( $tail )* ) ( $( $optail )* ) ( $( $output )* ))
+    ( @conv $slf:ident [ @rp $( $tail:tt )* ] [ @lp $( $optail:tt )* ] [ $( $output:tt )* ] ) => {
+        grammar!(@conv $slf [ $( $tail )* ] [ $( $optail )* ] [ $( $output )* ])
     };
-    (@conv $slf:ident ( @rp $( $tail:tt )* ) ( $op:tt $( $optail:tt )* ) ( $( $output:tt )* )) => {
-        grammar!(@conv $slf ( @rp $( $tail )* ) ( $( $optail )* ) ( $( $output )* $op ))
+    ( @conv $slf:ident [ @rp $( $tail:tt )* ] [ $op:tt $( $optail:tt )* ]
+      [ $( $output:tt )* ] ) => {
+        grammar!(@conv $slf [ @rp $( $tail )* ] [ $( $optail )* ] [ $( $output )* $op ])
     };
 
     // handle operands
-    (@conv $slf:ident ( ~ $( $tail:tt )* ) ( ~ $( $optail:tt )* ) ( $( $output:tt )* )) => {
-        grammar!(@conv $slf ( ~ $( $tail )* ) ( $( $optail )* ) ( $( $output )* ~ ))
+    ( @conv $slf:ident [ ~ $( $tail:tt )* ] [ ~ $( $optail:tt )* ] [ $( $output:tt )* ] ) => {
+        grammar!(@conv $slf [ ~ $( $tail )* ] [ $( $optail )* ] [ $( $output )* ~ ])
     };
-    (@conv $slf:ident ( ~ $( $tail:tt )* ) ( $( $optail:tt )* ) $output:tt) => {
-        grammar!(@conv $slf ( $( $tail )* ) ( ~ $( $optail )* ) $output)
+    ( @conv $slf:ident [ ~ $( $tail:tt )* ] [ $( $optail:tt )* ] $output:tt) => {
+        grammar!(@conv $slf [ $( $tail )* ] [ ~ $( $optail )* ] $output)
     };
-    (@conv $slf:ident ( | $( $tail:tt )* ) ( ~ $( $optail:tt )* ) ( $( $output:tt )* )) => {
-        grammar!(@conv $slf ( | $( $tail )* ) ( $( $optail )* ) ( $( $output )* ~ ))
+    ( @conv $slf:ident [ | $( $tail:tt )* ] [ ~ $( $optail:tt )* ] [ $( $output:tt )* ] ) => {
+        grammar!(@conv $slf [ | $( $tail )* ] [ $( $optail )* ] [ $( $output )* ~ ])
     };
-    (@conv $slf:ident ( | $( $tail:tt )* ) ( | $( $optail:tt )* ) ( $( $output:tt )* )) => {
-        grammar!(@conv $slf ( | $( $tail )* ) ( $( $optail )* ) ( $( $output )* | ))
+    ( @conv $slf:ident [ | $( $tail:tt )* ] [ | $( $optail:tt )* ] [ $( $output:tt )* ] ) => {
+        grammar!(@conv $slf [ | $( $tail )* ] [ $( $optail )* ] [ $( $output )* | ])
     };
-    (@conv $slf:ident ( | $( $tail:tt )* ) ( $( $optail:tt )* ) $output:tt) => {
-        grammar!(@conv $slf ( $( $tail )* ) ( | $( $optail )* ) $output)
+    ( @conv $slf:ident [ | $( $tail:tt )* ] [ $( $optail:tt )* ] $output:tt) => {
+        grammar!(@conv $slf [ $( $tail )* ] [ | $( $optail )* ] $output)
     };
 
     // handle everything else
-    (@conv $slf:ident ( $head:tt $( $tail:tt )* ) $ops:tt ( $( $output:tt )* )) => {
-        grammar!(@conv $slf ( $( $tail )* ) $ops ( $( $output )* $head ))
+    ( @conv $slf:ident [ $head:tt $( $tail:tt )* ] $ops:tt [ $( $output:tt )* ] ) => {
+        grammar!(@conv $slf [ $( $tail )* ] $ops [ $( $output )* $head ])
     };
 
     // output remaining operators
-    (@conv $slf:ident () () ( $( $output:tt )* )) => {
-        grammar!(@process $slf () ($( $output )*))
+    ( @conv $slf:ident [] [] [ $( $output:tt )* ] ) => {
+        grammar!(@process $slf [] [ $( $output )* ])
     };
-    (@conv $slf:ident () ( $op:tt $( $optail:tt )* ) ( $( $output:tt )* )) => {
-        grammar!(@conv $slf () ( $( $optail )* ) ( $( $output )* $op ))
+    ( @conv $slf:ident [] [ $op:tt $( $optail:tt )* ] [ $( $output:tt )* ] ) => {
+        grammar!(@conv $slf [] [ $( $optail )* ] [ $( $output )* $op ])
     };
 
     // match
-    (@mtc $slf:ident (( $exp:expr ))) => (($exp));
-    (@mtc $slf:ident [ $str:expr ]) => ($slf.matches($str));
-    (@mtc $slf:ident $rule:ident) => ($slf.$rule());
+    ( @mtc $slf:ident (( $exp:expr )) ) => (($exp));
+    ( @mtc $slf:ident [ $str:expr ]) => ($slf.matches($str));
+    ( @mtc $slf:ident $rule:ident) => ($slf.$rule());
 
     // process postfix
-    (@process $_slf:ident (( $result:expr )) ()) => ($result);
-    (@process $slf:ident ( $b:tt $a:tt $( $tail:tt )* ) ( ~ $( $optail:tt )* )) => {
+    ( @process $_slf:ident [( $result:expr )] [] ) => ($result);
+    ( @process $slf:ident [ $b:tt $a:tt $( $tail:tt )* ] [ ~ $( $optail:tt )* ] ) => {
         {
-            let try = $slf.try(Box::new(move |parser| {
+            let result = $slf.try(Box::new(move |parser| {
                 grammar!(@mtc parser $a) && grammar!(@mtc parser $b)
             }));
 
-            grammar!(@process $slf ((( try )) $( $tail )* ) ( $( $optail )* ))
+            grammar!(@process $slf [(( result )) $( $tail )* ] [ $( $optail )* ])
         }
     };
-    (@process $slf:ident ( $b:tt $a:tt $( $tail:tt )* ) ( | $( $optail:tt )* )) => {
+    ( @process $slf:ident [ $b:tt $a:tt $( $tail:tt )* ] [ | $( $optail:tt )* ] ) => {
         {
-            let a = grammar!(@mtc $slf $a);
-            let b = grammar!(@mtc $slf $b);
+            let result = grammar!(@mtc $slf $a) || grammar!(@mtc $slf $b);
 
-            grammar!(@process $slf ((( a || b )) $( $tail )* ) ( $( $optail )* ))
+            grammar!(@process $slf [(( result )) $( $tail )* ] [ $( $optail )* ])
         }
     };
-    (@process $slf:ident () ( $single:tt )) => {
+    ( @process $slf:ident [] [ $single:tt ] ) => {
         grammar!(@mtc $slf $single)
     };
-    (@process $slf:ident ( $( $optail:tt )* ) ( $head:tt $( $tail:tt )* )) => {
-        grammar!(@process $slf ( $head $( $optail )* ) ( $( $tail )* ))
+    ( @process $slf:ident [ $( $optail:tt )* ] [ $head:tt $( $tail:tt )* ] ) => {
+        grammar!(@process $slf [ $head $( $optail )* ] [ $( $tail )* ])
     };
 
     ( $( $name:ident = { $( $ts:tt )* } )* ) => {
@@ -112,7 +112,7 @@ macro_rules! grammar {
             #[allow(unused_parens)]
             #[allow(unused_variables)]
             pub fn $name(&mut self) -> bool {
-                grammar!(@conv self ( $( $ts )* ) () ())
+                grammar!(@conv self [ $( $ts )* ] [] [])
             }
         )*
     };
