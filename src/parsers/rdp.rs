@@ -63,11 +63,11 @@ pub trait Rdp {
         self.input().matches(string)
     }
 
-    fn try(&mut self, rule: Box<Fn(&mut Self) -> bool>) -> bool {
+    fn try(&mut self, revert: bool, rule: Box<Fn(&mut Self) -> bool>) -> bool {
         let pos = self.input().pos();
         let result = rule(self);
 
-        if !result {
+        if revert || !result {
             self.input().set_pos(pos);
         }
 
@@ -110,11 +110,11 @@ mod tests {
 
         assert!(parser.matches("asd"));
 
-        assert!(!parser.try(Box::new(|parser| {
+        assert!(!parser.try(false, Box::new(|parser| {
             parser.matches("as") && parser.matches("dd")
         })));
 
-        assert!(parser.try(Box::new(|parser| {
+        assert!(parser.try(false, Box::new(|parser| {
             parser.matches("as") && parser.matches("df")
         })));
     }

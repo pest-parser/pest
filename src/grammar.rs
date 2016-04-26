@@ -47,7 +47,17 @@ macro_rules! grammar {
         grammar!(@conv $slf [ @rp $( $tail )* ] [ $( $optail )* ] [ $( $output )* $op ])
     };
 
-    // handle operands
+    // handle prefix operands
+    ( @conv $slf:ident [ & $head:tt $( $tail:tt )* ] [ $( $optail:tt )* ]
+      [ $( $output:tt )* ] ) => {
+        grammar!(@conv $slf [ $( $tail )* ] [ $( $optail )* ] [ $( $output )* $head & ])
+    };
+    ( @conv $slf:ident [ ! $head:tt $( $tail:tt )* ] [ $( $optail:tt )* ]
+      [ $( $output:tt )* ] ) => {
+        grammar!(@conv $slf [ $( $tail )* ] [ $( $optail )* ] [ $( $output )* $head ! ])
+    };
+
+    // handle infix operands
     ( @conv $slf:ident [ ~ $( $tail:tt )* ] [ ~ $( $optail:tt )* ] [ $( $output:tt )* ] ) => {
         grammar!(@conv $slf [ ~ $( $tail )* ] [ $( $optail )* ] [ $( $output )* ~ ])
     };
@@ -86,7 +96,7 @@ macro_rules! grammar {
     ( @process $_slf:ident [( $result:expr )] [] ) => ($result);
     ( @process $slf:ident [ $b:tt $a:tt $( $tail:tt )* ] [ ~ $( $optail:tt )* ] ) => {
         {
-            let result = $slf.try(Box::new(move |parser| {
+            let result = $slf.try(false, Box::new(move |parser| {
                 grammar!(@mtc parser $a) && grammar!(@mtc parser $b)
             }));
 
@@ -143,6 +153,24 @@ macro_rules! grammar {
             grammar!(@process $slf [(( result )) $( $tail )* ] [ $( $optail )* ])
         }
     };
+    ( @process $slf:ident [ $a:tt $( $tail:tt )* ] [ & $( $optail:tt )* ] ) => {
+        {
+            let result = $slf.try(true, Box::new(move |parser| {
+                grammar!(@mtc parser $a)
+            }));
+
+            grammar!(@process $slf [(( result )) $( $tail )* ] [ $( $optail )* ])
+        }
+    };
+    ( @process $slf:ident [ $a:tt $( $tail:tt )* ] [ ! $( $optail:tt )* ] ) => {
+        {
+            let result = $slf.try(true, Box::new(move |parser| {
+                !grammar!(@mtc parser $a)
+            }));
+
+            grammar!(@process $slf [(( result )) $( $tail )* ] [ $( $optail )* ])
+        }
+    };
     ( @process $slf:ident [] [ $single:tt ] ) => {
         grammar!(@mtc $slf $single)
     };
@@ -177,6 +205,8 @@ mod tests {
             rep_zero = { ["a"]* }
             rep_one = { ["a"]+ }
             opt = { ["a"]? }
+            pres = { &["a"] }
+            abs = { !["a"] }
         }
     }
 
@@ -264,6 +294,38 @@ mod tests {
         let mut parser = MyRdp::new(Box::new(StringInput::new("b")));
 
         assert!(parser.opt());
+        assert!(!parser.end());
+    }
+
+    #[test]
+    fn pres_right() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("a")));
+
+        assert!(parser.pres());
+        assert!(!parser.end());
+    }
+
+    #[test]
+    fn pres_wrong() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("b")));
+
+        assert!(!parser.pres());
+        assert!(!parser.end());
+    }
+
+    #[test]
+    fn abs_right() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("b")));
+
+        assert!(parser.abs());
+        assert!(!parser.end());
+    }
+
+    #[test]
+    fn abs_wrong() {
+        let mut parser = MyRdp::new(Box::new(StringInput::new("a")));
+
+        assert!(!parser.abs());
         assert!(!parser.end());
     }
 }

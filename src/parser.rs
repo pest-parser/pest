@@ -7,13 +7,13 @@
 
 /// A `trait` that defines a parser.
 pub trait Parser {
-    /// Matches `string`, returns whether it matched, and advances the parser with `string.len()`
-    /// in case it did.
+    /// Matches `string`, returns whether it matched, and advances a parser with `string.len()` in
+    /// case it did.
     fn matches(&mut self, string: &str) -> bool;
 
-    /// Tries to match `rule`, returns whether it matched, and advances the parser with in case it
-    /// did.
-    fn try(&mut self, rule: Box<Fn(&mut Self) -> bool>) -> bool where Self: Sized;
+    /// Tries to match `rule`, returns whether it matched, and advances a parser with in case it
+    /// did. If `revert` is `true`, the parser will not advance.
+    fn try(&mut self, revert: bool, rule: Box<Fn(&mut Self) -> bool>) -> bool where Self: Sized;
 
     /// Returns whether a `Parser` has reached it end.
     fn end(&mut self) -> bool;
