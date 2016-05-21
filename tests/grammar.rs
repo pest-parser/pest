@@ -9,7 +9,7 @@ impl_rdp! {
     grammar! {
         exp = _{ paren ~ exp | [""] }
         paren = { ["("] ~ exp ~ [")"] }
-        rep_zero = { ["a"]* }
+        rep_zero = { ["a"]* ~ eoi }
         rep_one = { ["a"]+ }
         opt = { ["a"]? }
         pres = { &["a"] }
@@ -61,7 +61,6 @@ fn rep_zero_empty() {
     let mut parser = Rdp::new(Box::new(StringInput::new("")));
 
     assert!(parser.rep_zero());
-    assert!(parser.end());
 
     let queue = vec![
         Rules::rep_zero(0, 0)
@@ -75,7 +74,6 @@ fn rep_zero_long() {
     let mut parser = Rdp::new(Box::new(StringInput::new("aaaa")));
 
     assert!(parser.rep_zero());
-    assert!(parser.end());
 
     let queue = vec![
         Rules::rep_zero(0, 4)
@@ -88,12 +86,9 @@ fn rep_zero_long() {
 fn rep_zero_wrong() {
     let mut parser = Rdp::new(Box::new(StringInput::new("aaaab")));
 
-    assert!(parser.rep_zero());
-    assert!(!parser.end());
+    assert!(!parser.rep_zero());
 
-    let queue = vec![
-        Rules::rep_zero(0, 4)
-    ];
+    let queue = vec![];
 
     assert!(parser.queue().iter().eq(&queue));
 }

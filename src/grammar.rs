@@ -175,7 +175,14 @@ macro_rules! grammar {
         grammar!(@process $slf [ $head $( $optail )* ] [ $( $tail )* ])
     };
 
-    () => ();
+    () => {
+        #[allow(dead_code)]
+        #[allow(unused_parens)]
+        #[allow(unused_variables)]
+        pub fn eoi(&mut self) -> bool {
+            self.end()
+        }
+    };
 
     ( $name:ident = { $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens)]
