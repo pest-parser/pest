@@ -19,7 +19,11 @@ pub trait Parser {
     /// did. If `revert` is `true`, the parser will not advance.
     fn try(&mut self, revert: bool, rule: Box<Fn(&mut Self) -> bool>) -> bool where Self: Sized;
 
+    /// Returns the current position of a `Parser`.
     fn pos(&self) -> usize;
+
+    /// Sets the position of a `Parser`.
+    fn set_pos(&mut self, pos: usize);
 
     /// Returns whether a `Parser` has reached it end.
     fn end(&self) -> bool;
@@ -29,4 +33,7 @@ pub trait Parser {
 
     /// Returns the queue of all matched `Rules`.
     fn queue(&mut self) -> &mut VecDeque<Self::Rules>;
+
+    /// Skips white-space.
+    fn skip_ws(&mut self);
 }

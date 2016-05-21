@@ -8,6 +8,8 @@
 /// A `macro` that defines each rule as a method on a `Parser`. Rules starting with an uderscore
 /// will not be placed into the queue.
 ///
+/// `ws` is a special rules used exclusively for white-space.
+///
 /// # Examples
 ///
 /// ```
@@ -95,7 +97,13 @@ macro_rules! grammar {
     ( @process $slf:ident [ $b:tt $a:tt $( $tail:tt )* ] [ ~ $( $optail:tt )* ] ) => {
         {
             let result = $slf.try(false, Box::new(move |parser| {
-                grammar!(@mtc parser $a) && grammar!(@mtc parser $b)
+                if grammar!(@mtc parser $a) {
+                    parser.skip_ws();
+
+                    grammar!(@mtc parser $b)
+                } else {
+                    false
+                }
             }));
 
             grammar!(@process $slf [(( result )) $( $tail )* ] [ $( $optail )* ])
@@ -111,10 +119,18 @@ macro_rules! grammar {
     ( @process $slf:ident [ $a:tt $( $tail:tt )* ] [ * $( $optail:tt )* ] ) => {
         {
             let result = {
+                let mut pos = $slf.pos();
+
                 loop {
                     if !grammar!(@mtc $slf $a) {
+                        $slf.set_pos(pos);
+
                         break
                     }
+
+                    pos = $slf.pos();
+
+                    $slf.skip_ws();
                 }
 
                 true
@@ -127,7 +143,13 @@ macro_rules! grammar {
         {
             let result = if grammar!(@mtc $slf $a) {
                 loop {
+                    let pos = $slf.pos();
+
+                    $slf.skip_ws();
+
                     if !grammar!(@mtc $slf $a) {
+                        $slf.set_pos(pos);
+
                         break
                     }
                 }
@@ -176,10 +198,12 @@ macro_rules! grammar {
         grammar!(@process $slf [ $head $( $optail )* ] [ $( $tail )* ])
     };
 
+    // skip only if not ws
+    ( @skip ws $_slf:ident ) => ();
+    ( @skip $_name:ident $slf:ident ) => ($slf.skip_ws());
+
     () => {
         #[allow(dead_code)]
-        #[allow(unused_parens)]
-        #[allow(unused_variables)]
         pub fn eoi(&mut self) -> bool {
             self.end()
         }
@@ -189,8 +213,11 @@ macro_rules! grammar {
         #[allow(unused_parens)]
         #[allow(unused_variables)]
         pub fn $name(&mut self) -> bool {
+            grammar!(@skip $name self);
+
             let pos = self.pos();
             let queue_pos = self.queue().len();
+
             let result = grammar!(@conv self [ $( $ts )* ] [] []);
 
             if result {
@@ -209,7 +236,10 @@ macro_rules! grammar {
         #[allow(unused_parens)]
         #[allow(unused_variables)]
         pub fn $name(&mut self) -> bool {
+            grammar!(@skip $name self);
+
             let pos = self.pos();
+
             let result = grammar!(@conv self [ $( $ts )* ] [] []);
 
             result

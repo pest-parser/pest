@@ -49,6 +49,21 @@ macro_rules! impl_rdp {
         impl_rdp!(@filter [ $( $tail )* ] [ $( $rules )* ]);
     };
 
+    // implement empty ws rule
+    ( @ws ) => {
+        #[allow(dead_code)]
+        pub fn ws(&mut self) -> bool {
+            false
+        }
+    };
+    ( @ws ws = $( $_ts:tt )* ) => ();
+    ( @ws $_name:ident = { $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@ws $( $tail )*);
+    };
+    ( @ws $_name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@ws $( $tail )*);
+    };
+
     ( grammar!{ $( $ts:tt )* } ) => {
         use std::collections::VecDeque;
 
@@ -62,7 +77,7 @@ macro_rules! impl_rdp {
         impl_rdp!(@filter [ $( $ts )* ] []);
 
         impl Rdp {
-            fn new(input: Box<Input>) -> Rdp {
+            pub fn new(input: Box<Input>) -> Rdp {
                 Rdp {
                     input: input,
                     committed: VecDeque::new(),
@@ -70,6 +85,8 @@ macro_rules! impl_rdp {
                     commit: false
                 }
             }
+
+            impl_rdp!(@ws $( $ts )*);
 
             grammar! {
                 $( $ts )*
@@ -112,6 +129,10 @@ macro_rules! impl_rdp {
                 self.input.pos()
             }
 
+            fn set_pos(&mut self, pos: usize) {
+                self.input.set_pos(pos);
+            }
+
             fn end(&self) -> bool {
                 self.input.len() == self.input.pos()
             }
@@ -127,6 +148,14 @@ macro_rules! impl_rdp {
                     &mut self.uncommitted
                 }
             }
+
+            fn skip_ws(&mut self) {
+                loop {
+                    if !self.ws() {
+                        break
+                    }
+                }
+            }
         }
     };
 }
@@ -138,7 +167,13 @@ mod tests {
     use super::super::super::StringInput;
 
     impl_rdp! {
-        grammar! { }
+        grammar! {
+            exp = _{ paren ~ exp | [""] }
+            paren = { ["("] ~ exp ~ [")"] }
+            zero = { ["a"]* }
+            one = { ["a"]+ }
+            ws = _{ [" "] }
+        }
     }
 
     #[test]
@@ -187,5 +222,53 @@ mod tests {
         parser.reset();
 
         assert!(parser.matches("asdasdf"));
+    }
+
+    #[test]
+    fn ws_seq() {
+        let mut parser = Rdp::new(Box::new(StringInput::new("  (  ( ))(( () )() )() ")));
+
+        assert!(parser.exp());
+        assert!(parser.end());
+
+        let queue = vec![
+            Rules::paren(2, 7),
+            Rules::paren(5, 3),
+            Rules::paren(9, 11),
+            Rules::paren(10, 6),
+            Rules::paren(12, 2),
+            Rules::paren(16, 2),
+            Rules::paren(20, 2)
+        ];
+
+        assert!(parser.queue().iter().eq(&queue));
+    }
+
+    #[test]
+    fn ws_zero() {
+        let mut parser = Rdp::new(Box::new(StringInput::new("  a a aa aaaa a  ")));
+
+        assert!(parser.zero());
+        assert!(!parser.end());
+
+        let queue = vec![
+            Rules::zero(2, 13)
+        ];
+
+        assert!(parser.queue().iter().eq(&queue));
+    }
+
+    #[test]
+    fn ws_one() {
+        let mut parser = Rdp::new(Box::new(StringInput::new("  a a aa aaaa a  ")));
+
+        assert!(parser.one());
+        assert!(!parser.end());
+
+        let queue = vec![
+            Rules::one(2, 13)
+        ];
+
+        assert!(parser.queue().iter().eq(&queue));
     }
 }
