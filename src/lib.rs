@@ -15,19 +15,17 @@
 //! ```
 //! # #[macro_use] extern crate pest;
 //! # use pest::Input;
+//! # use pest::Parser;
 //! # use pest::StringInput;
-//! # use pest::Rdp;
 //! # fn main() {
-//! impl_rdp!(MyRdp);
-//!
-//! impl MyRdp {
+//! impl_rdp! {
 //!     grammar! {
 //!         exp = { paren ~ exp | [""] }
 //!         paren = { ["("] ~ exp ~ [")"] }
 //!     }
 //! }
 //!
-//! let mut parser = MyRdp::new(Box::new(StringInput::new("(())((())())()")));
+//! let mut parser = Rdp::new(Box::new(StringInput::new("(())((())())()")));
 //!
 //! assert!(parser.exp());
 //! assert!(parser.end());
@@ -35,9 +33,9 @@
 //! ```
 
 #[macro_use]
-mod parsers;
-
 mod grammar;
+#[macro_use]
+mod parsers;
 mod input;
 mod inputs;
 mod parser;
@@ -45,4 +43,3 @@ mod parser;
 pub use input::Input;
 pub use inputs::StringInput;
 pub use parser::Parser;
-pub use parsers::Rdp;

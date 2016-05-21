@@ -5,24 +5,24 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use super::super::Input;
-use super::super::Parser;
-
-/// A `macro` useful for implementing the `Rdp` `trait`.
+/// A `macro` useful for implementing the `Parser` `trait` as a recursive descent parser.
 ///
 /// # Examples
 ///
 /// ```
 /// # #[macro_use] extern crate pest;
 /// # use pest::Input;
+/// # use pest::Parser;
 /// # use pest::StringInput;
-/// # use pest::Rdp;
-///
 /// # fn main() {
-/// impl_rdp!(MyRdp);
+/// impl_rdp! {
+///     grammar! {
+///         rule = { [""] }
+///     }
+/// }
 ///
 /// let input = Box::new(StringInput::new("asdasdf"));
-/// let mut parser = MyRdp::new(input);
+/// let mut parser = Rdp::new(input);
 ///
 /// assert!(parser.matches("asd"));
 /// assert!(parser.matches("asdf"));
@@ -30,72 +30,121 @@ use super::super::Parser;
 /// ```
 #[macro_export]
 macro_rules! impl_rdp {
-    ( $name:ident ) => {
-        pub struct $name {
-            input: Box<Input>
+    ( @rules $( $name:ident )* ) => {
+        #[allow(non_camel_case_types)]
+        #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+        pub enum Rules {
+            $( $name(usize, usize) ),*
+        }
+    };
+
+    // filter out hidden rules
+    ( @filter [  ] [ $( $rules:tt )* ] ) => {
+        impl_rdp!(@rules $( $rules )*);
+    };
+    ( @filter [ $name:ident = { $( $_ts:tt )* } $( $tail:tt )* ] [ $( $rules:tt )* ] ) => {
+        impl_rdp!(@filter [ $( $tail )* ] [ $name $( $rules )* ]);
+    };
+    ( @filter [ $name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ] [ $( $rules:tt )* ] ) => {
+        impl_rdp!(@filter [ $( $tail )* ] [ $( $rules )* ]);
+    };
+
+    ( grammar!{ $( $ts:tt )* } ) => {
+        use std::collections::VecDeque;
+
+        pub struct Rdp {
+            input: Box<Input>,
+            committed: VecDeque<Rules>,
+            uncommitted: VecDeque<Rules>,
+            commit: bool
         }
 
-        impl Rdp for $name {
-            fn new(input: Box<Input>) -> $name {
-                $name {
-                    input: input
+        impl_rdp!(@filter [ $( $ts )* ] []);
+
+        impl Rdp {
+            fn new(input: Box<Input>) -> Rdp {
+                Rdp {
+                    input: input,
+                    committed: VecDeque::new(),
+                    uncommitted: VecDeque::new(),
+                    commit: false
                 }
             }
 
-            fn input(&mut self) -> &mut Box<Input> {
-                &mut self.input
+            grammar! {
+                $( $ts )*
+            }
+        }
+
+        impl Parser for Rdp {
+            type Rules = Rules;
+
+            fn matches(&mut self, string: &str) -> bool {
+                self.input.matches(string)
+            }
+
+            fn try(&mut self, revert: bool, rule: Box<Fn(&mut Self) -> bool>) -> bool {
+                let pos = self.input.pos();
+                let commit = self.commit;
+
+                if commit {
+                    self.commit = false;
+                }
+
+                let result = rule(self);
+
+                if revert || !result {
+                    self.input.set_pos(pos);
+                }
+
+                if commit {
+                    self.commit = true;
+
+                    if result {
+                        self.committed.append(&mut self.uncommitted);
+                    }
+                }
+
+                result
+            }
+
+            fn pos(&self) -> usize {
+                self.input.pos()
+            }
+
+            fn end(&self) -> bool {
+                self.input.len() == self.input.pos()
+            }
+
+            fn reset(&mut self) {
+                self.input.set_pos(0);
+            }
+
+            fn queue(&mut self) -> &mut VecDeque<Rules>{
+                if self.commit {
+                    &mut self.committed
+                } else {
+                    &mut self.uncommitted
+                }
             }
         }
     };
 }
 
-/// A `trait` that implements a recursive descent parser on a `struct` containing an `Input`.
-pub trait Rdp {
-    /// Creates a new `Rdp::Self` instance.
-    ///
-    /// Is subject to change in order to enhance flexibility.
-    fn new(input: Box<Input>) -> Self;
-
-    /// Returns `&mut Box<Input>` in order for the parser to have access to its input.
-    fn input(&mut self) -> &mut Box<Input>;
-
-    fn matches(&mut self, string: &str) -> bool {
-        self.input().matches(string)
-    }
-
-    fn try(&mut self, revert: bool, rule: Box<Fn(&mut Self) -> bool>) -> bool {
-        let pos = self.input().pos();
-        let result = rule(self);
-
-        if revert || !result {
-            self.input().set_pos(pos);
-        }
-
-        result
-    }
-
-    fn end(&mut self) -> bool {
-        self.input().len() == self.input().pos()
-    }
-
-    fn reset(&mut self) {
-        self.input().set_pos(0);
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::Rdp;
     use super::super::super::Parser;
     use super::super::super::Input;
     use super::super::super::StringInput;
 
-    impl_rdp!(MyRdp);
+    impl_rdp! {
+        grammar! { }
+    }
 
     #[test]
     fn matches() {
         let input = Box::new(StringInput::new("asdasdf"));
-        let mut parser = MyRdp::new(input);
+        let mut parser = Rdp::new(input);
 
         assert!(parser.matches("asd"));
         assert!(parser.matches("asdf"));
@@ -106,7 +155,7 @@ mod tests {
     #[test]
     fn try() {
         let input = Box::new(StringInput::new("asdasdf"));
-        let mut parser = MyRdp::new(input);
+        let mut parser = Rdp::new(input);
 
         assert!(parser.matches("asd"));
 
@@ -122,7 +171,7 @@ mod tests {
     #[test]
     fn end() {
         let input = Box::new(StringInput::new("asdasdf"));
-        let mut parser = MyRdp::new(input);
+        let mut parser = Rdp::new(input);
 
         assert!(parser.matches("asdasdf"));
         assert!(parser.end());
@@ -131,7 +180,7 @@ mod tests {
     #[test]
     fn reset() {
         let input = Box::new(StringInput::new("asdasdf"));
-        let mut parser = MyRdp::new(input);
+        let mut parser = Rdp::new(input);
 
         assert!(parser.matches("asdasdf"));
 

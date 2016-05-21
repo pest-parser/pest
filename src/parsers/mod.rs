@@ -7,5 +7,3 @@
 
 #[macro_use]
 mod rdp;
-
-pub use self::rdp::Rdp;

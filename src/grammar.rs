@@ -12,20 +12,17 @@
 /// ```
 /// # #[macro_use] extern crate pest;
 /// # use pest::Input;
+/// # use pest::Parser;
 /// # use pest::StringInput;
-/// # use pest::Rdp;
-///
 /// # fn main() {
-/// impl_rdp!(MyRdp);
-///
-/// impl MyRdp {
+/// impl_rdp! {
 ///     grammar! {
 ///         exp = { paren ~ exp | [""] }
 ///         paren = { ["("] ~ exp ~ [")"] }
 ///     }
 /// }
 ///
-/// let mut parser = MyRdp::new(Box::new(StringInput::new("(())((())())()")));
+/// let mut parser = Rdp::new(Box::new(StringInput::new("(())((())())()")));
 ///
 /// assert!(parser.exp());
 /// assert!(parser.end());
@@ -178,154 +175,38 @@ macro_rules! grammar {
         grammar!(@process $slf [ $head $( $optail )* ] [ $( $tail )* ])
     };
 
-    ( $( $name:ident = { $( $ts:tt )* } )* ) => {
-        $(
-            #[allow(unused_parens)]
-            #[allow(unused_variables)]
-            pub fn $name(&mut self) -> bool {
-                grammar!(@conv self [ $( $ts )* ] [] [])
+    () => ();
+
+    ( $name:ident = { $( $ts:tt )* } $( $tail:tt )* ) => {
+        #[allow(unused_parens)]
+        #[allow(unused_variables)]
+        pub fn $name(&mut self) -> bool {
+            let pos = self.pos();
+            let queue_pos = self.queue().len();
+            let result = grammar!(@conv self [ $( $ts )* ] [] []);
+
+            if result {
+                let new_pos = self.pos();
+
+                self.queue().insert(queue_pos, Rules::$name(pos, new_pos - pos));
             }
-        )*
-    };
-}
 
-#[cfg(test)]
-mod tests {
-    use super::super::Rdp;
-    use super::super::Parser;
-    use super::super::Input;
-    use super::super::StringInput;
-
-    impl_rdp!(MyRdp);
-
-    impl MyRdp {
-        grammar! {
-            exp = { paren ~ exp | [""] }
-            paren = { ["("] ~ exp ~ [")"] }
-            rep_zero = { ["a"]* }
-            rep_one = { ["a"]+ }
-            opt = { ["a"]? }
-            pres = { &["a"] }
-            abs = { !["a"] }
+            result
         }
-    }
 
-    #[test]
-    fn basic() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("(())((())())()")));
+        grammar!($( $tail )*);
+    };
 
-        assert!(parser.exp());
-        assert!(parser.end());
-    }
+    ( $name:ident = _{ $( $ts:tt )* } $( $tail:tt )* ) => {
+        #[allow(unused_parens)]
+        #[allow(unused_variables)]
+        pub fn $name(&mut self) -> bool {
+            let pos = self.pos();
+            let result = grammar!(@conv self [ $( $ts )* ] [] []);
 
-    #[test]
-    fn fail() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("(())((())())(")));
+            result
+        }
 
-        assert!(parser.exp());
-        assert!(!parser.end());
-    }
-
-    #[test]
-    fn rep_zero_empty() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("")));
-
-        assert!(parser.rep_zero());
-        assert!(parser.end());
-    }
-
-    #[test]
-    fn rep_zero_long() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("aaaa")));
-
-        assert!(parser.rep_zero());
-        assert!(parser.end());
-    }
-
-    #[test]
-    fn rep_zero_wrong() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("aaaab")));
-
-        assert!(parser.rep_zero());
-        assert!(!parser.end());
-    }
-
-    #[test]
-    fn rep_one_empty() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("")));
-
-        assert!(!parser.rep_one());
-    }
-
-    #[test]
-    fn rep_one_long() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("aaaa")));
-
-        assert!(parser.rep_one());
-        assert!(parser.end());
-    }
-
-    #[test]
-    fn rep_one_wrong() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("b")));
-
-        assert!(!parser.rep_one());
-        assert!(!parser.end());
-    }
-
-    #[test]
-    fn opt_empty() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("")));
-
-        assert!(parser.opt());
-        assert!(parser.end());
-    }
-
-    #[test]
-    fn opt_right() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("a")));
-
-        assert!(parser.opt());
-        assert!(parser.end());
-    }
-
-    #[test]
-    fn opt_wrong() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("b")));
-
-        assert!(parser.opt());
-        assert!(!parser.end());
-    }
-
-    #[test]
-    fn pres_right() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("a")));
-
-        assert!(parser.pres());
-        assert!(!parser.end());
-    }
-
-    #[test]
-    fn pres_wrong() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("b")));
-
-        assert!(!parser.pres());
-        assert!(!parser.end());
-    }
-
-    #[test]
-    fn abs_right() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("b")));
-
-        assert!(parser.abs());
-        assert!(!parser.end());
-    }
-
-    #[test]
-    fn abs_wrong() {
-        let mut parser = MyRdp::new(Box::new(StringInput::new("a")));
-
-        assert!(!parser.abs());
-        assert!(!parser.end());
-    }
+        grammar!($( $tail )*);
+    };
 }
