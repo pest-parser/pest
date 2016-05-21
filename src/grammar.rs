@@ -5,7 +5,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// A `macro` that defines each rule as a method on a `Parser`.
+/// A `macro` that defines each rule as a method on a `Parser`. Rules starting with an uderscore
+/// will not be placed into the queue.
 ///
 /// # Examples
 ///
@@ -17,7 +18,7 @@
 /// # fn main() {
 /// impl_rdp! {
 ///     grammar! {
-///         exp = { paren ~ exp | [""] }
+///         exp = _{ paren ~ exp | [""] }
 ///         paren = { ["("] ~ exp ~ [")"] }
 ///     }
 /// }

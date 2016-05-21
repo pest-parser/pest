@@ -27,5 +27,6 @@ pub trait Parser {
     /// Reset a `Parser`.
     fn reset(&mut self);
 
+    /// Returns the queue of all matched `Rules`.
     fn queue(&mut self) -> &mut VecDeque<Self::Rules>;
 }
