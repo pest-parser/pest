@@ -14,8 +14,9 @@
 //!
 //! ```
 //! # #[macro_use] extern crate pest;
-//! # use pest::Input;
 //! # use pest::Parser;
+//! # use pest::Queues;
+//! # use pest::Input;
 //! # use pest::StringInput;
 //! # fn main() {
 //! impl_rdp! {
@@ -43,3 +44,4 @@ mod parser;
 pub use input::Input;
 pub use inputs::StringInput;
 pub use parser::Parser;
+pub use parsers::Queues;
