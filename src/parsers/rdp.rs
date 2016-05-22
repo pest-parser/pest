@@ -100,7 +100,11 @@ macro_rules! impl_rdp {
                 self.input.matches(string)
             }
 
-            fn try(&mut self, revert: bool, rule: Box<Fn(&mut Self) -> bool>) -> bool {
+            fn between(&mut self, left: char, right: char) -> bool {
+                self.input.between(left, right)
+            }
+
+            fn try<F>(&mut self, revert: bool, rule: F) -> bool where F: FnOnce(&mut Self) -> bool{
                 let pos = self.input.pos();
                 let commit = self.commit;
 
@@ -194,13 +198,13 @@ mod tests {
 
         assert!(parser.matches("asd"));
 
-        assert!(!parser.try(false, Box::new(|parser| {
+        assert!(!parser.try(false, |parser| {
             parser.matches("as") && parser.matches("dd")
-        })));
+        }));
 
-        assert!(parser.try(false, Box::new(|parser| {
+        assert!(parser.try(false, |parser| {
             parser.matches("as") && parser.matches("df")
-        })));
+        }));
     }
 
     #[test]

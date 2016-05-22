@@ -15,9 +15,13 @@ pub trait Parser {
     /// case it did.
     fn matches(&mut self, string: &str) -> bool;
 
+    /// Matches `char` between `left` and `right`, and advances a parser with one `char` in case
+    /// it did.
+    fn between(&mut self, left: char, right: char) -> bool;
+
     /// Tries to match `rule`, returns whether it matched, and advances a parser with in case it
     /// did. If `revert` is `true`, the parser will not advance.
-    fn try(&mut self, revert: bool, rule: Box<Fn(&mut Self) -> bool>) -> bool where Self: Sized;
+    fn try<F>(&mut self, revert: bool, rule: F) -> bool where F: FnOnce(&mut Self) -> bool;
 
     /// Returns the current position of a `Parser`.
     fn pos(&self) -> usize;

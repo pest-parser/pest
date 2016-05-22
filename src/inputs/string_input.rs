@@ -78,6 +78,22 @@ impl Input for StringInput {
 
         true
     }
+
+    fn between(&mut self, left: char, right: char) -> bool {
+        let mut skipped = self.string.chars().skip(self.pos);
+
+        if let Some(c) = skipped.next() {
+            let result = left <= c && c <= right;
+
+            if result {
+                self.pos += 1;
+            }
+
+            result
+        } else {
+            false
+        }
+    }
 }
 
 #[cfg(test)]
@@ -121,5 +137,17 @@ mod tests {
         assert_eq!(input.pos(), 3);
         assert!(input.matches("asdf"));
         assert_eq!(input.pos(), 7);
+    }
+
+    #[test]
+    fn between() {
+        let mut input = StringInput::new("bbbb");
+
+        assert!(input.between('a', 'c'));
+        assert!(input.between('b', 'b'));
+        assert!(!input.between('a', 'a'));
+        assert!(!input.between('c', 'c'));
+
+        assert_eq!(input.pos(), 2);
     }
 }

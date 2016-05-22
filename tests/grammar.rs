@@ -14,6 +14,7 @@ impl_rdp! {
         opt = { ["a"]? }
         pres = { &["a"] }
         abs = { !["a"] }
+        digit = { ['0'..'9'] }
     }
 }
 
@@ -217,6 +218,32 @@ fn abs_wrong() {
     let mut parser = Rdp::new(Box::new(StringInput::new("a")));
 
     assert!(!parser.abs());
+    assert!(!parser.end());
+
+    let queue = vec![];
+
+    assert!(parser.queue().iter().eq(&queue));
+}
+
+#[test]
+fn digit_right() {
+    let mut parser = Rdp::new(Box::new(StringInput::new("0")));
+
+    assert!(parser.digit());
+    assert!(parser.end());
+
+    let queue = vec![
+        Rules::digit(0, 1)
+    ];
+
+    assert!(parser.queue().iter().eq(&queue));
+}
+
+#[test]
+fn digit_wrong() {
+    let mut parser = Rdp::new(Box::new(StringInput::new("a")));
+
+    assert!(!parser.digit());
     assert!(!parser.end());
 
     let queue = vec![];

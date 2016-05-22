@@ -19,4 +19,8 @@ pub trait Input {
     /// Matches `string` to an `Input`, returns whether it matched, and advances the position with
     /// `string.len()` in case it did.
     fn matches(&mut self, string: &str) -> bool;
+
+    /// Matches if an `Input`'s current `char` is between `left` and `right`, and advances the
+    /// position with one `char` in case it did.
+    fn between(&mut self, left: char, right: char) -> bool;
 }
