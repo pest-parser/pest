@@ -11,8 +11,9 @@
 ///
 /// ```
 /// # #[macro_use] extern crate pest;
-/// # use pest::Input;
 /// # use pest::Parser;
+/// # use pest::Queues;
+/// # use pest::Input;
 /// # use pest::StringInput;
 /// # fn main() {
 /// impl_rdp! {
@@ -69,7 +70,7 @@ macro_rules! impl_rdp {
 
         pub struct Rdp {
             input: Box<Input>,
-            queues: Vec<VecDeque<Rules>>
+            queues: Queues<Rules>
         }
 
         impl_rdp!(@filter [ $( $ts )* ] []);
@@ -78,7 +79,7 @@ macro_rules! impl_rdp {
             pub fn new(input: Box<Input>) -> Rdp {
                 Rdp {
                     input: input,
-                    queues: vec![VecDeque::new()]
+                    queues: Queues::new()
                 }
             }
 
@@ -104,7 +105,7 @@ macro_rules! impl_rdp {
                 where F: FnOnce(&mut Self) -> bool {
 
                 let pos = self.input.pos();
-                self.queues.push(VecDeque::new());
+                self.queues.push();
 
                 let result = rule(self);
 
@@ -112,12 +113,10 @@ macro_rules! impl_rdp {
                     self.input.set_pos(pos);
                 }
 
-                if let Some(mut queue) = self.queues.pop() {
-                    if result {
-                        self.queue().append(&mut queue);
-                    }
+                if result {
+                    self.queues.pour();
                 } else {
-                    unreachable!();
+                    self.queues.pop();
                 }
 
                 result
@@ -161,6 +160,7 @@ macro_rules! impl_rdp {
 #[cfg(test)]
 mod tests {
     use super::super::super::Parser;
+    use super::super::super::Queues;
     use super::super::super::Input;
     use super::super::super::StringInput;
 

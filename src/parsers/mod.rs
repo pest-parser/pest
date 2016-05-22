@@ -7,3 +7,7 @@
 
 #[macro_use]
 mod rdp;
+
+mod queues;
+
+pub use self::queues::Queues;

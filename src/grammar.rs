@@ -14,8 +14,9 @@
 ///
 /// ```
 /// # #[macro_use] extern crate pest;
-/// # use pest::Input;
 /// # use pest::Parser;
+/// # use pest::Queues;
+/// # use pest::Input;
 /// # use pest::StringInput;
 /// # fn main() {
 /// impl_rdp! {

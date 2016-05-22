@@ -5,6 +5,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::str;
+
 use super::super::Input;
 
 /// A `struct` useful for matching in-memory `String`s.
@@ -59,37 +61,44 @@ impl Input for StringInput {
     }
 
     fn matches(&mut self, string: &str) -> bool {
-        let mut skipped = self.string.chars().skip(self.pos);
+        let to = self.pos + string.len();
 
-        for c1 in string.chars() {
-            match skipped.next() {
-                Some(c2) => {
-                    if c1 != c2 {
-                        return false
-                    }
-                },
-                None => {
-                    return false
-                }
-            }
-        }
-
-        self.pos += string.len();
-
-        true
-    }
-
-    fn between(&mut self, left: char, right: char) -> bool {
-        let mut skipped = self.string.chars().skip(self.pos);
-
-        if let Some(c) = skipped.next() {
-            let result = left <= c && c <= right;
+        if to <= self.string.len() {
+            let result = &self.string[self.pos..to] == string;
 
             if result {
-                self.pos += 1;
+                self.pos = to;
             }
 
             result
+        } else {
+            false
+        }
+    }
+
+    fn between(&mut self, left: char, right: char) -> bool {
+        let len = left.len_utf8();
+
+        if len != right.len_utf8() {
+            panic!("ranges should have same-sized UTF-8 limits");
+        }
+
+        let to = self.pos + len;
+
+        if to <= self.string.len() {
+            if let Ok(string) = str::from_utf8(&self.string.as_bytes()[self.pos..to]) {
+                let c = string.chars().next().unwrap();
+
+                let result = left <= c && c <= right;
+
+                if result {
+                    self.pos += len;
+                }
+
+                result
+            } else {
+                false
+            }
         } else {
             false
         }
