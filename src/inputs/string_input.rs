@@ -5,6 +5,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::str;
+
 use super::super::Input;
 
 /// A `struct` useful for matching in-memory `String`s.
@@ -75,16 +77,28 @@ impl Input for StringInput {
     }
 
     fn between(&mut self, left: char, right: char) -> bool {
-        let mut skipped = self.string.chars().skip(self.pos);
+        let len = left.len_utf8();
 
-        if let Some(c) = skipped.next() {
-            let result = left <= c && c <= right;
+        if len != right.len_utf8() {
+            panic!("ranges should have same-sized UTF-8 limits");
+        }
 
-            if result {
-                self.pos += 1;
+        let to = self.pos + len;
+
+        if to <= self.string.len() {
+            if let Ok(string) = str::from_utf8(&self.string.as_bytes()[self.pos..to]) {
+                let c = string.chars().next().unwrap();
+
+                let result = left <= c && c <= right;
+
+                if result {
+                    self.pos += len;
+                }
+
+                result
+            } else {
+                false
             }
-
-            result
         } else {
             false
         }
