@@ -59,24 +59,19 @@ impl Input for StringInput {
     }
 
     fn matches(&mut self, string: &str) -> bool {
-        let mut skipped = self.string.chars().skip(self.pos);
+        let to = self.pos + string.len();
 
-        for c1 in string.chars() {
-            match skipped.next() {
-                Some(c2) => {
-                    if c1 != c2 {
-                        return false
-                    }
-                },
-                None => {
-                    return false
-                }
+        if to <= self.string.len() {
+            let result = &self.string[self.pos..to] == string;
+
+            if result {
+                self.pos = to;
             }
+
+            result
+        } else {
+            false
         }
-
-        self.pos += string.len();
-
-        true
     }
 
     fn between(&mut self, left: char, right: char) -> bool {
