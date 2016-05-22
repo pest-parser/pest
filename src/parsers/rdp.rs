@@ -69,9 +69,7 @@ macro_rules! impl_rdp {
 
         pub struct Rdp {
             input: Box<Input>,
-            committed: VecDeque<Rules>,
-            uncommitted: VecDeque<Rules>,
-            commit: bool
+            queues: Vec<VecDeque<Rules>>
         }
 
         impl_rdp!(@filter [ $( $ts )* ] []);
@@ -80,9 +78,7 @@ macro_rules! impl_rdp {
             pub fn new(input: Box<Input>) -> Rdp {
                 Rdp {
                     input: input,
-                    committed: VecDeque::new(),
-                    uncommitted: VecDeque::new(),
-                    commit: false
+                    queues: vec![VecDeque::new()]
                 }
             }
 
@@ -104,13 +100,11 @@ macro_rules! impl_rdp {
                 self.input.between(left, right)
             }
 
-            fn try<F>(&mut self, revert: bool, rule: F) -> bool where F: FnOnce(&mut Self) -> bool{
-                let pos = self.input.pos();
-                let commit = self.commit;
+            fn try<F>(&mut self, revert: bool, rule: F) -> bool
+                where F: FnOnce(&mut Self) -> bool {
 
-                if commit {
-                    self.commit = false;
-                }
+                let pos = self.input.pos();
+                self.queues.push(VecDeque::new());
 
                 let result = rule(self);
 
@@ -118,12 +112,12 @@ macro_rules! impl_rdp {
                     self.input.set_pos(pos);
                 }
 
-                if commit {
-                    self.commit = true;
-
+                if let Some(mut queue) = self.queues.pop() {
                     if result {
-                        self.committed.append(&mut self.uncommitted);
+                        self.queue().append(&mut queue);
                     }
+                } else {
+                    unreachable!();
                 }
 
                 result
@@ -146,10 +140,10 @@ macro_rules! impl_rdp {
             }
 
             fn queue(&mut self) -> &mut VecDeque<Rules>{
-                if self.commit {
-                    &mut self.committed
+                if let Some(queue) = self.queues.last_mut() {
+                    queue
                 } else {
-                    &mut self.uncommitted
+                    unreachable!();
                 }
             }
 

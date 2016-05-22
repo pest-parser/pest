@@ -36,25 +36,23 @@ macro_rules! grammar {
     // handle parens
     ( @conv $slf:ident [ ( $( $head:tt )* ) $( $tail:tt )* ] [ $( $optail:tt )* ]
       [ $( $output:tt )* ] ) => {
-        grammar!(@conv $slf [ $( $head )* @rp $( $tail )* ] [ @lp $( $optail )* ]
+        grammar!(@conv $slf [ $( $head )* _rp $( $tail )* ] [ _lp $( $optail )* ]
                  [ $( $output )* ])
     };
-    ( @conv $slf:ident [ @rp $( $tail:tt )* ] [ @lp $( $optail:tt )* ] [ $( $output:tt )* ] ) => {
+    ( @conv $slf:ident [ _rp $( $tail:tt )* ] [ _lp $( $optail:tt )* ] [ $( $output:tt )* ] ) => {
         grammar!(@conv $slf [ $( $tail )* ] [ $( $optail )* ] [ $( $output )* ])
     };
-    ( @conv $slf:ident [ @rp $( $tail:tt )* ] [ $op:tt $( $optail:tt )* ]
+    ( @conv $slf:ident [ _rp $( $tail:tt )* ] [ $op:tt $( $optail:tt )* ]
       [ $( $output:tt )* ] ) => {
-        grammar!(@conv $slf [ @rp $( $tail )* ] [ $( $optail )* ] [ $( $output )* $op ])
+        grammar!(@conv $slf [ _rp $( $tail )* ] [ $( $optail )* ] [ $( $output )* $op ])
     };
 
     // handle prefix operands
-    ( @conv $slf:ident [ & $head:tt $( $tail:tt )* ] [ $( $optail:tt )* ]
-      [ $( $output:tt )* ] ) => {
-        grammar!(@conv $slf [ $( $tail )* ] [ $( $optail )* ] [ $( $output )* $head & ])
+    ( @conv $slf:ident [ & $head:tt $( $tail:tt )* ] [ $( $optail:tt )* ] $output:tt ) => {
+        grammar!(@conv $slf [ $head _pres $( $tail )* ] [ $( $optail )* ] $output)
     };
-    ( @conv $slf:ident [ ! $head:tt $( $tail:tt )* ] [ $( $optail:tt )* ]
-      [ $( $output:tt )* ] ) => {
-        grammar!(@conv $slf [ $( $tail )* ] [ $( $optail )* ] [ $( $output )* $head ! ])
+    ( @conv $slf:ident [ ! $head:tt $( $tail:tt )* ] [ $( $optail:tt )* ] $output:tt ) => {
+        grammar!(@conv $slf [ $head _abs $( $tail )* ] [ $( $optail )* ] $output)
     };
 
     // handle infix operands
@@ -167,14 +165,14 @@ macro_rules! grammar {
             } )) $( $tail )* ] [ $( $optail )* ])
         }
     };
-    ( @process $slf:ident [ $a:tt $( $tail:tt )* ] [ & $( $optail:tt )* ] ) => {
+    ( @process $slf:ident [ $a:tt $( $tail:tt )* ] [ _pres $( $optail:tt )* ] ) => {
         {
             grammar!(@process $slf [(( $slf.try(true, |$slf| {
                 grammar!(@mtc $slf $a)
             }) )) $( $tail )* ] [ $( $optail )* ])
         }
     };
-    ( @process $slf:ident [ $a:tt $( $tail:tt )* ] [ ! $( $optail:tt )* ] ) => {
+    ( @process $slf:ident [ $a:tt $( $tail:tt )* ] [ _abs $( $optail:tt )* ] ) => {
         {
             grammar!(@process $slf [(( $slf.try(true, |$slf| {
                 !grammar!(@mtc $slf $a)
@@ -193,6 +191,18 @@ macro_rules! grammar {
     ( @skip $_name:ident $slf:ident ) => ($slf.skip_ws());
 
     () => {
+        #[allow(dead_code)]
+        pub fn any(&mut self) -> bool {
+            if self.end() {
+                false
+            } else {
+                let next = self.pos() + 1;
+                self.set_pos(next);
+
+                true
+            }
+        }
+
         #[allow(dead_code)]
         pub fn eoi(&mut self) -> bool {
             self.end()

@@ -32,8 +32,6 @@
 //! # }
 //! ```
 
-// #![recursion_limit = "65536"]
-
 #[macro_use]
 mod grammar;
 #[macro_use]
