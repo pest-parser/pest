@@ -150,6 +150,9 @@ macro_rules! impl_rdp {
 
             fn reset(&mut self) {
                 self.input.set_pos(0);
+                self.queues.clear();
+                self.failures.clear();
+                self.fail_pos = 0;
             }
 
             fn queue(&mut self) -> &mut VecDeque<Token>{

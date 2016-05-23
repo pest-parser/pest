@@ -39,6 +39,28 @@ impl<E> Queues<E> {
         }
     }
 
+    /// Clears the `Queues` without resizing the cache.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::Queues;
+    /// let mut queues = Queues::new();
+    ///
+    /// queues.last_mut().unwrap().push_back(1);
+    ///
+    /// queues.clear();
+    ///
+    /// assert!(queues.last().unwrap().is_empty());
+    /// ```
+    pub fn clear(&mut self) {
+        for queue in &mut self.queues {
+            queue.clear();
+        }
+
+        self.size = 1;
+    }
+
     /// Returns the last `VecDeque` if size is greater than 1, else `None`.
     ///
     /// # Examples
