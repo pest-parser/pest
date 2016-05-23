@@ -34,13 +34,13 @@ fn basic() {
     assert!(parser.end());
 
     let queue = vec![
-        Rules::paren(0, 4),
-        Rules::paren(1, 2),
-        Rules::paren(4, 8),
-        Rules::paren(5, 4),
-        Rules::paren(6, 2),
-        Rules::paren(9, 2),
-        Rules::paren(12, 2)
+        Token { rule: Rule::paren, pos: 0, len: 4 },
+        Token { rule: Rule::paren, pos: 1, len: 2 },
+        Token { rule: Rule::paren, pos: 4, len: 8 },
+        Token { rule: Rule::paren, pos: 5, len: 4 },
+        Token { rule: Rule::paren, pos: 6, len: 2 },
+        Token { rule: Rule::paren, pos: 9, len: 2 },
+        Token { rule: Rule::paren, pos: 12, len: 2 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -54,15 +54,17 @@ fn fail() {
     assert!(!parser.end());
 
     let queue = vec![
-        Rules::paren(0, 4),
-        Rules::paren(1, 2),
-        Rules::paren(4, 8),
-        Rules::paren(5, 4),
-        Rules::paren(6, 2),
-        Rules::paren(9, 2)
+        Token { rule: Rule::paren, pos: 0, len: 4 },
+        Token { rule: Rule::paren, pos: 1, len: 2 },
+        Token { rule: Rule::paren, pos: 4, len: 8 },
+        Token { rule: Rule::paren, pos: 5, len: 4 },
+        Token { rule: Rule::paren, pos: 6, len: 2 },
+        Token { rule: Rule::paren, pos: 9, len: 2 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
+
+    assert_eq!(parser.expected(), (vec![Rule::paren], 13));
 }
 
 #[test]
@@ -72,7 +74,7 @@ fn rep_zero_empty() {
     assert!(parser.rep_zero());
 
     let queue = vec![
-        Rules::rep_zero(0, 0)
+        Token { rule: Rule::rep_zero, pos: 0, len: 0 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -85,7 +87,7 @@ fn rep_zero_long() {
     assert!(parser.rep_zero());
 
     let queue = vec![
-        Rules::rep_zero(0, 4)
+        Token { rule: Rule::rep_zero, pos: 0, len: 4 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -100,6 +102,8 @@ fn rep_zero_wrong() {
     let queue = vec![];
 
     assert!(parser.queue().iter().eq(&queue));
+
+    assert_eq!(parser.expected(), (vec![Rule::eoi], 4));
 }
 
 #[test]
@@ -111,6 +115,8 @@ fn rep_one_empty() {
     let queue = vec![];
 
     assert!(parser.queue().iter().eq(&queue));
+
+    assert_eq!(parser.expected(), (vec![Rule::rep_one], 0));
 }
 
 #[test]
@@ -121,7 +127,7 @@ fn rep_one_long() {
     assert!(parser.end());
 
     let queue = vec![
-        Rules::rep_one(0, 4)
+        Token { rule: Rule::rep_one, pos: 0, len: 4 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -137,6 +143,8 @@ fn rep_one_wrong() {
     let queue = vec![];
 
     assert!(parser.queue().iter().eq(&queue));
+
+    assert_eq!(parser.expected(), (vec![Rule::rep_one], 0));
 }
 
 #[test]
@@ -147,7 +155,7 @@ fn opt_empty() {
     assert!(parser.end());
 
     let queue = vec![
-        Rules::opt(0, 0)
+        Token { rule: Rule::opt, pos: 0, len: 0 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -161,7 +169,7 @@ fn opt_right() {
     assert!(parser.end());
 
     let queue = vec![
-        Rules::opt(0, 1)
+        Token { rule: Rule::opt, pos: 0, len: 1 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -175,7 +183,7 @@ fn opt_wrong() {
     assert!(!parser.end());
 
     let queue = vec![
-        Rules::opt(0, 0)
+        Token { rule: Rule::opt, pos: 0, len: 0 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -189,7 +197,7 @@ fn pres_right() {
     assert!(!parser.end());
 
     let queue = vec![
-        Rules::pres(0, 0)
+        Token { rule: Rule::pres, pos: 0, len: 0 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -205,6 +213,8 @@ fn pres_wrong() {
     let queue = vec![];
 
     assert!(parser.queue().iter().eq(&queue));
+
+    assert_eq!(parser.expected(), (vec![Rule::pres], 0));
 }
 
 #[test]
@@ -215,7 +225,7 @@ fn abs_right() {
     assert!(parser.end());
 
     let queue = vec![
-        Rules::abs(0, 1)
+        Token { rule: Rule::abs, pos: 0, len: 1 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -231,6 +241,8 @@ fn abs_wrong() {
     let queue = vec![];
 
     assert!(parser.queue().iter().eq(&queue));
+
+    assert_eq!(parser.expected(), (vec![Rule::abs], 0));
 }
 
 #[test]
@@ -241,7 +253,7 @@ fn digit_right() {
     assert!(parser.end());
 
     let queue = vec![
-        Rules::digit(0, 1)
+        Token { rule: Rule::digit, pos: 0, len: 1 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -257,4 +269,6 @@ fn digit_wrong() {
     let queue = vec![];
 
     assert!(parser.queue().iter().eq(&queue));
+
+    assert_eq!(parser.expected(), (vec![Rule::digit], 0));
 }

@@ -28,7 +28,7 @@ assert!(parser.end());
 - [x] macro-generated recursive descent parser
 - [x] white-space detection
 - [x] token generation
-- [ ] automatic error reporting
+- [x] automatic error reporting
 - [ ] macro-generated Packrat parser
 - [ ] large file buffer
 - [ ] token pattern-matching

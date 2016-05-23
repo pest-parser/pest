@@ -32,10 +32,19 @@
 #[macro_export]
 macro_rules! impl_rdp {
     ( @rules $( $name:ident )* ) => {
-        #[allow(non_camel_case_types)]
+        #[allow(dead_code, non_camel_case_types)]
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+        pub enum Rule {
+            any,
+            eoi,
+            $( $name ),*
+        }
+
         #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-        pub enum Rules {
-            $( $name(usize, usize) ),*
+        pub struct Token {
+            pub rule: Rule,
+            pub pos:  usize,
+            pub len:  usize
         }
     };
 
@@ -69,8 +78,10 @@ macro_rules! impl_rdp {
         use std::collections::VecDeque;
 
         pub struct Rdp {
-            input: Box<Input>,
-            queues: Queues<Rules>
+            input:    Box<Input>,
+            queues:   Queues<Token>,
+            failures: Vec<Rule>,
+            fail_pos: usize
         }
 
         impl_rdp!(@filter [ $( $ts )* ] []);
@@ -78,8 +89,10 @@ macro_rules! impl_rdp {
         impl Rdp {
             pub fn new(input: Box<Input>) -> Rdp {
                 Rdp {
-                    input: input,
-                    queues: Queues::new()
+                    input:    input,
+                    queues:   Queues::new(),
+                    failures: vec![],
+                    fail_pos: 0
                 }
             }
 
@@ -91,7 +104,8 @@ macro_rules! impl_rdp {
         }
 
         impl Parser for Rdp {
-            type Rules = Rules;
+            type Rule = Rule;
+            type Token = Token;
 
             fn matches(&mut self, string: &str) -> bool {
                 self.input.matches(string)
@@ -138,7 +152,7 @@ macro_rules! impl_rdp {
                 self.input.set_pos(0);
             }
 
-            fn queue(&mut self) -> &mut VecDeque<Rules>{
+            fn queue(&mut self) -> &mut VecDeque<Token>{
                 if let Some(queue) = self.queues.last_mut() {
                     queue
                 } else {
@@ -152,6 +166,30 @@ macro_rules! impl_rdp {
                         break
                     }
                 }
+            }
+
+            fn track(&mut self, failed: Rule, pos: usize) {
+                if self.failures.is_empty() {
+                    self.failures.push(failed);
+
+                    self.fail_pos = pos;
+                } else {
+                    if pos == self.fail_pos {
+                        self.failures.push(failed);
+                    } else if pos > self.fail_pos {
+                        self.failures.clear();
+                        self.failures.push(failed);
+
+                        self.fail_pos = pos;
+                    }
+                }
+            }
+
+            fn expected(&mut self) -> (Vec<Rule>, usize) {
+                self.failures.dedup();
+                self.failures.sort();
+
+                (self.failures.iter().cloned().collect(), self.fail_pos)
             }
         }
     };
@@ -230,13 +268,13 @@ mod tests {
         assert!(parser.end());
 
         let queue = vec![
-            Rules::paren(2, 7),
-            Rules::paren(5, 3),
-            Rules::paren(9, 11),
-            Rules::paren(10, 6),
-            Rules::paren(12, 2),
-            Rules::paren(16, 2),
-            Rules::paren(20, 2)
+            Token { rule: Rule::paren, pos: 2, len: 7 },
+            Token { rule: Rule::paren, pos: 5, len: 3 },
+            Token { rule: Rule::paren, pos: 9, len: 11 },
+            Token { rule: Rule::paren, pos: 10, len: 6 },
+            Token { rule: Rule::paren, pos: 12, len: 2 },
+            Token { rule: Rule::paren, pos: 16, len: 2 },
+            Token { rule: Rule::paren, pos: 20, len: 2 }
         ];
 
         assert!(parser.queue().iter().eq(&queue));
@@ -250,7 +288,7 @@ mod tests {
         assert!(!parser.end());
 
         let queue = vec![
-            Rules::zero(2, 13)
+            Token { rule: Rule::zero, pos: 2, len: 13 }
         ];
 
         assert!(parser.queue().iter().eq(&queue));
@@ -264,7 +302,7 @@ mod tests {
         assert!(!parser.end());
 
         let queue = vec![
-            Rules::one(2, 13)
+            Token { rule: Rule::one, pos: 2, len: 13 }
         ];
 
         assert!(parser.queue().iter().eq(&queue));

@@ -9,7 +9,8 @@ use std::collections::VecDeque;
 
 /// A `trait` that defines a parser.
 pub trait Parser {
-    type Rules;
+    type Rule;
+    type Token;
 
     /// Matches `string`, returns whether it matched, and advances a parser with `string.len()` in
     /// case it did.
@@ -35,9 +36,15 @@ pub trait Parser {
     /// Reset a `Parser`.
     fn reset(&mut self);
 
-    /// Returns the queue of all matched `Rules`.
-    fn queue(&mut self) -> &mut VecDeque<Self::Rules>;
+    /// Returns the queue of all matched `Token`s.
+    fn queue(&mut self) -> &mut VecDeque<Self::Token>;
 
     /// Skips white-space.
     fn skip_ws(&mut self);
+
+    /// Keeps track of rule failures. It gets called when a rule fails at `pos`.
+    fn track(&mut self, failed: Self::Rule, pos: usize);
+
+    /// Retuns a `Vec` of all expected `Rule`s at the deepest position.
+    fn expected(&mut self) -> (Vec<Self::Rule>, usize);
 }

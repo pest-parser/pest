@@ -195,6 +195,10 @@ macro_rules! grammar {
         #[allow(dead_code)]
         pub fn any(&mut self) -> bool {
             if self.end() {
+                let pos = self.pos();
+
+                self.track(Rule::any, pos);
+
                 false
             } else {
                 let next = self.pos() + 1;
@@ -206,13 +210,20 @@ macro_rules! grammar {
 
         #[allow(dead_code)]
         pub fn eoi(&mut self) -> bool {
-            self.end()
+            let result = self.end();
+
+            if !result {
+                let pos = self.pos();
+
+                self.track(Rule::eoi, pos);
+            }
+
+            result
         }
     };
 
     ( $name:ident = { $( $ts:tt )* } $( $tail:tt )* ) => {
-        #[allow(unused_parens)]
-        #[allow(unused_variables)]
+        #[allow(unused_parens, unused_variables)]
         pub fn $name(&mut self) -> bool {
             let slf = self;
             grammar!(@skip $name slf);
@@ -225,7 +236,15 @@ macro_rules! grammar {
             if result {
                 let new_pos = slf.pos();
 
-                slf.queue().insert(queue_pos, Rules::$name(pos, new_pos - pos));
+                let token = Token {
+                    rule: Rule::$name,
+                    pos:  pos,
+                    len:  new_pos - pos
+                };
+
+                slf.queue().insert(queue_pos, token);
+            } else {
+                slf.track(Rule::$name, pos);
             }
 
             result
@@ -235,8 +254,7 @@ macro_rules! grammar {
     };
 
     ( $name:ident = _{ $( $ts:tt )* } $( $tail:tt )* ) => {
-        #[allow(unused_parens)]
-        #[allow(unused_variables)]
+        #[allow(unused_parens, unused_variables)]
         pub fn $name(&mut self) -> bool {
             let slf = self;
             grammar!(@skip $name slf);
