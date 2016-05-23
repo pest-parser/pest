@@ -64,7 +64,8 @@ impl Input for StringInput {
         let to = self.pos + string.len();
 
         if to <= self.string.len() {
-            let result = &self.string[self.pos..to] == string;
+            let slice = unsafe { self.string.slice_unchecked(self.pos, to) };
+            let result = slice == string;
 
             if result {
                 self.pos = to;
