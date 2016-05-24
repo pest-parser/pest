@@ -16,6 +16,7 @@
 /// # #[macro_use] extern crate pest;
 /// # use pest::Parser;
 /// # use pest::Queues;
+/// # use pest::Token;
 /// # use pest::Input;
 /// # use pest::StringInput;
 /// # fn main() {
@@ -237,9 +238,9 @@ macro_rules! grammar {
                 let new_pos = slf.pos();
 
                 let token = Token {
-                    rule: Rule::$name,
-                    pos:  pos,
-                    len:  new_pos - pos
+                    rule:  Rule::$name,
+                    start: pos,
+                    end:   new_pos
                 };
 
                 slf.queue().insert(queue_pos, token);

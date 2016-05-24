@@ -9,5 +9,7 @@
 mod rdp;
 
 mod queues;
+mod token;
 
 pub use self::queues::Queues;
+pub use self::token::Token;

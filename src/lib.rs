@@ -16,6 +16,7 @@
 //! # #[macro_use] extern crate pest;
 //! # use pest::Parser;
 //! # use pest::Queues;
+//! # use pest::Token;
 //! # use pest::Input;
 //! # use pest::StringInput;
 //! # fn main() {
@@ -45,3 +46,4 @@ pub use input::Input;
 pub use inputs::StringInput;
 pub use parser::Parser;
 pub use parsers::Queues;
+pub use parsers::Token;

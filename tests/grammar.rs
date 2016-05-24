@@ -10,6 +10,7 @@ extern crate pest;
 
 use pest::Parser;
 use pest::Queues;
+use pest::Token;
 use pest::Input;
 use pest::StringInput;
 
@@ -34,13 +35,13 @@ fn basic() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::paren, pos: 0, len: 4 },
-        Token { rule: Rule::paren, pos: 1, len: 2 },
-        Token { rule: Rule::paren, pos: 4, len: 8 },
-        Token { rule: Rule::paren, pos: 5, len: 4 },
-        Token { rule: Rule::paren, pos: 6, len: 2 },
-        Token { rule: Rule::paren, pos: 9, len: 2 },
-        Token { rule: Rule::paren, pos: 12, len: 2 }
+        Token { rule: Rule::paren, start: 0, end: 4 },
+        Token { rule: Rule::paren, start: 1, end: 3 },
+        Token { rule: Rule::paren, start: 4, end: 12 },
+        Token { rule: Rule::paren, start: 5, end: 9 },
+        Token { rule: Rule::paren, start: 6, end: 8 },
+        Token { rule: Rule::paren, start: 9, end: 11 },
+        Token { rule: Rule::paren, start: 12, end: 14 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -54,12 +55,12 @@ fn fail() {
     assert!(!parser.end());
 
     let queue = vec![
-        Token { rule: Rule::paren, pos: 0, len: 4 },
-        Token { rule: Rule::paren, pos: 1, len: 2 },
-        Token { rule: Rule::paren, pos: 4, len: 8 },
-        Token { rule: Rule::paren, pos: 5, len: 4 },
-        Token { rule: Rule::paren, pos: 6, len: 2 },
-        Token { rule: Rule::paren, pos: 9, len: 2 }
+        Token { rule: Rule::paren, start: 0, end: 4 },
+        Token { rule: Rule::paren, start: 1, end: 3 },
+        Token { rule: Rule::paren, start: 4, end: 12 },
+        Token { rule: Rule::paren, start: 5, end: 9 },
+        Token { rule: Rule::paren, start: 6, end: 8 },
+        Token { rule: Rule::paren, start: 9, end: 11 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -74,7 +75,7 @@ fn rep_zero_empty() {
     assert!(parser.rep_zero());
 
     let queue = vec![
-        Token { rule: Rule::rep_zero, pos: 0, len: 0 }
+        Token { rule: Rule::rep_zero, start: 0, end: 0 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -87,7 +88,7 @@ fn rep_zero_long() {
     assert!(parser.rep_zero());
 
     let queue = vec![
-        Token { rule: Rule::rep_zero, pos: 0, len: 4 }
+        Token { rule: Rule::rep_zero, start: 0, end: 4 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -127,7 +128,7 @@ fn rep_one_long() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::rep_one, pos: 0, len: 4 }
+        Token { rule: Rule::rep_one, start: 0, end: 4 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -155,7 +156,7 @@ fn opt_empty() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::opt, pos: 0, len: 0 }
+        Token { rule: Rule::opt, start: 0, end: 0 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -169,7 +170,7 @@ fn opt_right() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::opt, pos: 0, len: 1 }
+        Token { rule: Rule::opt, start: 0, end: 1 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -183,7 +184,7 @@ fn opt_wrong() {
     assert!(!parser.end());
 
     let queue = vec![
-        Token { rule: Rule::opt, pos: 0, len: 0 }
+        Token { rule: Rule::opt, start: 0, end: 0 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -197,7 +198,7 @@ fn pres_right() {
     assert!(!parser.end());
 
     let queue = vec![
-        Token { rule: Rule::pres, pos: 0, len: 0 }
+        Token { rule: Rule::pres, start: 0, end: 0 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -225,7 +226,7 @@ fn abs_right() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::abs, pos: 0, len: 1 }
+        Token { rule: Rule::abs, start: 0, end: 1 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
@@ -253,7 +254,7 @@ fn digit_right() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::digit, pos: 0, len: 1 }
+        Token { rule: Rule::digit, start: 0, end: 1 }
     ];
 
     assert!(parser.queue().iter().eq(&queue));
