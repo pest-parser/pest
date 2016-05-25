@@ -233,6 +233,14 @@ macro_rules! grammar {
     ( @skip ws $_slf:ident ) => ();
     ( @skip $_name:ident $slf:ident ) => ($slf.skip_ws());
 
+    // ws is always atomic
+    ( @atomic ws $_atomic:tt $slf:ident $rules:tt ) => {
+        grammar!(@conv true $slf $rules [] [])
+    };
+    ( @atomic $_name:ident $atomic:tt $slf:ident $rules:tt ) => {
+        grammar!(@conv $atomic $slf $rules [] [])
+    };
+
     () => {
         #[allow(dead_code)]
         pub fn any(&mut self) -> bool {
@@ -273,7 +281,7 @@ macro_rules! grammar {
             let pos = slf.pos();
             let queue_pos = slf.queue().len();
 
-            let result = grammar!(@conv false slf [ $( $ts )* ] [] []);
+            let result = grammar!(@atomic $name false slf [ $( $ts )* ]);
 
             if result {
                 let new_pos = slf.pos();
@@ -334,7 +342,7 @@ macro_rules! grammar {
 
             let pos = slf.pos();
 
-            let result = grammar!(@conv false slf [ $( $ts )* ] [] []);
+            let result = grammar!(@atomic $name false slf [ $( $ts )* ]);
 
             result
         }
