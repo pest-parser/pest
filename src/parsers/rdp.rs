@@ -56,22 +56,22 @@ macro_rules! impl_rdp {
         impl_rdp!(@filter [ $( $tail )* ] [ $( $rules )* ]);
     };
 
-    // implement empty ws rule
-    ( @ws ) => {
+    // implement empty whitespace rule
+    ( @whitespace ) => {
         #[allow(dead_code)]
-        pub fn ws(&mut self) -> bool {
+        pub fn whitespace(&mut self) -> bool {
             false
         }
     };
-    ( @ws ws = $( $_ts:tt )* ) => ();
-    ( @ws $_name:ident = { $( $_ts:tt )* } $( $tail:tt )* ) => {
-        impl_rdp!(@ws $( $tail )*);
+    ( @whitespace whitespace = $( $_ts:tt )* ) => ();
+    ( @whitespace $_name:ident = { $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@whitespace $( $tail )*);
     };
-    ( @ws $_name:ident = @{ $( $_ts:tt )* } $( $tail:tt )* ) => {
-        impl_rdp!(@ws $( $tail )*);
+    ( @whitespace $_name:ident = @{ $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@whitespace $( $tail )*);
     };
-    ( @ws $_name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ) => {
-        impl_rdp!(@ws $( $tail )*);
+    ( @whitespace $_name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@whitespace $( $tail )*);
     };
 
     ( grammar!{ $( $ts:tt )* } ) => {
@@ -96,7 +96,7 @@ macro_rules! impl_rdp {
                 }
             }
 
-            impl_rdp!(@ws $( $ts )*);
+            impl_rdp!(@whitespace $( $ts )*);
 
             grammar! {
                 $( $ts )*
@@ -165,7 +165,7 @@ macro_rules! impl_rdp {
 
             fn skip_ws(&mut self) {
                 loop {
-                    if !self.ws() {
+                    if !self.whitespace() {
                         break
                     }
                 }
@@ -212,7 +212,7 @@ mod tests {
             paren = { ["("] ~ exp ~ [")"] }
             zero = { ["a"]* }
             one = { ["a"]+ }
-            ws = _{ [" "] }
+            whitespace = _{ [" "] }
         }
     }
 
@@ -265,7 +265,7 @@ mod tests {
     }
 
     #[test]
-    fn ws_seq() {
+    fn whitespace_seq() {
         let mut parser = Rdp::new(Box::new(StringInput::new("  (  ( ))(( () )() )() ")));
 
         assert!(parser.exp());
@@ -285,7 +285,7 @@ mod tests {
     }
 
     #[test]
-    fn ws_zero() {
+    fn whitespace_zero() {
         let mut parser = Rdp::new(Box::new(StringInput::new("  a a aa aaaa a  ")));
 
         assert!(parser.zero());
@@ -299,7 +299,7 @@ mod tests {
     }
 
     #[test]
-    fn ws_one() {
+    fn whitespace_one() {
         let mut parser = Rdp::new(Box::new(StringInput::new("  a a aa aaaa a  ")));
 
         assert!(parser.one());

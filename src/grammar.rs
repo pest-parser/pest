@@ -8,7 +8,7 @@
 /// A `macro` that defines each rule as a method on a `Parser`. Rules starting with an uderscore
 /// will not be placed into the queue.
 ///
-/// `ws` is a special rules used exclusively for white-space.
+/// `whitespace` is a special rules used exclusively for white-space.
 ///
 /// # Examples
 ///
@@ -229,12 +229,12 @@ macro_rules! grammar {
         grammar!(@process $atomic $slf [ $head $( $optail )* ] [ $( $tail )* ])
     };
 
-    // skip only if not ws
-    ( @skip ws $_slf:ident ) => ();
+    // skip only if not whitespace
+    ( @skip whitespace $_slf:ident ) => ();
     ( @skip $_name:ident $slf:ident ) => ($slf.skip_ws());
 
-    // ws is always atomic
-    ( @atomic ws $_atomic:tt $slf:ident $rules:tt ) => {
+    // whitespace is always atomic
+    ( @atomic whitespace $_atomic:tt $slf:ident $rules:tt ) => {
         grammar!(@conv true $slf $rules [] [])
     };
     ( @atomic $_name:ident $atomic:tt $slf:ident $rules:tt ) => {
