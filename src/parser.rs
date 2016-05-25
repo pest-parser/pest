@@ -45,6 +45,12 @@ pub trait Parser {
     /// Skips comments.
     fn skip_com(&mut self);
 
+    /// Returns whether a `Parser` is currently inside an atomic rule.
+    fn is_atomic(&self) -> bool;
+
+    /// Sets a `Parser` to atomic rule mode, barring comment & white-space skipping.
+    fn set_atomic(&mut self, value: bool);
+
     /// Keeps track of rule failures. It gets called when a rule fails at `pos`.
     fn track(&mut self, failed: Self::Rule, pos: usize);
 

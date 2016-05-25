@@ -100,6 +100,7 @@ macro_rules! impl_rdp {
             queues:   Queues<Token<Rule>>,
             failures: Vec<Rule>,
             fail_pos: usize,
+            atomic:   bool,
             comment:  bool
         }
 
@@ -112,6 +113,7 @@ macro_rules! impl_rdp {
                     queues:   Queues::new(),
                     failures: vec![],
                     fail_pos: 0,
+                    atomic:   false,
                     comment:  false
                 }
             }
@@ -185,6 +187,10 @@ macro_rules! impl_rdp {
             }
 
             fn skip_ws(&mut self) {
+                if self.atomic {
+                    return
+                }
+
                 loop {
                     if !self.whitespace() {
                         break
@@ -193,6 +199,10 @@ macro_rules! impl_rdp {
             }
 
             fn skip_com(&mut self) {
+                if self.atomic {
+                    return
+                }
+
                 if !self.comment {
                     self.comment = true;
 
@@ -204,6 +214,14 @@ macro_rules! impl_rdp {
 
                     self.comment = false;
                 }
+            }
+
+            fn is_atomic(&self) -> bool {
+                self.atomic
+            }
+
+            fn set_atomic(&mut self, value: bool) {
+                self.atomic = value;
             }
 
             fn track(&mut self, failed: Rule, pos: usize) {

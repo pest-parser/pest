@@ -320,7 +320,17 @@ macro_rules! grammar {
             let pos = slf.pos();
             let queue_pos = slf.queue().len();
 
+            let toggled = slf.is_atomic();
+
+            if !toggled {
+                slf.set_atomic(true);
+            }
+
             let result = grammar!(@conv true slf [ $( $ts )* ] [] []);
+
+            if !toggled {
+                slf.set_atomic(false);
+            }
 
             if result {
                 let new_pos = slf.pos();

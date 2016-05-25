@@ -28,13 +28,13 @@ impl_rdp! {
         value = { string | number | object | array | ["true"] | ["false"] | ["null"] }
 
         string = @{ ["\""] ~ (escape | !(["\""] | ["\\"]) ~ any)* ~ ["\""] }
-        escape = @{ ["\\"] ~ (["\""] | ["\\"] | ["/"] | ["b"] | ["f"] | ["n"] | ["r"] | ["t"] | unicode) }
-        unicode = @{ ["u"] ~ hex ~ hex ~ hex ~ hex }
+        escape = { ["\\"] ~ (["\""] | ["\\"] | ["/"] | ["b"] | ["f"] | ["n"] | ["r"] | ["t"] | unicode) }
+        unicode = { ["u"] ~ hex ~ hex ~ hex ~ hex }
         hex = { ['0'..'9'] | ['a'..'f'] | ['A'..'F'] }
 
         number = @{ ["-"]? ~ int ~ ["."] ~ ['0'..'9']+ ~ exp? | ["-"]? ~ int ~ exp | ["-"]? ~ int }
-        int = @{ ["0"] | ['1'..'9'] ~ ['0'..'9']* }
-        exp = @{ (["E"] | ["e"]) ~ (["+"] | ["-"])? ~ int }
+        int = { ["0"] | ['1'..'9'] ~ ['0'..'9']* }
+        exp = { (["E"] | ["e"]) ~ (["+"] | ["-"])? ~ int }
 
         whitespace = _{ [" "] | ["\t"] | ["\r"] | ["\n"] }
     }
@@ -286,7 +286,7 @@ fn fail_number_space() {
 
     assert!(!parser.json());
 
-    assert_eq!(parser.expected(), (vec![Rule::eoi, Rule::exp], 2));
+    assert_eq!(parser.expected(), (vec![Rule::eoi], 2));
 }
 
 #[test]
