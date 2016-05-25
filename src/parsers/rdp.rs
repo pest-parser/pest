@@ -42,11 +42,14 @@ macro_rules! impl_rdp {
         }
     };
 
-    // filter out hidden rules
+    // filter out quiet rules
     ( @filter [  ] [ $( $rules:tt )* ] ) => {
         impl_rdp!(@rules $( $rules )*);
     };
     ( @filter [ $name:ident = { $( $_ts:tt )* } $( $tail:tt )* ] [ $( $rules:tt )* ] ) => {
+        impl_rdp!(@filter [ $( $tail )* ] [ $name $( $rules )* ]);
+    };
+    ( @filter [ $name:ident = @{ $( $_ts:tt )* } $( $tail:tt )* ] [ $( $rules:tt )* ] ) => {
         impl_rdp!(@filter [ $( $tail )* ] [ $name $( $rules )* ]);
     };
     ( @filter [ $name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ] [ $( $rules:tt )* ] ) => {
@@ -62,6 +65,9 @@ macro_rules! impl_rdp {
     };
     ( @ws ws = $( $_ts:tt )* ) => ();
     ( @ws $_name:ident = { $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@ws $( $tail )*);
+    };
+    ( @ws $_name:ident = @{ $( $_ts:tt )* } $( $tail:tt )* ) => {
         impl_rdp!(@ws $( $tail )*);
     };
     ( @ws $_name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ) => {

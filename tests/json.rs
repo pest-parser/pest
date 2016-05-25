@@ -27,14 +27,14 @@ impl_rdp! {
 
         value = { string | number | object | array | ["true"] | ["false"] | ["null"] }
 
-        string = { ["\""] ~ (escape | !(["\""] | ["\\"]) ~ any)* ~ ["\""] }
-        escape = { ["\\"] ~ (["\""] | ["\\"] | ["/"] | ["b"] | ["f"] | ["n"] | ["r"] | ["t"] | unicode) }
-        unicode = { ["u"] ~ hex ~ hex ~ hex ~ hex }
+        string = @{ ["\""] ~ (escape | !(["\""] | ["\\"]) ~ any)* ~ ["\""] }
+        escape = @{ ["\\"] ~ (["\""] | ["\\"] | ["/"] | ["b"] | ["f"] | ["n"] | ["r"] | ["t"] | unicode) }
+        unicode = @{ ["u"] ~ hex ~ hex ~ hex ~ hex }
         hex = { ['0'..'9'] | ['a'..'f'] | ['A'..'F'] }
 
-        number = { ["-"]? ~ int ~ ["."] ~ ['0'..'9']+ ~ exp? | ["-"]? ~ int ~ exp | ["-"]? ~ int }
-        int = { ["0"] | ['1'..'9'] ~ ['0'..'9']* }
-        exp = { (["E"] | ["e"]) ~ (["+"] | ["-"])? ~ int }
+        number = @{ ["-"]? ~ int ~ ["."] ~ ['0'..'9']+ ~ exp? | ["-"]? ~ int ~ exp | ["-"]? ~ int }
+        int = @{ ["0"] | ['1'..'9'] ~ ['0'..'9']* }
+        exp = @{ (["E"] | ["e"]) ~ (["+"] | ["-"])? ~ int }
 
         ws = _{ [" "] | ["\t"] | ["\r"] | ["\n"] }
     }
@@ -278,6 +278,15 @@ fn fail_number() {
     assert!(!parser.json());
 
     assert_eq!(parser.expected(), (vec![Rule::eoi, Rule::exp], 1));
+}
+
+#[test]
+fn fail_number_space() {
+    let mut parser = Rdp::new(Box::new(StringInput::new("3 3")));
+
+    assert!(!parser.json());
+
+    assert_eq!(parser.expected(), (vec![Rule::eoi, Rule::exp], 2));
 }
 
 #[test]

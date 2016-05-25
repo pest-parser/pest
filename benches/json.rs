@@ -35,12 +35,12 @@ impl_rdp! {
 
         value = { string | number | object | array | ["true"] | ["false"] | ["null"] }
 
-        string = { ["\""] ~ (escape | !(["\""] | ["\\"]) ~ any)* ~ ["\""] }
-        escape = { ["\\"] ~ (["\""] | ["\\"] | ["/"] | ["b"] | ["f"] | ["n"] | ["r"] | ["t"] | unicode) }
-        unicode = { ["u"] ~ hex ~ hex ~ hex ~ hex }
+        string = @{ ["\""] ~ (escape | !(["\""] | ["\\"]) ~ any)* ~ ["\""] }
+        escape = @{ ["\\"] ~ (["\""] | ["\\"] | ["/"] | ["b"] | ["f"] | ["n"] | ["r"] | ["t"] | unicode) }
+        unicode = @{ ["u"] ~ hex ~ hex ~ hex ~ hex }
         hex = { ['0'..'9'] | ['a'..'f'] | ['A'..'F'] }
 
-        number = { ["-"]? ~ int ~ ["."] ~ ['0'..'9']+ ~ exp? | ["-"]? ~ int ~ exp | ["-"]? ~ int }
+        number = @{ ["-"]? ~ int ~ ["."] ~ ['0'..'9']+ ~ exp? | ["-"]? ~ int ~ exp | ["-"]? ~ int }
         int = { ["0"] | ['1'..'9'] ~ ['0'..'9']* }
         exp = { (["E"] | ["e"]) ~ (["+"] | ["-"])? ~ int }
 
