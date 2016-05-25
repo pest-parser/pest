@@ -57,21 +57,39 @@ macro_rules! impl_rdp {
     };
 
     // implement empty whitespace rule
-    ( @whitespace ) => {
+    ( @ws ) => {
         #[allow(dead_code)]
         pub fn whitespace(&mut self) -> bool {
             false
         }
     };
-    ( @whitespace whitespace = $( $_ts:tt )* ) => ();
-    ( @whitespace $_name:ident = { $( $_ts:tt )* } $( $tail:tt )* ) => {
-        impl_rdp!(@whitespace $( $tail )*);
+    ( @ws whitespace = $( $_ts:tt )* ) => ();
+    ( @ws $_name:ident = { $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@ws $( $tail )*);
     };
-    ( @whitespace $_name:ident = @{ $( $_ts:tt )* } $( $tail:tt )* ) => {
-        impl_rdp!(@whitespace $( $tail )*);
+    ( @ws $_name:ident = @{ $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@ws $( $tail )*);
     };
-    ( @whitespace $_name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ) => {
-        impl_rdp!(@whitespace $( $tail )*);
+    ( @ws $_name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@ws $( $tail )*);
+    };
+
+    // implement empty comment rule
+    ( @com ) => {
+        #[allow(dead_code)]
+        pub fn comment(&mut self) -> bool {
+            false
+        }
+    };
+    ( @com comment = $( $_ts:tt )* ) => ();
+    ( @com $_name:ident = { $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@com $( $tail )*);
+    };
+    ( @com $_name:ident = @{ $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@com $( $tail )*);
+    };
+    ( @com $_name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@com $( $tail )*);
     };
 
     ( grammar!{ $( $ts:tt )* } ) => {
@@ -81,7 +99,8 @@ macro_rules! impl_rdp {
             input:    Box<Input>,
             queues:   Queues<Token<Rule>>,
             failures: Vec<Rule>,
-            fail_pos: usize
+            fail_pos: usize,
+            comment:  bool
         }
 
         impl_rdp!(@filter [ $( $ts )* ] []);
@@ -92,11 +111,13 @@ macro_rules! impl_rdp {
                     input:    input,
                     queues:   Queues::new(),
                     failures: vec![],
-                    fail_pos: 0
+                    fail_pos: 0,
+                    comment:  false
                 }
             }
 
-            impl_rdp!(@whitespace $( $ts )*);
+            impl_rdp!(@ws $( $ts )*);
+            impl_rdp!(@com $( $ts )*);
 
             grammar! {
                 $( $ts )*
@@ -171,6 +192,20 @@ macro_rules! impl_rdp {
                 }
             }
 
+            fn skip_com(&mut self) {
+                if !self.comment {
+                    self.comment = true;
+
+                    loop {
+                        if !self.comment() {
+                            break
+                        }
+                    }
+
+                    self.comment = false;
+                }
+            }
+
             fn track(&mut self, failed: Rule, pos: usize) {
                 if self.failures.is_empty() {
                     self.failures.push(failed);
@@ -212,6 +247,7 @@ mod tests {
             paren = { ["("] ~ exp ~ [")"] }
             zero = { ["a"]* }
             one = { ["a"]+ }
+            comment = _{ ["//"] ~ (!["\n"] ~ any)* ~ ["\n"] }
             whitespace = _{ [" "] }
         }
     }
@@ -307,6 +343,36 @@ mod tests {
 
         let queue = vec![
             Token { rule: Rule::one, start: 2, end: 15 }
+        ];
+
+        assert!(parser.queue().iter().eq(&queue));
+    }
+
+    #[test]
+    fn comment() {
+        let mut parser = Rdp::new(Box::new(StringInput::new("// hi\n(())")));
+
+        assert!(parser.exp());
+        assert!(parser.end());
+
+        let queue = vec![
+            Token { rule: Rule::paren, start: 6, end: 10 },
+            Token { rule: Rule::paren, start: 7, end: 9 }
+        ];
+
+        assert!(parser.queue().iter().eq(&queue));
+    }
+
+    #[test]
+    fn comment_whitespace() {
+        let mut parser = Rdp::new(Box::new(StringInput::new("   // hi\n  (())")));
+
+        assert!(parser.exp());
+        assert!(parser.end());
+
+        let queue = vec![
+            Token { rule: Rule::paren, start: 11, end: 15 },
+            Token { rule: Rule::paren, start: 12, end: 14 }
         ];
 
         assert!(parser.queue().iter().eq(&queue));

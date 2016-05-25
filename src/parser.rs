@@ -42,6 +42,9 @@ pub trait Parser {
     /// Skips white-space.
     fn skip_ws(&mut self);
 
+    /// Skips comments.
+    fn skip_com(&mut self);
+
     /// Keeps track of rule failures. It gets called when a rule fails at `pos`.
     fn track(&mut self, failed: Self::Rule, pos: usize);
 

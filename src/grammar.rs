@@ -230,8 +230,14 @@ macro_rules! grammar {
     };
 
     // skip only if not whitespace
-    ( @skip whitespace $_slf:ident ) => ();
-    ( @skip $_name:ident $slf:ident ) => ($slf.skip_ws());
+    ( @skip whitespace $_slf:ident )  => ();
+    ( @skip comment $slf:ident )      => ($slf.skip_ws());
+    ( @skip $_name:ident $slf:ident ) => {
+        {
+            $slf.skip_com();
+            $slf.skip_ws();
+        }
+    };
 
     // whitespace is always atomic
     ( @atomic whitespace $_atomic:tt $slf:ident $rules:tt ) => {
@@ -272,6 +278,7 @@ macro_rules! grammar {
         }
     };
 
+    // normal rule
     ( $name:ident = { $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens, unused_variables)]
         pub fn $name(&mut self) -> bool {
@@ -303,6 +310,7 @@ macro_rules! grammar {
         grammar!($( $tail )*);
     };
 
+    // atomic rule
     ( $name:ident = @{ $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens, unused_variables)]
         pub fn $name(&mut self) -> bool {
@@ -334,6 +342,7 @@ macro_rules! grammar {
         grammar!($( $tail )*);
     };
 
+    // quiet rule
     ( $name:ident = _{ $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens, unused_variables)]
         pub fn $name(&mut self) -> bool {
