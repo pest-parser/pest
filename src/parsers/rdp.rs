@@ -169,10 +169,10 @@ macro_rules! impl_rdp {
             }
 
             fn prec_climb<F, G>(&mut self, pos: usize, left: usize, prec: u8,
-                                last_op: Option<(Rule, u8, bool)>, primary: &mut F,
-                                climb: &mut G) -> (Option<(Rule, u8, bool)>, Option<usize>)
+                                last_op: Option<(Option<Rule>, u8, bool)>, primary: &mut F,
+                                climb: &mut G) -> (Option<(Option<Rule>, u8, bool)>, Option<usize>)
                 where F: FnMut(&mut Self) -> bool,
-                      G: FnMut(&mut Self) -> Option<(Rule, u8, bool)> {
+                      G: FnMut(&mut Self) -> Option<(Option<Rule>, u8, bool)> {
 
                 let mut op = if last_op.is_some() {
                     last_op
@@ -215,13 +215,15 @@ macro_rules! impl_rdp {
                             last_right = Some(right);
                         }
 
-                        let token = Token {
-                            rule:  rule,
-                            start: left,
-                            end:   right
-                        };
+                        if let Some(rule) = rule {
+                            let token = Token {
+                                rule:  rule,
+                                start: left,
+                                end:   right
+                            };
 
-                        self.queue().insert(pos, token);
+                            self.queue().insert(pos, token);
+                        }
                     } else {
                         return (op, last_right)
                     }

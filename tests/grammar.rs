@@ -31,7 +31,7 @@ impl_rdp! {
 
         expression = {
             { number }
-            add = { plus }
+            add = _{ plus }
             mul = { times }
             pow = {< power }
         }
@@ -296,9 +296,6 @@ fn expression() {
 
     let queue = vec![
         Token { rule: Rule::expression, start: 0, end: 13 },
-        Token { rule: Rule::add, start: 0, end: 13 },
-        Token { rule: Rule::add, start: 0, end: 11 },
-        Token { rule: Rule::add, start: 0, end: 3 },
         Token { rule: Rule::number, start: 0, end: 1 },
         Token { rule: Rule::plus, start: 1, end: 2 },
         Token { rule: Rule::number, start: 2, end: 3 },
@@ -329,9 +326,6 @@ fn expression_spaced() {
 
     let queue = vec![
         Token { rule: Rule::expression, start: 0, end: 21 },
-        Token { rule: Rule::add, start: 0, end: 21 },
-        Token { rule: Rule::add, start: 0, end: 17 },
-        Token { rule: Rule::add, start: 0, end: 5 },
         Token { rule: Rule::number, start: 0, end: 1 },
         Token { rule: Rule::plus, start: 2, end: 3 },
         Token { rule: Rule::number, start: 4, end: 5 },

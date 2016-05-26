@@ -45,29 +45,42 @@ macro_rules! grammar {
     };
 
     // handle precedence climbing
-    ( @conv $atomic:tt $slf:ident [ { $( $primary:tt )* } $name:ident = { $( $head:tt )* }
-                                    $( $names:ident = { $( $tail:tt )* } )* ] [] [] ) => {
+    ( @conv_prec ($_prec:expr) $_atomic:tt $_slf:ident [] [] [] ) => (None);
+    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident [ $name:ident = { $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
+        {
+            if grammar!(@conv $atomic $slf [ $( $head )* ] [] []) {
+                return Some((Some(Rule::$name), $prec, grammar!(@assoc $( $head )*)))
+            } else {
+                grammar!(@conv_prec ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
+            }
+        }
+    };
+    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident [ $name:ident = @{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
+        {
+            if grammar!(@conv true $slf [ $( $head )* ] [] []) {
+                return Some((Some(Rule::$name), $prec, grammar!(@assoc $( $head )*)))
+            } else {
+                grammar!(@conv_prec ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
+            }
+        }
+    };
+    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident [ $name:ident = _{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
+        {
+            if grammar!(@conv $atomic $slf [ $( $head )* ] [] []) {
+                return Some((None, $prec, grammar!(@assoc $( $head )*)))
+            } else {
+                grammar!(@conv_prec ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
+            }
+        }
+    };
+    ( @conv $atomic:tt $slf:ident [ { $( $primary:tt )* } $( $ts:tt )* ] [] [] ) => {
 
           {
               let mut primary = |slf: &mut Self| {
                   grammar!(@conv $atomic slf [ $( $primary )* ] [] [])
               };
               let mut climb = |slf: &mut Self| {
-                  let mut prec = 0u8;
-
-                  if grammar!(@conv $atomic slf [ $( $head )* ] [] []) {
-                      return Some((Rule::$name, prec, grammar!(@assoc $( $head )*)))
-                  }
-
-                  $(
-                      prec += 1;
-
-                      if grammar!(@conv $atomic slf [ $( $tail )* ] [] []) {
-                          return Some((Rule::$names, prec, grammar!(@assoc $( $tail )*)))
-                      }
-                  )*
-
-                  None
+                  grammar!(@conv_prec (0u8) $atomic slf [ $( $ts )* ] [] [])
               };
 
               let mut pos = $slf.pos();
