@@ -1,4 +1,8 @@
 # pest. Smart PEGs in Rust
+[![Build Status](https://travis-ci.org/dragostis/pest.svg?branch=master)]
+(https://travis-ci.org/dragostis/pest)
+[![Cargo Crate](http://meritbadge.herokuapp.com/pest)]
+(https://crates.io/crates/pest)
 
 pest is a parser generator that works with
 [PEGs](https://en.wikipedia.org/wiki/Parsing_expression_grammar).
