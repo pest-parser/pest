@@ -45,37 +45,43 @@ macro_rules! grammar {
     };
 
     // handle precedence climbing
-    ( @conv_prec ($_prec:expr) $_atomic:tt $_slf:ident [] [] [] ) => (None);
+    ( @conv_prec $pos:ident ($_prec:expr) $_atomic:tt $slf:ident [] [] [] ) => {
+        {
+            $slf.set_pos($pos);
+
+            None
+        }
+    };
     // normal
-    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident
+    ( @conv_prec $pos:ident ($prec:expr) $atomic:tt $slf:ident
       [ $name:ident = { $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
         {
             if grammar!(@conv $atomic $slf [ $( $head )* ] [] []) {
                 return Some((Some(Rule::$name), $prec, grammar!(@assoc $( $head )*)))
             } else {
-                grammar!(@conv_prec ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
+                grammar!(@conv_prec $pos ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
             }
         }
     };
     // atomic
-    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident
+    ( @conv_prec $pos:ident ($prec:expr) $atomic:tt $slf:ident
       [ $name:ident = @{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
         {
             if grammar!(@conv true $slf [ $( $head )* ] [] []) {
                 return Some((Some(Rule::$name), $prec, grammar!(@assoc $( $head )*)))
             } else {
-                grammar!(@conv_prec ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
+                grammar!(@conv_prec $pos ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
             }
         }
     };
     // quiet
-    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident
+    ( @conv_prec $pos:ident ($prec:expr) $atomic:tt $slf:ident
       [ $name:ident = _{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
         {
             if grammar!(@conv $atomic $slf [ $( $head )* ] [] []) {
                 return Some((None, $prec, grammar!(@assoc $( $head )*)))
             } else {
-                grammar!(@conv_prec ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
+                grammar!(@conv_prec $pos ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
             }
         }
     };
@@ -83,10 +89,20 @@ macro_rules! grammar {
 
           {
               let mut primary = |slf: &mut Self| {
-                  grammar!(@conv $atomic slf [ $( $primary )* ] [] [])
+                  let pos = slf.pos();
+
+                  let result = grammar!(@conv $atomic slf [ $( $primary )* ] [] []);
+
+                  if !result {
+                      slf.set_pos(pos);
+                  }
+
+                  result
               };
               let mut climb = |slf: &mut Self| {
-                  grammar!(@conv_prec (0u8) $atomic slf [ $( $ts )* ] [] [])
+                  let pos = slf.pos();
+
+                  grammar!(@conv_prec pos (0u8) $atomic slf [ $( $ts )* ] [] [])
               };
 
               let mut pos = $slf.pos();

@@ -54,6 +54,10 @@ macro_rules! impl_rdp {
       [ $( $rules:tt )* ] ) => {
         impl_rdp!(@filter [ $( $tail )* $( $ts )* ] [ $name $( $rules )* ]);
     };
+    ( @filter [ $name:ident = _{ { $( $_primary:tt )* } $( $ts:tt )* } $( $tail:tt )* ]
+      [ $( $rules:tt )* ] ) => {
+        impl_rdp!(@filter [ $( $tail )* $( $ts )* ] [ $name $( $rules )* ]);
+    };
     ( @filter [ $name:ident = { $( $_ts:tt )* } $( $tail:tt )* ] [ $( $rules:tt )* ] ) => {
         impl_rdp!(@filter [ $( $tail )* ] [ $name $( $rules )* ]);
     };

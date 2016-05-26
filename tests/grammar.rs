@@ -346,3 +346,18 @@ fn expression_spaced() {
 
     assert!(parser.queue().iter().eq(&queue));
 }
+
+#[test]
+fn expression_space_after() {
+    let mut parser = Rdp::new(Box::new(StringInput::new("1 ")));
+
+    assert!(parser.expression());
+    assert!(!parser.end());
+
+    let queue = vec![
+        Token { rule: Rule::expression, start: 0, end: 1 },
+        Token { rule: Rule::number, start: 0, end: 1 }
+    ];
+
+    assert!(parser.queue().iter().eq(&queue));
+}
