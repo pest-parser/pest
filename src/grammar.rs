@@ -35,6 +35,58 @@
 /// ```
 #[macro_export]
 macro_rules! grammar {
+    // handle associativity
+    ( @assoc < $( $ts:tt )* ) => (true);
+    ( @assoc $( $ts:tt )* )   => (false);
+
+    // handle right associativity rule
+    ( @conv $atomic:tt $slf:ident [ < $( $ts:tt )* ] [] [] ) => {
+        grammar!(@conv $atomic $slf [ $( $ts )* ] [] [])
+    };
+
+    // handle precedence climbing
+    ( @conv $atomic:tt $slf:ident [ { $( $primary:tt )* } $name:ident = { $( $head:tt )* }
+                                    $( $names:ident = { $( $tail:tt )* } )* ] [] [] ) => {
+
+          {
+              let mut primary = |slf: &mut Self| {
+                  grammar!(@conv $atomic slf [ $( $primary )* ] [] [])
+              };
+              let mut climb = |slf: &mut Self| {
+                  let mut prec = 0u8;
+
+                  if grammar!(@conv $atomic slf [ $( $head )* ] [] []) {
+                      return Some((Rule::$name, prec, grammar!(@assoc $( $head )*)))
+                  }
+
+                  $(
+                      prec += 1;
+
+                      if grammar!(@conv $atomic slf [ $( $tail )* ] [] []) {
+                          return Some((Rule::$names, prec, grammar!(@assoc $( $tail )*)))
+                      }
+                  )*
+
+                  None
+              };
+
+              let mut pos = $slf.pos();
+              let queue_pos = $slf.queue().len();
+
+              let result = primary($slf);
+
+              if let Some(token) = $slf.queue().get(queue_pos) {
+                  pos = token.start;
+              }
+
+              if result {
+                  $slf.prec_climb(queue_pos, pos, 0, None, &mut primary, &mut climb);
+              }
+
+              result
+          }
+    };
+
     // handle parens
     ( @conv $atomic:tt $slf:ident [ ( $( $head:tt )* ) $( $tail:tt )* ] [ $( $optail:tt )* ]
       [ $( $output:tt )* ] ) => {
@@ -106,9 +158,19 @@ macro_rules! grammar {
         {
             grammar!(@process false $slf [(( $slf.try(false, |$slf| {
                 if grammar!(@mtc $slf $a) {
+                    let original = $slf.pos();
+
                     $slf.skip_ws();
 
-                    grammar!(@mtc $slf $b)
+                    let pos = $slf.pos();
+
+                    let result = grammar!(@mtc $slf $b);
+
+                    if $slf.pos() == pos {
+                        $slf.set_pos(original);
+                    }
+
+                    result
                 } else {
                     false
                 }

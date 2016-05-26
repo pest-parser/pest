@@ -24,6 +24,19 @@ impl_rdp! {
         pres = { &["a"] }
         abs = { !(["a"] | ["b"]) ~ any }
         digit = { ['0'..'9'] }
+        number = { ['0'..'9']+ }
+        plus = { ["+"] }
+        times = { ["*"] }
+        power = { ["^"] }
+
+        expression = {
+            { number }
+            add = { plus }
+            mul = { times }
+            pow = {< power }
+        }
+
+        whitespace = _{ [" "] }
     }
 }
 
@@ -272,4 +285,70 @@ fn digit_wrong() {
     assert!(parser.queue().iter().eq(&queue));
 
     assert_eq!(parser.expected(), (vec![Rule::digit], 0));
+}
+
+#[test]
+fn expression() {
+    let mut parser = Rdp::new(Box::new(StringInput::new("1+2+3*9^2^2+2")));
+
+    assert!(parser.expression());
+    assert!(parser.end());
+
+    let queue = vec![
+        Token { rule: Rule::expression, start: 0, end: 13 },
+        Token { rule: Rule::add, start: 0, end: 13 },
+        Token { rule: Rule::add, start: 0, end: 11 },
+        Token { rule: Rule::add, start: 0, end: 3 },
+        Token { rule: Rule::number, start: 0, end: 1 },
+        Token { rule: Rule::plus, start: 1, end: 2 },
+        Token { rule: Rule::number, start: 2, end: 3 },
+        Token { rule: Rule::plus, start: 3, end: 4 },
+        Token { rule: Rule::mul, start: 4, end: 11 },
+        Token { rule: Rule::number, start: 4, end: 5 },
+        Token { rule: Rule::times, start: 5, end: 6 },
+        Token { rule: Rule::pow, start: 6, end: 11 },
+        Token { rule: Rule::number, start: 6, end: 7 },
+        Token { rule: Rule::power, start: 7, end: 8 },
+        Token { rule: Rule::pow, start: 8, end: 11 },
+        Token { rule: Rule::number, start: 8, end: 9 },
+        Token { rule: Rule::power, start: 9, end: 10 },
+        Token { rule: Rule::number, start: 10, end: 11 },
+        Token { rule: Rule::plus, start: 11, end: 12 },
+        Token { rule: Rule::number, start: 12, end: 13 }
+    ];
+
+    assert!(parser.queue().iter().eq(&queue));
+}
+
+#[test]
+fn expression_spaced() {
+    let mut parser = Rdp::new(Box::new(StringInput::new("1 + 2 + 3 * 9^2^2 + 2")));
+
+    assert!(parser.expression());
+    assert!(parser.end());
+
+    let queue = vec![
+        Token { rule: Rule::expression, start: 0, end: 21 },
+        Token { rule: Rule::add, start: 0, end: 21 },
+        Token { rule: Rule::add, start: 0, end: 17 },
+        Token { rule: Rule::add, start: 0, end: 5 },
+        Token { rule: Rule::number, start: 0, end: 1 },
+        Token { rule: Rule::plus, start: 2, end: 3 },
+        Token { rule: Rule::number, start: 4, end: 5 },
+        Token { rule: Rule::plus, start: 6, end: 7 },
+        Token { rule: Rule::mul, start: 8, end: 17 },
+        Token { rule: Rule::number, start: 8, end: 9 },
+        Token { rule: Rule::times, start: 10, end: 11 },
+        Token { rule: Rule::pow, start: 12, end: 17 },
+        Token { rule: Rule::number, start: 12, end: 13 },
+        Token { rule: Rule::power, start: 13, end: 14 },
+        Token { rule: Rule::pow, start: 14, end: 17 },
+        Token { rule: Rule::number, start: 14, end: 15 },
+        Token { rule: Rule::power, start: 15, end: 16 },
+        Token { rule: Rule::number, start: 16, end: 17 },
+        Token { rule: Rule::plus, start: 18, end: 19 },
+        Token { rule: Rule::number, start: 20, end: 21 }
+    ];
+
+    assert!(parser.queue().iter().eq(&queue));
 }

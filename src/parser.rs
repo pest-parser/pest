@@ -24,6 +24,11 @@ pub trait Parser {
     /// did. If `revert` is `true`, the parser will not advance.
     fn try<F>(&mut self, revert: bool, rule: F) -> bool where F: FnOnce(&mut Self) -> bool;
 
+    fn prec_climb<F, G>(&mut self, pos: usize, left: usize, prec: u8,
+                        last_op: Option<(Self::Rule, u8, bool)>, primary: &mut F,
+                        climb: &mut G) -> (Option<(Self::Rule, u8, bool)>, Option<usize>)
+        where F: FnMut(&mut Self) -> bool, G: FnMut(&mut Self) -> Option<(Self::Rule, u8, bool)>;
+
     /// Returns the current position of a `Parser`.
     fn pos(&self) -> usize;
 

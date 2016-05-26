@@ -46,6 +46,14 @@ macro_rules! impl_rdp {
     ( @filter [  ] [ $( $rules:tt )* ] ) => {
         impl_rdp!(@rules $( $rules )*);
     };
+    ( @filter [ $name:ident = { { $( $_primary:tt )* } $( $ts:tt )* } $( $tail:tt )* ]
+      [ $( $rules:tt )* ] ) => {
+        impl_rdp!(@filter [ $( $tail )* $( $ts )* ] [ $name $( $rules )* ]);
+    };
+    ( @filter [ $name:ident = @{ { $( $_primary:tt )* } $( $ts:tt )* } $( $tail:tt )* ]
+      [ $( $rules:tt )* ] ) => {
+        impl_rdp!(@filter [ $( $tail )* $( $ts )* ] [ $name $( $rules )* ]);
+    };
     ( @filter [ $name:ident = { $( $_ts:tt )* } $( $tail:tt )* ] [ $( $rules:tt )* ] ) => {
         impl_rdp!(@filter [ $( $tail )* ] [ $name $( $rules )* ]);
     };
@@ -93,6 +101,7 @@ macro_rules! impl_rdp {
     };
 
     ( grammar!{ $( $ts:tt )* } ) => {
+        use std::cmp;
         use std::collections::VecDeque;
 
         pub struct Rdp {
@@ -157,6 +166,68 @@ macro_rules! impl_rdp {
                 }
 
                 result
+            }
+
+            fn prec_climb<F, G>(&mut self, pos: usize, left: usize, prec: u8,
+                                last_op: Option<(Rule, u8, bool)>, primary: &mut F,
+                                climb: &mut G) -> (Option<(Rule, u8, bool)>, Option<usize>)
+                where F: FnMut(&mut Self) -> bool,
+                      G: FnMut(&mut Self) -> Option<(Rule, u8, bool)> {
+
+                let mut op = if last_op.is_some() {
+                    last_op
+                } else {
+                    climb(self)
+                };
+                let mut last_right = None;
+
+                while let Some((rule, new_prec, _)) = op {
+                    if new_prec >= prec {
+                        let mut new_pos = self.pos();
+                        let mut right = self.pos();
+                        let queue_pos = self.queue().len();
+
+                        primary(self);
+
+                        if let Some(token) = self.queue().get(queue_pos) {
+                            new_pos = token.start;
+                            right   = token.end;
+                        }
+
+                        op = climb(self);
+
+                        while let Some((_, new_prec, right_assoc)) = op {
+                            if new_prec > prec || right_assoc && new_prec == prec {
+                                let (new_op, new_lr) = self.prec_climb(queue_pos, new_pos,
+                                                                       new_prec, op, primary,
+                                                                       climb);
+
+                                op = new_op;
+                                last_right = new_lr;
+                            } else {
+                                break
+                            }
+                        }
+
+                        if let Some(pos) = last_right {
+                            right = cmp::max(pos, right);
+                        } else {
+                            last_right = Some(right);
+                        }
+
+                        let token = Token {
+                            rule:  rule,
+                            start: left,
+                            end:   right
+                        };
+
+                        self.queue().insert(pos, token);
+                    } else {
+                        return (op, last_right)
+                    }
+                }
+
+                (op, last_right)
             }
 
             fn pos(&self) -> usize {
@@ -242,8 +313,8 @@ macro_rules! impl_rdp {
             }
 
             fn expected(&mut self) -> (Vec<Rule>, usize) {
-                self.failures.dedup();
                 self.failures.sort();
+                self.failures.dedup();
 
                 (self.failures.iter().cloned().collect(), self.fail_pos)
             }
@@ -323,7 +394,7 @@ mod tests {
         let mut parser = Rdp::new(Box::new(StringInput::new("  (  ( ))(( () )() )() ")));
 
         assert!(parser.exp());
-        assert!(parser.end());
+        assert!(!parser.end());
 
         let queue = vec![
             Token { rule: Rule::paren, start: 2, end: 9 },
