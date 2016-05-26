@@ -46,7 +46,9 @@ macro_rules! grammar {
 
     // handle precedence climbing
     ( @conv_prec ($_prec:expr) $_atomic:tt $_slf:ident [] [] [] ) => (None);
-    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident [ $name:ident = { $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
+    // normal
+    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident
+      [ $name:ident = { $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
         {
             if grammar!(@conv $atomic $slf [ $( $head )* ] [] []) {
                 return Some((Some(Rule::$name), $prec, grammar!(@assoc $( $head )*)))
@@ -55,7 +57,9 @@ macro_rules! grammar {
             }
         }
     };
-    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident [ $name:ident = @{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
+    // atomic
+    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident
+      [ $name:ident = @{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
         {
             if grammar!(@conv true $slf [ $( $head )* ] [] []) {
                 return Some((Some(Rule::$name), $prec, grammar!(@assoc $( $head )*)))
@@ -64,7 +68,9 @@ macro_rules! grammar {
             }
         }
     };
-    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident [ $name:ident = _{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
+    // quiet
+    ( @conv_prec ($prec:expr) $atomic:tt $slf:ident
+      [ $name:ident = _{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
         {
             if grammar!(@conv $atomic $slf [ $( $head )* ] [] []) {
                 return Some((None, $prec, grammar!(@assoc $( $head )*)))
