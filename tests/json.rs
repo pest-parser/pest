@@ -42,7 +42,7 @@ impl_rdp! {
 
 #[test]
 fn int_zero() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("0")));
+    let mut parser = Rdp::new(StringInput::new("0"));
 
     assert!(parser.int());
     assert!(parser.end());
@@ -56,7 +56,7 @@ fn int_zero() {
 
 #[test]
 fn int_long() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("234239923610")));
+    let mut parser = Rdp::new(StringInput::new("234239923610"));
 
     assert!(parser.int());
     assert!(parser.end());
@@ -70,7 +70,7 @@ fn int_long() {
 
 #[test]
 fn exp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("e10")));
+    let mut parser = Rdp::new(StringInput::new("e10"));
 
     assert!(parser.exp());
     assert!(parser.end());
@@ -85,7 +85,7 @@ fn exp() {
 
 #[test]
 fn exp_signed() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("E-0")));
+    let mut parser = Rdp::new(StringInput::new("E-0"));
 
     assert!(parser.exp());
     assert!(parser.end());
@@ -100,7 +100,7 @@ fn exp_signed() {
 
 #[test]
 fn number_neg_point_exp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("-13.0593e-10")));
+    let mut parser = Rdp::new(StringInput::new("-13.0593e-10"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -117,7 +117,7 @@ fn number_neg_point_exp() {
 
 #[test]
 fn number_exp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("593e-10")));
+    let mut parser = Rdp::new(StringInput::new("593e-10"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -134,7 +134,7 @@ fn number_exp() {
 
 #[test]
 fn number_neg() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("-200")));
+    let mut parser = Rdp::new(StringInput::new("-200"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -149,7 +149,7 @@ fn number_neg() {
 
 #[test]
 fn unicode() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("u0a9F")));
+    let mut parser = Rdp::new(StringInput::new("u0a9F"));
 
     assert!(parser.unicode());
     assert!(parser.end());
@@ -167,7 +167,7 @@ fn unicode() {
 
 #[test]
 fn string() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("\"asd\\u0000\\\"\"")));
+    let mut parser = Rdp::new(StringInput::new("\"asd\\u0000\\\"\""));
 
     assert!(parser.string());
     assert!(parser.end());
@@ -188,7 +188,7 @@ fn string() {
 
 #[test]
 fn array_empty() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("[ ]")));
+    let mut parser = Rdp::new(StringInput::new("[ ]"));
 
     assert!(parser.array());
     assert!(parser.end());
@@ -202,7 +202,7 @@ fn array_empty() {
 
 #[test]
 fn array() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("[0.0e1, false, null, \"a\"]")));
+    let mut parser = Rdp::new(StringInput::new("[0.0e1, false, null, \"a\"]"));
 
     assert!(parser.array());
     assert!(parser.end());
@@ -225,7 +225,7 @@ fn array() {
 
 #[test]
 fn pair() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("\"a\" : 3")));
+    let mut parser = Rdp::new(StringInput::new("\"a\" : 3"));
 
     assert!(parser.pair());
     assert!(parser.end());
@@ -243,7 +243,7 @@ fn pair() {
 
 #[test]
 fn object() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("{\"a\" : 3, \"b\" : [{}, 3.0e-10]}")));
+    let mut parser = Rdp::new(StringInput::new("{\"a\" : 3, \"b\" : [{}, 3.0e-10]}"));
 
     assert!(parser.object());
     assert!(parser.end());
@@ -273,7 +273,7 @@ fn object() {
 
 #[test]
 fn fail_number() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("3f")));
+    let mut parser = Rdp::new(StringInput::new("3f"));
 
     assert!(!parser.json());
 
@@ -282,7 +282,7 @@ fn fail_number() {
 
 #[test]
 fn fail_number_space() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("3 3")));
+    let mut parser = Rdp::new(StringInput::new("3 3"));
 
     assert!(!parser.json());
 
@@ -291,7 +291,7 @@ fn fail_number_space() {
 
 #[test]
 fn fail_number_zero() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("03")));
+    let mut parser = Rdp::new(StringInput::new("03"));
 
     assert!(!parser.json());
 
@@ -300,7 +300,7 @@ fn fail_number_zero() {
 
 #[test]
 fn fail_exp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("3.4e")));
+    let mut parser = Rdp::new(StringInput::new("3.4e"));
 
     assert!(!parser.json());
 
@@ -309,7 +309,7 @@ fn fail_exp() {
 
 #[test]
 fn fail_string() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("\"a")));
+    let mut parser = Rdp::new(StringInput::new("\"a"));
 
     assert!(!parser.json());
 
@@ -318,7 +318,7 @@ fn fail_string() {
 
 #[test]
 fn fail_string_unicode() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("\"\\u00p")));
+    let mut parser = Rdp::new(StringInput::new("\"\\u00p"));
 
     assert!(!parser.json());
 
@@ -327,7 +327,7 @@ fn fail_string_unicode() {
 
 #[test]
 fn fail_array() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("[1, ]")));
+    let mut parser = Rdp::new(StringInput::new("[1, ]"));
 
     assert!(!parser.json());
 
@@ -343,7 +343,7 @@ fn fail_array() {
 
 #[test]
 fn fail_object_pair() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("{\"a\" : }")));
+    let mut parser = Rdp::new(StringInput::new("{\"a\" : }"));
 
     assert!(!parser.json());
 
@@ -359,7 +359,7 @@ fn fail_object_pair() {
 
 #[test]
 fn fail_object_open() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("{\"a\" : 3")));
+    let mut parser = Rdp::new(StringInput::new("{\"a\" : 3"));
 
     assert!(!parser.json());
 

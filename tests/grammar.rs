@@ -42,7 +42,7 @@ impl_rdp! {
 
 #[test]
 fn basic() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("(())((())())()")));
+    let mut parser = Rdp::new(StringInput::new("(())((())())()"));
 
     assert!(parser.exp());
     assert!(parser.end());
@@ -62,7 +62,7 @@ fn basic() {
 
 #[test]
 fn fail() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("(())((())())(")));
+    let mut parser = Rdp::new(StringInput::new("(())((())())("));
 
     assert!(parser.exp());
     assert!(!parser.end());
@@ -83,7 +83,7 @@ fn fail() {
 
 #[test]
 fn rep_zero_empty() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("")));
+    let mut parser = Rdp::new(StringInput::new(""));
 
     assert!(parser.rep_zero());
 
@@ -96,7 +96,7 @@ fn rep_zero_empty() {
 
 #[test]
 fn rep_zero_long() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("aaaa")));
+    let mut parser = Rdp::new(StringInput::new("aaaa"));
 
     assert!(parser.rep_zero());
 
@@ -109,7 +109,7 @@ fn rep_zero_long() {
 
 #[test]
 fn rep_zero_wrong() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("aaaab")));
+    let mut parser = Rdp::new(StringInput::new("aaaab"));
 
     assert!(!parser.rep_zero());
 
@@ -122,7 +122,7 @@ fn rep_zero_wrong() {
 
 #[test]
 fn rep_one_empty() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("")));
+    let mut parser = Rdp::new(StringInput::new(""));
 
     assert!(!parser.rep_one());
 
@@ -135,7 +135,7 @@ fn rep_one_empty() {
 
 #[test]
 fn rep_one_long() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("aaaa")));
+    let mut parser = Rdp::new(StringInput::new("aaaa"));
 
     assert!(parser.rep_one());
     assert!(parser.end());
@@ -149,7 +149,7 @@ fn rep_one_long() {
 
 #[test]
 fn rep_one_wrong() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("b")));
+    let mut parser = Rdp::new(StringInput::new("b"));
 
     assert!(!parser.rep_one());
     assert!(!parser.end());
@@ -163,7 +163,7 @@ fn rep_one_wrong() {
 
 #[test]
 fn opt_empty() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("")));
+    let mut parser = Rdp::new(StringInput::new(""));
 
     assert!(parser.opt());
     assert!(parser.end());
@@ -177,7 +177,7 @@ fn opt_empty() {
 
 #[test]
 fn opt_right() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("a")));
+    let mut parser = Rdp::new(StringInput::new("a"));
 
     assert!(parser.opt());
     assert!(parser.end());
@@ -191,7 +191,7 @@ fn opt_right() {
 
 #[test]
 fn opt_wrong() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("b")));
+    let mut parser = Rdp::new(StringInput::new("b"));
 
     assert!(parser.opt());
     assert!(!parser.end());
@@ -205,7 +205,7 @@ fn opt_wrong() {
 
 #[test]
 fn pres_right() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("a")));
+    let mut parser = Rdp::new(StringInput::new("a"));
 
     assert!(parser.pres());
     assert!(!parser.end());
@@ -219,7 +219,7 @@ fn pres_right() {
 
 #[test]
 fn pres_wrong() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("b")));
+    let mut parser = Rdp::new(StringInput::new("b"));
 
     assert!(!parser.pres());
     assert!(!parser.end());
@@ -233,7 +233,7 @@ fn pres_wrong() {
 
 #[test]
 fn abs_right() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("c")));
+    let mut parser = Rdp::new(StringInput::new("c"));
 
     assert!(parser.abs());
     assert!(parser.end());
@@ -247,7 +247,7 @@ fn abs_right() {
 
 #[test]
 fn abs_wrong() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("a")));
+    let mut parser = Rdp::new(StringInput::new("a"));
 
     assert!(!parser.abs());
     assert!(!parser.end());
@@ -261,7 +261,7 @@ fn abs_wrong() {
 
 #[test]
 fn digit_right() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("0")));
+    let mut parser = Rdp::new(StringInput::new("0"));
 
     assert!(parser.digit());
     assert!(parser.end());
@@ -275,7 +275,7 @@ fn digit_right() {
 
 #[test]
 fn digit_wrong() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("a")));
+    let mut parser = Rdp::new(StringInput::new("a"));
 
     assert!(!parser.digit());
     assert!(!parser.end());
@@ -289,7 +289,7 @@ fn digit_wrong() {
 
 #[test]
 fn expression() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("1+2+3*9^2^2+2")));
+    let mut parser = Rdp::new(StringInput::new("1+2+3*9^2^2+2"));
 
     assert!(parser.expression());
     assert!(parser.end());
@@ -319,7 +319,7 @@ fn expression() {
 
 #[test]
 fn expression_spaced() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("1 + 2 + 3 * 9^2^2 + 2")));
+    let mut parser = Rdp::new(StringInput::new("1 + 2 + 3 * 9^2^2 + 2"));
 
     assert!(parser.expression());
     assert!(parser.end());
@@ -349,7 +349,7 @@ fn expression_spaced() {
 
 #[test]
 fn expression_space_after() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("1 ")));
+    let mut parser = Rdp::new(StringInput::new("1 "));
 
     assert!(parser.expression());
     assert!(!parser.end());

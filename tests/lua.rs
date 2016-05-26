@@ -158,7 +158,7 @@ impl_rdp! {
 
 #[test]
 fn _power_number() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("123")));
+    let mut parser = Rdp::new(StringInput::new("123"));
 
     assert!(parser._power());
     assert!(parser.end());
@@ -174,7 +174,7 @@ fn _power_number() {
 
 #[test]
 fn _power_power() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("1 ^ 3")));
+    let mut parser = Rdp::new(StringInput::new("1 ^ 3"));
 
     assert!(parser._power());
     assert!(parser.end());
@@ -195,7 +195,7 @@ fn _power_power() {
 
 #[test]
 fn _unary_power() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("1 ^ 3")));
+    let mut parser = Rdp::new(StringInput::new("1 ^ 3"));
 
     assert!(parser._unary());
     assert!(parser.end());
@@ -216,7 +216,7 @@ fn _unary_power() {
 
 #[test]
 fn _unary_unary() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("not 1")));
+    let mut parser = Rdp::new(StringInput::new("not 1"));
 
     assert!(parser._unary());
     assert!(parser.end());
@@ -234,7 +234,7 @@ fn _unary_unary() {
 
 #[test]
 fn _unary_unary_unary() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("not not 1")));
+    let mut parser = Rdp::new(StringInput::new("not not 1"));
 
     assert!(parser._unary());
     assert!(parser.end());
@@ -254,7 +254,7 @@ fn _unary_unary_unary() {
 
 #[test]
 fn exp_number() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("123")));
+    let mut parser = Rdp::new(StringInput::new("123"));
 
     assert!(parser.exp());
     assert!(parser.end());
@@ -271,7 +271,7 @@ fn exp_number() {
 
 #[test]
 fn exp_power() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("1 ^ 3")));
+    let mut parser = Rdp::new(StringInput::new("1 ^ 3"));
 
     assert!(parser.exp());
     assert!(parser.end());
@@ -293,7 +293,7 @@ fn exp_power() {
 
 #[test]
 fn exp_unary() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("not 1")));
+    let mut parser = Rdp::new(StringInput::new("not 1"));
 
     assert!(parser.exp());
     assert!(parser.end());
@@ -312,7 +312,7 @@ fn exp_unary() {
 
 #[test]
 fn exp_unary_unary() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("not not 1")));
+    let mut parser = Rdp::new(StringInput::new("not not 1"));
 
     assert!(parser.exp());
     assert!(parser.end());
@@ -333,7 +333,7 @@ fn exp_unary_unary() {
 
 #[test]
 fn exp_infix() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("3 + 3 -1^2 * 2 %64 and 3 or a..b <= 2")));
+    let mut parser = Rdp::new(StringInput::new("3 + 3 -1^2 * 2 %64 and 3 or a..b <= 2"));
 
     assert!(parser.exp());
     assert!(parser.end());
@@ -397,7 +397,7 @@ fn exp_infix() {
 
 #[test]
 fn exp_functiondef() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("function (a, b, ...); end")));
+    let mut parser = Rdp::new(StringInput::new("function (a, b, ...); end"));
 
     assert!(parser.exp());
     assert!(parser.end());
@@ -419,7 +419,7 @@ fn exp_functiondef() {
 
 #[test]
 fn exp_prefixexp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("a()")));
+    let mut parser = Rdp::new(StringInput::new("a()"));
 
     assert!(parser.exp());
     assert!(parser.end());
@@ -440,7 +440,7 @@ fn exp_prefixexp() {
 
 #[test]
 fn exp_tableconstructor() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("{ }")));
+    let mut parser = Rdp::new(StringInput::new("{ }"));
 
     assert!(parser.exp());
     assert!(parser.end());
@@ -455,7 +455,7 @@ fn exp_tableconstructor() {
 
 #[test]
 fn retstat() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("return 1, 2;")));
+    let mut parser = Rdp::new(StringInput::new("return 1, 2;"));
 
     assert!(parser.retstat());
     assert!(parser.end());
@@ -478,7 +478,7 @@ fn retstat() {
 
 #[test]
 fn label() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("::a::")));
+    let mut parser = Rdp::new(StringInput::new("::a::"));
 
     assert!(parser.label());
     assert!(parser.end());
@@ -493,7 +493,7 @@ fn label() {
 
 #[test]
 fn funcname() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("a.b :c")));
+    let mut parser = Rdp::new(StringInput::new("a.b :c"));
 
     assert!(parser.funcname());
     assert!(parser.end());
@@ -510,7 +510,7 @@ fn funcname() {
 
 #[test]
 fn var() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("(1) :a ().hi")));
+    let mut parser = Rdp::new(StringInput::new("(1) :a ().hi"));
 
     assert!(parser.var());
     assert!(parser.end());
@@ -533,7 +533,7 @@ fn var() {
 
 #[test]
 fn functioncall_var() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("a()")));
+    let mut parser = Rdp::new(StringInput::new("a()"));
 
     assert!(parser.functioncall());
     assert!(parser.end());
@@ -553,7 +553,7 @@ fn functioncall_var() {
 
 #[test]
 fn functioncall_exp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("(1)()")));
+    let mut parser = Rdp::new(StringInput::new("(1)()"));
 
     assert!(parser.functioncall());
     assert!(parser.end());
@@ -575,7 +575,7 @@ fn functioncall_exp() {
 
 #[test]
 fn varsuffix() {
-    let mut parser = Rdp::new(Box::new(StringInput::new(":a () () [1]")));
+    let mut parser = Rdp::new(StringInput::new(":a () () [1]"));
 
     assert!(parser.varsuffix());
     assert!(parser.end());
@@ -599,7 +599,7 @@ fn varsuffix() {
 
 #[test]
 fn nameandargs() {
-    let mut parser = Rdp::new(Box::new(StringInput::new(":a ()")));
+    let mut parser = Rdp::new(StringInput::new(":a ()"));
 
     assert!(parser.nameandargs());
     assert!(parser.end());
@@ -616,7 +616,7 @@ fn nameandargs() {
 
 #[test]
 fn args() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("(1, 2)")));
+    let mut parser = Rdp::new(StringInput::new("(1, 2)"));
 
     assert!(parser.args());
     assert!(parser.end());
@@ -640,7 +640,7 @@ fn args() {
 
 #[test]
 fn explist() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("1, 2, 3")));
+    let mut parser = Rdp::new(StringInput::new("1, 2, 3"));
 
     assert!(parser.explist());
     assert!(parser.end());
@@ -667,7 +667,7 @@ fn explist() {
 
 #[test]
 fn functiondef() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("function (a, b, ...); end")));
+    let mut parser = Rdp::new(StringInput::new("function (a, b, ...); end"));
 
     assert!(parser.functiondef());
     assert!(parser.end());
@@ -688,7 +688,7 @@ fn functiondef() {
 
 #[test]
 fn funcbody() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("(a, b, ...); end")));
+    let mut parser = Rdp::new(StringInput::new("(a, b, ...); end"));
 
     assert!(parser.funcbody());
     assert!(parser.end());
@@ -708,7 +708,7 @@ fn funcbody() {
 
 #[test]
 fn parlist_dots() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("...")));
+    let mut parser = Rdp::new(StringInput::new("..."));
 
     assert!(parser.parlist());
     assert!(parser.end());
@@ -722,7 +722,7 @@ fn parlist_dots() {
 
 #[test]
 fn parlist() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("a, b, ...")));
+    let mut parser = Rdp::new(StringInput::new("a, b, ..."));
 
     assert!(parser.parlist());
     assert!(parser.end());
@@ -739,7 +739,7 @@ fn parlist() {
 
 #[test]
 fn namelist_one() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("abc")));
+    let mut parser = Rdp::new(StringInput::new("abc"));
 
     assert!(parser.namelist());
     assert!(parser.end());
@@ -754,7 +754,7 @@ fn namelist_one() {
 
 #[test]
 fn namelist_many() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("abc, def")));
+    let mut parser = Rdp::new(StringInput::new("abc, def"));
 
     assert!(parser.namelist());
     assert!(parser.end());
@@ -770,7 +770,7 @@ fn namelist_many() {
 
 #[test]
 fn tableconstructor_empty() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("{ }")));
+    let mut parser = Rdp::new(StringInput::new("{ }"));
 
     assert!(parser.tableconstructor());
     assert!(parser.end());
@@ -784,7 +784,7 @@ fn tableconstructor_empty() {
 
 #[test]
 fn tableconstructor() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("{ [1] = 1 }")));
+    let mut parser = Rdp::new(StringInput::new("{ [1] = 1 }"));
 
     assert!(parser.tableconstructor());
     assert!(parser.end());
@@ -808,7 +808,7 @@ fn tableconstructor() {
 
 #[test]
 fn fieldlist() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("[1] = 1, [1] = 1, ,;,")));
+    let mut parser = Rdp::new(StringInput::new("[1] = 1, [1] = 1, ,;,"));
 
     assert!(parser.fieldlist());
     assert!(parser.end());
@@ -840,7 +840,7 @@ fn fieldlist() {
 
 #[test]
 fn field1() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("[1] = 1")));
+    let mut parser = Rdp::new(StringInput::new("[1] = 1"));
 
     assert!(parser.field());
     assert!(parser.end());
@@ -862,7 +862,7 @@ fn field1() {
 
 #[test]
 fn field2() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("a = 1")));
+    let mut parser = Rdp::new(StringInput::new("a = 1"));
 
     assert!(parser.field());
     assert!(parser.end());
@@ -881,7 +881,7 @@ fn field2() {
 
 #[test]
 fn field3() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("1")));
+    let mut parser = Rdp::new(StringInput::new("1"));
 
     assert!(parser.field());
     assert!(parser.end());
@@ -899,7 +899,7 @@ fn field3() {
 
 #[test]
 fn name() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("__hell0")));
+    let mut parser = Rdp::new(StringInput::new("__hell0"));
 
     assert!(parser.name());
     assert!(parser.end());
@@ -913,7 +913,7 @@ fn name() {
 
 #[test]
 fn string_normal() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("\"a \\b\\n\\099\\xfF\"")));
+    let mut parser = Rdp::new(StringInput::new("\"a \\b\\n\\099\\xfF\""));
 
     assert!(parser.string());
     assert!(parser.end());
@@ -934,7 +934,7 @@ fn string_normal() {
 
 #[test]
 fn string_char() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("'a \\b\\n\\099\\xfF'")));
+    let mut parser = Rdp::new(StringInput::new("'a \\b\\n\\099\\xfF'"));
 
     assert!(parser.string());
     assert!(parser.end());
@@ -955,7 +955,7 @@ fn string_char() {
 
 #[test]
 fn string_long() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("[==[a d]==]")));
+    let mut parser = Rdp::new(StringInput::new("[==[a d]==]"));
 
     assert!(parser.string());
     assert!(parser.end());
@@ -970,7 +970,7 @@ fn string_long() {
 
 #[test]
 fn int() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("00845")));
+    let mut parser = Rdp::new(StringInput::new("00845"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -986,7 +986,7 @@ fn int() {
 
 #[test]
 fn float_digits_point_digits() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("10.01")));
+    let mut parser = Rdp::new(StringInput::new("10.01"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -1003,7 +1003,7 @@ fn float_digits_point_digits() {
 
 #[test]
 fn float_digits_point_exp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("01.E-1")));
+    let mut parser = Rdp::new(StringInput::new("01.E-1"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -1021,7 +1021,7 @@ fn float_digits_point_exp() {
 
 #[test]
 fn float_point_digits_exp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new(".02e-4")));
+    let mut parser = Rdp::new(StringInput::new(".02e-4"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -1039,7 +1039,7 @@ fn float_point_digits_exp() {
 
 #[test]
 fn float_digits_exp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("9e-01")));
+    let mut parser = Rdp::new(StringInput::new("9e-01"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -1057,7 +1057,7 @@ fn float_digits_exp() {
 
 #[test]
 fn hex() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("0x0aF")));
+    let mut parser = Rdp::new(StringInput::new("0x0aF"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -1073,7 +1073,7 @@ fn hex() {
 
 #[test]
 fn hex_float_digits_point_digits() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("0x0a.F1")));
+    let mut parser = Rdp::new(StringInput::new("0x0a.F1"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -1090,7 +1090,7 @@ fn hex_float_digits_point_digits() {
 
 #[test]
 fn hex_float_digits_point_exp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("0x0a.P-2")));
+    let mut parser = Rdp::new(StringInput::new("0x0a.P-2"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -1108,7 +1108,7 @@ fn hex_float_digits_point_exp() {
 
 #[test]
 fn hex_float_point_digits_exp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("0x.afp-2")));
+    let mut parser = Rdp::new(StringInput::new("0x.afp-2"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -1126,7 +1126,7 @@ fn hex_float_point_digits_exp() {
 
 #[test]
 fn hex_float_digits_exp() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("0x9ep-01")));
+    let mut parser = Rdp::new(StringInput::new("0x9ep-01"));
 
     assert!(parser.number());
     assert!(parser.end());
@@ -1144,7 +1144,7 @@ fn hex_float_digits_exp() {
 
 #[test]
 fn nested_str1_empty() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("=[]=")));
+    let mut parser = Rdp::new(StringInput::new("=[]="));
 
     assert!(parser.nested_str());
     assert!(parser.end());
@@ -1156,7 +1156,7 @@ fn nested_str1_empty() {
 
 #[test]
 fn nested_str1() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("=[asd asd]=")));
+    let mut parser = Rdp::new(StringInput::new("=[asd asd]="));
 
     assert!(parser.nested_str());
     assert!(parser.end());
@@ -1168,7 +1168,7 @@ fn nested_str1() {
 
 #[test]
 fn nested_str2_empty() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("==[]==")));
+    let mut parser = Rdp::new(StringInput::new("==[]=="));
 
     assert!(parser.nested_str());
     assert!(parser.end());
@@ -1180,7 +1180,7 @@ fn nested_str2_empty() {
 
 #[test]
 fn nested_str2() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("==[asd asd]==")));
+    let mut parser = Rdp::new(StringInput::new("==[asd asd]=="));
 
     assert!(parser.nested_str());
     assert!(parser.end());
@@ -1192,7 +1192,7 @@ fn nested_str2() {
 
 #[test]
 fn nested_str2_spaced() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("  =  = [asd asd] ==")));
+    let mut parser = Rdp::new(StringInput::new("  =  = [asd asd] =="));
 
     assert!(parser.nested_str());
     assert!(parser.end());
@@ -1204,7 +1204,7 @@ fn nested_str2_spaced() {
 
 #[test]
 fn comment() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("-- [ [simple] ]")));
+    let mut parser = Rdp::new(StringInput::new("-- [ [simple] ]"));
 
     assert!(parser.comment());
     assert!(parser.end());
@@ -1216,7 +1216,7 @@ fn comment() {
 
 #[test]
 fn line_comment1() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("--")));
+    let mut parser = Rdp::new(StringInput::new("--"));
 
     assert!(parser.comment());
     assert!(parser.end());
@@ -1228,7 +1228,7 @@ fn line_comment1() {
 
 #[test]
 fn line_comment2() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("--[=====")));
+    let mut parser = Rdp::new(StringInput::new("--[====="));
 
     assert!(parser.comment());
     assert!(parser.end());
@@ -1240,7 +1240,7 @@ fn line_comment2() {
 
 #[test]
 fn line_comment3() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("--[=====hi")));
+    let mut parser = Rdp::new(StringInput::new("--[=====hi"));
 
     assert!(parser.comment());
     assert!(parser.end());
@@ -1252,7 +1252,7 @@ fn line_comment3() {
 
 #[test]
 fn line_comment4() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("--hi")));
+    let mut parser = Rdp::new(StringInput::new("--hi"));
 
     assert!(parser.comment());
     assert!(parser.end());
@@ -1264,7 +1264,7 @@ fn line_comment4() {
 
 #[test]
 fn shebang() {
-    let mut parser = Rdp::new(Box::new(StringInput::new("#!/bin/not-lua")));
+    let mut parser = Rdp::new(StringInput::new("#!/bin/not-lua"));
 
     assert!(parser.comment());
     assert!(parser.end());

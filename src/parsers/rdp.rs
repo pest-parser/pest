@@ -23,7 +23,7 @@
 ///     }
 /// }
 ///
-/// let input = Box::new(StringInput::new("asdasdf"));
+/// let input = StringInput::new("asdasdf");
 /// let mut parser = Rdp::new(input);
 ///
 /// assert!(parser.matches("asd"));
@@ -108,8 +108,8 @@ macro_rules! impl_rdp {
         use std::cmp;
         use std::collections::VecDeque;
 
-        pub struct Rdp {
-            input:    Box<Input>,
+        pub struct Rdp<T: Input> {
+            input:    T,
             queues:   Queues<Token<Rule>>,
             failures: Vec<Rule>,
             fail_pos: usize,
@@ -119,8 +119,8 @@ macro_rules! impl_rdp {
 
         impl_rdp!(@filter [ $( $ts )* ] []);
 
-        impl Rdp {
-            pub fn new(input: Box<Input>) -> Rdp {
+        impl<T: Input> Rdp<T> {
+            pub fn new(input: T) -> Rdp<T> {
                 Rdp {
                     input:    input,
                     queues:   Queues::new(),
@@ -139,7 +139,7 @@ macro_rules! impl_rdp {
             }
         }
 
-        impl Parser for Rdp {
+        impl<T: Input> Parser for Rdp<T> {
             type Rule = Rule;
             type Token = Token<Rule>;
 
@@ -349,7 +349,7 @@ mod tests {
 
     #[test]
     fn matches() {
-        let input = Box::new(StringInput::new("asdasdf"));
+        let input = StringInput::new("asdasdf");
         let mut parser = Rdp::new(input);
 
         assert!(parser.matches("asd"));
@@ -360,7 +360,7 @@ mod tests {
 
     #[test]
     fn try() {
-        let input = Box::new(StringInput::new("asdasdf"));
+        let input = StringInput::new("asdasdf");
         let mut parser = Rdp::new(input);
 
         assert!(parser.matches("asd"));
@@ -376,7 +376,7 @@ mod tests {
 
     #[test]
     fn end() {
-        let input = Box::new(StringInput::new("asdasdf"));
+        let input = StringInput::new("asdasdf");
         let mut parser = Rdp::new(input);
 
         assert!(parser.matches("asdasdf"));
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn reset() {
-        let input = Box::new(StringInput::new("asdasdf"));
+        let input = StringInput::new("asdasdf");
         let mut parser = Rdp::new(input);
 
         assert!(parser.matches("asdasdf"));
@@ -397,7 +397,7 @@ mod tests {
 
     #[test]
     fn whitespace_seq() {
-        let mut parser = Rdp::new(Box::new(StringInput::new("  (  ( ))(( () )() )() ")));
+        let mut parser = Rdp::new(StringInput::new("  (  ( ))(( () )() )() "));
 
         assert!(parser.exp());
         assert!(!parser.end());
@@ -417,7 +417,7 @@ mod tests {
 
     #[test]
     fn whitespace_zero() {
-        let mut parser = Rdp::new(Box::new(StringInput::new("  a a aa aaaa a  ")));
+        let mut parser = Rdp::new(StringInput::new("  a a aa aaaa a  "));
 
         assert!(parser.zero());
         assert!(!parser.end());
@@ -431,7 +431,7 @@ mod tests {
 
     #[test]
     fn whitespace_one() {
-        let mut parser = Rdp::new(Box::new(StringInput::new("  a a aa aaaa a  ")));
+        let mut parser = Rdp::new(StringInput::new("  a a aa aaaa a  "));
 
         assert!(parser.one());
         assert!(!parser.end());
@@ -445,7 +445,7 @@ mod tests {
 
     #[test]
     fn comment() {
-        let mut parser = Rdp::new(Box::new(StringInput::new("// hi\n(())")));
+        let mut parser = Rdp::new(StringInput::new("// hi\n(())"));
 
         assert!(parser.exp());
         assert!(parser.end());
@@ -460,7 +460,7 @@ mod tests {
 
     #[test]
     fn comment_whitespace() {
-        let mut parser = Rdp::new(Box::new(StringInput::new("   // hi\n  (())")));
+        let mut parser = Rdp::new(StringInput::new("   // hi\n  (())"));
 
         assert!(parser.exp());
         assert!(parser.end());

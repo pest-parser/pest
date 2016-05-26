@@ -16,7 +16,7 @@ impl_rdp! {
     }
 }
 
-let mut parser = Rdp::new(Box::new(StringInput::new("(())((())())()")));
+let mut parser = Rdp::new(StringInput::new("(()((())())()")));
 
 assert!(parser.exp());
 assert!(parser.end());

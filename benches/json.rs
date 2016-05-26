@@ -55,7 +55,7 @@ fn data(b: &mut Bencher) {
 
     file.read_to_string(&mut data).unwrap();
 
-    let mut parser = Rdp::new(Box::new(StringInput::new(&data)));
+    let mut parser = Rdp::new(StringInput::new(&data));
 
     b.iter(|| {
         parser.json();
