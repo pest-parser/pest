@@ -5,8 +5,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::collections::VecDeque;
-
 /// A `trait` that defines a parser.
 pub trait Parser {
     type Rule;
@@ -51,7 +49,7 @@ pub trait Parser {
     fn reset(&mut self);
 
     /// Returns the queue of all matched `Token`s.
-    fn queue(&mut self) -> &mut VecDeque<Self::Token>;
+    fn queue(&mut self) -> &mut Vec<Self::Token>;
 
     /// Skips white-space.
     fn skip_ws(&mut self);

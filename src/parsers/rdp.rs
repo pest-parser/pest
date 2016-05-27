@@ -106,7 +106,6 @@ macro_rules! impl_rdp {
 
     ( grammar!{ $( $ts:tt )* } ) => {
         use std::cmp;
-        use std::collections::VecDeque;
 
         pub struct Rdp<T: Input> {
             input:    T,
@@ -255,7 +254,7 @@ macro_rules! impl_rdp {
                 self.fail_pos = 0;
             }
 
-            fn queue(&mut self) -> &mut VecDeque<Token<Rule>>{
+            fn queue(&mut self) -> &mut Vec<Token<Rule>>{
                 if let Some(queue) = self.queues.last_mut() {
                     queue
                 } else {

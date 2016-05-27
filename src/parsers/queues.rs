@@ -5,12 +5,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::collections::VecDeque;
-
 /// A `struct` which caches `VecDeque`s.
 #[derive(Debug)]
 pub struct Queues<E> {
-    queues: Vec<VecDeque<E>>,
+    queues: Vec<Vec<E>>,
     size: usize
 }
 
@@ -23,9 +21,9 @@ impl<E> Queues<E> {
     /// # use pest::Queues;
     /// let mut queues = Queues::new();
     ///
-    /// queues.last_mut().unwrap().push_back(1);
+    /// queues.last_mut().unwrap().push(1);
     /// queues.push();
-    /// queues.last_mut().unwrap().push_back(2);
+    /// queues.last_mut().unwrap().push(2);
     ///
     /// queues.pour();
     ///
@@ -34,7 +32,7 @@ impl<E> Queues<E> {
     /// ```
     pub fn new() -> Queues<E> {
         Queues {
-            queues: vec![VecDeque::new()],
+            queues: vec![vec![]],
             size: 1
         }
     }
@@ -47,7 +45,7 @@ impl<E> Queues<E> {
     /// # use pest::Queues;
     /// let mut queues = Queues::new();
     ///
-    /// queues.last_mut().unwrap().push_back(1);
+    /// queues.last_mut().unwrap().push(1);
     ///
     /// queues.clear();
     ///
@@ -71,7 +69,7 @@ impl<E> Queues<E> {
     ///
     /// assert!(queues.last().unwrap().is_empty());
     /// ```
-    pub fn last(&self) -> Option<&VecDeque<E>> {
+    pub fn last(&self) -> Option<&Vec<E>> {
         if self.size > 0 {
             Some(&self.queues[self.size - 1])
         } else {
@@ -89,7 +87,7 @@ impl<E> Queues<E> {
     ///
     /// assert!(queues.last_mut().unwrap().is_empty());
     /// ```
-    pub fn last_mut(&mut self) -> Option<&mut VecDeque<E>> {
+    pub fn last_mut(&mut self) -> Option<&mut Vec<E>> {
         if self.size > 0 {
             Some(&mut self.queues[self.size - 1])
         } else {
@@ -105,14 +103,14 @@ impl<E> Queues<E> {
     /// # use pest::Queues;
     /// let mut queues = Queues::new();
     ///
-    /// queues.last_mut().unwrap().push_back(1);
+    /// queues.last_mut().unwrap().push(1);
     /// queues.push();
     ///
     /// assert!(queues.last().unwrap().is_empty());
     /// ```
     pub fn push(&mut self) {
         if self.size >= self.queues.len() {
-            self.queues.push(VecDeque::new());
+            self.queues.push(vec![]);
         }
 
         self.size += 1;
@@ -127,7 +125,7 @@ impl<E> Queues<E> {
     /// let mut queues = Queues::new();
     ///
     /// queues.push();
-    /// queues.last_mut().unwrap().push_back(1);
+    /// queues.last_mut().unwrap().push(1);
     /// queues.pop();
     ///
     /// assert!(queues.last().unwrap().is_empty());
@@ -148,9 +146,9 @@ impl<E> Queues<E> {
     /// # use pest::Queues;
     /// let mut queues = Queues::new();
     ///
-    /// queues.last_mut().unwrap().push_back(1);
+    /// queues.last_mut().unwrap().push(1);
     /// queues.push();
-    /// queues.last_mut().unwrap().push_back(2);
+    /// queues.last_mut().unwrap().push(2);
     ///
     /// queues.pour();
     ///
