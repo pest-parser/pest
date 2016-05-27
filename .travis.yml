@@ -4,7 +4,7 @@ os:
   - linux
   - osx
 rust:
-  - beta
+  - stable
 addons:
   apt:
     packages:
