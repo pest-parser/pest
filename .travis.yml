@@ -5,6 +5,9 @@ os:
   - osx
 rust:
   - stable
+  - beta
+  - nightly
+  - 1.9.0
 addons:
   apt:
     packages:
