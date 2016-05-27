@@ -1,6 +1,9 @@
 # pest. Smart PEGs in Rust
 [![Build Status](https://travis-ci.org/dragostis/pest.svg?branch=master)]
 (https://travis-ci.org/dragostis/pest)
+[![Coverage Status]
+(https://coveralls.io/repos/github/dragostis/pest/badge.svg?branch=master)]
+(https://coveralls.io/github/dragostis/pest?branch=master)
 [![Cargo Crate](http://meritbadge.herokuapp.com/pest)]
 (https://crates.io/crates/pest)
 
