@@ -12,7 +12,6 @@
 /// ```
 /// # #[macro_use] extern crate pest;
 /// # use pest::Parser;
-/// # use pest::Queues;
 /// # use pest::Token;
 /// # use pest::Input;
 /// # use pest::StringInput;
@@ -111,7 +110,7 @@ macro_rules! impl_rdp {
 
         pub struct Rdp<T: Input> {
             input:    T,
-            queues:   Queues<Token<Rule>>,
+            queue:    Vec<Token<Rule>>,
             failures: Vec<Rule>,
             fail_pos: usize,
             atomic:   bool,
@@ -124,7 +123,7 @@ macro_rules! impl_rdp {
             pub fn new(input: T) -> Rdp<T> {
                 Rdp {
                     input:    input,
-                    queues:   Queues::new(),
+                    queue:    vec![],
                     failures: vec![],
                     fail_pos: 0,
                     atomic:   false,
@@ -159,7 +158,7 @@ macro_rules! impl_rdp {
                 where F: FnOnce(&mut Self) -> bool {
 
                 let pos = self.input.pos();
-                self.queues.push();
+                let len = self.queue.len();
 
                 let result = rule(self);
 
@@ -167,10 +166,8 @@ macro_rules! impl_rdp {
                     self.input.set_pos(pos);
                 }
 
-                if result {
-                    self.queues.pour();
-                } else {
-                    self.queues.pop();
+                if !result {
+                    self.queue.truncate(len);
                 }
 
                 result
@@ -258,18 +255,14 @@ macro_rules! impl_rdp {
             #[inline]
             fn reset(&mut self) {
                 self.input.set_pos(0);
-                self.queues.clear();
+                self.queue.clear();
                 self.failures.clear();
                 self.fail_pos = 0;
             }
 
             #[inline]
             fn queue(&mut self) -> &mut Vec<Token<Rule>>{
-                if let Some(queue) = self.queues.last_mut() {
-                    queue
-                } else {
-                    unreachable!();
-                }
+                &mut self.queue
             }
 
             #[inline]
@@ -341,7 +334,6 @@ macro_rules! impl_rdp {
 #[cfg(test)]
 mod tests {
     use super::super::super::Parser;
-    use super::super::super::Queues;
     use super::super::super::Token;
     use super::super::super::Input;
     use super::super::super::StringInput;

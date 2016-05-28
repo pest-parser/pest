@@ -15,7 +15,6 @@
 /// ```
 /// # #[macro_use] extern crate pest;
 /// # use pest::Parser;
-/// # use pest::Queues;
 /// # use pest::Token;
 /// # use pest::Input;
 /// # use pest::StringInput;
@@ -386,7 +385,7 @@ macro_rules! grammar {
             grammar!(@skip $name slf);
 
             let pos = slf.pos();
-            let queue_pos = slf.queue().len();
+            let len = slf.queue().len();
 
             let result = grammar!(@atomic $name false slf [ $( $ts )* ]);
 
@@ -399,8 +398,10 @@ macro_rules! grammar {
                     end:   new_pos
                 };
 
-                slf.queue().insert(queue_pos, token);
+                slf.queue().insert(len, token);
             } else {
+                slf.queue().truncate(len);
+
                 slf.track(Rule::$name, pos);
             }
 
@@ -419,7 +420,7 @@ macro_rules! grammar {
             grammar!(@skip $name slf);
 
             let pos = slf.pos();
-            let queue_pos = slf.queue().len();
+            let len = slf.queue().len();
 
             let toggled = slf.is_atomic();
 
@@ -442,8 +443,10 @@ macro_rules! grammar {
                     end:   new_pos
                 };
 
-                slf.queue().insert(queue_pos, token);
+                slf.queue().insert(len, token);
             } else {
+                slf.queue().truncate(len);
+
                 slf.track(Rule::$name, pos);
             }
 
