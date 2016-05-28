@@ -48,18 +48,22 @@ impl StringInput {
 }
 
 impl Input for StringInput {
+    #[inline]
     fn len(&self) -> usize {
         self.string.len()
     }
 
+    #[inline]
     fn pos(&self) -> usize {
         self.pos
     }
 
+    #[inline]
     fn set_pos(&mut self, pos: usize) {
         self.pos = pos
     }
 
+    #[inline]
     fn matches(&mut self, string: &str) -> bool {
         let to = self.pos + string.len();
 
@@ -77,6 +81,7 @@ impl Input for StringInput {
         }
     }
 
+    #[inline]
     fn between(&mut self, left: char, right: char) -> bool {
         let len = left.len_utf8();
 

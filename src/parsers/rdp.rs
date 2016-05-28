@@ -71,6 +71,7 @@ macro_rules! impl_rdp {
     // implement empty whitespace rule
     ( @ws ) => {
         #[allow(dead_code)]
+        #[inline]
         pub fn whitespace(&mut self) -> bool {
             false
         }
@@ -89,6 +90,7 @@ macro_rules! impl_rdp {
     // implement empty comment rule
     ( @com ) => {
         #[allow(dead_code)]
+        #[inline]
         pub fn comment(&mut self) -> bool {
             false
         }
@@ -142,14 +144,17 @@ macro_rules! impl_rdp {
             type Rule = Rule;
             type Token = Token<Rule>;
 
+            #[inline]
             fn matches(&mut self, string: &str) -> bool {
                 self.input.matches(string)
             }
 
+            #[inline]
             fn between(&mut self, left: char, right: char) -> bool {
                 self.input.between(left, right)
             }
 
+            #[inline]
             fn try<F>(&mut self, revert: bool, rule: F) -> bool
                 where F: FnOnce(&mut Self) -> bool {
 
@@ -235,18 +240,22 @@ macro_rules! impl_rdp {
                 (op, last_right)
             }
 
+            #[inline]
             fn pos(&self) -> usize {
                 self.input.pos()
             }
 
+            #[inline]
             fn set_pos(&mut self, pos: usize) {
                 self.input.set_pos(pos);
             }
 
+            #[inline]
             fn end(&self) -> bool {
                 self.input.len() == self.input.pos()
             }
 
+            #[inline]
             fn reset(&mut self) {
                 self.input.set_pos(0);
                 self.queues.clear();
@@ -254,6 +263,7 @@ macro_rules! impl_rdp {
                 self.fail_pos = 0;
             }
 
+            #[inline]
             fn queue(&mut self) -> &mut Vec<Token<Rule>>{
                 if let Some(queue) = self.queues.last_mut() {
                     queue
@@ -262,6 +272,7 @@ macro_rules! impl_rdp {
                 }
             }
 
+            #[inline]
             fn skip_ws(&mut self) {
                 if self.atomic {
                     return

@@ -346,6 +346,7 @@ macro_rules! grammar {
 
     () => {
         #[allow(dead_code)]
+        #[inline]
         pub fn any(&mut self) -> bool {
             if self.end() {
                 let pos = self.pos();
@@ -362,6 +363,7 @@ macro_rules! grammar {
         }
 
         #[allow(dead_code)]
+        #[inline]
         pub fn eoi(&mut self) -> bool {
             let result = self.end();
 
@@ -378,6 +380,7 @@ macro_rules! grammar {
     // normal rule
     ( $name:ident = { $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens, unused_variables)]
+        #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
             grammar!(@skip $name slf);
@@ -410,6 +413,7 @@ macro_rules! grammar {
     // atomic rule
     ( $name:ident = @{ $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens, unused_variables)]
+        #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
             grammar!(@skip $name slf);
@@ -452,6 +456,7 @@ macro_rules! grammar {
     // quiet rule
     ( $name:ident = _{ $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens, unused_variables)]
+        #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
             grammar!(@skip $name slf);

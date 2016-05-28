@@ -51,6 +51,7 @@ impl<E> Queues<E> {
     ///
     /// assert!(queues.last().unwrap().is_empty());
     /// ```
+    #[inline]
     pub fn clear(&mut self) {
         for queue in &mut self.queues {
             queue.clear();
@@ -69,6 +70,7 @@ impl<E> Queues<E> {
     ///
     /// assert!(queues.last().unwrap().is_empty());
     /// ```
+    #[inline]
     pub fn last(&self) -> Option<&Vec<E>> {
         if self.size > 0 {
             Some(&self.queues[self.size - 1])
@@ -87,6 +89,7 @@ impl<E> Queues<E> {
     ///
     /// assert!(queues.last_mut().unwrap().is_empty());
     /// ```
+    #[inline]
     pub fn last_mut(&mut self) -> Option<&mut Vec<E>> {
         if self.size > 0 {
             Some(&mut self.queues[self.size - 1])
@@ -108,6 +111,7 @@ impl<E> Queues<E> {
     ///
     /// assert!(queues.last().unwrap().is_empty());
     /// ```
+    #[inline]
     pub fn push(&mut self) {
         if self.size >= self.queues.len() {
             self.queues.push(vec![]);
@@ -130,6 +134,7 @@ impl<E> Queues<E> {
     ///
     /// assert!(queues.last().unwrap().is_empty());
     /// ```
+    #[inline]
     pub fn pop(&mut self) {
         if self.size > 0 {
             self.queues[self.size - 1].clear();
@@ -155,6 +160,7 @@ impl<E> Queues<E> {
     /// assert_eq!(queues.last().unwrap()[0], 1);
     /// assert_eq!(queues.last().unwrap()[1], 2);
     /// ```
+    #[inline]
     pub fn pour(&mut self) {
         if self.size > 1 {
             let (left, right) = self.queues.split_at_mut(self.size - 1);
