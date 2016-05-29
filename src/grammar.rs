@@ -90,6 +90,8 @@ macro_rules! grammar {
               let mut primary = |slf: &mut Self| {
                   let pos = slf.pos();
 
+                  grammar!(@skip $atomic slf);
+
                   let result = grammar!(@conv $atomic slf [ $( $primary )* ] [] []);
 
                   if !result {
@@ -100,6 +102,8 @@ macro_rules! grammar {
               };
               let mut climb = |slf: &mut Self| {
                   let pos = slf.pos();
+
+                  grammar!(@skip $atomic slf);
 
                   grammar!(@conv_prec pos (0u8) $atomic slf [ $( $ts )* ] [] [])
               };
@@ -329,6 +333,14 @@ macro_rules! grammar {
     ( @skip whitespace $_slf:ident )  => ();
     ( @skip comment $slf:ident )      => ($slf.skip_ws());
     ( @skip $_name:ident $slf:ident ) => {
+        {
+            $slf.skip_com();
+            $slf.skip_ws();
+        }
+    };
+    // skip if not atomic
+    ( @skip false $slf:ident ) => ();
+    ( @skip true $slf:ident ) => {
         {
             $slf.skip_com();
             $slf.skip_ws();

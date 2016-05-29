@@ -26,7 +26,7 @@ impl_rdp! {
         times  =  { ["*"] }
         slash  =  { ["/"] }
 
-        whitespace = { [" "] }
+        whitespace = _{ [" "] }
     }
 
     process! {
@@ -118,7 +118,7 @@ fn parens() {
 
 #[test]
 fn complex() {
-    let mut parser = Rdp::new(StringInput::new("(3+(9+3*4+(3+1)/2-4))*2"));
+    let mut parser = Rdp::new(StringInput::new("(3 + (9 + 3 * 4 + (3 + 1) / 2 - 4)) * 2"));
 
     assert!(parser.expression());
     assert_eq!(parser.process(), 44);
