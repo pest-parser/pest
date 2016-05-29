@@ -36,6 +36,8 @@
 #[macro_use]
 mod grammar;
 #[macro_use]
+mod process;
+#[macro_use]
 mod parsers;
 mod input;
 mod inputs;

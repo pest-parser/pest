@@ -48,8 +48,14 @@ pub trait Parser {
     /// Reset a `Parser`.
     fn reset(&mut self);
 
+    /// Slices a `Parser`'s `Input`.
+    fn slice_input(&self, start: usize, end: usize) -> &str;
+
     /// Returns the queue of all matched `Token`s.
-    fn queue(&mut self) -> &mut Vec<Self::Token>;
+    fn queue(&self) -> &Vec<Self::Token>;
+
+    /// Returns the mutable queue of all matched `Token`s.
+    fn queue_mut(&mut self) -> &mut Vec<Self::Token>;
 
     /// Skips white-space.
     fn skip_ws(&mut self);

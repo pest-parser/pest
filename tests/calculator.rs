@@ -1,0 +1,125 @@
+// pest. Smart PEGs in Rust
+// Copyright (C) 2016  Dragoș Tiselice
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+#[macro_use]
+extern crate pest;
+
+use pest::Parser;
+use pest::Token;
+use pest::Input;
+use pest::StringInput;
+
+impl_rdp! {
+    grammar! {
+        expression = _{
+            { ["("] ~ expression ~ [")"] | number }
+            addition       = { plus  | minus }
+            multiplication = { times | slash }
+        }
+        number = @{ ["0"] | ['1'..'9'] ~ ['0'..'9']* }
+        plus   =  { ["+"] }
+        minus  =  { ["-"] }
+        times  =  { ["*"] }
+        slash  =  { ["/"] }
+
+        whitespace = { [" "] }
+    }
+
+    process! {
+        (&self) -> i32 {
+            (&number: number) => {
+                number.parse::<i32>().unwrap()
+            },
+            (_: addition, @left, sign, @right) => {
+                match sign.rule {
+                    Rule::plus  => left + right,
+                    Rule::minus => left - right,
+                    _ => unreachable!()
+                }
+            },
+            (_: multiplication, @left, sign, @right) => {
+                match sign.rule {
+                    Rule::times => left * right,
+                    Rule::slash => left / right,
+                    _ => unreachable!()
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn zero() {
+    let mut parser = Rdp::new(StringInput::new("0"));
+
+    assert!(parser.expression());
+    assert_eq!(parser.process(), 0);
+}
+
+#[test]
+fn number() {
+    let mut parser = Rdp::new(StringInput::new("123"));
+
+    assert!(parser.expression());
+    assert_eq!(parser.process(), 123);
+}
+
+#[test]
+fn addition() {
+    let mut parser = Rdp::new(StringInput::new("123+321"));
+
+    assert!(parser.expression());
+    assert_eq!(parser.process(), 444);
+}
+
+#[test]
+fn subtraction() {
+    let mut parser = Rdp::new(StringInput::new("123-321"));
+
+    assert!(parser.expression());
+    assert_eq!(parser.process(), -198);
+}
+
+#[test]
+fn multiplication() {
+    let mut parser = Rdp::new(StringInput::new("16*16"));
+
+    assert!(parser.expression());
+    assert_eq!(parser.process(), 256);
+}
+
+#[test]
+fn division() {
+    let mut parser = Rdp::new(StringInput::new("16/16"));
+
+    assert!(parser.expression());
+    assert_eq!(parser.process(), 1);
+}
+
+#[test]
+fn precedence() {
+    let mut parser = Rdp::new(StringInput::new("2+3*4"));
+
+    assert!(parser.expression());
+    assert_eq!(parser.process(), 14);
+}
+
+#[test]
+fn parens() {
+    let mut parser = Rdp::new(StringInput::new("(2+3)*4"));
+
+    assert!(parser.expression());
+    assert_eq!(parser.process(), 20);
+}
+
+#[test]
+fn complex() {
+    let mut parser = Rdp::new(StringInput::new("(3+(9+3*4+(3+1)/2-4))*2"));
+
+    assert!(parser.expression());
+    assert_eq!(parser.process(), 44);
+}

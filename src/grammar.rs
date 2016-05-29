@@ -398,9 +398,9 @@ macro_rules! grammar {
                     end:   new_pos
                 };
 
-                slf.queue().insert(len, token);
+                slf.queue_mut().insert(len, token);
             } else {
-                slf.queue().truncate(len);
+                slf.queue_mut().truncate(len);
 
                 slf.track(Rule::$name, pos);
             }
@@ -443,9 +443,9 @@ macro_rules! grammar {
                     end:   new_pos
                 };
 
-                slf.queue().insert(len, token);
+                slf.queue_mut().insert(len, token);
             } else {
-                slf.queue().truncate(len);
+                slf.queue_mut().truncate(len);
 
                 slf.track(Rule::$name, pos);
             }

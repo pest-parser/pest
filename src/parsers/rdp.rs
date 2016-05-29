@@ -105,7 +105,7 @@ macro_rules! impl_rdp {
         impl_rdp!(@com $( $tail )*);
     };
 
-    ( grammar!{ $( $ts:tt )* } ) => {
+    ( grammar! { $( $ts:tt )* } $( $mac:ident! { $( $rest:tt )* } )* ) => {
         use std::cmp;
 
         pub struct Rdp<T: Input> {
@@ -137,6 +137,12 @@ macro_rules! impl_rdp {
             grammar! {
                 $( $ts )*
             }
+
+            $(
+                $mac! {
+                    $( $rest )*
+                }
+            )*
         }
 
         impl<T: Input> Parser for Rdp<T> {
@@ -190,11 +196,11 @@ macro_rules! impl_rdp {
                     if new_prec >= prec {
                         let mut new_pos = self.pos();
                         let mut right = self.pos();
-                        let queue_pos = self.queue().len();
+                        let queue_pos = self.queue.len();
 
                         primary(self);
 
-                        if let Some(token) = self.queue().get(queue_pos) {
+                        if let Some(token) = self.queue.get(queue_pos) {
                             new_pos = token.start;
                             right   = token.end;
                         }
@@ -227,7 +233,7 @@ macro_rules! impl_rdp {
                                 end:   right
                             };
 
-                            self.queue().insert(pos, token);
+                            self.queue.insert(pos, token);
                         }
                     } else {
                         return (op, last_right)
@@ -261,7 +267,17 @@ macro_rules! impl_rdp {
             }
 
             #[inline]
-            fn queue(&mut self) -> &mut Vec<Token<Rule>>{
+            fn slice_input(&self, start: usize, end: usize) -> &str {
+                self.input.slice(start, end)
+            }
+
+            #[inline]
+            fn queue(&self) -> &Vec<Token<Rule>>{
+                &self.queue
+            }
+
+            #[inline]
+            fn queue_mut(&mut self) -> &mut Vec<Token<Rule>>{
                 &mut self.queue
             }
 

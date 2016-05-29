@@ -64,6 +64,11 @@ impl Input for StringInput {
     }
 
     #[inline]
+    fn slice(&self, start: usize, end: usize) -> &str {
+        &self.string[start..end]
+    }
+
+    #[inline]
     fn matches(&mut self, string: &str) -> bool {
         let to = self.pos + string.len();
 
