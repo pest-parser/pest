@@ -16,6 +16,9 @@ pub trait Input {
     /// Set current position of an `Input`.
     fn set_pos(&mut self, pos: usize);
 
+    /// Slices an `Input`.
+    fn slice(&self, start: usize, end: usize) -> &str;
+
     /// Matches `string` to an `Input`, returns whether it matched, and advances the position with
     /// `string.len()` in case it did.
     fn matches(&mut self, string: &str) -> bool;

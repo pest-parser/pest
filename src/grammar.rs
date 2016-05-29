@@ -15,7 +15,6 @@
 /// ```
 /// # #[macro_use] extern crate pest;
 /// # use pest::Parser;
-/// # use pest::Queues;
 /// # use pest::Token;
 /// # use pest::Input;
 /// # use pest::StringInput;
@@ -346,6 +345,7 @@ macro_rules! grammar {
 
     () => {
         #[allow(dead_code)]
+        #[inline]
         pub fn any(&mut self) -> bool {
             if self.end() {
                 let pos = self.pos();
@@ -362,6 +362,7 @@ macro_rules! grammar {
         }
 
         #[allow(dead_code)]
+        #[inline]
         pub fn eoi(&mut self) -> bool {
             let result = self.end();
 
@@ -378,12 +379,13 @@ macro_rules! grammar {
     // normal rule
     ( $name:ident = { $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens, unused_variables)]
+        #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
             grammar!(@skip $name slf);
 
             let pos = slf.pos();
-            let queue_pos = slf.queue().len();
+            let len = slf.queue().len();
 
             let result = grammar!(@atomic $name false slf [ $( $ts )* ]);
 
@@ -396,8 +398,10 @@ macro_rules! grammar {
                     end:   new_pos
                 };
 
-                slf.queue().insert(queue_pos, token);
+                slf.queue_mut().insert(len, token);
             } else {
+                slf.queue_mut().truncate(len);
+
                 slf.track(Rule::$name, pos);
             }
 
@@ -410,12 +414,13 @@ macro_rules! grammar {
     // atomic rule
     ( $name:ident = @{ $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens, unused_variables)]
+        #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
             grammar!(@skip $name slf);
 
             let pos = slf.pos();
-            let queue_pos = slf.queue().len();
+            let len = slf.queue().len();
 
             let toggled = slf.is_atomic();
 
@@ -438,8 +443,10 @@ macro_rules! grammar {
                     end:   new_pos
                 };
 
-                slf.queue().insert(queue_pos, token);
+                slf.queue_mut().insert(len, token);
             } else {
+                slf.queue_mut().truncate(len);
+
                 slf.track(Rule::$name, pos);
             }
 
@@ -452,6 +459,7 @@ macro_rules! grammar {
     // quiet rule
     ( $name:ident = _{ $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens, unused_variables)]
+        #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
             grammar!(@skip $name slf);

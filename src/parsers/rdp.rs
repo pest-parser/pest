@@ -12,7 +12,6 @@
 /// ```
 /// # #[macro_use] extern crate pest;
 /// # use pest::Parser;
-/// # use pest::Queues;
 /// # use pest::Token;
 /// # use pest::Input;
 /// # use pest::StringInput;
@@ -71,6 +70,7 @@ macro_rules! impl_rdp {
     // implement empty whitespace rule
     ( @ws ) => {
         #[allow(dead_code)]
+        #[inline]
         pub fn whitespace(&mut self) -> bool {
             false
         }
@@ -89,6 +89,7 @@ macro_rules! impl_rdp {
     // implement empty comment rule
     ( @com ) => {
         #[allow(dead_code)]
+        #[inline]
         pub fn comment(&mut self) -> bool {
             false
         }
@@ -104,13 +105,12 @@ macro_rules! impl_rdp {
         impl_rdp!(@com $( $tail )*);
     };
 
-    ( grammar!{ $( $ts:tt )* } ) => {
+    ( grammar! { $( $ts:tt )* } $( $mac:ident! { $( $rest:tt )* } )* ) => {
         use std::cmp;
-        use std::collections::VecDeque;
 
         pub struct Rdp<T: Input> {
             input:    T,
-            queues:   Queues<Token<Rule>>,
+            queue:    Vec<Token<Rule>>,
             failures: Vec<Rule>,
             fail_pos: usize,
             atomic:   bool,
@@ -123,7 +123,7 @@ macro_rules! impl_rdp {
             pub fn new(input: T) -> Rdp<T> {
                 Rdp {
                     input:    input,
-                    queues:   Queues::new(),
+                    queue:    vec![],
                     failures: vec![],
                     fail_pos: 0,
                     atomic:   false,
@@ -137,25 +137,34 @@ macro_rules! impl_rdp {
             grammar! {
                 $( $ts )*
             }
+
+            $(
+                $mac! {
+                    $( $rest )*
+                }
+            )*
         }
 
         impl<T: Input> Parser for Rdp<T> {
             type Rule = Rule;
             type Token = Token<Rule>;
 
+            #[inline]
             fn matches(&mut self, string: &str) -> bool {
                 self.input.matches(string)
             }
 
+            #[inline]
             fn between(&mut self, left: char, right: char) -> bool {
                 self.input.between(left, right)
             }
 
+            #[inline]
             fn try<F>(&mut self, revert: bool, rule: F) -> bool
                 where F: FnOnce(&mut Self) -> bool {
 
                 let pos = self.input.pos();
-                self.queues.push();
+                let len = self.queue.len();
 
                 let result = rule(self);
 
@@ -163,10 +172,8 @@ macro_rules! impl_rdp {
                     self.input.set_pos(pos);
                 }
 
-                if result {
-                    self.queues.pour();
-                } else {
-                    self.queues.pop();
+                if !result {
+                    self.queue.truncate(len);
                 }
 
                 result
@@ -189,11 +196,11 @@ macro_rules! impl_rdp {
                     if new_prec >= prec {
                         let mut new_pos = self.pos();
                         let mut right = self.pos();
-                        let queue_pos = self.queue().len();
+                        let queue_pos = self.queue.len();
 
                         primary(self);
 
-                        if let Some(token) = self.queue().get(queue_pos) {
+                        if let Some(token) = self.queue.get(queue_pos) {
                             new_pos = token.start;
                             right   = token.end;
                         }
@@ -226,7 +233,7 @@ macro_rules! impl_rdp {
                                 end:   right
                             };
 
-                            self.queue().insert(pos, token);
+                            self.queue.insert(pos, token);
                         }
                     } else {
                         return (op, last_right)
@@ -236,33 +243,45 @@ macro_rules! impl_rdp {
                 (op, last_right)
             }
 
+            #[inline]
             fn pos(&self) -> usize {
                 self.input.pos()
             }
 
+            #[inline]
             fn set_pos(&mut self, pos: usize) {
                 self.input.set_pos(pos);
             }
 
+            #[inline]
             fn end(&self) -> bool {
                 self.input.len() == self.input.pos()
             }
 
+            #[inline]
             fn reset(&mut self) {
                 self.input.set_pos(0);
-                self.queues.clear();
+                self.queue.clear();
                 self.failures.clear();
                 self.fail_pos = 0;
             }
 
-            fn queue(&mut self) -> &mut VecDeque<Token<Rule>>{
-                if let Some(queue) = self.queues.last_mut() {
-                    queue
-                } else {
-                    unreachable!();
-                }
+            #[inline]
+            fn slice_input(&self, start: usize, end: usize) -> &str {
+                self.input.slice(start, end)
             }
 
+            #[inline]
+            fn queue(&self) -> &Vec<Token<Rule>>{
+                &self.queue
+            }
+
+            #[inline]
+            fn queue_mut(&mut self) -> &mut Vec<Token<Rule>>{
+                &mut self.queue
+            }
+
+            #[inline]
             fn skip_ws(&mut self) {
                 if self.atomic {
                     return
@@ -331,7 +350,6 @@ macro_rules! impl_rdp {
 #[cfg(test)]
 mod tests {
     use super::super::super::Parser;
-    use super::super::super::Queues;
     use super::super::super::Token;
     use super::super::super::Input;
     use super::super::super::StringInput;

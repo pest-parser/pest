@@ -11,7 +11,6 @@
 extern crate pest;
 
 use pest::Parser;
-use pest::Queues;
 use pest::Token;
 use pest::Input;
 use pest::StringInput;

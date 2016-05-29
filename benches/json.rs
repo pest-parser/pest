@@ -19,7 +19,6 @@ use std::io::Read;
 use test::Bencher;
 
 use pest::Parser;
-use pest::Queues;
 use pest::Token;
 use pest::Input;
 use pest::StringInput;
@@ -29,20 +28,20 @@ impl_rdp! {
         json = { value ~ eoi }
 
         object = { ["{"] ~ pair ~ ([","] ~ pair)* ~ ["}"] | ["{"] ~ ["}"] }
-        pair = { string ~ [":"] ~ value }
+        pair   = { string ~ [":"] ~ value }
 
         array = { ["["] ~ value ~ ([","] ~ value)* ~ ["]"] | ["["] ~ ["]"] }
 
         value = { string | number | object | array | ["true"] | ["false"] | ["null"] }
 
-        string = @{ ["\""] ~ (escape | !(["\""] | ["\\"]) ~ any)* ~ ["\""] }
-        escape = @{ ["\\"] ~ (["\""] | ["\\"] | ["/"] | ["b"] | ["f"] | ["n"] | ["r"] | ["t"] | unicode) }
-        unicode = @{ ["u"] ~ hex ~ hex ~ hex ~ hex }
-        hex = { ['0'..'9'] | ['a'..'f'] | ['A'..'F'] }
+        string  = @{ ["\""] ~ (escape | !(["\""] | ["\\"]) ~ any)* ~ ["\""] }
+        escape  =  { ["\\"] ~ (["\""] | ["\\"] | ["/"] | ["b"] | ["f"] | ["n"] | ["r"] | ["t"] | unicode) }
+        unicode =  { ["u"] ~ hex ~ hex ~ hex ~ hex }
+        hex     =  { ['0'..'9'] | ['a'..'f'] | ['A'..'F'] }
 
         number = @{ ["-"]? ~ int ~ ["."] ~ ['0'..'9']+ ~ exp? | ["-"]? ~ int ~ exp | ["-"]? ~ int }
-        int = @{ ["0"] | ['1'..'9'] ~ ['0'..'9']* }
-        exp = @{ (["E"] | ["e"]) ~ (["+"] | ["-"])? ~ int }
+        int    =  { ["0"] | ['1'..'9'] ~ ['0'..'9']* }
+        exp    =  { (["E"] | ["e"]) ~ (["+"] | ["-"])? ~ int }
 
         whitespace = _{ [" "] | ["\t"] | ["\r"] | ["\n"] }
     }
