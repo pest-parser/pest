@@ -168,6 +168,13 @@ macro_rules! process {
             panic!("no rules matched")
         }
     };
+    ( @branches $slf:ident $index:ident ( $( $pattern:tt )* ) => $block:expr,) => {
+        if let Some(result) = process!(@pattern $slf $index ($block) $( $pattern )*) {
+            result
+        } else {
+            panic!("no rules matched")
+        }
+    };
     ( @branches $slf:ident $index:ident ( $( $pattern:tt )* ) => $block:expr, $( $tail:tt )* ) => {
         if let Some(result) = process!(@pattern $slf $index ($block) $( $pattern )*) {
             result
