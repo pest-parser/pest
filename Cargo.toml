@@ -1,6 +1,6 @@
 [package]
 name = "pest"
-description = "Smart PEGs in Rust"
+description = "Elegant, efficient grammars"
 version = "0.1.0"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 repository = "https://github.com/dragostis/pest"
