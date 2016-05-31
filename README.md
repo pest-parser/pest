@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="https://cdn.rawgit.com/dragostis/pest/e0de86ef8a85b83f66da6f338258fb7114c489f9/pest-logo.svg"/>
+</p>
 # pest. Smart PEGs in Rust
 [![Build Status](https://travis-ci.org/dragostis/pest.svg?branch=master)]
 (https://travis-ci.org/dragostis/pest)
