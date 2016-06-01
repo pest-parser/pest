@@ -11,10 +11,14 @@ macro_rules! process {
     // _ : rule
     ( @pattern $slf:ident $index:ident ($block:expr) _ : $typ:ident ) => {
         {
-            if $slf.queue()[$index].rule == Rule::$typ {
-                let $index = $index + 1;
+            if let Some(token) = $slf.queue().get($index) {
+                if token.rule == Rule::$typ {
+                    let $index = $index + 1;
 
-                Some(($block, $index))
+                    Some(($block, $index))
+                } else {
+                    None
+                }
             } else {
                 None
             }
@@ -22,10 +26,14 @@ macro_rules! process {
     };
     ( @pattern $slf:ident $index:ident ($block:expr) _ : $typ:ident, $( $tail:tt )* ) => {
         {
-            if $slf.queue()[$index].rule == Rule::$typ {
-                let $index = $index + 1;
+            if let Some(token) = $slf.queue().get($index) {
+                if token.rule == Rule::$typ {
+                    let $index = $index + 1;
 
-                process!(@pattern $slf $index ($block) $( $tail )*)
+                    process!(@pattern $slf $index ($block) $( $tail )*)
+                } else {
+                    None
+                }
             } else {
                 None
             }
@@ -49,8 +57,45 @@ macro_rules! process {
     // &name : rule
     ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident : $typ:ident ) => {
         {
-            if $slf.queue()[$index].rule == Rule::$typ {
-                let $head = $slf.queue()[$index];
+            if let Some(token) = $slf.queue().get($index) {
+                if token.rule == Rule::$typ {
+                    let $head = $slf.queue()[$index];
+                    let $head = $slf.slice_input($head.start, $head.end);
+
+                    let $index = $index + 1;
+
+                    Some(($block, $index))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+    };
+    ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident : $typ:ident, $( $tail:tt )* ) => {
+        {
+            if let Some(token) = $slf.queue().get($index) {
+                if token.rule == Rule::$typ {
+                    let $head = $slf.queue()[$index];
+                    let $head = $slf.slice_input($head.start, $head.end);
+
+                    let $index = $index + 1;
+
+                    process!(@pattern $slf $index ($block) $( $tail )*)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+    };
+    // &name
+    ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident ) => {
+        {
+            if let Some(token) = $slf.queue().get($index) {
+                let $head = token;
                 let $head = $slf.slice_input($head.start, $head.end);
 
                 let $index = $index + 1;
@@ -61,10 +106,10 @@ macro_rules! process {
             }
         }
     };
-    ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident : $typ:ident, $( $tail:tt )* ) => {
+    ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident, $( $tail:tt )* ) => {
         {
-            if $slf.queue()[$index].rule == Rule::$typ {
-                let $head = $slf.queue()[$index];
+            if let Some(token) = $slf.queue().get($index) {
+                let $head = token;
                 let $head = $slf.slice_input($head.start, $head.end);
 
                 let $index = $index + 1;
@@ -73,27 +118,6 @@ macro_rules! process {
             } else {
                 None
             }
-        }
-    };
-    // &name
-    ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident ) => {
-        {
-            let $head = $slf.queue()[$index];
-            let $head = $slf.slice_input($head.start, $head.end);
-
-            let $index = $index + 1;
-
-            Some(($block, $index))
-        }
-    };
-    ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident, $( $tail:tt )* ) => {
-        {
-            let $head = $slf.queue()[$index];
-            let $head = $slf.slice_input($head.start, $head.end);
-
-            let $index = $index + 1;
-
-            process!(@pattern $slf $index ($block) $( $tail )*)
         }
     };
     // @recurse
@@ -116,8 +140,43 @@ macro_rules! process {
     // name : rule
     ( @pattern $slf:ident $index:ident ($block:expr) $head:ident : $typ:ident ) => {
         {
-            if $slf.queue()[$index].rule == Rule::$typ {
-                let $head = $slf.queue()[$index];
+            if let Some(token) = $slf.queue().get($index) {
+                if token.rule == Rule::$typ {
+                    let $head = $slf.queue()[$index];
+
+                    let $index = $index + 1;
+
+                    Some(($block, $index))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+    };
+    ( @pattern $slf:ident $index:ident ($block:expr) $head:ident : $typ:ident, $( $tail:tt )* ) => {
+        {
+            if let Some(token) = $slf.queue().get($index) {
+                if token.rule == Rule::$typ {
+                    let $head = $slf.queue()[$index];
+
+                    let $index = $index + 1;
+
+                    process!(@pattern $slf $index ($block) $( $tail )*)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+    };
+    // name
+    ( @pattern $slf:ident $index:ident ($block:expr) $head:ident ) => {
+        {
+            if let Some(token) = $slf.queue().get($index) {
+                let $head = token;
 
                 let $index = $index + 1;
 
@@ -127,10 +186,10 @@ macro_rules! process {
             }
         }
     };
-    ( @pattern $slf:ident $index:ident ($block:expr) $head:ident : $typ:ident, $( $tail:tt )* ) => {
+    ( @pattern $slf:ident $index:ident ($block:expr) $head:ident, $( $tail:tt )* ) => {
         {
-            if $slf.queue()[$index].rule == Rule::$typ {
-                let $head = $slf.queue()[$index];
+            if let Some(token) = $slf.queue().get($index) {
+                let $head = token;
 
                 let $index = $index + 1;
 
@@ -138,25 +197,6 @@ macro_rules! process {
             } else {
                 None
             }
-        }
-    };
-    // name
-    ( @pattern $slf:ident $index:ident ($block:expr) $head:ident ) => {
-        {
-            let $head = $slf.queue()[$index];
-
-            let $index = $index + 1;
-
-            Some(($block, $index))
-        }
-    };
-    ( @pattern $slf:ident $index:ident ($block:expr) $head:ident, $( $tail:tt )* ) => {
-        {
-            let $head = $slf.queue()[$index];
-
-            let $index = $index + 1;
-
-            process!(@pattern $slf $index ($block) $( $tail )*)
         }
     };
 
