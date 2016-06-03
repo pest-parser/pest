@@ -5,7 +5,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::str;
+use std::iter::Peekable;
+use std::str::{self, Chars};
 
 use super::super::Input;
 
@@ -66,6 +67,41 @@ impl Input for StringInput {
     #[inline]
     fn slice(&self, start: usize, end: usize) -> &str {
         &self.string[start..end]
+    }
+
+    #[inline]
+    fn line_col(&self, pos: usize) -> (usize, usize) {
+        fn find(chars: &mut Peekable<Chars>, pos: usize,
+                current: (usize, usize)) -> (usize, usize) {
+            if pos == 0 {
+                current
+            } else {
+                match chars.next() {
+                    Some('\r') => {
+                        if let Some(&'\n') = chars.peek() {
+                            chars.next();
+
+                            if pos == 1 {
+                                find(chars, pos - 1, (current.0 + 1, 1))
+                            } else {
+                                find(chars, pos - 2, (current.0 + 1, 1))
+                            }
+                        } else {
+                            find(chars, pos - 1, (current.0 + 1, 1))
+                        }
+                    },
+                    Some('\n') => find(chars, pos - 1, (current.0 + 1, 1)),
+                    Some(_)    => find(chars, pos - 1, (current.0, current.1 + 1)),
+                    None       => unreachable!()
+                }
+            }
+        }
+
+        if pos > self.string.len() {
+            panic!("position out of bounds");
+        }
+
+        find(&mut self.string.chars().peekable(), pos, (1, 1))
     }
 
     #[inline]
@@ -157,6 +193,28 @@ mod tests {
         assert_eq!(input.pos(), 3);
         assert!(input.matches("asdf"));
         assert_eq!(input.pos(), 7);
+    }
+
+    #[test]
+    fn slice() {
+        let input = StringInput::new("asdasdf");
+
+        assert_eq!(input.slice(1, 3), "sd");
+    }
+
+    #[test]
+    fn line_col() {
+        let input = StringInput::new("a\rb\nc\r\nd");
+
+        assert_eq!(input.line_col(0), (1, 1));
+        assert_eq!(input.line_col(1), (1, 2));
+        assert_eq!(input.line_col(2), (2, 1));
+        assert_eq!(input.line_col(3), (2, 2));
+        assert_eq!(input.line_col(4), (3, 1));
+        assert_eq!(input.line_col(5), (3, 2));
+        assert_eq!(input.line_col(6), (4, 1));
+        assert_eq!(input.line_col(7), (4, 1));
+        assert_eq!(input.line_col(8), (4, 2));
     }
 
     #[test]

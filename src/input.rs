@@ -19,6 +19,9 @@ pub trait Input {
     /// Slices an `Input`.
     fn slice(&self, start: usize, end: usize) -> &str;
 
+    /// Returns the line and column of a position for an `Input`.
+    fn line_col(&self, pos: usize) -> (usize, usize);
+
     /// Matches `string` to an `Input`, returns whether it matched, and advances the position with
     /// `string.len()` in case it did.
     fn matches(&mut self, string: &str) -> bool;
