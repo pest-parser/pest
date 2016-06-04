@@ -38,7 +38,7 @@
 /// ab = @{ a ~ b }
 /// ```
 ///
-/// In the rule above, there cannot be any between `a` and `b` for `ab` to match. This rule has a
+/// In the rule above, there cannot be anything between `a` and `b` for `ab` to match. This rule has a
 /// *cascading* effect, so any rules called from an atomic rule will also be atomic while being
 /// matched in an atomic context. In other words, `a` and `b` will also be atomic when being
 /// matched inside of `ab`.
@@ -69,7 +69,7 @@
 /// | `&a`         | matches `a` without making progress                  |
 /// | `!a`         | matches if `a` doesn't match without making progress |
 ///
-/// ## Precendece climbing
+/// ## Precedence climbing
 ///
 /// pest supports a special type of rule that implements precedence climbing in the background.
 ///
@@ -82,7 +82,7 @@
 /// ```
 ///
 /// The first part of the precedence climbing rule is the primary expression that comes between
-/// braces. It's followed by any number of rules, each next rule having a precedence higher than
+/// braces. It's followed by any number of rules, each rule having a precedence higher than the
 /// previous one.
 ///
 /// # Examples
