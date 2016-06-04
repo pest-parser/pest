@@ -22,8 +22,8 @@ pest uses PEG syntax to enable expressive grammar creation.
 ```rust
 impl_rdp! {
     grammar! {
-      expression = { paren ~ expression? }
-      paren = { ["("] ~ expression? ~ [")"] }
+      expression = _{ paren ~ expression? }
+      paren      =  { ["("] ~ expression? ~ [")"] }
     }
 }
 
