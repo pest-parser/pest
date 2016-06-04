@@ -50,6 +50,7 @@ Here are some preliminary tests for your enjoyment.
 
 * simple PEG grammar
 * smart error reporting with `atomic` and `silent` rules
+* precedence climbing rule
 * no generation step (one-step compilation)
 * fast macro-generated recursive descent parser
 * runs on stable Rust

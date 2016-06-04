@@ -9,7 +9,7 @@
 /// position. Rules are always defined between braces, with an optional symbol marking the type of
 /// rule defined.
 ///
-/// `pest` has two special rules that get called in-between all other rules if defined.
+/// pest has two special rules that get called in-between all other rules if defined.
 ///
 /// * `whitespace` - gets run between rules and sub-rules
 /// * `comment` - gets run only between rules
@@ -68,6 +68,22 @@
 /// | `a?`         | optionally matches `a`                               |
 /// | `&a`         | matches `a` without making progress                  |
 /// | `!a`         | matches if `a` doesn't match without making progress |
+///
+/// ## Precendece climbing
+///
+/// pest supports a special type of rule that implements precedence climbing in the background.
+///
+/// ```ignore
+/// expression = _{
+///     { ["("] ~ expression ~ [")"] | number }
+///     addition       = { plus  | minus }
+///     multiplication = { times | slash }
+/// }
+/// ```
+///
+/// The first part of the precedence climbing rule is the primary expression that comes between
+/// braces. It's followed by any number of rules, each next rule having a precedence higher than
+/// previous one.
 ///
 /// # Examples
 ///
