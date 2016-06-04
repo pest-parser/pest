@@ -5,10 +5,69 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// A `macro` that defines each rule as a method on a `Parser`. Rules starting with an uderscore
-/// will not be placed into the queue.
+/// A `macro` that defines each rule as a method on a `Parser` which parses from the current
+/// position. Rules are always defined between braces, with an optional symbol marking the type of
+/// rule defined.
 ///
-/// `whitespace` is a special rules used exclusively for white-space.
+/// `pest` has two special rules that get called in-between all other rules if defined.
+///
+/// * `whitespace` - gets run between rules and sub-rules
+/// * `comment` - gets run only between rules
+///
+/// # Normal rules
+///
+/// A normal rule will always create a `Token` and add it to the `Parser::queue`, along with any
+/// subsequent rules that its subrules may create.
+///
+/// ```ignore
+/// one = { two }
+/// ```
+///
+/// If the above rule matches and `two` is a normal rule as well, the queue of `Token`s will
+/// contain `Token { rule: Rule::one, ... }, Token { rule: Rule::two, ... }`.
+///
+/// Normal rules are also tracked for error reporting. Once a normal rule fails, its failure is
+/// automatically recorded and available in `Parser::expected`.
+///
+/// # Atomic rules `@`
+///
+/// Atomic rules work as normal rules apart from the fact that they don't accept any `whitespace`
+/// or `comment` between rules and sub-rules.
+///
+/// ```ignore
+/// ab = @{ a ~ b }
+/// ```
+///
+/// In the rule above, there cannot be any between `a` and `b` for `ab` to match. This rule has a
+/// *cascading* effect, so any rules called from an atomic rule will also be atomic while being
+/// matched in an atomic context. In other words, `a` and `b` will also be atomic when being
+/// matched inside of `ab`.
+///
+/// # Silent rules `_`
+///
+/// Silent rules work like normal rules without appearing in `Parser::queue` or `Parser::expected`.
+///
+/// ```ignore
+/// whitespace = _{ [" "] }
+/// ```
+///
+/// Unlike atomic rules, silent rules are *not cascading*. A rule inside a silent rule will not be
+/// silent unless it's explicitly stated.
+///
+/// # Syntax
+///
+/// | Rule         | What it does                                         |
+/// |--------------|------------------------------------------------------|
+/// | `["a"]`      | matches the exact string `"a"`                       |
+/// | `['a'..'z']` | matches one character between `'a'` and `'z'`        |
+/// | `a`          | matches rule `a`                                     |
+/// | `a ~ b`      | matches the sequence `a` `b`                         |
+/// | `a | b`      | matches either `a` or `b`                            |
+/// | `a*`         | matches `a` zero or more times                       |
+/// | `a+`         | matches `a` one or more times                        |
+/// | `a?`         | optionally matches `a`                               |
+/// | `&a`         | matches `a` without making progress                  |
+/// | `!a`         | matches if `a` doesn't match without making progress |
 ///
 /// # Examples
 ///
@@ -73,7 +132,7 @@ macro_rules! grammar {
             }
         }
     };
-    // quiet
+    // silent
     ( @conv_prec $pos:ident ($prec:expr) $atomic:tt $slf:ident
       [ $name:ident = _{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
         {
@@ -468,7 +527,7 @@ macro_rules! grammar {
         grammar!($( $tail )*);
     };
 
-    // quiet rule
+    // silent rule
     ( $name:ident = _{ $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens, unused_variables)]
         #[inline]

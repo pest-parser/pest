@@ -27,7 +27,7 @@ pub trait Parser {
     /// currently processed precedence. `last_op` is the last greedily parsed infix operator.
     /// `primary` is a closure defined in `grammar!` that parses a primary expression. `climb` is a
     /// closure defined in `grammar!` that returns the first `Rule` that was parsed (provided it
-    /// was not quieted) along with its precedence and right-associativity, or `None` if no
+    /// was not silented) along with its precedence and right-associativity, or `None` if no
     /// operator passes. This operator triplet is also returned by the function when it greedily
     /// parses an operator useful for a higher precedence.
     fn prec_climb<F, G>(&mut self, pos: usize, left: usize, prec: u8,

@@ -37,7 +37,7 @@
 /// # fn main() {
 /// # impl_rdp! {
 /// # grammar! {
-/// exp    = _{ paren | letter }      // exp is quiet since we already know what we're parsing
+/// exp    = _{ paren | letter }      // exp is silent since we already know what we're parsing
 /// paren  =  { ["("] ~ exp ~ [")"] }
 /// letter =  { ['a'..'z'] }
 /// # }
