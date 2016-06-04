@@ -35,7 +35,8 @@ before_script:
 script:
   - |
     if [[ $TRAVIS_OS_NAME =~ linux ]]; then
-      travis-cargo test
+      travis-cargo test &&
+      travis-cargo --only stable doc
     else
       cargo test
     fi
