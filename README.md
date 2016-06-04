@@ -13,6 +13,8 @@
 pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
 generator with *simplicity* and *speed* in mind.
 
+## [Documentation](http://dragostis.github.io/pest/pest)
+
 ## Elegant
 
 pest uses PEG syntax to enable expressive grammar creation.
