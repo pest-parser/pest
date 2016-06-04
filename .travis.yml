@@ -40,7 +40,7 @@ script:
       cargo test
     fi
 after_success: |
-  if [[ $TRAVIS_OS_NAME =~ linux ]]; then
+  if [[ $TRAVIS_OS_NAME =~ linux && $TRAVIS_RUST_VERSION =~ stable ]]; then
     travis-cargo --only stable doc-upload
     travis-cargo coveralls --no-sudo --verify \
     --kcov-options="--exclude-path=target/,tests/"

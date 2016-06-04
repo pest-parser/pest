@@ -1,16 +1,14 @@
-// pest. Smart PEGs in Rust
+// pest. Elegant, efficient grammars
 // Copyright (C) 2016  Dragoș Tiselice
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! # pest. Smart PEGs in Rust
+//! # pest. Elegant, efficient grammars
 //!
-//! pest is a parser generator that works with
-//! [PEGs](https://en.wikipedia.org/wiki/Parsing_expression_grammar).
-//!
-//! It relies exclusively on macros to create an efficient parser at compile-time.
+//! pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser generator with
+//! *simplicity* and *speed* in mind.
 //!
 //! ```
 //! # #[macro_use] extern crate pest;

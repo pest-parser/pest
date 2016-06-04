@@ -1,4 +1,4 @@
-// pest. Smart PEGs in Rust
+// pest. Elegant, efficient grammars
 // Copyright (C) 2016  Dragoș Tiselice
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
