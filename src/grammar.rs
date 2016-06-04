@@ -16,8 +16,9 @@
 ///
 /// # Normal rules
 ///
-/// A normal rule will always create a `Token` and add it to the `Parser::queue`, along with any
-/// subsequent rules that its subrules may create.
+/// A normal rule will always create a [`Token`](struct.Token) and add it to the
+/// [`Parser::queue`](trait.Parser#tymethod.queue), along with any subsequent rules that its
+/// subrules may create.
 ///
 /// ```ignore
 /// one = { two }
@@ -27,7 +28,7 @@
 /// contain `Token { rule: Rule::one, ... }, Token { rule: Rule::two, ... }`.
 ///
 /// Normal rules are also tracked for error reporting. Once a normal rule fails, its failure is
-/// automatically recorded and available in `Parser::expected`.
+/// automatically recorded and available in [`Parser::expected`](trait.Parser#tymethod.expected).
 ///
 /// # Atomic rules `@`
 ///
@@ -45,7 +46,9 @@
 ///
 /// # Silent rules `_`
 ///
-/// Silent rules work like normal rules without appearing in `Parser::queue` or `Parser::expected`.
+/// Silent rules work like normal rules without appearing in
+/// [`Parser::queue`](trait.Parser#tymethod.queue) or
+/// [`Parser::expected`]((trait.Parser#tymethod.expected).
 ///
 /// ```ignore
 /// whitespace = _{ [" "] }

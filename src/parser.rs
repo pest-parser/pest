@@ -72,6 +72,7 @@ pub trait Parser {
     /// Keeps track of rule failures. It gets called when a rule fails at `pos`.
     fn track(&mut self, failed: Self::Rule, pos: usize);
 
-    /// Retuns a `Vec` of all expected `Rule`s at the deepest position.
+    /// Retuns a `Vec` of all expected `Rule`s at the deepest position where the parsing last
+    /// stopped. Used for error reporting.
     fn expected(&mut self) -> (Vec<Self::Rule>, usize);
 }

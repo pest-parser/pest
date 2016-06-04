@@ -37,7 +37,7 @@
 /// # fn main() {
 /// # impl_rdp! {
 /// # grammar! {
-/// expression = _{ paren | letter }      // we don't need the expression Token
+/// expression = _{ paren | letter } // we don't need the expression Token
 /// paren      =  { ["("] ~ expression ~ [")"] }
 /// letter     =  { ['a'..'z'] }
 /// # }
