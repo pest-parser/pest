@@ -55,5 +55,5 @@ Here are some preliminary tests for your enjoyment.
 
 ## Roadmap
 
-* Packrat parsing
-* parsing parallelisation
+* [Packrat parsing](issues/7)
+* [parsing parallelization](issues/25)
