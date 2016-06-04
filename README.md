@@ -10,14 +10,13 @@
 [![Cargo Crate](http://meritbadge.herokuapp.com/pest)]
 (https://crates.io/crates/pest)
 
-pest is a parser generator that works with
-[PEGs](https://en.wikipedia.org/wiki/Parsing_expression_grammar).
+pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
+generator with *simplicity* and *speed* in mind.
 
-It relies exclusively on macros to create an efficient parser at compile-time.
+## Elegant
 
-*The parser generator is currently experimental and will change.*
+pest uses PEG syntax to enable expressive grammar creation.
 
-## Example
 ```rust
 impl_rdp! {
     grammar! {
@@ -32,13 +31,29 @@ assert!(parser.exp());
 assert!(parser.end());
 ```
 
+## Fast
+
+pest generates a fast parser at compile time through the use of macros, without
+forcing you to use nightly. Yes, it works on **stable** (1.9.0+).
+
+Here are some preliminary tests for your enjoyment.
+
+| Parser generator | Time to parse 272.5 KB of JSON |
+|------------------|--------------------------------|
+| ANTRL 4          | 153,000 μs (+/- 15,000)        |
+| Bison + Flex     | 8,761.9 μs (+/- 697)           |
+| **pest**         | 3,178.9 μs (+/- 40.6)          |
+
 ## Features
 
-- [x] infix PEG rules
-- [x] macro-generated recursive descent parser
-- [x] white-space detection
-- [x] token generation
-- [x] automatic error reporting
-- [ ] macro-generated Packrat parser
-- [ ] large file buffer
-- [ ] token pattern-matching
+* simple PEG grammar
+* smart error reporting with `atomic` and `silent` rules
+* no generation step (one-step compilation)
+* fast macro-generated recursive descent parser
+* runs on stable Rust
+* elegant functional-style `Token` processing
+
+## Roadmap
+
+* Packrat parsing
+* parsing parallelisation
