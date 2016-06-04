@@ -31,6 +31,7 @@
 /// ```
 #[macro_export]
 macro_rules! impl_rdp {
+    // implement rules
     ( @rules $( $name:ident )* ) => {
         #[allow(dead_code, non_camel_case_types)]
         #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -41,7 +42,7 @@ macro_rules! impl_rdp {
         }
     };
 
-    // filter out quiet rules
+    // filter out silent rules
     ( @filter [  ] [ $( $rules:tt )* ] ) => {
         impl_rdp!(@rules $( $rules )*);
     };
