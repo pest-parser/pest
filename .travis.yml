@@ -36,7 +36,21 @@ script:
   - |
     if [[ $TRAVIS_OS_NAME =~ linux ]]; then
       travis-cargo test &&
-      travis-cargo --only stable doc
+      travis-cargo --only stable doc &&
+      python -c '
+    import os
+    import re
+
+    for path, subdirs, files in os.walk("."):
+        for name in files:
+            if "macro" in name:
+                with open(os.path.join(path, name), "r") as inputfile:
+                    out = re.sub(" *\( (<[^>]*>)?@((?!\{ \.\.\. \};)(.|\\n))*{ \.\.\. \};\\n", "",
+                                 inputfile.read())
+
+                with open(os.path.join(path, name), "w") as outputfile:
+                    outputfile.write(out)
+      '
     else
       cargo test
     fi
