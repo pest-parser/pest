@@ -19,14 +19,14 @@
 //! # fn main() {
 //! impl_rdp! {
 //!     grammar! {
-//!         exp = { paren ~ exp | [""] }
-//!         paren = { ["("] ~ exp ~ [")"] }
+//!         expression = _{ paren ~ expression? }
+//!         paren      =  { ["("] ~ expression? ~ [")"] }
 //!     }
 //! }
 //!
 //! let mut parser = Rdp::new(StringInput::new("(())((())())()"));
 //!
-//! assert!(parser.exp());
+//! assert!(parser.expression());
 //! assert!(parser.end());
 //! # }
 //! ```

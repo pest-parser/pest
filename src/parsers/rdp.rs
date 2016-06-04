@@ -18,15 +18,15 @@
 /// # fn main() {
 /// impl_rdp! {
 ///     grammar! {
-///         rule = { [""] }
+///         expression = _{ paren ~ expression? }
+///         paren      =  { ["("] ~ expression? ~ [")"] }
 ///     }
 /// }
 ///
-/// let input = StringInput::new("asdasdf");
-/// let mut parser = Rdp::new(input);
+/// let mut parser = Rdp::new(StringInput::new("(())((())())()"));
 ///
-/// assert!(parser.matches("asd"));
-/// assert!(parser.matches("asdf"));
+/// assert!(parser.expression());
+/// assert!(parser.end());
 /// # }
 /// ```
 #[macro_export]
@@ -357,8 +357,8 @@ mod tests {
 
     impl_rdp! {
         grammar! {
-            exp = _{ paren ~ exp | [""] }
-            paren = { ["("] ~ exp ~ [")"] }
+            expression = _{ paren ~ expression? }
+            paren = { ["("] ~ expression? ~ [")"] }
             zero = { ["a"]* }
             one = { ["a"]+ }
             comment = _{ ["//"] ~ (!["\n"] ~ any)* ~ ["\n"] }
@@ -418,7 +418,7 @@ mod tests {
     fn whitespace_seq() {
         let mut parser = Rdp::new(StringInput::new("  (  ( ))(( () )() )() "));
 
-        assert!(parser.exp());
+        assert!(parser.expression());
         assert!(!parser.end());
 
         let queue = vec![
@@ -466,7 +466,7 @@ mod tests {
     fn comment() {
         let mut parser = Rdp::new(StringInput::new("// hi\n(())"));
 
-        assert!(parser.exp());
+        assert!(parser.expression());
         assert!(parser.end());
 
         let queue = vec![
@@ -481,7 +481,7 @@ mod tests {
     fn comment_whitespace() {
         let mut parser = Rdp::new(StringInput::new("   // hi\n  (())"));
 
-        assert!(parser.exp());
+        assert!(parser.expression());
         assert!(parser.end());
 
         let queue = vec![

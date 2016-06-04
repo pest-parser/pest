@@ -37,9 +37,9 @@
 /// # fn main() {
 /// # impl_rdp! {
 /// # grammar! {
-/// exp    = _{ paren | letter }      // exp is silent since we already know what we're parsing
-/// paren  =  { ["("] ~ exp ~ [")"] }
-/// letter =  { ['a'..'z'] }
+/// expression = _{ paren | letter }      // we don't need the expression Token
+/// paren      =  { ["("] ~ expression ~ [")"] }
+/// letter     =  { ['a'..'z'] }
 /// # }
 /// # }
 /// # unreachable!();
@@ -51,8 +51,8 @@
 ///
 /// ```no_run
 /// #[derive(Debug, PartialEq)]
-/// pub enum Exp {
-///     Paren(Box<Exp>),
+/// pub enum Expression {
+///     Paren(Box<Expression>),
 ///     Letter(char)
 /// }
 /// ```
@@ -68,7 +68,7 @@
 /// But before that, it needs to match a `paren` `Token` that gets ignored.
 ///
 /// ```ignore
-/// (_: paren, @exp)
+/// (_: paren, @expression)
 /// ```
 ///
 /// All together now:
@@ -81,25 +81,25 @@
 /// # use pest::StringInput;
 /// # fn main() {
 /// #[derive(Debug, PartialEq)]
-/// pub enum Exp {
-///     Paren(Box<Exp>),
+/// pub enum Expression {
+///     Paren(Box<Expression>),
 ///     Letter(char)
 /// }
 ///
 /// impl_rdp! {
 ///     grammar! {
-///         exp    = _{ paren | letter }
-///         paren  =  { ["("] ~ exp ~ [")"] }
-///         letter =  { ['a'..'z'] }
+///         expression = _{ paren | letter }
+///         paren      =  { ["("] ~ expression ~ [")"] }
+///         letter     =  { ['a'..'z'] }
 ///     }
 ///
 ///     process! {
-///         (&self) -> Exp {
+///         (&self) -> Expression {
 ///             (&letter: letter) => {
-///                 Exp::Letter(letter.chars().next().unwrap())
+///                 Expression::Letter(letter.chars().next().unwrap())
 ///             },
-///             (_: paren, @exp) => {
-///                 Exp::Paren(Box::new(exp))
+///             (_: paren, @expression) => {
+///                 Expression::Paren(Box::new(expression))
 ///             }
 ///         }
 ///     }
@@ -107,8 +107,9 @@
 ///
 /// let mut parser = Rdp::new(StringInput::new("((z))"));
 ///
-/// assert!(parser.exp());
-/// assert_eq!(parser.process(), Exp::Paren(Box::new(Exp::Paren(Box::new(Exp::Letter('z'))))));
+/// assert!(parser.expression());
+/// assert_eq!(parser.process(),
+///            Expression::Paren(Box::new(Expression::Paren(Box::new(Expression::Letter('z'))))));
 /// # }
 /// ```
 #[macro_export]

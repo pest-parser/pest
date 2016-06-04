@@ -15,8 +15,8 @@ use pest::StringInput;
 
 impl_rdp! {
     grammar! {
-        exp = _{ paren ~ exp | [""] }
-        paren = { ["("] ~ exp ~ [")"] }
+        expr = _{ paren ~ expr? }
+        paren = { ["("] ~ expr? ~ [")"] }
         rep_zero = { ["a"]* ~ eoi }
         rep_one = { ["a"]+ }
         opt = { ["a"]? }
@@ -43,7 +43,7 @@ impl_rdp! {
 fn basic() {
     let mut parser = Rdp::new(StringInput::new("(())((())())()"));
 
-    assert!(parser.exp());
+    assert!(parser.expr());
     assert!(parser.end());
 
     let queue = vec![
@@ -63,7 +63,7 @@ fn basic() {
 fn fail() {
     let mut parser = Rdp::new(StringInput::new("(())((())())("));
 
-    assert!(parser.exp());
+    assert!(parser.expr());
     assert!(!parser.end());
 
     let queue = vec![
