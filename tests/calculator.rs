@@ -20,7 +20,7 @@ impl_rdp! {
             addition       = { plus  | minus }
             multiplication = { times | slash }
         }
-        number = @{ ["0"] | ['1'..'9'] ~ ['0'..'9']* }
+        number = @{ ["-"]? ~ (["0"] | ['1'..'9'] ~ ['0'..'9']*) }
         plus   =  { ["+"] }
         minus  =  { ["-"] }
         times  =  { ["*"] }
@@ -114,6 +114,14 @@ fn parens() {
 
     assert!(parser.expression());
     assert_eq!(parser.process(), 20);
+}
+
+#[test]
+fn negative() {
+    let mut parser = Rdp::new(StringInput::new("-2*-2 / -4"));
+
+    assert!(parser.expression());
+    assert_eq!(parser.process(), -1);
 }
 
 #[test]

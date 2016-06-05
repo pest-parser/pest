@@ -180,7 +180,7 @@ macro_rules! impl_rdp {
                 result
             }
 
-            fn prec_climb<F, G>(&mut self, pos: usize, left: usize, prec: u8,
+            fn prec_climb<F, G>(&mut self, pos: usize, left: usize, min_prec: u8,
                                 last_op: Option<(Option<Rule>, u8, bool)>, primary: &mut F,
                                 climb: &mut G) -> (Option<(Option<Rule>, u8, bool)>, Option<usize>)
                 where F: FnMut(&mut Self) -> bool,
@@ -193,8 +193,8 @@ macro_rules! impl_rdp {
                 };
                 let mut last_right = None;
 
-                while let Some((rule, new_prec, _)) = op {
-                    if new_prec >= prec {
+                while let Some((rule, prec, _)) = op {
+                    if prec >= min_prec {
                         let mut new_pos = self.pos();
                         let mut right = self.pos();
                         let queue_pos = self.queue.len();
