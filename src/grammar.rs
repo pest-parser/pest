@@ -54,7 +54,7 @@
 ///
 /// Silent rules work like normal rules without appearing in
 /// [`Parser::queue`](trait.Parser#tymethod.queue) or
-/// [`Parser::expected`]((trait.Parser#tymethod.expected).
+/// [`Parser::expected`](trait.Parser#tymethod.expected).
 ///
 /// ```ignore
 /// whitespace = _{ [" "] }
@@ -85,14 +85,15 @@
 /// ```ignore
 /// expression = _{
 ///     { ["("] ~ expression ~ [")"] | number }
-///     addition       = { plus  | minus }
-///     multiplication = { times | slash }
+///     addition       = {  plus  | minus }
+///     multiplication = {  times | slash }
+///     power          = {< pow } // < for right-associativity
 /// }
 /// ```
 ///
 /// The first part of the precedence climbing rule is the primary expression that comes between
 /// braces. It's followed by any number of rules, each rule having a precedence higher than the
-/// previous one.
+/// previous one. The `<` denote right-associativity, the default being left-associativity.
 ///
 /// # Examples
 ///

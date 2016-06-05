@@ -22,6 +22,37 @@
 /// | `_: R`     | skips a `Token` of rule `R`    |
 /// | `@item`    | recursively process child      |
 ///
+/// # Panics
+///
+/// In case all the patterns inside of `process!` won't match, the `process` method will `panic!`.
+///
+/// ```should_panic
+/// # #[macro_use] extern crate pest;
+/// # use pest::Parser;
+/// # use pest::Token;
+/// # use pest::Input;
+/// # use pest::StringInput;
+/// # fn main() {
+/// impl_rdp! {
+///     grammar! {
+///         a = { ["a"] }
+///         b = { ["b"] }
+///     }
+///
+///     process! {
+///         (&self) -> () {
+///             (_: a) => {}
+///         }
+///     }
+/// }
+///
+/// let mut parser = Rdp::new(StringInput::new("b"));
+///
+/// parser.b();
+/// parser.process();
+/// # }
+/// ```
+///
 /// # Examples
 ///
 /// ### Nested letter

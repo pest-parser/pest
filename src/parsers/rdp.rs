@@ -5,7 +5,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-/// A `macro` useful for implementing the `Parser` `trait` as a recursive descent parser.
+/// A `macro` useful for implementing the `Parser` `trait` as a recursive descent parser. It only
+/// accepts `grammar!` and `process!` calls that get implemented on `self`.
 ///
 /// # Examples
 ///

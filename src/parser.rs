@@ -23,14 +23,14 @@ pub trait Parser {
     fn try<F>(&mut self, revert: bool, rule: F) -> bool where F: FnOnce(&mut Self) -> bool;
 
     /// Uses the precendence climbing algorithm to match rules. `pos` is the current position
-    /// of the queue. `left` is the left-most starting position of the current rule. `prec` is the
-    /// currently processed precedence. `last_op` is the last greedily parsed infix operator.
+    /// of the queue. `left` is the left-most starting position of the current rule. `min_prec` is
+    /// the currently processed precedence. `last_op` is the last greedily parsed infix operator.
     /// `primary` is a closure defined in `grammar!` that parses a primary expression. `climb` is a
     /// closure defined in `grammar!` that returns the first `Rule` that was parsed (provided it
     /// was not silented) along with its precedence and right-associativity, or `None` if no
     /// operator passes. This operator triplet is also returned by the function when it greedily
     /// parses an operator useful for a higher precedence.
-    fn prec_climb<F, G>(&mut self, pos: usize, left: usize, prec: u8,
+    fn prec_climb<F, G>(&mut self, pos: usize, left: usize, min_prec: u8,
                         last_op: Option<(Option<Self::Rule>, u8, bool)>, primary: &mut F,
                         climb: &mut G) -> (Option<(Option<Self::Rule>, u8, bool)>, Option<usize>)
         where F: FnMut(&mut Self) -> bool,
