@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://cdn.rawgit.com/dragostis/pest/e0de86ef8a85b83f66da6f338258fb7114c489f9/pest-logo.svg"/>
+  <img src="https://cdn.rawgit.com/dragostis/pest/9605855a9c4e86d5e89bc963fe50ee344d8a40e6/pest-logo.svg"/>
 </p>
 # pest. Elegant, efficient grammars
 [![Build Status](https://travis-ci.org/dragostis/pest.svg?branch=master)]
@@ -40,11 +40,11 @@ forcing you to use nightly. Yes, it works on **stable** (1.9.0+).
 
 Here are some preliminary tests for your enjoyment.
 
-| Parser generator | Time to parse 272.5 KB of JSON |
-|------------------|--------------------------------|
-| ANTRL 4          | 153,000 μs (+/- 15,000)        |
-| Bison + Flex     | 8,761.9 μs (+/- 697)           |
-| **pest**         | 3,178.9 μs (+/- 40.6)          |
+| Parser generator | Time to parse 272.5 KB of JSON | Speedup |
+|------------------|--------------------------------|--------:|
+| ANTRL 4          | 153,000 μs (+/- 15,000)        |  48.12x |
+| Bison + Flex     | 8,761.9 μs (+/- 697)           |   2.76x |
+| **pest**         | 3,178.9 μs (+/- 40.6)          |   1.00x |
 
 ## Features
 
