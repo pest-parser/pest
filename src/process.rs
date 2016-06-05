@@ -28,10 +28,7 @@
 ///
 /// ```should_panic
 /// # #[macro_use] extern crate pest;
-/// # use pest::Parser;
-/// # use pest::Token;
-/// # use pest::Input;
-/// # use pest::StringInput;
+/// # use pest::prelude::*;
 /// # fn main() {
 /// impl_rdp! {
 ///     grammar! {
@@ -61,10 +58,7 @@
 ///
 /// ```no_run
 /// # #[macro_use] extern crate pest;
-/// # use pest::Parser;
-/// # use pest::Token;
-/// # use pest::Input;
-/// # use pest::StringInput;
+/// # use pest::prelude::*;
 /// # fn main() {
 /// # impl_rdp! {
 /// # grammar! {
@@ -106,10 +100,7 @@
 ///
 /// ```
 /// # #[macro_use] extern crate pest;
-/// # use pest::Parser;
-/// # use pest::Token;
-/// # use pest::Input;
-/// # use pest::StringInput;
+/// # use pest::prelude::*;
 /// # fn main() {
 /// #[derive(Debug, PartialEq)]
 /// pub enum Expression {

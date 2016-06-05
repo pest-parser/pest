@@ -571,6 +571,8 @@ mod input;
 mod inputs;
 mod parser;
 
+pub mod prelude;
+
 pub use input::Input;
 pub use inputs::StringInput;
 pub use parser::Parser;

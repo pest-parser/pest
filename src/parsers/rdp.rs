@@ -12,10 +12,7 @@
 ///
 /// ```
 /// # #[macro_use] extern crate pest;
-/// # use pest::Parser;
-/// # use pest::Token;
-/// # use pest::Input;
-/// # use pest::StringInput;
+/// # use pest::prelude::*;
 /// # fn main() {
 /// impl_rdp! {
 ///     grammar! {
@@ -351,10 +348,7 @@ macro_rules! impl_rdp {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::Parser;
-    use super::super::super::Token;
-    use super::super::super::Input;
-    use super::super::super::StringInput;
+    use super::super::super::prelude::*;
 
     impl_rdp! {
         grammar! {

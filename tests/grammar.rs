@@ -8,10 +8,7 @@
 #[macro_use]
 extern crate pest;
 
-use pest::Parser;
-use pest::Token;
-use pest::Input;
-use pest::StringInput;
+use pest::prelude::*;
 
 impl_rdp! {
     grammar! {

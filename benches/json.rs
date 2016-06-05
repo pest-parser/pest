@@ -18,10 +18,7 @@ use std::io::Read;
 
 use test::Bencher;
 
-use pest::Parser;
-use pest::Token;
-use pest::Input;
-use pest::StringInput;
+use pest::prelude::*;
 
 impl_rdp! {
     grammar! {

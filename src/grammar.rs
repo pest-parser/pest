@@ -99,10 +99,7 @@
 ///
 /// ```
 /// # #[macro_use] extern crate pest;
-/// # use pest::Parser;
-/// # use pest::Token;
-/// # use pest::Input;
-/// # use pest::StringInput;
+/// # use pest::prelude::*;
 /// # fn main() {
 /// impl_rdp! {
 ///     grammar! {
