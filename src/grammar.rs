@@ -9,10 +9,16 @@
 /// position. Rules are always defined between braces, with an optional symbol marking the type of
 /// rule defined.
 ///
-/// pest has two special rules that get called in-between all other rules if defined.
+/// pest has four special rules:
 ///
 /// * `whitespace` - gets run between rules and sub-rules
 /// * `comment` - gets run only between rules
+/// * `any` - matches exactly one `char`
+/// * `eoi` - (end-of-input) matches only when a `Parser` has reached its
+///   [end](trait.Parser#tymethod.end)
+///
+/// `whitespace` and `comment` should be overridden and are void otherwise, while `any` and `eoi`
+/// are predefined rules.
 ///
 /// # Normal rules
 ///
