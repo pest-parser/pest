@@ -28,7 +28,7 @@
 //!
 //! assert_eq!(input.pos(), 3);                  // last match advances the parser by "asd".len()
 //!
-//! assert!(input.between('a', 'z'));            // Input::between ca match 'a' and returns true
+//! assert!(input.between('a', 'z'));            // Input::between can match 'a' and returns true
 //!
 //! assert_eq!(input.pos(), 4);                  // last match advances the parser by 1
 //! ```
