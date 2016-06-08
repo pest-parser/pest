@@ -9,6 +9,9 @@
 /// position. Rules are always defined between braces, with an optional symbol marking the type of
 /// rule defined.
 ///
+/// *Note:* `grammar!` may require you to increase the recursion limit of your create with
+/// `#![recursion_limit = "*"]` where * is the new limit.
+///
 /// pest has four special rules:
 ///
 /// * `whitespace` - gets run between rules and sub-rules

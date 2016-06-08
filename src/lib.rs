@@ -48,6 +48,9 @@
 //! inside of [`impl_rdp!`](macro.impl_rdp!) right now until other parser algorithms are
 //! implemented.
 //!
+//! *Note:* `grammar!` may require you to increase the recursion limit of your create with
+//! `#![recursion_limit = "*"]` where * is the new limit.
+//!
 //! When `impl_rdp!` is run, it implements an `enum` called `Rule` that has a value for all
 //! [non-silent](macro.grammar!#silent-rules-_) rules, but also for
 //! [`any` and `eoi`](macro.grammar!). These `Rule`s are used within `Token`s to specify the type
