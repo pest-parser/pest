@@ -73,7 +73,7 @@ pest is the youngest among them, but is continuously improving.
 | **type**            | combinator           | generator       | generator (macros) |
 | **goals**           | speed, extensibility | usability       | simplicity, speed  |
 | **grammar**         | specialized          | LR(1) / LALR(1) | PEG                |
-| **steps**           | 2                    | 2               | 1                  |
+| **steps**           | 1                    | 2               | 1                  |
 | **code**            | separate / mixed     | mixed           | separate           |
 | **extensibility**   | great                | great           | little             |
 | **great for**       | binary formats       | any text        | languages          |
