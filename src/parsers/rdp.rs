@@ -115,12 +115,13 @@ macro_rules! impl_rdp {
         use std::cmp;
 
         pub struct Rdp<T: Input> {
-            input:    T,
-            queue:    Vec<Token<Rule>>,
-            failures: Vec<Rule>,
-            fail_pos: usize,
-            atomic:   bool,
-            comment:  bool
+            input:       T,
+            queue:       Vec<Token<Rule>>,
+            failures:    Vec<Rule>,
+            fail_pos:    usize,
+            atomic:      bool,
+            comment:     bool,
+            eoi_matched: bool
         }
 
         impl_rdp!(@filter [ $( $ts )* ] []);
@@ -128,17 +129,51 @@ macro_rules! impl_rdp {
         impl<T: Input> Rdp<T> {
             pub fn new(input: T) -> Rdp<T> {
                 Rdp {
-                    input:    input,
-                    queue:    vec![],
-                    failures: vec![],
-                    fail_pos: 0,
-                    atomic:   false,
-                    comment:  false
+                    input:       input,
+                    queue:       vec![],
+                    failures:    vec![],
+                    fail_pos:    0,
+                    atomic:      false,
+                    comment:     false,
+                    eoi_matched: false
                 }
             }
 
             impl_rdp!(@ws $( $ts )*);
             impl_rdp!(@com $( $ts )*);
+
+            #[allow(dead_code)]
+            #[inline]
+            pub fn any(&mut self) -> bool {
+                if self.end() {
+                    let pos = self.pos();
+
+                    self.track(Rule::any, pos);
+
+                    false
+                } else {
+                    let next = self.pos() + 1;
+                    self.set_pos(next);
+
+                    true
+                }
+            }
+
+            #[allow(dead_code)]
+            #[inline]
+            pub fn eoi(&mut self) -> bool {
+                let result = self.end();
+
+                if !result {
+                    let pos = self.pos();
+
+                    self.track(Rule::eoi, pos);
+                } else {
+                    self.eoi_matched = true;
+                }
+
+                result
+            }
 
             grammar! {
                 $( $ts )*
@@ -262,6 +297,11 @@ macro_rules! impl_rdp {
             #[inline]
             fn end(&self) -> bool {
                 self.input.len() == self.input.pos()
+            }
+
+            #[inline]
+            fn eoi_matched(&self) -> bool {
+                self.eoi_matched
             }
 
             #[inline]

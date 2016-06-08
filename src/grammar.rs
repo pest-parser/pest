@@ -286,10 +286,11 @@ macro_rules! grammar {
                     $slf.skip_ws();
 
                     let pos = $slf.pos();
+                    let len = $slf.queue().len();
 
                     let result = grammar!(@mtc $slf $b);
 
-                    if $slf.pos() == pos {
+                    if $slf.pos() == pos && !$slf.eoi_matched() {
                         $slf.set_pos(original);
                     }
 
@@ -440,38 +441,7 @@ macro_rules! grammar {
         grammar!(@conv $atomic $slf $rules [] [])
     };
 
-    () => {
-        #[allow(dead_code)]
-        #[inline]
-        pub fn any(&mut self) -> bool {
-            if self.end() {
-                let pos = self.pos();
-
-                self.track(Rule::any, pos);
-
-                false
-            } else {
-                let next = self.pos() + 1;
-                self.set_pos(next);
-
-                true
-            }
-        }
-
-        #[allow(dead_code)]
-        #[inline]
-        pub fn eoi(&mut self) -> bool {
-            let result = self.end();
-
-            if !result {
-                let pos = self.pos();
-
-                self.track(Rule::eoi, pos);
-            }
-
-            result
-        }
-    };
+    () => ();
 
     // normal rule
     ( $name:ident = { $( $ts:tt )* } $( $tail:tt )* ) => {

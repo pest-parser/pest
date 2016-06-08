@@ -42,8 +42,11 @@ pub trait Parser {
     /// Sets the position of a `Parser`.
     fn set_pos(&mut self, pos: usize);
 
-    /// Returns whether a `Parser` has reached it end.
+    /// Returns whether a `Parser` has reached its end.
     fn end(&self) -> bool;
+
+    /// Returns whether a `Parser` has matched end-of-input.
+    fn eoi_matched(&self) -> bool;
 
     /// Reset a `Parser`.
     fn reset(&mut self);
