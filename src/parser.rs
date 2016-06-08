@@ -12,11 +12,11 @@ pub trait Parser {
 
     /// Matches `string`, returns whether it matched, and advances a parser with `string.len()` in
     /// case it did.
-    fn matches(&mut self, string: &str) -> bool;
+    fn match_string(&mut self, string: &str) -> bool;
 
     /// Matches `char` between `left` and `right`, and advances a parser with one `char` in case
     /// it did.
-    fn between(&mut self, left: char, right: char) -> bool;
+    fn match_range(&mut self, left: char, right: char) -> bool;
 
     /// Tries to match `rule`, returns whether it matched, and advances a parser with in case it
     /// did. If `revert` is `true`, the parser will not advance.

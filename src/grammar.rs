@@ -268,8 +268,8 @@ macro_rules! grammar {
     // match
     ( @mtc $slf:ident (( $exp:expr )) ) => (($exp));
     ( @mtc $slf:ident [ $left:tt .. $right:tt ]) => (grammar!(@mtc $slf [$left, $right]));
-    ( @mtc $slf:ident [ $left:expr, $right:expr ]) => ($slf.between($left, $right));
-    ( @mtc $slf:ident [ $str:expr ]) => ($slf.matches($str));
+    ( @mtc $slf:ident [ $left:expr, $right:expr ]) => ($slf.match_range($left, $right));
+    ( @mtc $slf:ident [ $str:expr ]) => ($slf.match_string($str));
     ( @mtc $slf:ident $rule:ident) => ($slf.$rule());
 
     // process postfix

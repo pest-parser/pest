@@ -149,13 +149,13 @@ macro_rules! impl_rdp {
             type Token = Token<Rule>;
 
             #[inline]
-            fn matches(&mut self, string: &str) -> bool {
-                self.input.matches(string)
+            fn match_string(&mut self, string: &str) -> bool {
+                self.input.match_string(string)
             }
 
             #[inline]
-            fn between(&mut self, left: char, right: char) -> bool {
-                self.input.between(left, right)
+            fn match_range(&mut self, left: char, right: char) -> bool {
+                self.input.match_range(left, right)
             }
 
             #[inline]
@@ -362,14 +362,14 @@ mod tests {
     }
 
     #[test]
-    fn matches() {
+    fn match_string() {
         let input = StringInput::new("asdasdf");
         let mut parser = Rdp::new(input);
 
-        assert!(parser.matches("asd"));
-        assert!(parser.matches("asdf"));
-        assert!(parser.matches(""));
-        assert!(!parser.matches("a"));
+        assert!(parser.match_string("asd"));
+        assert!(parser.match_string("asdf"));
+        assert!(parser.match_string(""));
+        assert!(!parser.match_string("a"));
     }
 
     #[test]
@@ -377,14 +377,14 @@ mod tests {
         let input = StringInput::new("asdasdf");
         let mut parser = Rdp::new(input);
 
-        assert!(parser.matches("asd"));
+        assert!(parser.match_string("asd"));
 
         assert!(!parser.try(false, |parser| {
-            parser.matches("as") && parser.matches("dd")
+            parser.match_string("as") && parser.match_string("dd")
         }));
 
         assert!(parser.try(false, |parser| {
-            parser.matches("as") && parser.matches("df")
+            parser.match_string("as") && parser.match_string("df")
         }));
     }
 
@@ -393,7 +393,7 @@ mod tests {
         let input = StringInput::new("asdasdf");
         let mut parser = Rdp::new(input);
 
-        assert!(parser.matches("asdasdf"));
+        assert!(parser.match_string("asdasdf"));
         assert!(parser.end());
     }
 
@@ -402,11 +402,11 @@ mod tests {
         let input = StringInput::new("asdasdf");
         let mut parser = Rdp::new(input);
 
-        assert!(parser.matches("asdasdf"));
+        assert!(parser.match_string("asdasdf"));
 
         parser.reset();
 
-        assert!(parser.matches("asdasdf"));
+        assert!(parser.match_string("asdasdf"));
     }
 
     #[test]

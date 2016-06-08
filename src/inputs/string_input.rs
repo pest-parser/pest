@@ -19,9 +19,9 @@ use super::super::Input;
 /// # use pest::StringInput;
 /// let mut input = StringInput::new("asdasdf");
 ///
-/// assert!(input.matches("asd"));
-/// assert!(input.matches("asdf"));
-/// assert!(!input.matches("nope"));
+/// assert!(input.match_string("asd"));
+/// assert!(input.match_string("asdf"));
+/// assert!(!input.match_string("nope"));
 /// ```
 pub struct StringInput {
     string: String,
@@ -105,7 +105,7 @@ impl Input for StringInput {
     }
 
     #[inline]
-    fn matches(&mut self, string: &str) -> bool {
+    fn match_string(&mut self, string: &str) -> bool {
         let to = self.pos + string.len();
 
         if to <= self.string.len() {
@@ -123,7 +123,7 @@ impl Input for StringInput {
     }
 
     #[inline]
-    fn between(&mut self, left: char, right: char) -> bool {
+    fn match_range(&mut self, left: char, right: char) -> bool {
         let len = left.len_utf8();
 
         if len != right.len_utf8() {
@@ -161,16 +161,16 @@ mod tests {
     fn empty() {
         let mut input = StringInput::new("");
 
-        assert!(input.matches(""));
-        assert!(!input.matches("a"));
+        assert!(input.match_string(""));
+        assert!(!input.match_string("a"));
     }
 
     #[test]
     fn parts() {
         let mut input = StringInput::new("asdasdf");
 
-        assert!(input.matches("asd"));
-        assert!(input.matches("asdf"));
+        assert!(input.match_string("asd"));
+        assert!(input.match_string("asdf"));
     }
 
     #[test]
@@ -183,15 +183,15 @@ mod tests {
         let mut input = StringInput::new("asdasdf");
 
         assert_eq!(input.pos(), 0);
-        assert!(input.matches("asd"));
+        assert!(input.match_string("asd"));
         assert_eq!(input.pos(), 3);
-        assert!(input.matches("asdf"));
+        assert!(input.match_string("asdf"));
         assert_eq!(input.pos(), 7);
 
         input.set_pos(3);
 
         assert_eq!(input.pos(), 3);
-        assert!(input.matches("asdf"));
+        assert!(input.match_string("asdf"));
         assert_eq!(input.pos(), 7);
     }
 
@@ -218,13 +218,13 @@ mod tests {
     }
 
     #[test]
-    fn between() {
+    fn match_range() {
         let mut input = StringInput::new("bbbb");
 
-        assert!(input.between('a', 'c'));
-        assert!(input.between('b', 'b'));
-        assert!(!input.between('a', 'a'));
-        assert!(!input.between('c', 'c'));
+        assert!(input.match_range('a', 'c'));
+        assert!(input.match_range('b', 'b'));
+        assert!(!input.match_range('a', 'a'));
+        assert!(!input.match_range('c', 'c'));
 
         assert_eq!(input.pos(), 2);
     }

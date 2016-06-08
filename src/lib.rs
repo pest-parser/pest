@@ -24,11 +24,11 @@
 //!
 //! assert_eq!(input.pos(), 0);                  // matching starts from 0, before 'a'
 //!
-//! assert!(input.matches("asd"));               // Input::matches can match "asd" and returns true
+//! assert!(input.match_string("asd"));          // Input::match_string matches "asd"; returns true
 //!
 //! assert_eq!(input.pos(), 3);                  // last match advances the parser by "asd".len()
 //!
-//! assert!(input.between('a', 'z'));            // Input::between can match 'a' and returns true
+//! assert!(input.match_range('a', 'z'));        // Input::match_range matches 'a'; returns true
 //!
 //! assert_eq!(input.pos(), 4);                  // last match advances the parser by 1
 //! ```
