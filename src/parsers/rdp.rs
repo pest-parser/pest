@@ -8,6 +8,13 @@
 /// A `macro` useful for implementing the `Parser` `trait` as a recursive descent parser. It only
 /// accepts `grammar!` and `process!` calls that get implemented on `self`.
 ///
+/// # Rule
+///
+/// It also implements an `enum` called `Rule` that has a value for all
+/// [non-silent](macro.grammar!#silent-rules-_) rules, but also for
+/// [`any` and `eoi`](macro.grammar!). These `Rule`s are used within `Token`s to specify the type
+/// of rule that matched.
+///
 /// # Examples
 ///
 /// ```
