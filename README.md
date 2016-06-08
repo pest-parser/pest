@@ -68,7 +68,7 @@ Tests have been run on an Intel Q8200, 4GB DDR2, Linux 4.6.2 as follows:
 Short comparison with other parsing tools. Please take into consideration that
 pest is the youngest among them, but is continuously improving.
 
-|                      | [nom](1)             | [LALRPOP](2)    | pest               |
+|                      | [nom][1]             | [LALRPOP][2]    | pest               |
 |----------------------|----------------------|-----------------|--------------------|
 | **type**             | combinator           | generator       | generator (macros) |
 | **goals**            | speed, extensibility | usability       | simplicity, speed  |
