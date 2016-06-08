@@ -56,6 +56,26 @@ Here are some preliminary tests for your enjoyment.
 * runs on stable Rust
 * elegant functional-style `Token` processing
 
+## Comparison
+
+Short comparison with other parsing tools. Please take into consideration that
+pest is the youngest among them, but is continuously improving.
+
+|                 | [nom](1)             | [LALRPOP](2)    | pest               |
+|-----------------|----------------------|-----------------|--------------------|
+| type            | combinator           | generator       | generator (macros) |
+| goals           | speed, extensibility | usability       | simplicity, speed  |
+| grammar         | specialized          | LR(1) / LALR(1) | PEG                |
+| steps           | 2                    | 2               | 1                  |
+| code            | separate / mixed     | mixed           | separate           |
+| extensibility   | great                | great           | little             |
+| great for       | binary formats       | any text        | languages          |
+| error reporting | yes                  | yes             | yes                |
+| LOCs            | ~10K                 | ~500K           | ~6K                |
+
+[1]: https://github.com/Geal/nom
+[2]: https://github.com/nikomatsakis/lalrpop
+
 ## Roadmap
 
 * [Packrat parsing](issues/7)
