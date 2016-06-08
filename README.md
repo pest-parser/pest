@@ -38,13 +38,20 @@ assert!(parser.end());
 pest generates a fast parser at compile time through the use of macros, without
 forcing you to use nightly. Yes, it works on **stable** (1.9.0+).
 
-Here are some preliminary tests for your enjoyment.
+| Parser generator | Time to parse 272.5 KB of JSON | pest speedup |
+|------------------|--------------------------------|-------------:|
+| ANTRL 4          | 153,000 μs (+/- 15,000)        |       48.12x |
+| Bison + Flex     | 8,761.9 μs (+/- 697)           |        2.76x |
+| **pest**         | 3,178.9 μs (+/- 40.6)          |        1.00x |
 
-| Parser generator | Time to parse 272.5 KB of JSON | Speedup |
-|------------------|--------------------------------|--------:|
-| ANTRL 4          | 153,000 μs (+/- 15,000)        |  48.12x |
-| Bison + Flex     | 8,761.9 μs (+/- 697)           |   2.76x |
-| **pest**         | 3,178.9 μs (+/- 40.6)          |   1.00x |
+Tests have been run on an Intel Q8200, 4GB DDR2, Linux 4.6.2 as follows:
+
+* ANTLR 4 [JSON grammar]
+  (https://github.com/antlr/grammars-v4/blob/master/json/JSON.g4) measured with
+  [JMH](http://openjdk.java.net/projects/code-tools/jmh/) SingleShotTime
+* Bison + Flex [JSON grammar](https://gist.github.com/justjkk/436828) with
+  string capturing and printing removed
+* pest [JSON grammar](benches/json.rs) measured with `cargo bench`
 
 ## Features
 
