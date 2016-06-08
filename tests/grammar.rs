@@ -53,7 +53,7 @@ fn basic() {
         Token { rule: Rule::paren, start: 12, end: 14 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -72,7 +72,7 @@ fn fail() {
         Token { rule: Rule::paren, start: 9, end: 11 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 
     assert_eq!(parser.expected(), (vec![Rule::paren], 13));
 }
@@ -87,7 +87,7 @@ fn rep_zero_empty() {
         Token { rule: Rule::rep_zero, start: 0, end: 0 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -100,7 +100,7 @@ fn rep_zero_long() {
         Token { rule: Rule::rep_zero, start: 0, end: 4 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -111,7 +111,7 @@ fn rep_zero_wrong() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 
     assert_eq!(parser.expected(), (vec![Rule::eoi], 4));
 }
@@ -124,7 +124,7 @@ fn rep_one_empty() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 
     assert_eq!(parser.expected(), (vec![Rule::rep_one], 0));
 }
@@ -140,7 +140,7 @@ fn rep_one_long() {
         Token { rule: Rule::rep_one, start: 0, end: 4 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -152,7 +152,7 @@ fn rep_one_wrong() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 
     assert_eq!(parser.expected(), (vec![Rule::rep_one], 0));
 }
@@ -168,7 +168,7 @@ fn opt_empty() {
         Token { rule: Rule::opt, start: 0, end: 0 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -182,7 +182,7 @@ fn opt_right() {
         Token { rule: Rule::opt, start: 0, end: 1 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -196,7 +196,7 @@ fn opt_wrong() {
         Token { rule: Rule::opt, start: 0, end: 0 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -210,7 +210,7 @@ fn pres_right() {
         Token { rule: Rule::pres, start: 0, end: 0 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -222,7 +222,7 @@ fn pres_wrong() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 
     assert_eq!(parser.expected(), (vec![Rule::pres], 0));
 }
@@ -238,7 +238,7 @@ fn abs_right() {
         Token { rule: Rule::abs, start: 0, end: 1 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -250,7 +250,7 @@ fn abs_wrong() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 
     assert_eq!(parser.expected(), (vec![Rule::abs], 0));
 }
@@ -266,7 +266,7 @@ fn digit_right() {
         Token { rule: Rule::digit, start: 0, end: 1 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -278,7 +278,7 @@ fn digit_wrong() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 
     assert_eq!(parser.expected(), (vec![Rule::digit], 0));
 }
@@ -310,7 +310,7 @@ fn expression() {
         Token { rule: Rule::number, start: 12, end: 13 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -340,7 +340,7 @@ fn expression_spaced() {
         Token { rule: Rule::number, start: 20, end: 21 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -355,5 +355,5 @@ fn expression_space_after() {
         Token { rule: Rule::number, start: 0, end: 1 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }

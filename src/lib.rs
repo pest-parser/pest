@@ -83,7 +83,7 @@
 //!     Token { rule: Rule::paren, start: 4, end: 6 }
 //! ];
 //!
-//! assert!(parser.queue().iter().eq(&queue));
+//! assert_eq!(parser.queue(), &queue);
 //! # }
 //! ```
 //!
@@ -308,7 +308,7 @@
 //!     Token { rule: Rule::number, start: 0, end: 3 }
 //! ];
 //!
-//! assert!(parser.queue().iter().eq(&queue));
+//! assert_eq!(parser.queue(), &queue);
 //! # }
 //! ```
 //!
@@ -346,7 +346,7 @@
 //!     Token { rule: Rule::number, start: 2, end: 5 }
 //! ];
 //!
-//! assert!(parser.queue().iter().eq(&queue));
+//! assert_eq!(parser.queue(), &queue);
 //! # }
 //! ```
 //!
@@ -418,7 +418,7 @@
 //!     Token { rule: Rule::number, start: 0, end: 3 }
 //! ];
 //!
-//! assert!(parser.queue().iter().eq(&queue));
+//! assert_eq!(parser.queue(), &queue);
 //! # }
 //! ```
 //!

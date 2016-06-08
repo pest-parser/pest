@@ -47,7 +47,7 @@ fn int_zero() {
         Token { rule: Rule::int, start: 0, end: 1 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn int_long() {
         Token { rule: Rule::int, start: 0, end: 12 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -76,7 +76,7 @@ fn exp() {
         Token { rule: Rule::int, start: 1, end: 3 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -91,7 +91,7 @@ fn exp_signed() {
         Token { rule: Rule::int, start: 2, end: 3 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -108,7 +108,7 @@ fn number_neg_point_exp() {
         Token { rule: Rule::int, start: 10, end: 12 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -125,7 +125,7 @@ fn number_exp() {
         Token { rule: Rule::int, start: 5, end: 7 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -140,7 +140,7 @@ fn number_neg() {
         Token { rule: Rule::int, start: 1, end: 4 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -158,7 +158,7 @@ fn unicode() {
         Token { rule: Rule::hex, start: 4, end: 5 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -179,7 +179,7 @@ fn string() {
         Token { rule: Rule::escape, start: 10, end: 12 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -193,7 +193,7 @@ fn array_empty() {
         Token { rule: Rule::array, start: 0, end: 3 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -216,7 +216,7 @@ fn array() {
         Token { rule: Rule::string, start: 21, end: 24 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -234,7 +234,7 @@ fn pair() {
         Token { rule: Rule::int, start: 6, end: 7 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -264,7 +264,7 @@ fn object() {
         Token { rule: Rule::int, start: 26, end: 28 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]

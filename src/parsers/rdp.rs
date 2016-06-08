@@ -426,7 +426,7 @@ mod tests {
             Token { rule: Rule::paren, start: 20, end: 22 }
         ];
 
-        assert!(parser.queue().iter().eq(&queue));
+        assert_eq!(parser.queue(), &queue);
     }
 
     #[test]
@@ -440,7 +440,7 @@ mod tests {
             Token { rule: Rule::zero, start: 2, end: 15 }
         ];
 
-        assert!(parser.queue().iter().eq(&queue));
+        assert_eq!(parser.queue(), &queue);
     }
 
     #[test]
@@ -454,7 +454,7 @@ mod tests {
             Token { rule: Rule::one, start: 2, end: 15 }
         ];
 
-        assert!(parser.queue().iter().eq(&queue));
+        assert_eq!(parser.queue(), &queue);
     }
 
     #[test]
@@ -469,7 +469,7 @@ mod tests {
             Token { rule: Rule::paren, start: 7, end: 9 }
         ];
 
-        assert!(parser.queue().iter().eq(&queue));
+        assert_eq!(parser.queue(), &queue);
     }
 
     #[test]
@@ -484,6 +484,6 @@ mod tests {
             Token { rule: Rule::paren, start: 12, end: 14 }
         ];
 
-        assert!(parser.queue().iter().eq(&queue));
+        assert_eq!(parser.queue(), &queue);
     }
 }

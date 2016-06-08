@@ -165,7 +165,7 @@ fn _power_number() {
         Token { rule: Rule::digits, start: 0, end: 3 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -186,7 +186,7 @@ fn _power_power() {
         Token { rule: Rule::digits, start: 4, end: 5 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -207,7 +207,7 @@ fn _unary_power() {
         Token { rule: Rule::digits, start: 4, end: 5 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -225,7 +225,7 @@ fn _unary_unary() {
         Token { rule: Rule::digits, start: 4, end: 5 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -245,7 +245,7 @@ fn _unary_unary_unary() {
         Token { rule: Rule::digits, start: 8, end: 9 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -262,7 +262,7 @@ fn exp_number() {
         Token { rule: Rule::digits, start: 0, end: 3 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -284,7 +284,7 @@ fn exp_power() {
         Token { rule: Rule::digits, start: 4, end: 5 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -303,7 +303,7 @@ fn exp_unary() {
         Token { rule: Rule::digits, start: 4, end: 5 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -324,7 +324,7 @@ fn exp_unary_unary() {
         Token { rule: Rule::digits, start: 8, end: 9 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -388,7 +388,7 @@ fn exp_infix() {
         Token { rule: Rule::digits, start: 36, end: 37 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -410,7 +410,7 @@ fn exp_functiondef() {
         Token { rule: Rule::stat, start: 20, end: 21 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -431,7 +431,7 @@ fn exp_prefixexp() {
 
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -446,7 +446,7 @@ fn exp_tableconstructor() {
         Token { rule: Rule::tableconstructor, start: 0, end: 3 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -469,7 +469,7 @@ fn retstat() {
         Token { rule: Rule::digits, start: 10, end: 11 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -484,7 +484,7 @@ fn label() {
         Token { rule: Rule::name, start: 2, end: 3 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -501,7 +501,7 @@ fn funcname() {
         Token { rule: Rule::name, start: 5, end: 6 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -524,7 +524,7 @@ fn var() {
         Token { rule: Rule::name, start: 10, end: 12 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -544,7 +544,7 @@ fn functioncall_var() {
 
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -566,7 +566,7 @@ fn functioncall_exp() {
 
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -590,7 +590,7 @@ fn varsuffix() {
 
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -607,7 +607,7 @@ fn nameandargs() {
 
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -631,7 +631,7 @@ fn args() {
 
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -658,7 +658,7 @@ fn explist() {
 
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -679,7 +679,7 @@ fn functiondef() {
         Token { rule: Rule::stat, start: 20, end: 21 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -699,7 +699,7 @@ fn funcbody() {
         Token { rule: Rule::stat, start: 11, end: 12 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -713,7 +713,7 @@ fn parlist_dots() {
         Token { rule: Rule::parlist, start: 0, end: 3 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -730,7 +730,7 @@ fn parlist() {
         Token { rule: Rule::name, start: 3, end: 4 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -745,7 +745,7 @@ fn namelist_one() {
         Token { rule: Rule::name, start: 0, end: 3 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -761,7 +761,7 @@ fn namelist_many() {
         Token { rule: Rule::name, start: 5, end: 8 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -775,7 +775,7 @@ fn tableconstructor_empty() {
         Token { rule: Rule::tableconstructor, start: 0, end: 3 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -799,7 +799,7 @@ fn tableconstructor() {
         Token { rule: Rule::digits, start: 8, end: 9 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -831,7 +831,7 @@ fn fieldlist() {
         Token { rule: Rule::digits, start: 15, end: 16 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -853,7 +853,7 @@ fn field1() {
         Token { rule: Rule::digits, start: 6, end: 7 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -872,7 +872,7 @@ fn field2() {
         Token { rule: Rule::digits, start: 4, end: 5 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -890,7 +890,7 @@ fn field3() {
         Token { rule: Rule::digits, start: 0, end: 1 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -904,7 +904,7 @@ fn name() {
         Token { rule: Rule::name, start: 0, end: 7 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -925,7 +925,7 @@ fn string_normal() {
         Token { rule: Rule::hex_escape, start: 11, end: 15 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -946,7 +946,7 @@ fn string_char() {
         Token { rule: Rule::hex_escape, start: 11, end: 15 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -961,7 +961,7 @@ fn string_long() {
         Token { rule: Rule::longstring, start: 0, end: 11 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -977,7 +977,7 @@ fn int() {
         Token { rule: Rule::digits, start: 0, end: 5 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -994,7 +994,7 @@ fn float_digits_point_digits() {
         Token { rule: Rule::digits, start: 3, end: 5 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1012,7 +1012,7 @@ fn float_digits_point_exp() {
         Token { rule: Rule::digits, start: 5, end: 6 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1030,7 +1030,7 @@ fn float_point_digits_exp() {
         Token { rule: Rule::digits, start: 5, end: 6 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1048,7 +1048,7 @@ fn float_digits_exp() {
         Token { rule: Rule::digits, start: 3, end: 5 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1064,7 +1064,7 @@ fn hex() {
         Token { rule: Rule::hex_digits, start: 2, end: 5 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1081,7 +1081,7 @@ fn hex_float_digits_point_digits() {
         Token { rule: Rule::hex_digits, start: 5, end: 7 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1099,7 +1099,7 @@ fn hex_float_digits_point_exp() {
         Token { rule: Rule::digits, start: 7, end: 8 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1117,7 +1117,7 @@ fn hex_float_point_digits_exp() {
         Token { rule: Rule::digits, start: 7, end: 8 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1135,7 +1135,7 @@ fn hex_float_digits_exp() {
         Token { rule: Rule::digits, start: 6, end: 8 }
     ];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1147,7 +1147,7 @@ fn nested_str1_empty() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1159,7 +1159,7 @@ fn nested_str1() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1171,7 +1171,7 @@ fn nested_str2_empty() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1183,7 +1183,7 @@ fn nested_str2() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1195,7 +1195,7 @@ fn nested_str2_spaced() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1207,7 +1207,7 @@ fn comment() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1219,7 +1219,7 @@ fn line_comment1() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1231,7 +1231,7 @@ fn line_comment2() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1243,7 +1243,7 @@ fn line_comment3() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1255,7 +1255,7 @@ fn line_comment4() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
 
 #[test]
@@ -1267,5 +1267,5 @@ fn shebang() {
 
     let queue = vec![];
 
-    assert!(parser.queue().iter().eq(&queue));
+    assert_eq!(parser.queue(), &queue);
 }
