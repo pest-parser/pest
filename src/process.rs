@@ -188,8 +188,7 @@ macro_rules! process {
         {
             if let Some(token) = $slf.queue().get($index) {
                 if token.rule == Rule::$typ {
-                    let $head = $slf.queue()[$index];
-                    let $head = $slf.slice_input($head.start, $head.end);
+                    let $head = $slf.slice_input(token.start, token.end);
 
                     let $index = $index + 1;
 
@@ -206,8 +205,7 @@ macro_rules! process {
         {
             if let Some(token) = $slf.queue().get($index) {
                 if token.rule == Rule::$typ {
-                    let $head = $slf.queue()[$index];
-                    let $head = $slf.slice_input($head.start, $head.end);
+                    let $head = $slf.slice_input(token.start, token.end);
 
                     let $index = $index + 1;
 
@@ -224,8 +222,7 @@ macro_rules! process {
     ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
-                let $head = token;
-                let $head = $slf.slice_input($head.start, $head.end);
+                let $head = $slf.slice_input(token.start, token.end);
 
                 let $index = $index + 1;
 
@@ -238,8 +235,7 @@ macro_rules! process {
     ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident, $( $tail:tt )* ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
-                let $head = token;
-                let $head = $slf.slice_input($head.start, $head.end);
+                let $head = $slf.slice_input(token.start, token.end);
 
                 let $index = $index + 1;
 
