@@ -21,20 +21,20 @@ pub enum Node {
 
 impl_rdp! {
     grammar! {
-        sentence = { word ~ ([" "] ~ word)* }
-        word     = { letter* }
-        letter   = { ['a'..'z'] }
+        sentence = _{ word ~ ([" "] ~ word)* }
+        word     =  { letter* }
+        letter   =  { ['a'..'z'] }
     }
 
     process! {
         main(&self) -> Node {
-            (_: sentence, @<_sentence>list) => {
+            (list: _sentence()) => {
                 Node::Sentence(list)
             }
         }
 
         _sentence(&self) -> LinkedList<Node> {
-            (_: word, @<_word>head, @tail) => {
+            (_: word, head: _word(), tail: _sentence()) => {
                 let mut tail = tail;
                 tail.push_front(Node::Word(head));
 
@@ -46,7 +46,7 @@ impl_rdp! {
         }
 
         _word(&self) -> LinkedList<Node> {
-            (&head: letter, @tail) => {
+            (&head: letter, tail: _word()) => {
                 let mut tail = tail;
                 tail.push_front(Node::Letter(head.chars().next().unwrap()));
 

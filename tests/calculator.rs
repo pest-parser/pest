@@ -31,14 +31,14 @@ impl_rdp! {
             (&number: number) => {
                 number.parse::<i32>().unwrap()
             },
-            (_: addition, @left, sign, @right) => {
+            (_: addition, left: main(), sign, right: main()) => {
                 match sign.rule {
                     Rule::plus  => left + right,
                     Rule::minus => left - right,
                     _ => unreachable!()
                 }
             },
-            (_: multiplication, @left, sign, @right) => {
+            (_: multiplication, left: main(), sign, right: main()) => {
                 match sign.rule {
                     Rule::times => left * right,
                     Rule::slash => left / right,

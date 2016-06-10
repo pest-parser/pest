@@ -25,14 +25,14 @@ impl_rdp! {
             (&number: number) => { // capture number as &str
                 number.parse::<i32>().unwrap()
             },
-            (_: addition, @left, sign, @right) => { // get left & right by calling process
-                match sign.rule {                   // recursively with @
+            (_: addition, left: main(), sign, right: main()) => { // get left & right by calling
+                match sign.rule {                                 // main recursively
                     Rule::plus  => left + right,
                     Rule::minus => left - right,
                     _ => unreachable!()
                 }
             },
-            (_: multiplication, @left, sign, @right) => {
+            (_: multiplication, left: main(), sign, right: main()) => {
                 match sign.rule {
                     Rule::times => left * right,
                     Rule::slash => left / right,
