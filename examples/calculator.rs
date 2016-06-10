@@ -21,7 +21,7 @@ impl_rdp! {
     }
 
     process! {
-        (&self) -> i32 { // return an i32 in the end
+        main(&self) -> i32 { // return an i32 in the end
             (&number: number) => { // capture number as &str
                 number.parse::<i32>().unwrap()
             },

@@ -9,18 +9,21 @@
 /// `process` on `&self` that processes the whole queue of `Token`s, reducing it to one single
 /// result. The type of this result is specified at the beginning of the definition.
 ///
-/// The `process` is populated with patterns and the way a pattern shall be dealt with. A pattern
-/// is constructed from the following comma-separated items:
+/// The `process` is populated with methods that match patterns, and the way a pattern shall be
+/// dealt with. A pattern is constructed from the following comma-separated items:
 ///
-/// | Item       | What it does                   |
-/// |------------|--------------------------------|
-/// | `item`     | matches any `Token`            |
-/// | `item: R`  | matches a `Token` of rule `R`  |
-/// | `&item`    | captures a `Token`             |
-/// | `&item: R` | captures a `Token` of rule `R` |
-/// | `_`        | skips a `Token`                |
-/// | `_: R`     | skips a `Token` of rule `R`    |
-/// | `@item`    | recursively process child      |
+/// | Item        | What it does                                       |
+/// |-------------|----------------------------------------------------|
+/// | `item`      | matches any `Token`                                |
+/// | `item: R`   | matches a `Token` of rule `R`                      |
+/// | `&item`     | captures a `Token`                                 |
+/// | `&item: R`  | captures a `Token` of rule `R`                     |
+/// | `_`         | skips a `Token`                                    |
+/// | `_: R`      | skips a `Token` of rule `R`                        |
+/// | `@item`     | call method recursively and store result in `item` |
+/// | `@<fn>item` | call `fn` and store result in `item`               |
+///
+/// `process` automatically calls the `main` matcher which is mandatory.
 ///
 /// # Panics
 ///
@@ -37,7 +40,7 @@
 ///     }
 ///
 ///     process! {
-///         (&self) -> () {
+///         main(&self) -> () {
 ///             (_: a) => {}
 ///         }
 ///     }
@@ -116,7 +119,7 @@
 ///     }
 ///
 ///     process! {
-///         (&self) -> Expression {
+///         main(&self) -> Expression {
 ///             (&letter: letter) => {
 ///                 Expression::Letter(letter.chars().next().unwrap())
 ///             },
@@ -134,11 +137,147 @@
 ///            Expression::Paren(Box::new(Expression::Paren(Box::new(Expression::Letter('z'))))));
 /// # }
 /// ```
+///
+/// ### Sentence
+///
+/// To showcase the use of multiple matchers, we'll use a sentence grammar:
+///
+/// ```no_run
+/// # #[macro_use] extern crate pest;
+/// # use pest::prelude::*;
+/// # fn main() {
+/// # impl_rdp! {
+/// # grammar! {
+/// sentence = { word ~ ([" "] ~ word)* }
+/// word     = { letter* }
+/// letter   = { ['a'..'z'] }
+/// # }
+/// # }
+/// # unreachable!();
+/// # }
+/// ```
+///
+/// Let's create a very simple AST that works in this case:
+///
+/// ```no_run
+/// # use std::collections::LinkedList;
+/// #[derive(Debug, PartialEq)]
+/// pub enum Node {
+///     Sentence(LinkedList<Node>), // we're using LinkedList because they're more efficient when
+///     Word(LinkedList<Node>),     // using tail recursion
+///     Letter(char)
+/// }
+/// ```
+///
+/// To build the `Token` processor, let's use a bottom up aproach when writing the matchers. Let's
+/// start by building a `word` matcher. We'll call it `_word` in order not to clash with the name
+/// of the rule that also gets defined as a method on the `Parser`.
+///
+/// ```ignore
+/// _word(&self) -> LinkedList<Node> { // return LinkedList<Node> to build Word with
+///     (&head: letter, @tail) => { // usual tail recursion; &head is captured,
+///         let mut tail = tail;    // tail is recursive
+///         tail.push_front(Node::Letter(head.chars().next().unwrap()));
+///
+///         tail
+///     },
+///     () => {                // if rule above doesn't match, there are no more letters to
+///         LinkedList::new()  // process; return empty list
+///     }
+/// }
+/// ```
+///
+/// Processing a `sentence` is similar, only this time `head` will be a `_word` call.
+///
+/// ```ignore
+/// _sentence(&self) -> LinkedList<Node> {
+///     (_: word, @<_word>head, @tail) => { // match word Token then call _word
+///         let mut tail = tail;
+///         tail.push_front(Node::Word(head));
+///
+///         tail
+///     },
+///     () => {
+///         LinkedList::new()
+///     }
+/// }
+/// ```
+///
+/// Finally, the `main` matcher:
+///
+/// ```ignore
+/// main(&self) -> Node {
+///     (_: sentence, @<_sentence>list) => {
+///         Node::Sentence(list)
+///     }
+/// }
+/// ```
+///
+/// Putting everything together:
+///
+/// ```
+/// # #[macro_use] extern crate pest;
+/// # use std::collections::LinkedList;
+/// # use pest::prelude::*;
+/// # fn main() {
+/// #[derive(Debug, PartialEq)]
+/// pub enum Node {
+///     Sentence(LinkedList<Node>),
+///     Word(LinkedList<Node>),
+///     Letter(char)
+/// }
+///
+/// impl_rdp! {
+///     grammar! {
+///         sentence = { word ~ ([" "] ~ word)* }
+///         word     = { letter* }
+///         letter   = { ['a'..'z'] }
+///     }
+///
+///     process! {
+///         main(&self) -> Node {
+///             (_: sentence, @<_sentence>list) => {
+///                 Node::Sentence(list)
+///             }
+///         }
+///
+///         _sentence(&self) -> LinkedList<Node> {
+///             (_: word, @<_word>head, @tail) => {
+///                 let mut tail = tail;
+///                 tail.push_front(Node::Word(head));
+///
+///                 tail
+///             },
+///             () => {
+///                 LinkedList::new()
+///             }
+///         }
+///
+///         _word(&self) -> LinkedList<Node> {
+///             (&head: letter, @tail) => {
+///                 let mut tail = tail;
+///                 tail.push_front(Node::Letter(head.chars().next().unwrap()));
+///
+///                 tail
+///             },
+///             () => {
+///                 LinkedList::new()
+///             }
+///         }
+///     }
+/// }
+///
+/// let mut parser = Rdp::new(StringInput::new("abc def"));
+///
+/// assert!(parser.sentence());
+/// parser.process();
+/// # }
+/// ```
 #[macro_export]
 macro_rules! process {
     // handle patterns; increment $index automatically
     // _ : rule
-    ( @pattern $slf:ident $index:ident ($block:expr) _ : $typ:ident ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) _ : $typ:ident ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
                 if token.rule == Rule::$typ {
@@ -153,13 +292,13 @@ macro_rules! process {
             }
         }
     };
-    ( @pattern $slf:ident $index:ident ($block:expr) _ : $typ:ident, $( $tail:tt )* ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) _ : $typ:ident, $( $tail:tt )* ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
                 if token.rule == Rule::$typ {
                     let $index = $index + 1;
 
-                    process!(@pattern $slf $index ($block) $( $tail )*)
+                    process!(@pattern $slf $index $name ($block) $( $tail )*)
                 } else {
                     None
                 }
@@ -169,22 +308,22 @@ macro_rules! process {
         }
     };
     // _
-    ( @pattern $slf:ident $index:ident ($block:expr) _ ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) _ ) => {
         {
             let $index = $index + 1;
 
             Some(($block, $index))
         }
     };
-    ( @pattern $slf:ident $index:ident ($block:expr) _, $( $tail:tt )* ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) _, $( $tail:tt )* ) => {
         {
             let $index = $index + 1;
 
-            process!(@pattern $slf $index ($block) $( $tail )*)
+            process!(@pattern $slf $index $name ($block) $( $tail )*)
         }
     };
     // &name : rule
-    ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident : $typ:ident ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) &$head:ident : $typ:ident ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
                 if token.rule == Rule::$typ {
@@ -201,7 +340,7 @@ macro_rules! process {
             }
         }
     };
-    ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident : $typ:ident, $( $tail:tt )* ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) &$head:ident : $typ:ident, $( $tail:tt )* ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
                 if token.rule == Rule::$typ {
@@ -209,7 +348,7 @@ macro_rules! process {
 
                     let $index = $index + 1;
 
-                    process!(@pattern $slf $index ($block) $( $tail )*)
+                    process!(@pattern $slf $index $name ($block) $( $tail )*)
                 } else {
                     None
                 }
@@ -219,7 +358,7 @@ macro_rules! process {
         }
     };
     // &name
-    ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) &$head:ident ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
                 let $head = $slf.slice_input(token.start, token.end);
@@ -232,38 +371,56 @@ macro_rules! process {
             }
         }
     };
-    ( @pattern $slf:ident $index:ident ($block:expr) &$head:ident, $( $tail:tt )* ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) &$head:ident, $( $tail:tt )* ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
                 let $head = $slf.slice_input(token.start, token.end);
 
                 let $index = $index + 1;
 
-                process!(@pattern $slf $index ($block) $( $tail )*)
+                process!(@pattern $slf $index $name ($block) $( $tail )*)
             } else {
                 None
             }
         }
     };
-    // @recurse
-    ( @pattern $slf:ident $index:ident ($block:expr) @$head:ident ) => {
+    // @<fun>recurse
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) @<$fun:ident>$head:ident ) => {
         {
-            let ($head, index) = $slf.next($index);
+            let ($head, index) = $slf.$fun($index);
             let $index = index;
 
             Some(($block, $index))
         }
     };
-    ( @pattern $slf:ident $index:ident ($block:expr) @$head:ident, $( $tail:tt )* ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) @<$fun:ident>$head:ident,
+      $( $tail:tt )* ) => {
         {
-            let ($head, index) = $slf.next($index);
+            let ($head, index) = $slf.$fun($index);
             let $index = index;
 
-            process!(@pattern $slf $index ($block) $( $tail )*)
+            process!(@pattern $slf $index $name ($block) $( $tail )*)
+        }
+    };
+    // @recurse
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) @$head:ident ) => {
+        {
+            let ($head, index) = $slf.$name($index);
+            let $index = index;
+
+            Some(($block, $index))
+        }
+    };
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) @$head:ident, $( $tail:tt )* ) => {
+        {
+            let ($head, index) = $slf.$name($index);
+            let $index = index;
+
+            process!(@pattern $slf $index $name ($block) $( $tail )*)
         }
     };
     // name : rule
-    ( @pattern $slf:ident $index:ident ($block:expr) $head:ident : $typ:ident ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) $head:ident : $typ:ident ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
                 if token.rule == Rule::$typ {
@@ -280,7 +437,7 @@ macro_rules! process {
             }
         }
     };
-    ( @pattern $slf:ident $index:ident ($block:expr) $head:ident : $typ:ident, $( $tail:tt )* ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) $head:ident : $typ:ident, $( $tail:tt )* ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
                 if token.rule == Rule::$typ {
@@ -288,7 +445,7 @@ macro_rules! process {
 
                     let $index = $index + 1;
 
-                    process!(@pattern $slf $index ($block) $( $tail )*)
+                    process!(@pattern $slf $index $name ($block) $( $tail )*)
                 } else {
                     None
                 }
@@ -298,7 +455,7 @@ macro_rules! process {
         }
     };
     // name
-    ( @pattern $slf:ident $index:ident ($block:expr) $head:ident ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) $head:ident ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
                 let $head = token;
@@ -311,50 +468,66 @@ macro_rules! process {
             }
         }
     };
-    ( @pattern $slf:ident $index:ident ($block:expr) $head:ident, $( $tail:tt )* ) => {
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) $head:ident, $( $tail:tt )* ) => {
         {
             if let Some(token) = $slf.queue().get($index) {
                 let $head = token;
 
                 let $index = $index + 1;
 
-                process!(@pattern $slf $index ($block) $( $tail )*)
+                process!(@pattern $slf $index $name ($block) $( $tail )*)
             } else {
                 None
             }
         }
     };
+    // empty
+    ( @pattern $slf:ident $index:ident $name:ident ($block:expr) ) => {
+        {
+            Some(($block, $index))
+        }
+    };
 
     // handle branches; panic if no branch matches
-    ( @branches $slf:ident $index:ident ( $( $pattern:tt )* ) => $block:expr) => {
-        if let Some(result) = process!(@pattern $slf $index ($block) $( $pattern )*) {
+    ( @branches $slf:ident $index:ident $name:ident ( $( $pattern:tt )* ) => $block:expr) => {
+        if let Some(result) = process!(@pattern $slf $index $name ($block) $( $pattern )*) {
             result
         } else {
-            panic!("no rules matched")
+            panic!("no rules matched in {}", stringify!($name))
         }
     };
-    ( @branches $slf:ident $index:ident ( $( $pattern:tt )* ) => $block:expr,) => {
-        if let Some(result) = process!(@pattern $slf $index ($block) $( $pattern )*) {
+    ( @branches $slf:ident $index:ident $name:ident ( $( $pattern:tt )* ) => $block:expr,) => {
+        if let Some(result) = process!(@pattern $slf $index $name ($block) $( $pattern )*) {
             result
         } else {
-            panic!("no rules matched")
+            panic!("no rules matched in {}", stringify!($name))
         }
     };
-    ( @branches $slf:ident $index:ident ( $( $pattern:tt )* ) => $block:expr, $( $tail:tt )* ) => {
-        if let Some(result) = process!(@pattern $slf $index ($block) $( $pattern )*) {
+    ( @branches $slf:ident $index:ident $name:ident ( $( $pattern:tt )* ) => $block:expr, $( $tail:tt )* ) => {
+        if let Some(result) = process!(@pattern $slf $index $name ($block) $( $pattern )*) {
             result
         } else {
-            process!(@branches $slf $index $( $tail )*)
+            process!(@branches $slf $index $name $( $tail )*)
         }
     };
 
-    ( (&$slf:ident) -> $typ:ty { $( $ts:tt )* } ) => {
-        fn next(&$slf, index: usize) -> ($typ, usize) {
-            process!(@branches $slf index $( $ts )*)
-        }
-
+    // get main's type
+    ( @type (main $typ:ty) $( $_ts:tt )* ) => {
         pub fn process(&self) -> $typ {
-            self.next(0).0
+            self.main(0).0
         }
+    };
+    ( @type ($_name:ident $_typ:ty) $( $ts:tt )* ) => {
+        process!(@type $( $ts )*);
+    };
+
+    ( $( $name:ident (&$slf:ident) -> $typ:ty { $( $ts:tt )* } )* ) => {
+        $(
+            fn $name(&$slf, index: usize) -> ($typ, usize) {
+                process!(@branches $slf index $name $( $ts )*)
+            }
+        )*
+
+        process!(@type $( ($name $typ) )*);
     }
 }

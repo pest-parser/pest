@@ -466,7 +466,7 @@
 //! Let's start by defining signature. We need to return an `i32` in the end.
 //!
 //! ```ignore
-//! (&self) -> i32
+//! main(&self) -> i32
 //! ```
 //!
 //! Now all we need to do is to the three cases of interest, namely `number`, `addition`, and
@@ -535,7 +535,7 @@
 //!     }
 //!
 //!     process! {
-//!         (&self) -> i32 {
+//!         main(&self) -> i32 {
 //!             (&number: number) => {
 //!                 number.parse::<i32>().unwrap()
 //!             },
