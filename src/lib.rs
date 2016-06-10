@@ -460,16 +460,18 @@
 //! ```
 //!
 //! To process all these `Token`s we'll use the [`process!`](macro.process!) `macro`. This `macro`
-//! defines the `process` method on the `Parser` which method works by pattern matching any number
-//! of `Tokens` against patterns, occasionally calling itself recusrively.
+//! defines the `process` method on the `Parser` which works by defining a set of methods, called
+//! matchers, that pattern match against a set of `Token`s from the front of the queue, calling
+//! themselves recursively until everything matched and returned its result.
 //!
-//! Let's start by defining signature. We need to return an `i32` in the end.
+//! Let's start by defining the signature of the `main` matcher which gets called by default. We
+//! need it to return an `i32` in the end.
 //!
 //! ```ignore
-//! (&self) -> i32
+//! main(&self) -> i32
 //! ```
 //!
-//! Now all we need to do is to the three cases of interest, namely `number`, `addition`, and
+//! Now all we need to do is to write the three cases of interest, namely `number`, `addition`, and
 //! `multiplication`. `number` is captured (its `&str` is being sliced from the `Input`) with the
 //! `&` pattern and then parsed to an `i32`.
 //!
@@ -482,20 +484,20 @@
 //! `addition` and `multiplication` are virtually identical:
 //!
 //! * match the `addition`/`multiplication` `Token` without using it
-//! * recursively process the left-hand-side with the `@` pattern
+//! * recursively process the left-hand-side by calling `main`
 //! * use the `sign` `Token` without capturing its `&str` value
-//! * recursively process the right-hand-side with the `@` pattern
+//! * recursively process the right-hand-side by calling `main`
 //! * inside the block match `sign` and return the appropriate result
 //!
 //! ```ignore
-//! (_: addition, @left, sign, @right) => {
+//! (_: addition, left: main(), sign, right: main()) => {
 //!     match sign.rule {
 //!         Rule::plus  => left + right,
 //!         Rule::minus => left - right,
 //!         _ => unreachable!()
 //!     }
 //! },
-//! (_: multiplication, @left, sign, @right) => {
+//! (_: multiplication, left: main(), sign, right: main()) => {
 //!     match sign.rule {
 //!         Rule::times => left * right,
 //!         Rule::slash => left / right,
@@ -505,8 +507,8 @@
 //! ```
 //!
 //! The reason we're matching `sign` manually inside of the block is because using `_: plus` and
-//! `_: minus` will cause `@left` to be run twice in case the first rule fails. Caching the result
-//! in this case is non-trivial apart from the fact that duplicated complex pattern are not
+//! `_: minus` will cause `left: main()` to be run twice in case the first rule fails. Caching the
+//! result in this case is non-trivial apart from the fact that duplicate complex patterns are not
 //! necessarily easier to read.
 //!
 //! Now for the whole example:
@@ -535,18 +537,18 @@
 //!     }
 //!
 //!     process! {
-//!         (&self) -> i32 {
+//!         main(&self) -> i32 {
 //!             (&number: number) => {
 //!                 number.parse::<i32>().unwrap()
 //!             },
-//!             (_: addition, @left, sign, @right) => {
+//!             (_: addition, left: main(), sign, right: main()) => {
 //!                 match sign.rule {
 //!                     Rule::plus  => left + right,
 //!                     Rule::minus => left - right,
 //!                     _ => unreachable!()
 //!                 }
 //!             },
-//!             (_: multiplication, @left, sign, @right) => {
+//!             (_: multiplication, left: main(), sign, right: main()) => {
 //!                 match sign.rule {
 //!                     Rule::times => left * right,
 //!                     Rule::slash => left / right,
