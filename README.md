@@ -2,6 +2,8 @@
   <img src="https://cdn.rawgit.com/dragostis/pest/9605855a9c4e86d5e89bc963fe50ee344d8a40e6/pest-logo.svg"/>
 </p>
 # pest. Elegant, efficient grammars
+
+[![Join the chat at https://gitter.im/dragostis/pest](https://badges.gitter.im/dragostis/pest.svg)](https://gitter.im/dragostis/pest?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/dragostis/pest.svg?branch=master)]
 (https://travis-ci.org/dragostis/pest)
 [![Coverage Status]
