@@ -12,15 +12,16 @@
 /// The `process` is populated with methods, called *matchers*, that match patterns and return
 /// results. A pattern is constructed from the following comma-separated items:
 ///
-/// | Item         | What it does                                 |
-/// |--------------|----------------------------------------------|
-/// | `item`       | matches any `Token`                          |
-/// | `item: R`    | matches a `Token` of rule `R`                |
-/// | `&item`      | captures a `Token`                           |
-/// | `&item: R`   | captures a `Token` of rule `R`               |
-/// | `_`          | skips a `Token`                              |
-/// | `_: R`       | skips a `Token` of rule `R`                  |
-/// | `item: fn()` | call matcher `fn` and store result in `item` |
+/// | Item             | What it does                                         |
+/// |------------------|------------------------------------------------------|
+/// | `item`           | matches any `Token`                                  |
+/// | `item: R`        | matches a `Token` of rule `R`                        |
+/// | `&item`          | captures a `Token`                                   |
+/// | `&item: R`       | captures a `Token` of rule `R`                       |
+/// | `_`              | skips a `Token`                                      |
+/// | `_: R`           | skips a `Token` of rule `R`                          |
+/// | `item: fn()`     | call matcher `fn` and store result in `item`         |
+/// | `mut item: fn()` | call matcher `fn` and store mutable result in `item` |
 ///
 /// `process` automatically calls the `main` matcher which is mandatory.
 ///
@@ -174,8 +175,7 @@
 ///
 /// ```ignore
 /// _word(&self) -> LinkedList<Node> { // return LinkedList<Node> to build Word with
-///     (&head: letter, tail: _word()) => { // usual tail recursion; &head is captured,
-///         let mut tail = tail;    // tail is recursive
+///     (&head: letter, mut tail: _word()) => { // usual tail recursion
 ///         tail.push_front(Node::Letter(head.chars().next().unwrap()));
 ///
 ///         tail
@@ -190,8 +190,7 @@
 ///
 /// ```ignore
 /// _sentence(&self) -> LinkedList<Node> {
-///     (_: word, head: _word(), tail: _sentence()) => { // match word Token then call _word
-///         let mut tail = tail;
+///     (_: word, head: _word(), mut tail: _sentence()) => { // match word Token then call _word
 ///         tail.push_front(Node::Word(head));
 ///
 ///         tail
@@ -241,8 +240,7 @@
 ///         }
 ///
 ///         _sentence(&self) -> LinkedList<Node> {
-///             (_: word, head: _word(), tail: _sentence()) => {
-///                 let mut tail = tail;
+///             (_: word, head: _word(), mut tail: _sentence()) => {
 ///                 tail.push_front(Node::Word(head));
 ///
 ///                 tail
@@ -253,8 +251,7 @@
 ///         }
 ///
 ///         _word(&self) -> LinkedList<Node> {
-///             (&head: letter, tail: _word()) => {
-///                 let mut tail = tail;
+///             (&head: letter, mut tail: _word()) => {
 ///                 tail.push_front(Node::Letter(head.chars().next().unwrap()));
 ///
 ///                 tail
@@ -381,6 +378,26 @@ macro_rules! process {
             } else {
                 None
             }
+        }
+    };
+    // mut name : fn()
+    ( @pattern $slf:ident $index:ident ($block:expr) mut $head:ident : $call:ident() ) => {
+        {
+            let ($head, index) = $slf.$call($index);
+            let mut $head = $head;
+            let $index = index;
+
+            Some(($block, $index))
+        }
+    };
+    ( @pattern $slf:ident $index:ident ($block:expr) mut $head:ident : $call:ident(),
+      $( $tail:tt )* ) => {
+        {
+            let ($head, index) = $slf.$call($index);
+            let mut $head = $head;
+            let $index = index;
+
+            process!(@pattern $slf $index ($block) $( $tail )*)
         }
     };
     // name : fn()

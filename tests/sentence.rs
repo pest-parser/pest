@@ -34,8 +34,7 @@ impl_rdp! {
         }
 
         _sentence(&self) -> LinkedList<Node> {
-            (_: word, head: _word(), tail: _sentence()) => {
-                let mut tail = tail;
+            (_: word, head: _word(), mut tail: _sentence()) => {
                 tail.push_front(Node::Word(head));
 
                 tail
@@ -46,8 +45,7 @@ impl_rdp! {
         }
 
         _word(&self) -> LinkedList<Node> {
-            (&head: letter, tail: _word()) => {
-                let mut tail = tail;
+            (&head: letter, mut tail: _word()) => {
                 tail.push_front(Node::Letter(head.chars().next().unwrap()));
 
                 tail
