@@ -511,6 +511,8 @@ macro_rules! process {
     // get main's type
     ( @type (main $typ:ty) $( $_ts:tt )* ) => {
         pub fn process(&self) -> $typ {
+            self.set_queue_index(0);
+
             self.main()
         }
     };
