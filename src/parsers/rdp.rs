@@ -112,11 +112,13 @@ macro_rules! impl_rdp {
     };
 
     ( grammar! { $( $ts:tt )* } $( $mac:ident! { $( $rest:tt )* } )* ) => {
+        use std::cell::Cell;
         use std::cmp;
 
         pub struct Rdp<T: Input> {
             input:       T,
             queue:       Vec<Token<Rule>>,
+            queue_index: Cell<usize>,
             failures:    Vec<Rule>,
             fail_pos:    usize,
             atomic:      bool,
@@ -131,6 +133,7 @@ macro_rules! impl_rdp {
                 Rdp {
                     input:       input,
                     queue:       vec![],
+                    queue_index: Cell::new(0),
                     failures:    vec![],
                     fail_pos:    0,
                     atomic:      false,
@@ -320,6 +323,21 @@ macro_rules! impl_rdp {
             #[inline]
             fn queue(&self) -> &Vec<Token<Rule>>{
                 &self.queue
+            }
+
+            #[inline]
+            fn queue_index(&self) -> usize {
+                self.queue_index.get()
+            }
+
+            #[inline]
+            fn inc_queue_index(&self) {
+                self.queue_index.set(self.queue_index.get() + 1);
+            }
+
+            #[inline]
+            fn set_queue_index(&self, index: usize) {
+                self.queue_index.set(index);
             }
 
             #[inline]

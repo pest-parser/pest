@@ -60,6 +60,15 @@ pub trait Parser {
     /// Returns the mutable queue of all matched `Token`s.
     fn queue_mut(&mut self) -> &mut Vec<Self::Token>;
 
+    /// Returns the current index within the queue. Used in `process!`.
+    fn queue_index(&self) -> usize;
+
+    /// Increments the current index within the queue. Used in `process!`.
+    fn inc_queue_index(&self);
+
+    /// Set the current index within the queue. Used in `process!`.
+    fn set_queue_index(&self, index: usize);
+
     /// Skips white-space.
     fn skip_ws(&mut self);
 
