@@ -166,6 +166,7 @@ mod tests {
     fn empty() {
         let mut input = StringInput::new("");
 
+        assert!(input.is_empty());
         assert!(input.match_string(""));
         assert!(!input.match_string("a"));
     }
@@ -174,6 +175,7 @@ mod tests {
     fn parts() {
         let mut input = StringInput::new("asdasdf");
 
+        assert!(!input.is_empty());
         assert!(input.match_string("asd"));
         assert!(input.match_string("asdf"));
     }
