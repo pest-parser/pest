@@ -484,14 +484,26 @@ macro_rules! process {
         if let Some(result) = process!(@pattern $slf ($block) $( $pattern )*) {
             result
         } else {
-            panic!("no pattern matched in {}", stringify!($name))
+            let next = $slf.queue()[$slf.queue_index()..]
+                           .iter()
+                           .take(3)
+                           .map(|token| token.rule)
+                           .fold("".to_owned(), |acc, rule| acc + &format!("{:?}, ", rule));
+
+            panic!("no pattern matched in {}; failed at [{}...]", stringify!($name), next)
         }
     };
     ( @branches $slf:ident $name:ident ( $( $pattern:tt )* ) => $block:expr,) => {
         if let Some(result) = process!(@pattern $slf ($block) $( $pattern )*) {
             result
         } else {
-            panic!("no pattern matched in {}", stringify!($name))
+            let next = $slf.queue()[$slf.queue_index()..]
+                           .iter()
+                           .take(3)
+                           .map(|token| token.rule)
+                           .fold("".to_owned(), |acc, rule| acc + &format!("{:?}, ", rule));
+
+            panic!("no pattern matched in {}; failed at [{}...]", stringify!($name), next)
         }
     };
     ( @branches $slf:ident $name:ident ( $( $pattern:tt )* ) => $block:expr, $( $tail:tt )* ) => {
