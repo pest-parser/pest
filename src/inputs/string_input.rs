@@ -55,6 +55,11 @@ impl Input for StringInput {
     }
 
     #[inline]
+    fn is_empty(&self) -> bool {
+        self.string.is_empty()
+    }
+
+    #[inline]
     fn pos(&self) -> usize {
         self.pos
     }

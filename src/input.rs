@@ -10,6 +10,9 @@ pub trait Input {
     /// Returns length of an `Input`.
     fn len(&self) -> usize;
 
+    /// Returns whether an `Input` is empty.
+    fn is_empty(&self) -> bool;
+
     /// Returns current position of an `Input`.
     fn pos(&self) -> usize;
 
