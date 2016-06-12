@@ -480,21 +480,21 @@ macro_rules! process {
     };
 
     // handle branches; panic if no branch matches
-    ( @branches $slf:ident ( $( $pattern:tt )* ) => $block:expr) => {
+    ( @branches $slf:ident $name:ident ( $( $pattern:tt )* ) => $block:expr) => {
         if let Some(result) = process!(@pattern $slf ($block) $( $pattern )*) {
             result
         } else {
-            panic!("no rules matched")
+            panic!("no pattern matched in {}", stringify!($name))
         }
     };
-    ( @branches $slf:ident ( $( $pattern:tt )* ) => $block:expr,) => {
+    ( @branches $slf:ident $name:ident ( $( $pattern:tt )* ) => $block:expr,) => {
         if let Some(result) = process!(@pattern $slf ($block) $( $pattern )*) {
             result
         } else {
-            panic!("no rules matched")
+            panic!("no pattern matched in {}", stringify!($name))
         }
     };
-    ( @branches $slf:ident ( $( $pattern:tt )* ) => $block:expr, $( $tail:tt )* ) => {
+    ( @branches $slf:ident $name:ident ( $( $pattern:tt )* ) => $block:expr, $( $tail:tt )* ) => {
         {
             let index = $slf.queue_index();
 
@@ -503,7 +503,7 @@ macro_rules! process {
             } else {
                 $slf.set_queue_index(index);
 
-                process!(@branches $slf $( $tail )*)
+                process!(@branches $slf $name $( $tail )*)
             }
         }
     };
@@ -523,7 +523,7 @@ macro_rules! process {
     ( $( $name:ident (&$slf:ident) -> $typ:ty { $( $ts:tt )* } )* ) => {
         $(
             fn $name(&$slf) -> $typ {
-                process!(@branches $slf $( $ts )*)
+                process!(@branches $slf $name $( $ts )*)
             }
         )*
 
