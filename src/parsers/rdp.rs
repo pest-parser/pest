@@ -405,6 +405,10 @@ macro_rules! impl_rdp {
                 }
             }
 
+            fn tracked_len(&self) -> usize {
+                self.failures.len()
+            }
+
             fn expected(&mut self) -> (Vec<Rule>, usize) {
                 self.failures.sort();
                 self.failures.dedup();

@@ -312,10 +312,8 @@ fn fail_string() {
     assert_eq!(parser.expected(), (vec![
         Rule::number,
         Rule::string,
-        Rule::value,
         Rule::array,
-        Rule::object,
-        Rule::json
+        Rule::object
     ], 0));
 }
 
@@ -328,10 +326,8 @@ fn fail_string_unicode() {
     assert_eq!(parser.expected(), (vec![
         Rule::number,
         Rule::string,
-        Rule::value,
         Rule::array,
-        Rule::object,
-        Rule::json
+        Rule::object
     ], 0));
 }
 
@@ -344,7 +340,6 @@ fn fail_array() {
     assert_eq!(parser.expected(), (vec![
         Rule::number,
         Rule::string,
-        Rule::value,
         Rule::array,
         Rule::object
     ], 4));
@@ -359,7 +354,6 @@ fn fail_object_pair() {
     assert_eq!(parser.expected(), (vec![
         Rule::number,
         Rule::string,
-        Rule::value,
         Rule::array,
         Rule::object
     ], 7));
@@ -374,7 +368,6 @@ fn fail_object_open() {
     assert_eq!(parser.expected(), (vec![
         Rule::number,
         Rule::string,
-        Rule::value,
         Rule::array,
         Rule::object
     ], 7));

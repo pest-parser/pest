@@ -454,6 +454,7 @@ macro_rules! grammar {
 
             let pos = slf.pos();
             let len = slf.queue().len();
+            let tracked_len = slf.tracked_len();
 
             let result = grammar!(@atomic $name false slf [ $( $ts )* ]);
 
@@ -470,7 +471,9 @@ macro_rules! grammar {
             } else {
                 slf.queue_mut().truncate(len);
 
-                slf.track(Rule::$name, pos);
+                if slf.tracked_len() == tracked_len {
+                    slf.track(Rule::$name, pos);
+                }
             }
 
             result

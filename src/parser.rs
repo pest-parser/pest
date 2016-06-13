@@ -81,10 +81,13 @@ pub trait Parser {
     /// Sets a `Parser` to atomic rule mode, barring comment & white-space skipping.
     fn set_atomic(&mut self, value: bool);
 
-    /// Keeps track of rule failures. It gets called when a rule fails at `pos`.
+    /// Keeps track of rule failures. It gets called when a `Rule` fails at `pos`.
     fn track(&mut self, failed: Self::Rule, pos: usize);
 
+    /// Returns the length of the tracked `Rule`s.
+    fn tracked_len(&self) -> usize;
+
     /// Retuns a `Vec` of all expected `Rule`s at the deepest position where the parsing last
-    /// stopped. Used for error reporting.
+    /// stopped. It only returns leafs from the rule tree. Used for error reporting.
     fn expected(&mut self) -> (Vec<Self::Rule>, usize);
 }
