@@ -17,20 +17,20 @@ impl_rdp! {
         json = { value ~ eoi }
 
         object = { ["{"] ~ pair ~ ([","] ~ pair)* ~ ["}"] | ["{"] ~ ["}"] }
-        pair = { string ~ [":"] ~ value }
+        pair   = { string ~ [":"] ~ value }
 
         array = { ["["] ~ value ~ ([","] ~ value)* ~ ["]"] | ["["] ~ ["]"] }
 
         value = { string | number | object | array | ["true"] | ["false"] | ["null"] }
 
-        string = @{ ["\""] ~ (escape | !(["\""] | ["\\"]) ~ any)* ~ ["\""] }
-        escape = { ["\\"] ~ (["\""] | ["\\"] | ["/"] | ["b"] | ["f"] | ["n"] | ["r"] | ["t"] | unicode) }
-        unicode = { ["u"] ~ hex ~ hex ~ hex ~ hex }
-        hex = { ['0'..'9'] | ['a'..'f'] | ['A'..'F'] }
+        string  = @{ ["\""] ~ (escape | !(["\""] | ["\\"]) ~ any)* ~ ["\""] }
+        escape  =  { ["\\"] ~ (["\""] | ["\\"] | ["/"] | ["b"] | ["f"] | ["n"] | ["r"] | ["t"] | unicode) }
+        unicode =  { ["u"] ~ hex ~ hex ~ hex ~ hex }
+        hex     =  { ['0'..'9'] | ['a'..'f'] | ['A'..'F'] }
 
         number = @{ ["-"]? ~ int ~ ["."] ~ ['0'..'9']+ ~ exp? | ["-"]? ~ int ~ exp | ["-"]? ~ int }
-        int = { ["0"] | ['1'..'9'] ~ ['0'..'9']* }
-        exp = { (["E"] | ["e"]) ~ (["+"] | ["-"])? ~ int }
+        int    =  { ["0"] | ['1'..'9'] ~ ['0'..'9']* }
+        exp    =  { (["E"] | ["e"]) ~ (["+"] | ["-"])? ~ int }
 
         whitespace = _{ [" "] | ["\t"] | ["\r"] | ["\n"] }
     }
@@ -273,7 +273,7 @@ fn fail_number() {
 
     assert!(!parser.json());
 
-    assert_eq!(parser.expected(), (vec![Rule::eoi, Rule::exp], 1));
+    assert_eq!(parser.expected(), (vec![Rule::eoi], 1));
 }
 
 #[test]
@@ -291,7 +291,7 @@ fn fail_number_zero() {
 
     assert!(!parser.json());
 
-    assert_eq!(parser.expected(), (vec![Rule::eoi, Rule::exp], 1));
+    assert_eq!(parser.expected(), (vec![Rule::eoi], 1));
 }
 
 #[test]
@@ -300,7 +300,7 @@ fn fail_exp() {
 
     assert!(!parser.json());
 
-    assert_eq!(parser.expected(), (vec![Rule::int], 4));
+    assert_eq!(parser.expected(), (vec![Rule::eoi], 3));
 }
 
 #[test]
@@ -309,7 +309,14 @@ fn fail_string() {
 
     assert!(!parser.json());
 
-    assert_eq!(parser.expected(), (vec![Rule::any, Rule::escape], 2));
+    assert_eq!(parser.expected(), (vec![
+        Rule::number,
+        Rule::string,
+        Rule::value,
+        Rule::array,
+        Rule::object,
+        Rule::json
+    ], 0));
 }
 
 #[test]
@@ -318,7 +325,14 @@ fn fail_string_unicode() {
 
     assert!(!parser.json());
 
-    assert_eq!(parser.expected(), (vec![Rule::hex], 5));
+    assert_eq!(parser.expected(), (vec![
+        Rule::number,
+        Rule::string,
+        Rule::value,
+        Rule::array,
+        Rule::object,
+        Rule::json
+    ], 0));
 }
 
 #[test]
@@ -328,7 +342,6 @@ fn fail_array() {
     assert!(!parser.json());
 
     assert_eq!(parser.expected(), (vec![
-        Rule::int,
         Rule::number,
         Rule::string,
         Rule::value,
@@ -344,7 +357,6 @@ fn fail_object_pair() {
     assert!(!parser.json());
 
     assert_eq!(parser.expected(), (vec![
-        Rule::int,
         Rule::number,
         Rule::string,
         Rule::value,
@@ -355,9 +367,15 @@ fn fail_object_pair() {
 
 #[test]
 fn fail_object_open() {
-    let mut parser = Rdp::new(StringInput::new("{\"a\" : 3"));
+    let mut parser = Rdp::new(StringInput::new("{\"a\" : "));
 
     assert!(!parser.json());
 
-    assert_eq!(parser.expected(), (vec![Rule::exp], 8));
+    assert_eq!(parser.expected(), (vec![
+        Rule::number,
+        Rule::string,
+        Rule::value,
+        Rule::array,
+        Rule::object
+    ], 7));
 }

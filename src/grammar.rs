@@ -42,15 +42,16 @@
 /// # Atomic rules `@`
 ///
 /// Atomic rules work as normal rules apart from the fact that they don't accept any `whitespace`
-/// or `comment` between rules and sub-rules.
+/// or `comment` between rules and sub-rules, and any sub-rules of an atomic rule will not appear
+/// in [`Parser::expected`](trait.Parser#tymethod.expected).
 ///
 /// ```ignore
 /// ab = @{ a ~ b }
 /// ```
 ///
-/// In the rule above, there cannot be anything between `a` and `b` for `ab` to match. This rule has a
-/// *cascading* effect, so any rules called from an atomic rule will also be atomic while being
-/// matched in an atomic context. In other words, `a` and `b` will also be atomic when being
+/// In the rule above, there cannot be anything between `a` and `b` for `ab` to match. This rule
+/// has a *cascading* effect, so any rules called from an atomic rule will also be atomic while
+/// being matched in an atomic context. In other words, `a` and `b` will also be atomic when being
 /// matched inside of `ab`.
 ///
 /// # Silent rules `_`

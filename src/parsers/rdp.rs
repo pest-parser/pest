@@ -385,6 +385,10 @@ macro_rules! impl_rdp {
             }
 
             fn track(&mut self, failed: Rule, pos: usize) {
+                if self.atomic {
+                    return
+                }
+
                 if self.failures.is_empty() {
                     self.failures.push(failed);
 
