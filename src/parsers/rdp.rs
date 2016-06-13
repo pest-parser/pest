@@ -114,8 +114,9 @@ macro_rules! impl_rdp {
     ( grammar! { $( $ts:tt )* } $( $mac:ident! { $( $rest:tt )* } )* ) => {
         use std::cell::Cell;
         use std::cmp;
+        use std::marker::PhantomData;
 
-        pub struct Rdp<T: Input> {
+        pub struct Rdp<'n, T: Input<'n>> {
             input:       T,
             queue:       Vec<Token<Rule>>,
             queue_index: Cell<usize>,
@@ -123,13 +124,14 @@ macro_rules! impl_rdp {
             fail_pos:    usize,
             atomic:      bool,
             comment:     bool,
-            eoi_matched: bool
+            eoi_matched: bool,
+            phantom:     PhantomData<Input<'n>>
         }
 
         impl_rdp!(@filter [ $( $ts )* ] []);
 
-        impl<T: Input> Rdp<T> {
-            pub fn new(input: T) -> Rdp<T> {
+        impl<'n, T: Input<'n>> Rdp<'n, T> {
+            pub fn new(input: T) -> Rdp<'n, T> {
                 Rdp {
                     input:       input,
                     queue:       vec![],
@@ -138,7 +140,8 @@ macro_rules! impl_rdp {
                     fail_pos:    0,
                     atomic:      false,
                     comment:     false,
-                    eoi_matched: false
+                    eoi_matched: false,
+                    phantom:     PhantomData
                 }
             }
 
@@ -189,7 +192,7 @@ macro_rules! impl_rdp {
             )*
         }
 
-        impl<T: Input> Parser for Rdp<T> {
+        impl<'n, T: Input<'n>> Parser<'n> for Rdp<'n, T> {
             type Rule = Rule;
             type Token = Token<Rule>;
 
@@ -316,7 +319,7 @@ macro_rules! impl_rdp {
             }
 
             #[inline]
-            fn slice_input(&self, start: usize, end: usize) -> &str {
+            fn slice_input(&self, start: usize, end: usize) -> &'n str {
                 self.input.slice(start, end)
             }
 

@@ -48,7 +48,7 @@ impl<'a> StringInput<'a> {
     }
 }
 
-impl<'a> Input for StringInput<'a> {
+impl<'a> Input<'a> for StringInput<'a> {
     #[inline]
     fn len(&self) -> usize {
         self.string.len()
@@ -70,7 +70,7 @@ impl<'a> Input for StringInput<'a> {
     }
 
     #[inline]
-    fn slice(&self, start: usize, end: usize) -> &str {
+    fn slice(&self, start: usize, end: usize) -> &'a str {
         &self.string[start..end]
     }
 

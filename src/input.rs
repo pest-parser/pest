@@ -6,7 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 /// A `trait` that defines an input for a `Parser`.
-pub trait Input {
+pub trait Input<'a> {
     /// Returns length of an `Input`.
     fn len(&self) -> usize;
 
@@ -20,7 +20,7 @@ pub trait Input {
     fn set_pos(&mut self, pos: usize);
 
     /// Slices an `Input`.
-    fn slice(&self, start: usize, end: usize) -> &str;
+    fn slice(&self, start: usize, end: usize) -> &'a str;
 
     /// Returns the line and column of a position for an `Input`.
     fn line_col(&self, pos: usize) -> (usize, usize);
