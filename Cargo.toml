@@ -1,7 +1,7 @@
 [package]
 name = "pest"
 description = "Elegant, efficient grammars"
-version = "0.2.7"
+version = "0.2.8"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 repository = "https://github.com/dragostis/pest"
 documentation = "http://dragostis.github.io/pest/pest/"
