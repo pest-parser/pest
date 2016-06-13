@@ -521,24 +521,22 @@ macro_rules! process {
     };
 
     // get main's type
-    ( @type (main $typ:ty) $( $_ts:tt )* ) => {
+    ( @type main $typ:ty ) => {
         pub fn process(&self) -> $typ {
             self.set_queue_index(0);
 
             self.main()
         }
     };
-    ( @type ($_name:ident $_typ:ty) $( $ts:tt )* ) => {
-        process!(@type $( $ts )*);
-    };
+    ( @type $_name:ident $_typ:ty ) => ();
 
     ( $( $name:ident (&$slf:ident) -> $typ:ty { $( $ts:tt )* } )* ) => {
         $(
             fn $name(&$slf) -> $typ {
                 process!(@branches $slf $name $( $ts )*)
             }
-        )*
 
-        process!(@type $( ($name $typ) )*);
-    }
+            process!(@type $name $typ);
+        )*
+    };
 }
