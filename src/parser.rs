@@ -6,7 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 /// A `trait` that defines a parser.
-pub trait Parser {
+pub trait Parser<'a> {
     type Rule;
     type Token;
 
@@ -52,7 +52,7 @@ pub trait Parser {
     fn reset(&mut self);
 
     /// Slices a `Parser`'s `Input`.
-    fn slice_input(&self, start: usize, end: usize) -> &str;
+    fn slice_input(&self, start: usize, end: usize) -> &'a str;
 
     /// Returns the queue of all matched `Token`s.
     fn queue(&self) -> &Vec<Self::Token>;
