@@ -23,12 +23,12 @@ use super::super::Input;
 /// assert!(input.match_string("asdf"));
 /// assert!(!input.match_string("nope"));
 /// ```
-pub struct StringInput {
-    string: String,
+pub struct StringInput<'a> {
+    string: &'a str,
     pos: usize
 }
 
-impl StringInput {
+impl<'a> StringInput<'a> {
     /// Creates a new `StringInput` from a `&str`.
     ///
     /// # Examples
@@ -40,15 +40,15 @@ impl StringInput {
     ///
     /// assert_eq!(input.len(), 3);
     /// ```
-    pub fn new(string: &str) -> StringInput {
+    pub fn new(string: &'a str) -> StringInput<'a> {
         StringInput {
-            string: string.to_owned(),
+            string: string,
             pos : 0
         }
     }
 }
 
-impl Input for StringInput {
+impl<'a> Input for StringInput<'a> {
     #[inline]
     fn len(&self) -> usize {
         self.string.len()
