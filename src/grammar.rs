@@ -434,8 +434,11 @@ macro_rules! grammar {
         }
     };
 
-    // whitespace is always atomic
+    // whitespace and comment are always atomic
     ( @atomic whitespace $_atomic:tt $slf:ident $rules:tt ) => {
+        grammar!(@conv true $slf $rules [] [])
+    };
+    ( @atomic comment $_atomic:tt $slf:ident $rules:tt ) => {
         grammar!(@conv true $slf $rules [] [])
     };
     ( @atomic $_name:ident $atomic:tt $slf:ident $rules:tt ) => {
