@@ -460,15 +460,15 @@
 //! ```
 //!
 //! To process all these `Token`s we'll use the [`process!`](macro.process!) `macro`. This `macro`
-//! defines the `process` method on the `Parser` which works by defining a set of methods, called
-//! matchers, that pattern match against a set of `Token`s from the front of the queue, calling
-//! themselves recursively until everything matched and returned its result.
+//! defines matcher methods on the `Parser` that pattern match against a set of `Token`s from the
+//! front of the queue, calling themselves recursively until everything matched and returned its
+//! result.
 //!
-//! Let's start by defining the signature of the `main` matcher which gets called by default. We
+//! Let's start by defining the signature of the `compute` matcher that will do the computation. We
 //! need it to return an `i32` in the end.
 //!
 //! ```ignore
-//! main(&self) -> i32
+//! compute(&self) -> i32
 //! ```
 //!
 //! Now all we need to do is to write the three cases of interest, namely `number`, `addition`, and
@@ -490,14 +490,14 @@
 //! * inside the block match `sign` and return the appropriate result
 //!
 //! ```ignore
-//! (_: addition, left: main(), sign, right: main()) => {
+//! (_: addition, left: compute(), sign, right: compute()) => {
 //!     match sign.rule {
 //!         Rule::plus  => left + right,
 //!         Rule::minus => left - right,
 //!         _ => unreachable!()
 //!     }
 //! },
-//! (_: multiplication, left: main(), sign, right: main()) => {
+//! (_: multiplication, left: compute(), sign, right: compute()) => {
 //!     match sign.rule {
 //!         Rule::times => left * right,
 //!         Rule::slash => left / right,
@@ -537,18 +537,18 @@
 //!     }
 //!
 //!     process! {
-//!         main(&self) -> i32 {
+//!         compute(&self) -> i32 {
 //!             (&number: number) => {
 //!                 number.parse::<i32>().unwrap()
 //!             },
-//!             (_: addition, left: main(), sign, right: main()) => {
+//!             (_: addition, left: compute(), sign, right: compute()) => {
 //!                 match sign.rule {
 //!                     Rule::plus  => left + right,
 //!                     Rule::minus => left - right,
 //!                     _ => unreachable!()
 //!                 }
 //!             },
-//!             (_: multiplication, left: main(), sign, right: main()) => {
+//!             (_: multiplication, left: compute(), sign, right: compute()) => {
 //!                 match sign.rule {
 //!                     Rule::times => left * right,
 //!                     Rule::slash => left / right,
@@ -562,7 +562,7 @@
 //! let mut parser = Rdp::new(StringInput::new("(3 + (9 + 3 * 4 + (3 + 1) / 2 - 4)) * 2"));
 //!
 //! assert!(parser.expression());
-//! assert_eq!(parser.process(), 44);
+//! assert_eq!(parser.compute(), 44);
 //! # }
 //! ```
 

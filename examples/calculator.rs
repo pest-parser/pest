@@ -21,18 +21,18 @@ impl_rdp! {
     }
 
     process! {
-        main(&self) -> i32 { // return an i32 in the end
+        compute(&self) -> i32 { // return an i32 in the end
             (&number: number) => { // capture number as &str
                 number.parse::<i32>().unwrap()
             },
-            (_: addition, left: main(), sign, right: main()) => { // get left & right by calling
-                match sign.rule {                                 // main recursively
+            (_: addition, left: compute(), sign, right: compute()) => { // get left & right by
+                match sign.rule {                                       // calling compute
                     Rule::plus  => left + right,
                     Rule::minus => left - right,
                     _ => unreachable!()
                 }
             },
-            (_: multiplication, left: main(), sign, right: main()) => {
+            (_: multiplication, left: compute(), sign, right: compute()) => {
                 match sign.rule {
                     Rule::times => left * right,
                     Rule::slash => left / right,
@@ -48,5 +48,5 @@ fn main() {
 
     parser.expression();
 
-    println!("{}", parser.process()); // prints 44
+    println!("{}", parser.compute()); // prints 44
 }

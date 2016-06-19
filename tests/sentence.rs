@@ -86,5 +86,5 @@ fn word() {
 
     let sentence = Node::Sentence(words);
 
-    assert_eq!(parser.process(), sentence);
+    assert_eq!(parser.main(), sentence);
 }

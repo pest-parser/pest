@@ -9,8 +9,8 @@
 /// `process` on `&self` that processes the whole queue of `Token`s, reducing it to one single
 /// result.
 ///
-/// The `process` is populated with methods, called *matchers*, that match patterns and return
-/// results. A pattern is constructed from the following comma-separated items:
+/// The `process` is populated with callable methods, called *matchers*, that match patterns and
+/// return results. A pattern is constructed from the following comma-separated items:
 ///
 /// | Item             | What it does                                         |
 /// |------------------|------------------------------------------------------|
@@ -22,8 +22,6 @@
 /// | `_: R`           | skips a `Token` of rule `R`                          |
 /// | `item: fn()`     | call matcher `fn` and store result in `item`         |
 /// | `mut item: fn()` | call matcher `fn` and store mutable result in `item` |
-///
-/// `process` automatically calls the `main` matcher which is mandatory.
 ///
 /// # Panics
 ///
@@ -40,7 +38,7 @@
 ///     }
 ///
 ///     process! {
-///         main(&self) -> () {
+///         ab(&self) -> () {
 ///             (_: a) => {}
 ///         }
 ///     }
@@ -49,7 +47,7 @@
 /// let mut parser = Rdp::new(StringInput::new("b"));
 ///
 /// parser.b();
-/// parser.process();
+/// parser.ab();
 /// # }
 /// ```
 ///
@@ -96,7 +94,7 @@
 /// But before that, it needs to match a `paren` `Token` that gets ignored.
 ///
 /// ```ignore
-/// (_: paren, expression: main())
+/// (_: paren, expression: nested_letter())
 /// ```
 ///
 /// All together now:
@@ -119,11 +117,11 @@
 ///     }
 ///
 ///     process! {
-///         main(&self) -> Expression {
+///         nested_letter(&self) -> Expression {
 ///             (&letter: letter) => {
 ///                 Expression::Letter(letter.chars().next().unwrap())
 ///             },
-///             (_: paren, expression: main()) => {
+///             (_: paren, expression: nested_letter()) => {
 ///                 Expression::Paren(Box::new(expression))
 ///             }
 ///         }
@@ -133,7 +131,7 @@
 /// let mut parser = Rdp::new(StringInput::new("((z))"));
 ///
 /// assert!(parser.expression());
-/// assert_eq!(parser.process(),
+/// assert_eq!(parser.nested_letter(),
 ///            Expression::Paren(Box::new(Expression::Paren(Box::new(Expression::Letter('z'))))));
 /// # }
 /// ```
@@ -266,7 +264,7 @@
 /// let mut parser = Rdp::new(StringInput::new("abc def"));
 ///
 /// assert!(parser.sentence());
-/// parser.process();
+/// parser.main();
 /// # }
 /// ```
 #[macro_export]
@@ -520,23 +518,11 @@ macro_rules! process {
         }
     };
 
-    // get main's type
-    ( @type main $typ:ty ) => {
-        pub fn process(&self) -> $typ {
-            self.set_queue_index(0);
-
-            self.main()
-        }
-    };
-    ( @type $_name:ident $_typ:ty ) => ();
-
     ( $( $name:ident (&$slf:ident) -> $typ:ty { $( $ts:tt )* } )* ) => {
         $(
-            fn $name(&$slf) -> $typ {
+            pub fn $name(&$slf) -> $typ {
                 process!(@branches $slf $name $( $ts )*)
             }
-
-            process!(@type $name $typ);
         )*
     };
 }

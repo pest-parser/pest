@@ -24,7 +24,7 @@ impl_rdp! {
     }
 
     process! {
-        main(&self) -> Node<'n> {
+        _word(&self) -> Node<'n> {
             (&w: word) => Node::Sentence(w)
         }
     }
@@ -37,7 +37,7 @@ fn word() {
         let mut parser = Rdp::new(StringInput::new(&file));
 
         assert!(parser.word());
-        parser.process()
+        parser._word()
     };
     assert_eq!(result, Node::Sentence("abc"));
 }
