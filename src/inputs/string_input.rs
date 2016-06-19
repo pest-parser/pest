@@ -96,7 +96,7 @@ impl<'a> Input<'a> for StringInput<'a> {
                         }
                     },
                     Some('\n') => find(chars, pos - 1, (current.0 + 1, 1)),
-                    Some(_)    => find(chars, pos - 1, (current.0, current.1 + 1)),
+                    Some(c)    => find(chars, pos - c.len_utf8(), (current.0, current.1 + 1)),
                     None       => unreachable!()
                 }
             }
@@ -106,7 +106,9 @@ impl<'a> Input<'a> for StringInput<'a> {
             panic!("position out of bounds");
         }
 
-        find(&mut self.string.chars().peekable(), pos, (1, 1))
+        let slice = &self.string[..pos];
+
+        find(&mut slice.chars().peekable(), pos, (1, 1))
     }
 
     #[inline]
@@ -211,7 +213,7 @@ mod tests {
 
     #[test]
     fn line_col() {
-        let input = StringInput::new("a\rb\nc\r\nd");
+        let input = StringInput::new("a\rb\nc\r\nd嗨");
 
         assert_eq!(input.line_col(0), (1, 1));
         assert_eq!(input.line_col(1), (1, 2));
@@ -222,6 +224,7 @@ mod tests {
         assert_eq!(input.line_col(6), (4, 1));
         assert_eq!(input.line_col(7), (4, 1));
         assert_eq!(input.line_col(8), (4, 2));
+        assert_eq!(input.line_col(11), (4, 3));
     }
 
     #[test]
