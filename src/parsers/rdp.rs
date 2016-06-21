@@ -114,9 +114,8 @@ macro_rules! impl_rdp {
     ( grammar! { $( $ts:tt )* } $( $mac:ident! { $( $rest:tt )* } )* ) => {
         use std::cell::Cell;
         use std::cmp;
-        use std::marker::PhantomData;
 
-        pub struct Rdp<'n, T: Input<'n>> {
+        pub struct Rdp<T: Input> {
             input:       T,
             queue:       Vec<Token<Rule>>,
             queue_index: Cell<usize>,
@@ -124,14 +123,13 @@ macro_rules! impl_rdp {
             fail_pos:    usize,
             atomic:      bool,
             comment:     bool,
-            eoi_matched: bool,
-            phantom:     PhantomData<Input<'n>>
+            eoi_matched: bool
         }
 
         impl_rdp!(@filter [ $( $ts )* ] []);
 
-        impl<'n, T: Input<'n>> Rdp<'n, T> {
-            pub fn new(input: T) -> Rdp<'n, T> {
+        impl<T: Input> Rdp<T> {
+            pub fn new(input: T) -> Rdp<T> {
                 Rdp {
                     input:       input,
                     queue:       vec![],
@@ -140,8 +138,7 @@ macro_rules! impl_rdp {
                     fail_pos:    0,
                     atomic:      false,
                     comment:     false,
-                    eoi_matched: false,
-                    phantom:     PhantomData
+                    eoi_matched: false
                 }
             }
 
@@ -152,14 +149,14 @@ macro_rules! impl_rdp {
             #[inline]
             pub fn any(&mut self) -> bool {
                 if self.end() {
-                    let pos = self.pos();
+                    let pos = self.input.pos();
 
                     self.track(Rule::any, pos);
 
                     false
                 } else {
-                    let next = self.pos() + 1;
-                    self.set_pos(next);
+                    let next = self.input.pos() + 1;
+                    self.input.set_pos(next);
 
                     true
                 }
@@ -171,7 +168,7 @@ macro_rules! impl_rdp {
                 let result = self.end();
 
                 if !result {
-                    let pos = self.pos();
+                    let pos = self.input.pos();
 
                     self.track(Rule::eoi, pos);
                 } else {
@@ -192,18 +189,18 @@ macro_rules! impl_rdp {
             )*
         }
 
-        impl<'n, T: Input<'n>> Parser<'n> for Rdp<'n, T> {
+        impl<T: Input> Parser for Rdp<T> {
             type Rule = Rule;
             type Token = Token<Rule>;
 
             #[inline]
-            fn match_string(&mut self, string: &str) -> bool {
-                self.input.match_string(string)
+            fn input(&self) -> &Input {
+                &self.input
             }
 
             #[inline]
-            fn match_range(&mut self, left: char, right: char) -> bool {
-                self.input.match_range(left, right)
+            fn input_mut(&mut self) -> &mut Input {
+                &mut self.input
             }
 
             #[inline]
@@ -241,8 +238,8 @@ macro_rules! impl_rdp {
 
                 while let Some((rule, prec, _)) = op {
                     if prec >= min_prec {
-                        let mut new_pos = self.pos();
-                        let mut right = self.pos();
+                        let mut new_pos = self.input.pos();
+                        let mut right = self.input.pos();
                         let queue_pos = self.queue.len();
 
                         primary(self);
@@ -291,16 +288,6 @@ macro_rules! impl_rdp {
             }
 
             #[inline]
-            fn pos(&self) -> usize {
-                self.input.pos()
-            }
-
-            #[inline]
-            fn set_pos(&mut self, pos: usize) {
-                self.input.set_pos(pos);
-            }
-
-            #[inline]
             fn end(&self) -> bool {
                 self.input.len() == self.input.pos()
             }
@@ -316,11 +303,6 @@ macro_rules! impl_rdp {
                 self.queue.clear();
                 self.failures.clear();
                 self.fail_pos = 0;
-            }
-
-            #[inline]
-            fn slice_input(&self, start: usize, end: usize) -> &'n str {
-                self.input.slice(start, end)
             }
 
             #[inline]
@@ -361,6 +343,7 @@ macro_rules! impl_rdp {
                 }
             }
 
+            #[inline]
             fn skip_com(&mut self) {
                 if self.atomic {
                     return
@@ -379,14 +362,17 @@ macro_rules! impl_rdp {
                 }
             }
 
+            #[inline]
             fn is_atomic(&self) -> bool {
                 self.atomic
             }
 
+            #[inline]
             fn set_atomic(&mut self, value: bool) {
                 self.atomic = value;
             }
 
+            #[inline]
             fn track(&mut self, failed: Rule, pos: usize) {
                 if self.atomic {
                     return
@@ -438,29 +424,18 @@ mod tests {
     }
 
     #[test]
-    fn match_string() {
-        let input = StringInput::new("asdasdf");
-        let mut parser = Rdp::new(input);
-
-        assert!(parser.match_string("asd"));
-        assert!(parser.match_string("asdf"));
-        assert!(parser.match_string(""));
-        assert!(!parser.match_string("a"));
-    }
-
-    #[test]
     fn try() {
         let input = StringInput::new("asdasdf");
         let mut parser = Rdp::new(input);
 
-        assert!(parser.match_string("asd"));
+        assert!(parser.input_mut().match_string("asd"));
 
         assert!(!parser.try(false, |parser| {
-            parser.match_string("as") && parser.match_string("dd")
+            parser.input_mut().match_string("as") && parser.input_mut().match_string("dd")
         }));
 
         assert!(parser.try(false, |parser| {
-            parser.match_string("as") && parser.match_string("df")
+            parser.input_mut().match_string("as") && parser.input_mut().match_string("df")
         }));
     }
 
@@ -469,7 +444,7 @@ mod tests {
         let input = StringInput::new("asdasdf");
         let mut parser = Rdp::new(input);
 
-        assert!(parser.match_string("asdasdf"));
+        assert!(parser.input_mut().match_string("asdasdf"));
         assert!(parser.end());
     }
 
@@ -478,11 +453,11 @@ mod tests {
         let input = StringInput::new("asdasdf");
         let mut parser = Rdp::new(input);
 
-        assert!(parser.match_string("asdasdf"));
+        assert!(parser.input_mut().match_string("asdasdf"));
 
         parser.reset();
 
-        assert!(parser.match_string("asdasdf"));
+        assert!(parser.input_mut().match_string("asdasdf"));
     }
 
     #[test]

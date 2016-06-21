@@ -24,7 +24,7 @@ impl_rdp! {
     }
 
     process! {
-        _word(&self) -> Node<'n> {
+        _word(&self) -> Node {
             (&w: word) => Node::Sentence(w)
         }
     }
