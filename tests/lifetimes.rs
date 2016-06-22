@@ -8,8 +8,6 @@
 #[macro_use]
 extern crate pest;
 
-use std::collections::LinkedList;
-
 use pest::prelude::*;
 
 #[derive(Debug, PartialEq)]
@@ -24,7 +22,7 @@ impl_rdp! {
     }
 
     process! {
-        _word(&self) -> Node<'a> {
+        _word(&self) -> Node<'input> {
             (&w: word) => Node::Sentence(w)
         }
     }

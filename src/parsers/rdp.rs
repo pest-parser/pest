@@ -128,7 +128,7 @@ macro_rules! impl_rdp {
 
         impl_rdp!(@filter [ $( $ts )* ] []);
 
-        impl<'a, T: Input<'a>> Rdp<T> {
+        impl<'input, T: Input<'input>> Rdp<T> {
             pub fn new(input: T) -> Rdp<T> {
                 Rdp {
                     input:       input,
@@ -189,7 +189,7 @@ macro_rules! impl_rdp {
             )*
         }
 
-        impl<'a, T: Input<'a>> Parser<'a, T> for Rdp<T> {
+        impl<'input, T: Input<'input>> Parser<'input, T> for Rdp<T> {
             type Rule = Rule;
             type Token = Token<Rule>;
 

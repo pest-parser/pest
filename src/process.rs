@@ -23,6 +23,10 @@
 /// | `item: fn()`     | call matcher `fn` and store result in `item`         |
 /// | `mut item: fn()` | call matcher `fn` and store mutable result in `item` |
 ///
+/// *Note:* Lifetime elision works by using the lifetime of the `Parser` instance. To use the
+/// lifetime of the `Input` instance, use the explicit `'input` lifetime like in the
+/// [test](https://github.com/dragostis/pest/blob/master/tests/lifetimes.rs#L25).
+///
 /// # Panics
 ///
 /// In case all the patterns inside of `process!` won't match, the `process` method will `panic!`.
