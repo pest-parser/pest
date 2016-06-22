@@ -25,7 +25,7 @@ use super::super::Input;
 /// ```
 pub struct StringInput<'a> {
     string: &'a str,
-    pos: usize
+    pos: usize,
 }
 
 impl<'a> StringInput<'a> {
@@ -43,12 +43,12 @@ impl<'a> StringInput<'a> {
     pub fn new(string: &'a str) -> StringInput<'a> {
         StringInput {
             string: string,
-            pos : 0
+            pos: 0,
         }
     }
 }
 
-impl<'a> Input for StringInput<'a> {
+impl<'a> Input<'a> for StringInput<'a> {
     #[inline]
     fn len(&self) -> usize {
         self.string.len()
@@ -70,14 +70,16 @@ impl<'a> Input for StringInput<'a> {
     }
 
     #[inline]
-    fn slice(&self, start: usize, end: usize) -> &str {
+    fn slice(&self, start: usize, end: usize) -> &'a str {
         &self.string[start..end]
     }
 
     #[inline]
     fn line_col(&self, pos: usize) -> (usize, usize) {
-        fn find(chars: &mut Peekable<Chars>, pos: usize,
-                current: (usize, usize)) -> (usize, usize) {
+        fn find(chars: &mut Peekable<Chars>,
+                pos: usize,
+                current: (usize, usize))
+                -> (usize, usize) {
             if pos == 0 {
                 current
             } else {
@@ -94,10 +96,10 @@ impl<'a> Input for StringInput<'a> {
                         } else {
                             find(chars, pos - 1, (current.0 + 1, 1))
                         }
-                    },
+                    }
                     Some('\n') => find(chars, pos - 1, (current.0 + 1, 1)),
-                    Some(c)    => find(chars, pos - c.len_utf8(), (current.0, current.1 + 1)),
-                    None       => unreachable!()
+                    Some(c) => find(chars, pos - c.len_utf8(), (current.0, current.1 + 1)),
+                    None => unreachable!(),
                 }
             }
         }
