@@ -44,7 +44,7 @@ fn int_zero() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::int, start: 0, end: 1 }
+        Token::new(Rule::int, 0, 1)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -58,7 +58,7 @@ fn int_long() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::int, start: 0, end: 12 }
+        Token::new(Rule::int, 0, 12)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -72,8 +72,8 @@ fn exp() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::exp, start: 0, end: 3 },
-        Token { rule: Rule::int, start: 1, end: 3 }
+        Token::new(Rule::exp, 0, 3),
+        Token::new(Rule::int, 1, 3)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -87,8 +87,8 @@ fn exp_signed() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::exp, start: 0, end: 3 },
-        Token { rule: Rule::int, start: 2, end: 3 }
+        Token::new(Rule::exp, 0, 3),
+        Token::new(Rule::int, 2, 3)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -102,10 +102,10 @@ fn number_neg_point_exp() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::number, start: 0, end: 12 },
-        Token { rule: Rule::int, start: 1, end: 3 },
-        Token { rule: Rule::exp, start: 8, end: 12 },
-        Token { rule: Rule::int, start: 10, end: 12 }
+        Token::new(Rule::number, 0, 12),
+        Token::new(Rule::int, 1, 3),
+        Token::new(Rule::exp, 8, 12),
+        Token::new(Rule::int, 10, 12)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -119,10 +119,10 @@ fn number_exp() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::number, start: 0, end: 7 },
-        Token { rule: Rule::int, start: 0, end: 3 },
-        Token { rule: Rule::exp, start: 3, end: 7 },
-        Token { rule: Rule::int, start: 5, end: 7 }
+        Token::new(Rule::number, 0, 7),
+        Token::new(Rule::int, 0, 3),
+        Token::new(Rule::exp, 3, 7),
+        Token::new(Rule::int, 5, 7)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -136,8 +136,8 @@ fn number_neg() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::number, start: 0, end: 4 },
-        Token { rule: Rule::int, start: 1, end: 4 }
+        Token::new(Rule::number, 0, 4),
+        Token::new(Rule::int, 1, 4)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -151,11 +151,11 @@ fn unicode() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::unicode, start: 0, end: 5 },
-        Token { rule: Rule::hex, start: 1, end: 2 },
-        Token { rule: Rule::hex, start: 2, end: 3 },
-        Token { rule: Rule::hex, start: 3, end: 4 },
-        Token { rule: Rule::hex, start: 4, end: 5 }
+        Token::new(Rule::unicode, 0, 5),
+        Token::new(Rule::hex, 1, 2),
+        Token::new(Rule::hex, 2, 3),
+        Token::new(Rule::hex, 3, 4),
+        Token::new(Rule::hex, 4, 5)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -169,14 +169,14 @@ fn string() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::string, start: 0, end: 13 },
-        Token { rule: Rule::escape, start: 4, end: 10 },
-        Token { rule: Rule::unicode, start: 5, end: 10 },
-        Token { rule: Rule::hex, start: 6, end: 7 },
-        Token { rule: Rule::hex, start: 7, end: 8 },
-        Token { rule: Rule::hex, start: 8, end: 9 },
-        Token { rule: Rule::hex, start: 9, end: 10 },
-        Token { rule: Rule::escape, start: 10, end: 12 }
+        Token::new(Rule::string, 0, 13),
+        Token::new(Rule::escape, 4, 10),
+        Token::new(Rule::unicode, 5, 10),
+        Token::new(Rule::hex, 6, 7),
+        Token::new(Rule::hex, 7, 8),
+        Token::new(Rule::hex, 8, 9),
+        Token::new(Rule::hex, 9, 10),
+        Token::new(Rule::escape, 10, 12)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -190,7 +190,7 @@ fn array_empty() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::array, start: 0, end: 3 }
+        Token::new(Rule::array, 0, 3)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -204,16 +204,16 @@ fn array() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::array, start: 0, end: 25 },
-        Token { rule: Rule::value, start: 1, end: 6 },
-        Token { rule: Rule::number, start: 1, end: 6 },
-        Token { rule: Rule::int, start: 1, end: 2 },
-        Token { rule: Rule::exp, start: 4, end: 6 },
-        Token { rule: Rule::int, start: 5, end: 6 },
-        Token { rule: Rule::value, start: 8, end: 13 },
-        Token { rule: Rule::value, start: 15, end: 19 },
-        Token { rule: Rule::value, start: 21, end: 24 },
-        Token { rule: Rule::string, start: 21, end: 24 }
+        Token::new(Rule::array, 0, 25),
+        Token::new(Rule::value, 1, 6),
+        Token::new(Rule::number, 1, 6),
+        Token::new(Rule::int, 1, 2),
+        Token::new(Rule::exp, 4, 6),
+        Token::new(Rule::int, 5, 6),
+        Token::new(Rule::value, 8, 13),
+        Token::new(Rule::value, 15, 19),
+        Token::new(Rule::value, 21, 24),
+        Token::new(Rule::string, 21, 24)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -227,11 +227,11 @@ fn pair() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::pair, start: 0, end: 7 },
-        Token { rule: Rule::string, start: 0, end: 3 },
-        Token { rule: Rule::value, start: 6, end: 7 },
-        Token { rule: Rule::number, start: 6, end: 7 },
-        Token { rule: Rule::int, start: 6, end: 7 }
+        Token::new(Rule::pair, 0, 7),
+        Token::new(Rule::string, 0, 3),
+        Token::new(Rule::value, 6, 7),
+        Token::new(Rule::number, 6, 7),
+        Token::new(Rule::int, 6, 7)
     ];
 
     assert_eq!(parser.queue(), &queue);
@@ -245,23 +245,23 @@ fn object() {
     assert!(parser.end());
 
     let queue = vec![
-        Token { rule: Rule::object, start: 0, end: 30 },
-        Token { rule: Rule::pair, start: 1, end: 8 },
-        Token { rule: Rule::string, start: 1, end: 4 },
-        Token { rule: Rule::value, start: 7, end: 8 },
-        Token { rule: Rule::number, start: 7, end: 8 },
-        Token { rule: Rule::int, start: 7, end: 8 },
-        Token { rule: Rule::pair, start: 10, end: 29 },
-        Token { rule: Rule::string, start: 10, end: 13 },
-        Token { rule: Rule::value, start: 16, end: 29 },
-        Token { rule: Rule::array, start: 16, end: 29 },
-        Token { rule: Rule::value, start: 17, end: 19 },
-        Token { rule: Rule::object, start: 17, end: 19 },
-        Token { rule: Rule::value, start: 21, end: 28 },
-        Token { rule: Rule::number, start: 21, end: 28 },
-        Token { rule: Rule::int, start: 21, end: 22 },
-        Token { rule: Rule::exp, start: 24, end: 28 },
-        Token { rule: Rule::int, start: 26, end: 28 }
+        Token::new(Rule::object, 0, 30),
+        Token::new(Rule::pair, 1, 8),
+        Token::new(Rule::string, 1, 4),
+        Token::new(Rule::value, 7, 8),
+        Token::new(Rule::number, 7, 8),
+        Token::new(Rule::int, 7, 8),
+        Token::new(Rule::pair, 10, 29),
+        Token::new(Rule::string, 10, 13),
+        Token::new(Rule::value, 16, 29),
+        Token::new(Rule::array, 16, 29),
+        Token::new(Rule::value, 17, 19),
+        Token::new(Rule::object, 17, 19),
+        Token::new(Rule::value, 21, 28),
+        Token::new(Rule::number, 21, 28),
+        Token::new(Rule::int, 21, 22),
+        Token::new(Rule::exp, 24, 28),
+        Token::new(Rule::int, 26, 28)
     ];
 
     assert_eq!(parser.queue(), &queue);

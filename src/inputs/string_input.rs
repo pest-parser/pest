@@ -98,8 +98,8 @@ impl<'a> Input<'a> for StringInput<'a> {
                         }
                     }
                     Some('\n') => find(chars, pos - 1, (current.0 + 1, 1)),
-                    Some(c) => find(chars, pos - c.len_utf8(), (current.0, current.1 + 1)),
-                    None => unreachable!(),
+                    Some(c)    => find(chars, pos - c.len_utf8(), (current.0, current.1 + 1)),
+                    None       => unreachable!(),
                 }
             }
         }

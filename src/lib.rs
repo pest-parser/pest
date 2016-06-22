@@ -81,9 +81,9 @@
 //! assert!(parser.end());
 //!
 //! let queue = vec![
-//!     Token { rule: Rule::paren, start: 0, end: 4 },
-//!     Token { rule: Rule::paren, start: 1, end: 3 },
-//!     Token { rule: Rule::paren, start: 4, end: 6 }
+//!     Token::new(Rule::paren, 0, 4),
+//!     Token::new(Rule::paren, 1, 3),
+//!     Token::new(Rule::paren, 4, 6)
 //! ];
 //!
 //! assert_eq!(parser.queue(), &queue);
@@ -308,7 +308,7 @@
 //! assert!(parser.end());
 //!
 //! let queue = vec![
-//!     Token { rule: Rule::number, start: 0, end: 3 }
+//!     Token::new(Rule::number, 0, 3)
 //! ];
 //!
 //! assert_eq!(parser.queue(), &queue);
@@ -346,7 +346,7 @@
 //! assert!(parser.end());
 //!
 //! let queue = vec![
-//!     Token { rule: Rule::number, start: 2, end: 5 }
+//!     Token::new(Rule::number, 2, 5)
 //! ];
 //!
 //! assert_eq!(parser.queue(), &queue);
@@ -418,7 +418,7 @@
 //! assert!(parser.end());
 //!
 //! let queue = vec![
-//!     Token { rule: Rule::number, start: 0, end: 3 }
+//!     Token::new(Rule::number, 0, 3)
 //! ];
 //!
 //! assert_eq!(parser.queue(), &queue);

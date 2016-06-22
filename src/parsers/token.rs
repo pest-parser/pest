@@ -15,3 +15,35 @@ pub struct Token<Rule> {
     /// ending position in `Input`
     pub end:   usize
 }
+
+impl<Rule> Token<Rule> {
+    /// Creates a new `Token`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[macro_use] extern crate pest;
+    /// # use pest::prelude::*;
+    /// # fn main() {
+    /// impl_rdp! {
+    ///     grammar! {
+    ///         expression = _{ paren ~ expression? }
+    ///         paren      =  { ["("] ~ expression? ~ [")"] }
+    ///     }
+    /// }
+    ///
+    /// let token = Token::new(Rule::paren, 0, 1);
+    ///
+    /// assert_eq!(token.rule, Rule::paren);
+    /// assert_eq!(token.start, 0);
+    /// assert_eq!(token.end, 1);
+    /// # }
+    /// ```
+    pub fn new(rule: Rule, start: usize, end: usize) -> Token<Rule> {
+        Token {
+            rule:  rule,
+            start: start,
+            end:   end
+        }
+    }
+}
