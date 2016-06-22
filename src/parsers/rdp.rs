@@ -115,7 +115,7 @@ macro_rules! impl_rdp {
         use std::cell::Cell;
         use std::cmp;
 
-        pub struct Rdp<T: Input> {
+        pub struct Rdp<T> {
             input:       T,
             queue:       Vec<Token<Rule>>,
             queue_index: Cell<usize>,
@@ -128,7 +128,7 @@ macro_rules! impl_rdp {
 
         impl_rdp!(@filter [ $( $ts )* ] []);
 
-        impl<T: Input> Rdp<T> {
+        impl<'a, T: Input<'a>> Rdp<T> {
             pub fn new(input: T) -> Rdp<T> {
                 Rdp {
                     input:       input,
@@ -189,17 +189,17 @@ macro_rules! impl_rdp {
             )*
         }
 
-        impl<T: Input> Parser for Rdp<T> {
+        impl<'a, T: Input<'a>> Parser<'a, T> for Rdp<T> {
             type Rule = Rule;
             type Token = Token<Rule>;
 
             #[inline]
-            fn input(&self) -> &Input {
+            fn input(&self) -> &T {
                 &self.input
             }
 
             #[inline]
-            fn input_mut(&mut self) -> &mut Input {
+            fn input_mut(&mut self) -> &mut T {
                 &mut self.input
             }
 
@@ -467,15 +467,41 @@ mod tests {
         assert!(parser.expression());
         assert!(!parser.end());
 
-        let queue = vec![
-            Token { rule: Rule::paren, start: 2, end: 9 },
-            Token { rule: Rule::paren, start: 5, end: 8 },
-            Token { rule: Rule::paren, start: 9, end: 20 },
-            Token { rule: Rule::paren, start: 10, end: 16 },
-            Token { rule: Rule::paren, start: 12, end: 14 },
-            Token { rule: Rule::paren, start: 16, end: 18 },
-            Token { rule: Rule::paren, start: 20, end: 22 }
-        ];
+        let queue = vec![Token {
+                             rule: Rule::paren,
+                             start: 2,
+                             end: 9,
+                         },
+                         Token {
+                             rule: Rule::paren,
+                             start: 5,
+                             end: 8,
+                         },
+                         Token {
+                             rule: Rule::paren,
+                             start: 9,
+                             end: 20,
+                         },
+                         Token {
+                             rule: Rule::paren,
+                             start: 10,
+                             end: 16,
+                         },
+                         Token {
+                             rule: Rule::paren,
+                             start: 12,
+                             end: 14,
+                         },
+                         Token {
+                             rule: Rule::paren,
+                             start: 16,
+                             end: 18,
+                         },
+                         Token {
+                             rule: Rule::paren,
+                             start: 20,
+                             end: 22,
+                         }];
 
         assert_eq!(parser.queue(), &queue);
     }
@@ -487,9 +513,11 @@ mod tests {
         assert!(parser.zero());
         assert!(!parser.end());
 
-        let queue = vec![
-            Token { rule: Rule::zero, start: 2, end: 15 }
-        ];
+        let queue = vec![Token {
+                             rule: Rule::zero,
+                             start: 2,
+                             end: 15,
+                         }];
 
         assert_eq!(parser.queue(), &queue);
     }
@@ -501,9 +529,11 @@ mod tests {
         assert!(parser.one());
         assert!(!parser.end());
 
-        let queue = vec![
-            Token { rule: Rule::one, start: 2, end: 15 }
-        ];
+        let queue = vec![Token {
+                             rule: Rule::one,
+                             start: 2,
+                             end: 15,
+                         }];
 
         assert_eq!(parser.queue(), &queue);
     }
@@ -515,10 +545,16 @@ mod tests {
         assert!(parser.expression());
         assert!(parser.end());
 
-        let queue = vec![
-            Token { rule: Rule::paren, start: 6, end: 10 },
-            Token { rule: Rule::paren, start: 7, end: 9 }
-        ];
+        let queue = vec![Token {
+                             rule: Rule::paren,
+                             start: 6,
+                             end: 10,
+                         },
+                         Token {
+                             rule: Rule::paren,
+                             start: 7,
+                             end: 9,
+                         }];
 
         assert_eq!(parser.queue(), &queue);
     }
@@ -530,10 +566,16 @@ mod tests {
         assert!(parser.expression());
         assert!(parser.end());
 
-        let queue = vec![
-            Token { rule: Rule::paren, start: 11, end: 15 },
-            Token { rule: Rule::paren, start: 12, end: 14 }
-        ];
+        let queue = vec![Token {
+                             rule: Rule::paren,
+                             start: 11,
+                             end: 15,
+                         },
+                         Token {
+                             rule: Rule::paren,
+                             start: 12,
+                             end: 14,
+                         }];
 
         assert_eq!(parser.queue(), &queue);
     }

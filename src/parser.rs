@@ -8,13 +8,13 @@
 use super::Input;
 
 /// A `trait` that defines a parser.
-pub trait Parser {
+pub trait Parser<'a, T: Input<'a>> {
     type Rule;
     type Token;
 
-    fn input(&self) -> &Input;
+    fn input(&self) -> &T;
 
-    fn input_mut(&mut self) -> &mut Input;
+    fn input_mut(&mut self) -> &mut T;
 
     /// Tries to match `rule`, returns whether it matched, and advances a parser with in case it
     /// did. If `revert` is `true`, the parser will not advance.
@@ -28,9 +28,14 @@ pub trait Parser {
     /// was not silented) along with its precedence and right-associativity, or `None` if no
     /// operator passes. This operator triplet is also returned by the function when it greedily
     /// parses an operator useful for a higher precedence.
-    fn prec_climb<F, G>(&mut self, pos: usize, left: usize, min_prec: u8,
-                        last_op: Option<(Option<Self::Rule>, u8, bool)>, primary: &mut F,
-                        climb: &mut G) -> (Option<(Option<Self::Rule>, u8, bool)>, Option<usize>)
+    fn prec_climb<F, G>(&mut self,
+                        pos: usize,
+                        left: usize,
+                        min_prec: u8,
+                        last_op: Option<(Option<Self::Rule>, u8, bool)>,
+                        primary: &mut F,
+                        climb: &mut G)
+                        -> (Option<(Option<Self::Rule>, u8, bool)>, Option<usize>)
         where F: FnMut(&mut Self) -> bool,
               G: FnMut(&mut Self) -> Option<(Option<Self::Rule>, u8, bool)>;
 
