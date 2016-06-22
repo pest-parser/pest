@@ -8,8 +8,6 @@
 #[macro_use]
 extern crate pest;
 
-use std::collections::LinkedList;
-
 use pest::prelude::*;
 
 #[derive(Debug, PartialEq)]
@@ -24,7 +22,7 @@ impl_rdp! {
     }
 
     process! {
-        main(&self) -> Node<'n> {
+        _word(&self) -> Node<'input> {
             (&w: word) => Node::Sentence(w)
         }
     }
@@ -37,7 +35,7 @@ fn word() {
         let mut parser = Rdp::new(StringInput::new(&file));
 
         assert!(parser.word());
-        parser.process()
+        parser._word()
     };
     assert_eq!(result, Node::Sentence("abc"));
 }

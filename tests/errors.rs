@@ -18,7 +18,7 @@ impl_rdp! {
     }
 
     process! {
-        main(&self) -> Result<String, String> {
+        primary(&self) -> Result<String, String> {
             (_: ab, res: secondary()) => Ok(try!(res) + "b")
         }
 
@@ -35,7 +35,7 @@ fn a() {
 
     assert!(parser.ab());
 
-    assert_eq!(parser.process(), Ok("ab".to_owned()));
+    assert_eq!(parser.primary(), Ok("ab".to_owned()));
 }
 
 #[test]
@@ -44,5 +44,5 @@ fn b() {
 
     assert!(parser.ab());
 
-    assert_eq!(parser.process(), Err("error".to_owned()));
+    assert_eq!(parser.primary(), Err("error".to_owned()));
 }

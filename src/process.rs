@@ -9,8 +9,8 @@
 /// `process` on `&self` that processes the whole queue of `Token`s, reducing it to one single
 /// result.
 ///
-/// The `process` is populated with methods, called *matchers*, that match patterns and return
-/// results. A pattern is constructed from the following comma-separated items:
+/// The `process` is populated with callable methods, called *matchers*, that match patterns and
+/// return results. A pattern is constructed from the following comma-separated items:
 ///
 /// | Item             | What it does                                         |
 /// |------------------|------------------------------------------------------|
@@ -23,7 +23,9 @@
 /// | `item: fn()`     | call matcher `fn` and store result in `item`         |
 /// | `mut item: fn()` | call matcher `fn` and store mutable result in `item` |
 ///
-/// `process` automatically calls the `main` matcher which is mandatory.
+/// *Note:* Lifetime elision works by using the lifetime of the `Parser` instance. To use the
+/// lifetime of the `Input` instance, use the explicit `'input` lifetime like in the
+/// [test](https://github.com/dragostis/pest/blob/master/tests/lifetimes.rs#L25).
 ///
 /// # Panics
 ///
@@ -40,7 +42,7 @@
 ///     }
 ///
 ///     process! {
-///         main(&self) -> () {
+///         ab(&self) -> () {
 ///             (_: a) => {}
 ///         }
 ///     }
@@ -49,7 +51,7 @@
 /// let mut parser = Rdp::new(StringInput::new("b"));
 ///
 /// parser.b();
-/// parser.process();
+/// parser.ab();
 /// # }
 /// ```
 ///
@@ -96,7 +98,7 @@
 /// But before that, it needs to match a `paren` `Token` that gets ignored.
 ///
 /// ```ignore
-/// (_: paren, expression: main())
+/// (_: paren, expression: nested_letter())
 /// ```
 ///
 /// All together now:
@@ -119,11 +121,11 @@
 ///     }
 ///
 ///     process! {
-///         main(&self) -> Expression {
+///         nested_letter(&self) -> Expression {
 ///             (&letter: letter) => {
 ///                 Expression::Letter(letter.chars().next().unwrap())
 ///             },
-///             (_: paren, expression: main()) => {
+///             (_: paren, expression: nested_letter()) => {
 ///                 Expression::Paren(Box::new(expression))
 ///             }
 ///         }
@@ -133,7 +135,7 @@
 /// let mut parser = Rdp::new(StringInput::new("((z))"));
 ///
 /// assert!(parser.expression());
-/// assert_eq!(parser.process(),
+/// assert_eq!(parser.nested_letter(),
 ///            Expression::Paren(Box::new(Expression::Paren(Box::new(Expression::Letter('z'))))));
 /// # }
 /// ```
@@ -266,7 +268,7 @@
 /// let mut parser = Rdp::new(StringInput::new("abc def"));
 ///
 /// assert!(parser.sentence());
-/// parser.process();
+/// parser.main();
 /// # }
 /// ```
 #[macro_export]
@@ -323,7 +325,7 @@ macro_rules! process {
         {
             if let Some(token) = $slf.queue().get($slf.queue_index()) {
                 if token.rule == Rule::$typ {
-                    let $head = $slf.slice_input(token.start, token.end);
+                    let $head = $slf.input().slice(token.start, token.end);
 
                     $slf.inc_queue_index();
 
@@ -340,7 +342,7 @@ macro_rules! process {
         {
             if let Some(token) = $slf.queue().get($slf.queue_index()) {
                 if token.rule == Rule::$typ {
-                    let $head = $slf.slice_input(token.start, token.end);
+                    let $head = $slf.input().slice(token.start, token.end);
 
                     $slf.inc_queue_index();
 
@@ -357,7 +359,7 @@ macro_rules! process {
     ( @pattern $slf:ident ($block:expr) &$head:ident ) => {
         {
             if let Some(token) = $slf.queue().get($slf.queue_index()) {
-                let $head = $slf.slice_input(token.start, token.end);
+                let $head = $slf.input().slice(token.start, token.end);
 
                 $slf.inc_queue_index();
 
@@ -370,7 +372,7 @@ macro_rules! process {
     ( @pattern $slf:ident ($block:expr) &$head:ident, $( $tail:tt )* ) => {
         {
             if let Some(token) = $slf.queue().get($slf.queue_index()) {
-                let $head = $slf.slice_input(token.start, token.end);
+                let $head = $slf.input().slice(token.start, token.end);
 
                 $slf.inc_queue_index();
 
@@ -520,23 +522,11 @@ macro_rules! process {
         }
     };
 
-    // get main's type
-    ( @type main $typ:ty ) => {
-        pub fn process(&self) -> $typ {
-            self.set_queue_index(0);
-
-            self.main()
-        }
-    };
-    ( @type $_name:ident $_typ:ty ) => ();
-
     ( $( $name:ident (&$slf:ident) -> $typ:ty { $( $ts:tt )* } )* ) => {
         $(
-            fn $name(&$slf) -> $typ {
+            pub fn $name(&$slf) -> $typ {
                 process!(@branches $slf $name $( $ts )*)
             }
-
-            process!(@type $name $typ);
         )*
     };
 }
