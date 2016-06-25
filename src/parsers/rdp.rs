@@ -301,6 +301,7 @@ macro_rules! impl_rdp {
             fn reset(&mut self) {
                 self.input.set_pos(0);
                 self.queue.clear();
+                self.queue_index.set(0);
                 self.failures.clear();
                 self.fail_pos = 0;
             }
