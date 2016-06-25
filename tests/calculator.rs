@@ -28,9 +28,7 @@ impl_rdp! {
 
     process! {
         compute(&self) -> i32 {
-            (&number: number) => {
-                number.parse::<i32>().unwrap()
-            },
+            (&number: number) => number.parse::<i32>().unwrap(),
             (_: addition, left: compute(), sign, right: compute()) => {
                 match sign.rule {
                     Rule::plus  => left + right,

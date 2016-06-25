@@ -476,9 +476,7 @@
 //! `&` pattern and then parsed to an `i32`.
 //!
 //! ```ignore
-//! (&number: number) => {
-//!     number.parse::<i32>().unwrap()
-//! }
+//! (&number: number) => number.parse::<i32>().unwrap()
 //! ```
 //!
 //! `addition` and `multiplication` are virtually identical:
@@ -538,9 +536,7 @@
 //!
 //!     process! {
 //!         compute(&self) -> i32 {
-//!             (&number: number) => {
-//!                 number.parse::<i32>().unwrap()
-//!             },
+//!             (&number: number) => number.parse::<i32>().unwrap(),
 //!             (_: addition, left: compute(), sign, right: compute()) => {
 //!                 match sign.rule {
 //!                     Rule::plus  => left + right,

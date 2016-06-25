@@ -22,9 +22,7 @@ impl_rdp! {
 
     process! {
         compute(&self) -> i32 { // return an i32 in the end
-            (&number: number) => { // capture number as &str
-                number.parse::<i32>().unwrap()
-            },
+            (&number: number) => number.parse::<i32>().unwrap(), // capture number as &str
             (_: addition, left: compute(), sign, right: compute()) => { // get left & right by
                 match sign.rule {                                       // calling compute
                     Rule::plus  => left + right,
