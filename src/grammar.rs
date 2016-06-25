@@ -447,7 +447,94 @@ macro_rules! grammar {
         grammar!(@conv $atomic $slf $rules [] [])
     };
 
-    () => ();
+    () => {
+        #[allow(dead_code)]
+        #[inline]
+        pub fn try<F>(&mut self, revert: bool, rule: F) -> bool
+            where F: FnOnce(&mut Self) -> bool {
+
+            let pos = self.input().pos();
+            let len = self.queue().len();
+
+            let result = rule(self);
+
+            if revert || !result {
+                self.input_mut().set_pos(pos);
+            }
+
+            if !result {
+                self.queue_mut().truncate(len);
+            }
+
+            result
+        }
+
+        #[allow(dead_code)]
+        #[inline]
+        pub fn prec_climb<F, G>(&mut self, pos: usize, left: usize, min_prec: u8,
+                            last_op: Option<(Option<Rule>, u8, bool)>, primary: &mut F,
+                            climb: &mut G) -> (Option<(Option<Rule>, u8, bool)>, Option<usize>)
+            where F: FnMut(&mut Self) -> bool,
+                  G: FnMut(&mut Self) -> Option<(Option<Rule>, u8, bool)> {
+
+            let mut op = if last_op.is_some() {
+                last_op
+            } else {
+                climb(self)
+            };
+            let mut last_right = None;
+
+            while let Some((rule, prec, _)) = op {
+                if prec >= min_prec {
+                    let mut new_pos = self.input().pos();
+                    let mut right = self.input().pos();
+                    let queue_pos = self.queue().len();
+
+                    primary(self);
+
+                    if let Some(token) = self.queue().get(queue_pos) {
+                        new_pos = token.start;
+                        right   = token.end;
+                    }
+
+                    op = climb(self);
+
+                    while let Some((_, new_prec, right_assoc)) = op {
+                        if new_prec > prec || right_assoc && new_prec == prec {
+                            let (new_op, new_lr) = self.prec_climb(queue_pos, new_pos,
+                                                                   new_prec, op, primary,
+                                                                   climb);
+
+                            op = new_op;
+                            last_right = new_lr;
+                        } else {
+                            break
+                        }
+                    }
+
+                    if let Some(pos) = last_right {
+                        right = cmp::max(pos, right);
+                    } else {
+                        last_right = Some(right);
+                    }
+
+                    if let Some(rule) = rule {
+                        let token = Token {
+                            rule:  rule,
+                            start: left,
+                            end:   right
+                        };
+
+                        self.queue_mut().insert(pos, token);
+                    }
+                } else {
+                    return (op, last_right)
+                }
+            }
+
+            (op, last_right)
+        }
+    };
 
     // normal rule
     ( $name:ident = { $( $ts:tt )* } $( $tail:tt )* ) => {

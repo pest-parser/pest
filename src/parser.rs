@@ -16,29 +16,6 @@ pub trait Parser<'a, T: Input<'a>> {
 
     fn input_mut(&mut self) -> &mut T;
 
-    /// Tries to match `rule`, returns whether it matched, and advances a parser with in case it
-    /// did. If `revert` is `true`, the parser will not advance.
-    fn try<F>(&mut self, revert: bool, rule: F) -> bool where F: FnOnce(&mut Self) -> bool;
-
-    /// Uses the precendence climbing algorithm to match rules. `pos` is the current position
-    /// of the queue. `left` is the left-most starting position of the current rule. `min_prec` is
-    /// the currently processed precedence. `last_op` is the last greedily parsed infix operator.
-    /// `primary` is a closure defined in `grammar!` that parses a primary expression. `climb` is a
-    /// closure defined in `grammar!` that returns the first `Rule` that was parsed (provided it
-    /// was not silented) along with its precedence and right-associativity, or `None` if no
-    /// operator passes. This operator triplet is also returned by the function when it greedily
-    /// parses an operator useful for a higher precedence.
-    fn prec_climb<F, G>(&mut self,
-                        pos: usize,
-                        left: usize,
-                        min_prec: u8,
-                        last_op: Option<(Option<Self::Rule>, u8, bool)>,
-                        primary: &mut F,
-                        climb: &mut G)
-                        -> (Option<(Option<Self::Rule>, u8, bool)>, Option<usize>)
-        where F: FnMut(&mut Self) -> bool,
-              G: FnMut(&mut Self) -> Option<(Option<Self::Rule>, u8, bool)>;
-
     /// Returns whether a `Parser` has reached its end.
     fn end(&self) -> bool;
 
