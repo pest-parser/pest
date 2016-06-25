@@ -484,10 +484,10 @@
 //! `addition` and `multiplication` are virtually identical:
 //!
 //! * match the `addition`/`multiplication` `Token` without using it
-//! * recursively process the left-hand-side by calling `main`
+//! * recursively process the left-hand-side by calling `compute`
 //! * use the `sign` `Token` without capturing its `&str` value
-//! * recursively process the right-hand-side by calling `main`
-//! * inside the block match `sign` and return the appropriate result
+//! * recursively process the right-hand-side by calling `compute`
+//! * match `sign` inside the block and return the appropriate result
 //!
 //! ```ignore
 //! (_: addition, left: compute(), sign, right: compute()) => {
