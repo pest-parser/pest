@@ -524,6 +524,7 @@ macro_rules! process {
 
     ( $( $name:ident (&$slf:ident) -> $typ:ty { $( $ts:tt )* } )* ) => {
         $(
+            #[inline]
             pub fn $name(&$slf) -> $typ {
                 process!(@branches $slf $name $( $ts )*)
             }
