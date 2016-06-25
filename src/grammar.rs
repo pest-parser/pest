@@ -540,8 +540,6 @@ macro_rules! grammar {
             let slf = self;
             grammar!(@skip $name slf);
 
-            let pos = slf.input().pos();
-
             let result = grammar!(@atomic $name false slf [ $( $ts )* ]);
 
             result
