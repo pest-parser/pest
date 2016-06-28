@@ -1,5 +1,19 @@
 # Change Log
 
+## [v0.3.2](https://github.com/dragostis/pest/tree/v0.3.2) (2016-06-28)
+[Full Changelog](https://github.com/dragostis/pest/compare/v0.3.1...v0.3.2)
+
+**Closed issues:**
+
+- line\_col causing stack overflow when optimization turned off [\#67](https://github.com/dragostis/pest/issues/67)
+
+## [v0.3.1](https://github.com/dragostis/pest/tree/v0.3.1) (2016-06-25)
+[Full Changelog](https://github.com/dragostis/pest/compare/v0.3.0...v0.3.1)
+
+**Implemented enhancements:**
+
+- Add changelog [\#56](https://github.com/dragostis/pest/issues/56)
+
 ## [v0.3.0](https://github.com/dragostis/pest/tree/v0.3.0) (2016-06-22)
 [Full Changelog](https://github.com/dragostis/pest/compare/v0.2.9...v0.3.0)
 
@@ -62,6 +76,10 @@
 
 ## [v0.2.3](https://github.com/dragostis/pest/tree/v0.2.3) (2016-06-10)
 [Full Changelog](https://github.com/dragostis/pest/compare/v0.2.2...v0.2.3)
+
+**Implemented enhancements:**
+
+- process! support mutability-specifier for bindings [\#50](https://github.com/dragostis/pest/issues/50)
 
 **Merged pull requests:**
 
@@ -127,6 +145,7 @@
 
 - Fixed minor typo. [\#40](https://github.com/dragostis/pest/pull/40) ([alexandrusebastian](https://github.com/alexandrusebastian))
 - Fix some docs + thoughts on the doc [\#32](https://github.com/dragostis/pest/pull/32) ([Keats](https://github.com/Keats))
+- Token processing constructs. [\#24](https://github.com/dragostis/pest/pull/24) ([dragostis](https://github.com/dragostis))
 
 ## [v0.1.0](https://github.com/dragostis/pest/tree/v0.1.0) (2016-05-22)
 [Full Changelog](https://github.com/dragostis/pest/compare/v0.0.1...v0.1.0)
@@ -138,6 +157,10 @@
 - Add interrogation rules. [\#3](https://github.com/dragostis/pest/issues/3)
 - Add repetition rules. [\#2](https://github.com/dragostis/pest/issues/2)
 - Restyle grammar. [\#1](https://github.com/dragostis/pest/issues/1)
+
+**Merged pull requests:**
+
+- Performance [\#10](https://github.com/dragostis/pest/pull/10) ([dragostis](https://github.com/dragostis))
 
 ## [v0.0.1](https://github.com/dragostis/pest/tree/v0.0.1) (2016-04-24)
 

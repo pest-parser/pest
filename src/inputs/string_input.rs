@@ -109,7 +109,7 @@ impl<'a> Input<'a> for StringInput<'a> {
                 },
                 Some(c)    => {
                     pos -= c.len_utf8();
-                    line_col = (line_col.0, line_col.1+ 1);
+                    line_col = (line_col.0, line_col.1 + 1);
                 },
                 None       => unreachable!(),
             }
