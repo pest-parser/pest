@@ -5,8 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::iter::Peekable;
-use std::str::{self, Chars};
+use std::str;
 
 use super::super::Input;
 
@@ -76,41 +75,47 @@ impl<'a> Input<'a> for StringInput<'a> {
 
     #[inline]
     fn line_col(&self, pos: usize) -> (usize, usize) {
-        fn find(chars: &mut Peekable<Chars>,
-                pos: usize,
-                current: (usize, usize))
-                -> (usize, usize) {
-            if pos == 0 {
-                current
-            } else {
-                match chars.next() {
-                    Some('\r') => {
-                        if let Some(&'\n') = chars.peek() {
-                            chars.next();
-
-                            if pos == 1 {
-                                find(chars, pos - 1, (current.0 + 1, 1))
-                            } else {
-                                find(chars, pos - 2, (current.0 + 1, 1))
-                            }
-                        } else {
-                            find(chars, pos - 1, (current.0 + 1, 1))
-                        }
-                    }
-                    Some('\n') => find(chars, pos - 1, (current.0 + 1, 1)),
-                    Some(c)    => find(chars, pos - c.len_utf8(), (current.0, current.1 + 1)),
-                    None       => unreachable!(),
-                }
-            }
-        }
-
         if pos > self.string.len() {
             panic!("position out of bounds");
         }
 
+        let mut pos = pos;
         let slice = &self.string[..pos];
+        let mut chars = slice.chars().peekable();
 
-        find(&mut slice.chars().peekable(), pos, (1, 1))
+        let mut line_col = (1, 1);
+
+        while pos != 0 {
+            match chars.next() {
+                Some('\r') => {
+                    if let Some(&'\n') = chars.peek() {
+                        chars.next();
+
+                        if pos == 1 {
+                            pos -= 1;
+                            line_col = (line_col.0 + 1, 1);
+                        } else {
+                            pos -= 2;
+                            line_col = (line_col.0 + 1, 1);
+                        }
+                    } else {
+                        pos -= 1;
+                        line_col = (line_col.0 + 1, 1);
+                    }
+                }
+                Some('\n') => {
+                    pos -= 1;
+                    line_col = (line_col.0 + 1, 1);
+                },
+                Some(c)    => {
+                    pos -= c.len_utf8();
+                    line_col = (line_col.0, line_col.1+ 1);
+                },
+                None       => unreachable!(),
+            }
+        }
+
+        line_col
     }
 
     #[inline]
