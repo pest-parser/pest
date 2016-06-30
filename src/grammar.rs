@@ -176,36 +176,46 @@ macro_rules! grammar {
           {
               let mut primary = |slf: &mut Self| {
                   let pos = slf.input().pos();
+                  let len = slf.queue().len();
 
-                  grammar!(@skip $atomic slf);
+                  slf.skip();
 
                   let result = grammar!(@conv $atomic slf [ $( $primary )* ] [] []);
 
                   if !result {
                       slf.input_mut().set_pos(pos);
+                      slf.queue_mut().truncate(len);
                   }
 
                   result
               };
               let mut climb = |slf: &mut Self| {
                   let pos = slf.input().pos();
+                  let len = slf.queue().len();
 
-                  grammar!(@skip $atomic slf);
+                  slf.skip();
 
-                  grammar!(@conv_prec pos (0u8) $atomic slf [ $( $ts )* ] [] [])
+                  let result = grammar!(@conv_prec pos (0u8) $atomic slf [ $( $ts )* ] [] []);
+
+                  if result.is_none() {
+                      slf.input_mut().set_pos(pos);
+                      slf.queue_mut().truncate(len);
+                  }
+
+                  result
               };
 
               let mut pos = $slf.input().pos();
-              let queue_pos = $slf.queue().len();
+              let len = $slf.queue().len();
 
-              let result = primary($slf);
+              let result = grammar!(@conv $atomic $slf [ $( $primary )* ] [] []);
 
-              if let Some(token) = $slf.queue().get(queue_pos) {
+              if let Some(token) = $slf.queue().get(len) {
                   pos = token.start;
               }
 
               if result {
-                  $slf.prec_climb(queue_pos, pos, 0, None, &mut primary, &mut climb);
+                  $slf.prec_climb(len, pos, 0, None, &mut primary, &mut climb);
               }
 
               result
@@ -287,8 +297,7 @@ macro_rules! grammar {
                 if grammar!(@mtc $slf $a) {
                     let original = $slf.input().pos();
 
-                    $slf.skip_ws();
-                    $slf.skip_com();
+                    $slf.skip();
 
                     let pos = $slf.input().pos();
                     let len = $slf.queue().len();
@@ -334,8 +343,7 @@ macro_rules! grammar {
 
                     pos = $slf.input().pos();
 
-                    $slf.skip_ws();
-                    $slf.skip_com();
+                    $slf.skip();
                 }
 
                 true
@@ -361,8 +369,7 @@ macro_rules! grammar {
                 loop {
                     let pos = $slf.input().pos();
 
-                    $slf.skip_ws();
-                    $slf.skip_com();
+                    $slf.skip();
 
                     if !grammar!(@mtc $slf $a) {
                         $slf.input_mut().set_pos(pos);
@@ -422,24 +429,6 @@ macro_rules! grammar {
         grammar!(@process $atomic $slf [ $head $( $optail )* ] [ $( $tail )* ])
     };
 
-    // skip only if not whitespace
-    ( @skip whitespace $_slf:ident )  => ();
-    ( @skip comment $slf:ident )      => ($slf.skip_ws());
-    ( @skip $_name:ident $slf:ident ) => {
-        {
-            $slf.skip_com();
-            $slf.skip_ws();
-        }
-    };
-    // skip if not atomic
-    ( @skip false $slf:ident ) => ();
-    ( @skip true $slf:ident ) => {
-        {
-            $slf.skip_com();
-            $slf.skip_ws();
-        }
-    };
-
     // whitespace and comment are always atomic
     ( @atomic whitespace $_atomic:tt $slf:ident $rules:tt ) => {
         grammar!(@conv true $slf $rules [] [])
@@ -494,7 +483,9 @@ macro_rules! grammar {
                     let mut right = self.input().pos();
                     let queue_pos = self.queue().len();
 
-                    primary(self);
+                    if !primary(self) {
+                        break
+                    }
 
                     if let Some(token) = self.queue().get(queue_pos) {
                         new_pos = token.start;
@@ -546,7 +537,6 @@ macro_rules! grammar {
         #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
-            grammar!(@skip $name slf);
 
             let pos = slf.input().pos();
             let len = slf.queue().len();
@@ -584,7 +574,6 @@ macro_rules! grammar {
         #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
-            grammar!(@skip $name slf);
 
             let pos = slf.input().pos();
             let len = slf.queue().len();
@@ -629,7 +618,6 @@ macro_rules! grammar {
         #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
-            grammar!(@skip $name slf);
 
             let result = grammar!(@atomic $name false slf [ $( $ts )* ]);
 

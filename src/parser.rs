@@ -40,11 +40,8 @@ pub trait Parser<'a, T: Input<'a>> {
     /// Set the current index within the queue. Used in `process!`.
     fn set_queue_index(&self, index: usize);
 
-    /// Skips white-space.
-    fn skip_ws(&mut self);
-
-    /// Skips comments.
-    fn skip_com(&mut self);
+    /// Skips whitespace and comments.
+    fn skip(&mut self);
 
     /// Returns whether a `Parser` is currently inside an atomic rule.
     fn is_atomic(&self) -> bool;

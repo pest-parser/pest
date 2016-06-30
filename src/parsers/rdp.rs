@@ -123,7 +123,6 @@ macro_rules! impl_rdp {
             failures:    Vec<Rule>,
             fail_pos:    usize,
             atomic:      bool,
-            comment:     bool,
             eoi_matched: bool
         }
 
@@ -138,7 +137,6 @@ macro_rules! impl_rdp {
                     failures:    vec![],
                     fail_pos:    0,
                     atomic:      false,
-                    comment:     false,
                     eoi_matched: false
                 }
             }
@@ -263,7 +261,7 @@ macro_rules! impl_rdp {
             }
 
             #[inline]
-            fn skip_ws(&mut self) {
+            fn skip(&mut self) {
                 if self.atomic {
                     return
                 }
@@ -273,24 +271,13 @@ macro_rules! impl_rdp {
                         break
                     }
                 }
-            }
 
-            #[inline]
-            fn skip_com(&mut self) {
-                if self.atomic {
-                    return
-                }
-
-                if !self.comment {
-                    self.comment = true;
-
+                while self.comment() {
                     loop {
-                        if !self.comment() {
+                        if !self.whitespace() {
                             break
                         }
                     }
-
-                    self.comment = false;
                 }
             }
 
@@ -395,19 +382,19 @@ mod tests {
 
     #[test]
     fn whitespace_seq() {
-        let mut parser = Rdp::new(StringInput::new("  (  ( ))(( () )() )() "));
+        let mut parser = Rdp::new(StringInput::new("(  ( ))(( () )() )() "));
 
         assert!(parser.expression());
         assert!(!parser.end());
 
         let queue = vec![
-            Token::new(Rule::paren, 2, 9),
-            Token::new(Rule::paren, 5, 8),
-            Token::new(Rule::paren, 9, 20),
-            Token::new(Rule::paren, 10, 16),
-            Token::new(Rule::paren, 12, 14),
-            Token::new(Rule::paren, 16, 18),
-            Token::new(Rule::paren, 20, 22)
+            Token::new(Rule::paren, 0, 7),
+            Token::new(Rule::paren, 3, 6),
+            Token::new(Rule::paren, 7, 18),
+            Token::new(Rule::paren, 8, 14),
+            Token::new(Rule::paren, 10, 12),
+            Token::new(Rule::paren, 14, 16),
+            Token::new(Rule::paren, 18, 20)
         ];
 
         assert_eq!(parser.queue(), &queue);
@@ -415,13 +402,13 @@ mod tests {
 
     #[test]
     fn whitespace_zero() {
-        let mut parser = Rdp::new(StringInput::new("  a a aa aaaa a  "));
+        let mut parser = Rdp::new(StringInput::new("a a aa aaaa a  "));
 
         assert!(parser.zero());
         assert!(!parser.end());
 
         let queue = vec![
-            Token::new(Rule::zero, 2, 15)
+            Token::new(Rule::zero, 0, 13)
         ];
 
         assert_eq!(parser.queue(), &queue);
@@ -429,26 +416,26 @@ mod tests {
 
     #[test]
     fn whitespace_one() {
-        let mut parser = Rdp::new(StringInput::new("  a a aa aaaa a  "));
+        let mut parser = Rdp::new(StringInput::new("a a aa aaaa a  "));
 
         assert!(parser.one());
         assert!(!parser.end());
 
-        let queue = vec![Token::new(Rule::one, 2, 15)];
+        let queue = vec![Token::new(Rule::one, 0, 13)];
 
         assert_eq!(parser.queue(), &queue);
     }
 
     #[test]
     fn comment() {
-        let mut parser = Rdp::new(StringInput::new("// hi\n(())"));
+        let mut parser = Rdp::new(StringInput::new("((// hi\n))"));
 
         assert!(parser.expression());
         assert!(parser.end());
 
         let queue = vec![
-            Token::new(Rule::paren, 6, 10),
-            Token::new(Rule::paren, 7, 9)
+            Token::new(Rule::paren, 0, 10),
+            Token::new(Rule::paren, 1, 9)
         ];
 
         assert_eq!(parser.queue(), &queue);
@@ -456,14 +443,14 @@ mod tests {
 
     #[test]
     fn comment_whitespace() {
-        let mut parser = Rdp::new(StringInput::new("   // hi\n  (())"));
+        let mut parser = Rdp::new(StringInput::new("((  // hi\n  ))"));
 
         assert!(parser.expression());
         assert!(parser.end());
 
         let queue = vec![
-            Token::new(Rule::paren, 11, 15),
-            Token::new(Rule::paren, 12, 14)
+            Token::new(Rule::paren, 0, 14),
+            Token::new(Rule::paren, 1, 13)
         ];
 
         assert_eq!(parser.queue(), &queue);

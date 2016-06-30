@@ -345,21 +345,6 @@ fn expression_spaced() {
 }
 
 #[test]
-fn expression_space_after() {
-    let mut parser = Rdp::new(StringInput::new("1 "));
-
-    assert!(parser.expression());
-    assert!(!parser.end());
-
-    let queue = vec![
-        Token::new(Rule::expression, 0, 1),
-        Token::new(Rule::number, 0, 1)
-    ];
-
-    assert_eq!(parser.queue(), &queue);
-}
-
-#[test]
 fn comment_between_subrules() {
     let mut parser = Rdp::new(StringInput::new("a//a//a"));
 
