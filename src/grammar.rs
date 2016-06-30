@@ -15,7 +15,7 @@
 /// pest has four special rules:
 ///
 /// * `whitespace` - gets run between rules and sub-rules
-/// * `comment` - gets run only between rules
+/// * `comment` - gets run between rules and sub-rules
 /// * `any` - matches exactly one `char`
 /// * `soi` - (start-of-input) matches only when a `Parser` is still at the starting position
 /// * `eoi` - (end-of-input) matches only when a `Parser` has reached its
@@ -288,6 +288,7 @@ macro_rules! grammar {
                     let original = $slf.input().pos();
 
                     $slf.skip_ws();
+                    $slf.skip_com();
 
                     let pos = $slf.input().pos();
                     let len = $slf.queue().len();
@@ -334,6 +335,7 @@ macro_rules! grammar {
                     pos = $slf.input().pos();
 
                     $slf.skip_ws();
+                    $slf.skip_com();
                 }
 
                 true
@@ -360,6 +362,7 @@ macro_rules! grammar {
                     let pos = $slf.input().pos();
 
                     $slf.skip_ws();
+                    $slf.skip_com();
 
                     if !grammar!(@mtc $slf $a) {
                         $slf.input_mut().set_pos(pos);

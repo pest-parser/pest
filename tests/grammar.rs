@@ -33,6 +33,7 @@ impl_rdp! {
         }
 
         whitespace = _{ [" "] }
+        comment = _{ ["//"] }
     }
 }
 
@@ -356,4 +357,12 @@ fn expression_space_after() {
     ];
 
     assert_eq!(parser.queue(), &queue);
+}
+
+#[test]
+fn comment_between_subrules() {
+    let mut parser = Rdp::new(StringInput::new("a//a//a"));
+
+    assert!(parser.rep_one());
+    assert!(parser.end());
 }
