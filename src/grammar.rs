@@ -17,6 +17,7 @@
 /// * `whitespace` - gets run between rules and sub-rules
 /// * `comment` - gets run only between rules
 /// * `any` - matches exactly one `char`
+/// * `soi` - (start-of-input) matches only when a `Parser` is still at the starting position
 /// * `eoi` - (end-of-input) matches only when a `Parser` has reached its
 ///   [end](trait.Parser#tymethod.end)
 ///

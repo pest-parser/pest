@@ -42,6 +42,7 @@ macro_rules! impl_rdp {
         #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
         pub enum Rule {
             any,
+            soi,
             eoi,
             $( $name ),*
         }
@@ -160,6 +161,20 @@ macro_rules! impl_rdp {
 
                     true
                 }
+            }
+
+            #[allow(dead_code)]
+            #[inline]
+            pub fn soi(&mut self) -> bool {
+                let result = self.input.pos() == 0;
+
+                if !result {
+                    let pos = self.input.pos();
+
+                    self.track(Rule::soi, pos);
+                }
+
+                result
             }
 
             #[allow(dead_code)]
@@ -336,6 +351,7 @@ mod tests {
             zero = { ["a"]* }
             one = { ["a"]+ }
             comment = _{ ["//"] ~ (!["\n"] ~ any)* ~ ["\n"] }
+            soi_eoi = { soi ~ ["a"] ~ eoi }
             whitespace = _{ [" "] }
         }
     }
@@ -418,11 +434,7 @@ mod tests {
         assert!(parser.one());
         assert!(!parser.end());
 
-        let queue = vec![Token {
-                             rule: Rule::one,
-                             start: 2,
-                             end: 15,
-                         }];
+        let queue = vec![Token::new(Rule::one, 2, 15)];
 
         assert_eq!(parser.queue(), &queue);
     }
@@ -455,5 +467,13 @@ mod tests {
         ];
 
         assert_eq!(parser.queue(), &queue);
+    }
+
+    #[test]
+    fn soi_eoi() {
+        let mut parser = Rdp::new(StringInput::new("  a  "));
+
+        assert!(parser.soi_eoi());
+        assert!(parser.end());
     }
 }
