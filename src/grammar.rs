@@ -133,8 +133,6 @@ macro_rules! grammar {
     // handle precedence climbing
     ( @conv_prec $pos:ident ($_prec:expr) $_atomic:tt $slf:ident [] [] [] ) => {
         {
-            $slf.input_mut().set_pos($pos);
-
             None
         }
     };
@@ -295,17 +293,18 @@ macro_rules! grammar {
         {
             grammar!(@process false $slf [(( $slf.try(false, |$slf| {
                 if grammar!(@mtc $slf $a) {
-                    let original = $slf.input().pos();
+                    let original_pos = $slf.input().pos();
+                    let original_len = $slf.queue().len();
 
                     $slf.skip();
 
                     let pos = $slf.input().pos();
-                    let len = $slf.queue().len();
 
                     let result = grammar!(@mtc $slf $b);
 
                     if $slf.input().pos() == pos && !$slf.eoi_matched() {
-                        $slf.input_mut().set_pos(original);
+                        $slf.input_mut().set_pos(original_pos);
+                        $slf.queue_mut().truncate(original_len);
                     }
 
                     result
@@ -333,15 +332,18 @@ macro_rules! grammar {
         {
             grammar!(@process false $slf [(( {
                 let mut pos = $slf.input().pos();
+                let mut len = $slf.queue().len();
 
                 loop {
                     if !grammar!(@mtc $slf $a) {
                         $slf.input_mut().set_pos(pos);
+                        $slf.queue_mut().truncate(len);
 
                         break
                     }
 
                     pos = $slf.input().pos();
+                    len = $slf.queue().len();
 
                     $slf.skip();
                 }
@@ -368,11 +370,13 @@ macro_rules! grammar {
             grammar!(@process false $slf [(( if grammar!(@mtc $slf $a) {
                 loop {
                     let pos = $slf.input().pos();
+                    let len = $slf.queue().len();
 
                     $slf.skip();
 
                     if !grammar!(@mtc $slf $a) {
                         $slf.input_mut().set_pos(pos);
+                        $slf.queue_mut().truncate(len);
 
                         break
                     }
@@ -453,9 +457,6 @@ macro_rules! grammar {
 
             if revert || !result {
                 self.input_mut().set_pos(pos);
-            }
-
-            if !result {
                 self.queue_mut().truncate(len);
             }
 
