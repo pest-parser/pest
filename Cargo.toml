@@ -7,3 +7,6 @@ repository = "https://github.com/dragostis/pest"
 documentation = "http://dragostis.github.io/pest/pest/"
 keywords = ["pest", "parser", "peg", "grammar"]
 license = "MPL-2.0"
+
+[dependencies]
+clap = "2.8.0"
