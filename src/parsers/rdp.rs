@@ -313,8 +313,8 @@ macro_rules! impl_rdp {
                 }
             }
 
-            fn tracked_len(&self) -> usize {
-                self.failures.len()
+            fn tracked_len_pos(&self) -> (usize, usize) {
+                (self.failures.len(), self.fail_pos)
             }
 
             fn expected(&mut self) -> (Vec<Rule>, usize) {

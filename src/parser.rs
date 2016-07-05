@@ -53,7 +53,7 @@ pub trait Parser<'a, T: Input<'a>> {
     fn track(&mut self, failed: Self::Rule, pos: usize);
 
     /// Returns the length of the tracked `Rule`s.
-    fn tracked_len(&self) -> usize;
+    fn tracked_len_pos(&self) -> (usize, usize);
 
     /// Retuns a `Vec` of all expected `Rule`s at the deepest position where the parsing last
     /// stopped. It only returns leafs from the rule tree. Used for error reporting.
