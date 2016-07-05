@@ -18,8 +18,10 @@ use clap::{Arg, App, SubCommand};
 
 use pest::prelude::*;
 
+mod checker;
 mod meta;
 
+use checker::Checker;
 use meta::parser::Rdp;
 
 fn main() {
@@ -41,11 +43,12 @@ fn main() {
 
         file.read_to_string(&mut data).unwrap();
 
-        let mut parser = Rdp::new(StringInput::new(&data));
+        let parser = Rdp::new(StringInput::new(&data));
+        let mut checker = Checker::new(parser);
 
-        if !parser.file() {
-            let (expected, pos) = parser.expected();
-            panic!("{:?} at {:?}", expected, parser.input().line_col(pos));
+        match checker.check() {
+            Ok(())       => println!("Okay."),
+            Err(message) => panic!("{}", message)
         }
     }
 }
