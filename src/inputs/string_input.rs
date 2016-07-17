@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::ascii::AsciiExt;
 use std::str;
 
 use super::super::Input;
@@ -142,7 +143,7 @@ impl<'a> Input<'a> for StringInput<'a> {
 
         if slice.is_char_boundary(string.len()) {
             let slice = unsafe { slice.slice_unchecked(0, string.len()) };
-            let result = slice.to_lowercase() == string;
+            let result = slice.eq_ignore_ascii_case(string);
 
             if result {
                 self.pos += string.len();

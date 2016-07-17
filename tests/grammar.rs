@@ -19,7 +19,7 @@ impl_rdp! {
         opt = { ["a"]? }
         pres = { &["a"] }
         abs = { !(["a"] | ["b"]) ~ any }
-        ins = { [i"select"] }
+        ins = { [i"seLeCT"] }
         digit = { ['0'..'9'] }
         number = { ['0'..'9']+ }
         plus = { ["+"] }

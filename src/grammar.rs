@@ -70,19 +70,19 @@
 ///
 /// # Syntax
 ///
-/// | Rule         | What it does                                                                |
-/// |--------------|-----------------------------------------------------------------------------|
-/// | `["a"]`      | matches the exact string `"a"`                                              |
-/// | `[i"a"]`     | matches the exact string `"a"` case insensitively (use *lowercase* in rule) |
-/// | `['a'..'z']` | matches one character between `'a'` and `'z'`                               |
-/// | `a`          | matches rule `a`                                                            |
-/// | `a ~ b`      | matches the sequence `a` `b`                                                |
-/// | `a | b`      | matches either `a` or `b`                                                   |
-/// | `a*`         | matches `a` zero or more times                                              |
-/// | `a+`         | matches `a` one or more times                                               |
-/// | `a?`         | optionally matches `a`                                                      |
-/// | `&a`         | matches `a` without making progress                                         |
-/// | `!a`         | matches if `a` doesn't match without making progress                        |
+/// | Rule         | What it does                                                   |
+/// |--------------|----------------------------------------------------------------|
+/// | `["a"]`      | matches the exact string `"a"`                                 |
+/// | `[i"a"]`     | matches the exact string `"a"` case insensitively (ASCII only) |
+/// | `['a'..'z']` | matches one character between `'a'` and `'z'`                  |
+/// | `a`          | matches rule `a`                                               |
+/// | `a ~ b`      | matches the sequence `a` `b`                                   |
+/// | `a | b`      | matches either `a` or `b`                                      |
+/// | `a*`         | matches `a` zero or more times                                 |
+/// | `a+`         | matches `a` one or more times                                  |
+/// | `a?`         | optionally matches `a`                                         |
+/// | `&a`         | matches `a` without making progress                            |
+/// | `!a`         | matches if `a` doesn't match without making progress           |
 ///
 /// ## Precedence climbing
 ///
