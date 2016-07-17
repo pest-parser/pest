@@ -485,6 +485,11 @@ macro_rules! grammar {
                     let queue_pos = self.queue().len();
 
                     if !primary(self) {
+                        let last_pos = self.queue().get(pos).unwrap().end;
+
+                        self.input_mut().set_pos(last_pos);
+                        self.queue_mut().truncate(pos + 1);
+
                         break
                     }
 
