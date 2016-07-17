@@ -19,6 +19,7 @@ impl_rdp! {
         opt = { ["a"]? }
         pres = { &["a"] }
         abs = { !(["a"] | ["b"]) ~ any }
+        ins = { [i"select"] }
         digit = { ['0'..'9'] }
         number = { ['0'..'9']+ }
         plus = { ["+"] }
@@ -349,5 +350,13 @@ fn comment_between_subrules() {
     let mut parser = Rdp::new(StringInput::new("a//a//a"));
 
     assert!(parser.rep_one());
+    assert!(parser.end());
+}
+
+#[test]
+fn insensitive() {
+    let mut parser = Rdp::new(StringInput::new("SeleCt"));
+
+    assert!(parser.ins());
     assert!(parser.end());
 }

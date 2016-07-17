@@ -70,18 +70,19 @@
 ///
 /// # Syntax
 ///
-/// | Rule         | What it does                                         |
-/// |--------------|------------------------------------------------------|
-/// | `["a"]`      | matches the exact string `"a"`                       |
-/// | `['a'..'z']` | matches one character between `'a'` and `'z'`        |
-/// | `a`          | matches rule `a`                                     |
-/// | `a ~ b`      | matches the sequence `a` `b`                         |
-/// | `a | b`      | matches either `a` or `b`                            |
-/// | `a*`         | matches `a` zero or more times                       |
-/// | `a+`         | matches `a` one or more times                        |
-/// | `a?`         | optionally matches `a`                               |
-/// | `&a`         | matches `a` without making progress                  |
-/// | `!a`         | matches if `a` doesn't match without making progress |
+/// | Rule         | What it does                                                                |
+/// |--------------|-----------------------------------------------------------------------------|
+/// | `["a"]`      | matches the exact string `"a"`                                              |
+/// | `[i"a"]`     | matches the exact string `"a"` case insensitively (use *lowercase* in rule) |
+/// | `['a'..'z']` | matches one character between `'a'` and `'z'`                               |
+/// | `a`          | matches rule `a`                                                            |
+/// | `a ~ b`      | matches the sequence `a` `b`                                                |
+/// | `a | b`      | matches either `a` or `b`                                                   |
+/// | `a*`         | matches `a` zero or more times                                              |
+/// | `a+`         | matches `a` one or more times                                               |
+/// | `a?`         | optionally matches `a`                                                      |
+/// | `&a`         | matches `a` without making progress                                         |
+/// | `!a`         | matches if `a` doesn't match without making progress                        |
 ///
 /// ## Precedence climbing
 ///
@@ -279,13 +280,14 @@ macro_rules! grammar {
     };
 
     // match
-    ( @mtc $slf:ident (( $exp:expr )) ) => (($exp));
-    ( @mtc $slf:ident [ $left:tt .. $right:tt ]) => (grammar!(@mtc $slf [$left, $right]));
+    ( @mtc $slf:ident (( $exp:expr )) )            => (($exp));
+    ( @mtc $slf:ident [ $left:tt .. $right:tt ])   => (grammar!(@mtc $slf [$left, $right]));
     ( @mtc $slf:ident [ $left:expr, $right:expr ]) => {
         $slf.input_mut().match_range($left, $right)
     };
-    ( @mtc $slf:ident [ $str:expr ]) => ($slf.input_mut().match_string($str));
-    ( @mtc $slf:ident $rule:ident) => ($slf.$rule());
+    ( @mtc $slf:ident [ $str:expr ])               => ($slf.input_mut().match_string($str));
+    ( @mtc $slf:ident [ i $str:expr ])             => ($slf.input_mut().match_insensitive($str));
+    ( @mtc $slf:ident $rule:ident)                 => ($slf.$rule());
 
     // process postfix
     ( @process $_atomic:tt $_slf:ident [( $result:expr )] [] ) => ($result);
