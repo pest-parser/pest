@@ -36,13 +36,14 @@ impl_rdp! {
         alpha = _{ ['a'..'z'] | ['A'..'Z'] }
         digit = _{ ['0'..'9'] }
 
-        terminal  =  { terminal_start ~ (string | range) ~ terminal_end }
+        terminal  =  { terminal_start ~ (insensitive? ~ string | range) ~ terminal_end }
         string    = @{ ["\""] ~ (["\\"] ~ any | !["\""] ~ any )* ~ ["\""] }
         range     =  { character ~ [".."] ~ character }
         character = @{ ["'"]  ~ (["\\"] ~ any | !["'"]  ~ any )* ~ ["'"] }
 
-        prefix  = { ["&"] | ["!"] }
-        postfix = { ["?"] | ["*"] | ["+"] }
+        prefix      = { ["&"] | ["!"] }
+        postfix     = { ["?"] | ["*"] | ["+"] }
+        insensitive = { ["i"] }
 
         op_choice   = { ["|"] }
         op_sequence = { ["~"] }

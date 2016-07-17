@@ -149,7 +149,7 @@ impl<'a> Input<'a> for StringInput<'a> {
             }
 
             result
-        } else {println!("hi");
+        } else {
             false
         }
     }
