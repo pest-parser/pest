@@ -20,6 +20,9 @@ impl_rdp! {
         pres = { &["a"] }
         abs = { !(["a"] | ["b"]) ~ any }
         ins = { [i"seLeCT"] }
+        push_pop = { [push(opt)] ~ [pop()] }
+        pop_twice = { [push(opt)] ~ [pop()] ~ [pop()] }
+        push_peek_pop = { [push(opt)] ~ [peek()] ~ [pop()] }
         digit = { ['0'..'9'] }
         number = { ['0'..'9']+ }
         plus = { ["+"] }
@@ -358,5 +361,29 @@ fn insensitive() {
     let mut parser = Rdp::new(StringInput::new("SeleCt"));
 
     assert!(parser.ins());
+    assert!(parser.end());
+}
+
+#[test]
+fn stack_push_pop() {
+    let mut parser = Rdp::new(StringInput::new("a a"));
+
+    assert!(parser.push_pop());
+    assert!(parser.end());
+}
+
+#[test]
+#[should_panic]
+fn stack_pop_twice() {
+    let mut parser = Rdp::new(StringInput::new("a a a"));
+
+    assert!(parser.pop_twice());
+}
+
+#[test]
+fn stack_push_peek_pop() {
+    let mut parser = Rdp::new(StringInput::new("a a a"));
+
+    assert!(parser.push_peek_pop());
     assert!(parser.end());
 }

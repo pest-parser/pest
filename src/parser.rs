@@ -58,4 +58,10 @@ pub trait Parser<'a, T: Input<'a>> {
     /// Retuns a `Vec` of all expected `Rule`s at the deepest position where the parsing last
     /// stopped. It only returns leafs from the rule tree. Used for error reporting.
     fn expected(&mut self) -> (Vec<Self::Rule>, usize);
+
+    /// Returns the stack `Vec`.
+    fn stack(&self) -> &Vec<String>;
+
+    /// Returns the mutable stack `Vec`.
+    fn stack_mut(&mut self) -> &mut Vec<String>;
 }

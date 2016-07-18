@@ -122,6 +122,7 @@ macro_rules! impl_rdp {
             queue_index: Cell<usize>,
             failures:    Vec<Rule>,
             fail_pos:    usize,
+            stack:       Vec<String>,
             atomic:      bool,
             eoi_matched: bool
         }
@@ -136,6 +137,7 @@ macro_rules! impl_rdp {
                     queue_index: Cell::new(0),
                     failures:    vec![],
                     fail_pos:    0,
+                    stack:       vec![],
                     atomic:      false,
                     eoi_matched: false
                 }
@@ -241,6 +243,11 @@ macro_rules! impl_rdp {
             }
 
             #[inline]
+            fn queue_mut(&mut self) -> &mut Vec<Token<Rule>>{
+                &mut self.queue
+            }
+
+            #[inline]
             fn queue_index(&self) -> usize {
                 self.queue_index.get()
             }
@@ -253,11 +260,6 @@ macro_rules! impl_rdp {
             #[inline]
             fn set_queue_index(&self, index: usize) {
                 self.queue_index.set(index);
-            }
-
-            #[inline]
-            fn queue_mut(&mut self) -> &mut Vec<Token<Rule>>{
-                &mut self.queue
             }
 
             #[inline]
@@ -322,6 +324,16 @@ macro_rules! impl_rdp {
                 self.failures.dedup();
 
                 (self.failures.iter().cloned().collect(), self.fail_pos)
+            }
+
+            #[inline]
+            fn stack(&self) -> &Vec<String> {
+                &self.stack
+            }
+
+            #[inline]
+            fn stack_mut(&mut self) -> &mut Vec<String> {
+                &mut self.stack
             }
         }
     };

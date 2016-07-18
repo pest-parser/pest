@@ -83,6 +83,9 @@
 /// | `a?`         | optionally matches `a`                                         |
 /// | `&a`         | matches `a` without making progress                            |
 /// | `!a`         | matches if `a` doesn't match without making progress           |
+/// | [push(a)]    | matches a and pushes it's captured string down the stack       |
+/// | [pop()]      | pops a string from the stack and matches it                    |
+/// | [peek()]     | peeks a string from the stack and matches it                   |
 ///
 /// ## Precedence climbing
 ///
@@ -280,13 +283,42 @@ macro_rules! grammar {
     };
 
     // match
-    ( @mtc $slf:ident (( $exp:expr )) )            => (($exp));
-    ( @mtc $slf:ident [ $left:tt .. $right:tt ])   => (grammar!(@mtc $slf [$left, $right]));
-    ( @mtc $slf:ident [ $left:expr, $right:expr ]) => {
+    ( @mtc $slf:ident (( $exp:expr )) )             => (($exp));
+    ( @mtc $slf:ident [ $left:tt .. $right:tt ] )   => (grammar!(@mtc $slf [$left, $right]));
+    ( @mtc $slf:ident [ $left:expr, $right:expr ] ) => {
         $slf.input_mut().match_range($left, $right)
     };
-    ( @mtc $slf:ident [ $str:expr ])               => ($slf.input_mut().match_string($str));
-    ( @mtc $slf:ident [ i $str:expr ])             => ($slf.input_mut().match_insensitive($str));
+    ( @mtc $slf:ident [ push( $rule:ident ) ] )     => {
+        {
+            let start = $slf.input().pos();
+
+            let result = $slf.$rule();
+
+            if result {
+                let slice = $slf.input().slice(start, $slf.input().pos());
+
+                $slf.stack_mut().push(slice.to_owned());
+            }
+
+            result
+        }
+    };
+    ( @mtc $slf:ident [ pop() ] )     => {
+        {
+            let string = $slf.stack_mut().pop().expect("can't pop empty slots");
+
+            $slf.input_mut().match_string(&string)
+        }
+    };
+    ( @mtc $slf:ident [ peek() ] )     => {
+        {
+            let string = $slf.stack().last().expect("can't peek empty slots").clone();
+
+            $slf.input_mut().match_string(&string)
+        }
+    };
+    ( @mtc $slf:ident [ $str:expr ] )               => ($slf.input_mut().match_string($str));
+    ( @mtc $slf:ident [ i $str:expr ] )             => ($slf.input_mut().match_insensitive($str));
     ( @mtc $slf:ident $rule:ident)                 => ($slf.$rule());
 
     // process postfix
