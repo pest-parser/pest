@@ -31,6 +31,9 @@ pub trait Parser<'a, T: Input<'a>> {
     /// Returns the mutable queue of all matched `Token`s.
     fn queue_mut(&mut self) -> &mut Vec<Self::Token>;
 
+    /// Returns the queue of all matched `(Token, value)`s.
+    fn queue_with_captures(&self) -> Vec<(Self::Token, String)>;
+
     /// Returns the current index within the queue. Used in `process!`.
     fn queue_index(&self) -> usize;
 

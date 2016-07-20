@@ -238,13 +238,21 @@ macro_rules! impl_rdp {
             }
 
             #[inline]
-            fn queue(&self) -> &Vec<Token<Rule>>{
+            fn queue(&self) -> &Vec<Token<Rule>> {
                 &self.queue
             }
 
             #[inline]
-            fn queue_mut(&mut self) -> &mut Vec<Token<Rule>>{
+            fn queue_mut(&mut self) -> &mut Vec<Token<Rule>> {
                 &mut self.queue
+            }
+
+            fn queue_with_captures(&self) -> Vec<(Token<Rule>, String)> {
+                self.queue
+                    .clone()
+                    .into_iter()
+                    .map(|t| (t, self.input().slice(t.start, t.end).to_owned()))
+                    .collect()
             }
 
             #[inline]
@@ -474,5 +482,25 @@ mod tests {
 
         assert!(parser.soi_eoi());
         assert!(parser.end());
+    }
+
+    #[test]
+    fn queue_with_captures() {
+        let mut parser = Rdp::new(StringInput::new("(  ( ))(( () )() )() "));
+
+        assert!(parser.expression());
+        assert!(!parser.end());
+
+        let queue = vec![
+            (Token::new(Rule::paren, 0, 7), "(  ( ))".to_owned()),
+            (Token::new(Rule::paren, 3, 6), "( )".to_owned()),
+            (Token::new(Rule::paren, 7, 18), "(( () )() )".to_owned()),
+            (Token::new(Rule::paren, 8, 14), "( () )".to_owned()),
+            (Token::new(Rule::paren, 10, 12), "()".to_owned()),
+            (Token::new(Rule::paren, 14, 16), "()".to_owned()),
+            (Token::new(Rule::paren, 18, 20), "()".to_owned()),
+        ];
+
+        assert_eq!(parser.queue_with_captures(), queue);
     }
 }
