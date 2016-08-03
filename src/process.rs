@@ -390,7 +390,7 @@ macro_rules! process {
             Some($block)
         }
     };
-    ( @pattern $slf:ident ($block:expr) mut $head:ident : $call:ident(), ( $tail:tt )* ) => {
+    ( @pattern $slf:ident ($block:expr) mut $head:ident : $call:ident(), $( $tail:tt )* ) => {
         {
             let mut $head = $slf.$call();
 
