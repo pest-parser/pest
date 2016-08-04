@@ -48,7 +48,7 @@
 //! inside of [`impl_rdp!`](macro.impl_rdp!) right now until other parser algorithms are
 //! implemented.
 //!
-//! *Note:* `grammar!` may require you to increase the recursion limit of your create with
+//! *Note:* `grammar!` may require you to increase the recursion limit of your crate with
 //! `#![recursion_limit = "*"]` where * is the new limit.
 //!
 //! When `impl_rdp!` is run, it implements an `enum` called `Rule` that has a value for all

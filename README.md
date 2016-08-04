@@ -15,6 +15,26 @@
 pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
 generator with *simplicity* and *speed* in mind.
 
+## Usage
+You will need Cargo and Rust, follow the [installation instructions](https://www.rust-lang.org/en-US/downloads.html) 
+to get them.
+
+Add the following to `Cargo.toml`:
+
+```toml
+pest = "0.4"
+```
+
+and in your Rust `lib.rs` or `main.rs`:
+
+```rust
+#[macro_use]
+extern crate pest;
+```
+
+You can run the calculator example by using `cargo run --example calculator`.
+
+
 ## [Documentation](http://dragostis.github.io/pest/pest)
 
 ## Elegant
@@ -89,3 +109,8 @@ pest is the youngest among them, but is continuously improving.
 
 * [Packrat parsing](issues/7)
 * [parsing parallelization](issues/25)
+
+## FAQ
+
+### I get recursion errors, what should I do?
+You will need to increase the recursion limit of the crate by adding `#![recursion_limit = "x"]` in your `lib.rs` or `main.rs`. Try different values for `x` until it doesn't error anymore. You can start with a value of 200 and go up or down.
