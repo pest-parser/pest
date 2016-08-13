@@ -55,6 +55,21 @@
 /// being matched in an atomic context. In other words, `a` and `b` will also be atomic when being
 /// matched inside of `ab`.
 ///
+/// # Non-atomic rules `!@`
+///
+/// Non-atomic act like normal rules but also stop atomic rules from cascading. So, if any atomic
+/// rule contains a non-atomic rule, the cascading atomic effect will not apply to it.
+///
+/// ```ignore
+/// atomic = @{ non_atomic }
+/// non_atomic = !@{ a ~ b } // whitespace accepted between a and b.
+/// ```
+///
+/// In the rule above, there cannot be anything between `a` and `b` for `ab` to match. This rule
+/// has a *cascading* effect, so any rules called from an atomic rule will also be atomic while
+/// being matched in an atomic context. In other words, `a` and `b` will also be atomic when being
+/// matched inside of `ab`.
+///
 /// # Silent rules `_`
 ///
 /// Silent rules work like normal rules without appearing in
@@ -156,6 +171,17 @@ macro_rules! grammar {
       [ $name:ident = @{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
         {
             if grammar!(@conv true $slf [ $( $head )* ] [] []) {
+                return Some((Some(Rule::$name), $prec, grammar!(@assoc $( $head )*)))
+            } else {
+                grammar!(@conv_prec $pos ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
+            }
+        }
+    };
+    // non-atomic
+    ( @conv_prec $pos:ident ($prec:expr) $atomic:tt $slf:ident
+      [ $name:ident = !@{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
+        {
+            if grammar!(@conv false $slf [ $( $head )* ] [] []) {
                 return Some((Some(Rule::$name), $prec, grammar!(@assoc $( $head )*)))
             } else {
                 grammar!(@conv_prec $pos ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
@@ -644,6 +670,53 @@ macro_rules! grammar {
                 slf.queue_mut().truncate(len);
 
                 slf.track(Rule::$name, pos);
+            }
+
+            result
+        }
+
+        grammar!($( $tail )*);
+    };
+
+    // non-atomic rule
+    ( $name:ident = !@{ $( $ts:tt )* } $( $tail:tt )* ) => {
+        #[allow(unused_parens, unused_variables)]
+        #[inline]
+        pub fn $name(&mut self) -> bool {
+            let slf = self;
+
+            let pos = slf.input().pos();
+            let len = slf.queue().len();
+            let tracked_len_pos = slf.tracked_len_pos();
+
+            let toggled = slf.is_atomic();
+
+            if toggled {
+                slf.set_atomic(false);
+            }
+
+            let result = grammar!(@atomic $name false slf [ $( $ts )* ]);
+
+            if result {
+                let new_pos = slf.input().pos();
+
+                let token = Token {
+                    rule:  Rule::$name,
+                    start: pos,
+                    end:   new_pos
+                };
+
+                slf.queue_mut().insert(len, token);
+            } else {
+                slf.queue_mut().truncate(len);
+
+                if slf.tracked_len_pos() == tracked_len_pos {
+                    slf.track(Rule::$name, pos);
+                }
+            }
+
+            if toggled {
+                slf.set_atomic(true);
             }
 
             result
