@@ -126,3 +126,22 @@ fn complex() {
     assert!(parser.expression());
     assert_eq!(parser.compute(), 44);
 }
+
+#[test]
+fn end_fail_no_rhs() {
+    let mut parser = Rdp::new(StringInput::new("1 + "));
+
+    assert!(parser.expression());
+    assert!(!parser.end());
+
+    assert_eq!(parser.input().pos(), 1);
+
+    let queue = vec![
+        Token::new(Rule::number, 0, 1)
+    ];
+
+    assert_eq!(parser.queue(), &queue);
+    assert_eq!(parser.expected(), (vec![
+        Rule::number
+    ], 4));
+}

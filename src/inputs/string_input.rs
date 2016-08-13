@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::ascii::AsciiExt;
 use std::str;
 
 use super::super::Input;
@@ -137,6 +138,24 @@ impl<'a> Input<'a> for StringInput<'a> {
     }
 
     #[inline]
+    fn match_insensitive(&mut self, string: &str) -> bool {
+        let slice = unsafe { self.string.slice_unchecked(self.pos, self.string.len()) };
+
+        if slice.is_char_boundary(string.len()) {
+            let slice = unsafe { slice.slice_unchecked(0, string.len()) };
+            let result = slice.eq_ignore_ascii_case(string);
+
+            if result {
+                self.pos += string.len();
+            }
+
+            result
+        } else {
+            false
+        }
+    }
+
+    #[inline]
     fn match_range(&mut self, left: char, right: char) -> bool {
         let len = left.len_utf8();
 
@@ -244,5 +263,15 @@ mod tests {
         assert!(!input.match_range('c', 'c'));
 
         assert_eq!(input.pos(), 2);
+    }
+
+    #[test]
+    fn match_insensitive() {
+        let mut input = StringInput::new("AaaAAaA");
+
+        assert!(input.match_insensitive("aaaa"));
+        assert!(input.match_insensitive("aaa"));
+
+        assert_eq!(input.pos(), 7);
     }
 }

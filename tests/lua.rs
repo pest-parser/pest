@@ -1188,7 +1188,7 @@ fn nested_str2() {
 
 #[test]
 fn nested_str2_spaced() {
-    let mut parser = Rdp::new(StringInput::new("  =  = [asd asd] =="));
+    let mut parser = Rdp::new(StringInput::new("=  = [asd asd] =="));
 
     assert!(parser.nested_str());
     assert!(parser.end());

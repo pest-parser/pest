@@ -42,6 +42,7 @@ macro_rules! impl_rdp {
         #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
         pub enum Rule {
             any,
+            soi,
             eoi,
             $( $name ),*
         }
@@ -59,6 +60,10 @@ macro_rules! impl_rdp {
       [ $( $rules:tt )* ] ) => {
         impl_rdp!(@filter [ $( $tail )* $( $ts )* ] [ $name $( $rules )* ]);
     };
+    ( @filter [ $name:ident = !@{ { $( $_primary:tt )* } $( $ts:tt )* } $( $tail:tt )* ]
+      [ $( $rules:tt )* ] ) => {
+        impl_rdp!(@filter [ $( $tail )* $( $ts )* ] [ $name $( $rules )* ]);
+    };
     ( @filter [ $_name:ident = _{ { $( $_primary:tt )* } $( $ts:tt )* } $( $tail:tt )* ]
       [ $( $rules:tt )* ] ) => {
         impl_rdp!(@filter [ $( $tail )* $( $ts )* ] [ $( $rules )* ]);
@@ -67,6 +72,9 @@ macro_rules! impl_rdp {
         impl_rdp!(@filter [ $( $tail )* ] [ $name $( $rules )* ]);
     };
     ( @filter [ $name:ident = @{ $( $_ts:tt )* } $( $tail:tt )* ] [ $( $rules:tt )* ] ) => {
+        impl_rdp!(@filter [ $( $tail )* ] [ $name $( $rules )* ]);
+    };
+    ( @filter [ $name:ident = !@{ $( $_ts:tt )* } $( $tail:tt )* ] [ $( $rules:tt )* ] ) => {
         impl_rdp!(@filter [ $( $tail )* ] [ $name $( $rules )* ]);
     };
     ( @filter [ $_name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ] [ $( $rules:tt )* ] ) => {
@@ -88,6 +96,9 @@ macro_rules! impl_rdp {
     ( @ws $_name:ident = @{ $( $_ts:tt )* } $( $tail:tt )* ) => {
         impl_rdp!(@ws $( $tail )*);
     };
+    ( @ws $_name:ident = !@{ $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@ws $( $tail )*);
+    };
     ( @ws $_name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ) => {
         impl_rdp!(@ws $( $tail )*);
     };
@@ -107,6 +118,9 @@ macro_rules! impl_rdp {
     ( @com $_name:ident = @{ $( $_ts:tt )* } $( $tail:tt )* ) => {
         impl_rdp!(@com $( $tail )*);
     };
+    ( @com $_name:ident = !@{ $( $_ts:tt )* } $( $tail:tt )* ) => {
+        impl_rdp!(@com $( $tail )*);
+    };
     ( @com $_name:ident = _{ $( $_ts:tt )* } $( $tail:tt )* ) => {
         impl_rdp!(@com $( $tail )*);
     };
@@ -121,8 +135,8 @@ macro_rules! impl_rdp {
             queue_index: Cell<usize>,
             failures:    Vec<Rule>,
             fail_pos:    usize,
+            stack:       Vec<String>,
             atomic:      bool,
-            comment:     bool,
             eoi_matched: bool
         }
 
@@ -136,8 +150,8 @@ macro_rules! impl_rdp {
                     queue_index: Cell::new(0),
                     failures:    vec![],
                     fail_pos:    0,
+                    stack:       vec![],
                     atomic:      false,
-                    comment:     false,
                     eoi_matched: false
                 }
             }
@@ -160,6 +174,20 @@ macro_rules! impl_rdp {
 
                     true
                 }
+            }
+
+            #[allow(dead_code)]
+            #[inline]
+            pub fn soi(&mut self) -> bool {
+                let result = self.input.pos() == 0;
+
+                if !result {
+                    let pos = self.input.pos();
+
+                    self.track(Rule::soi, pos);
+                }
+
+                result
             }
 
             #[allow(dead_code)]
@@ -223,8 +251,21 @@ macro_rules! impl_rdp {
             }
 
             #[inline]
-            fn queue(&self) -> &Vec<Token<Rule>>{
+            fn queue(&self) -> &Vec<Token<Rule>> {
                 &self.queue
+            }
+
+            #[inline]
+            fn queue_mut(&mut self) -> &mut Vec<Token<Rule>> {
+                &mut self.queue
+            }
+
+            fn queue_with_captures(&self) -> Vec<(Token<Rule>, String)> {
+                self.queue
+                    .clone()
+                    .into_iter()
+                    .map(|t| (t, self.input().slice(t.start, t.end).to_owned()))
+                    .collect()
             }
 
             #[inline]
@@ -243,12 +284,7 @@ macro_rules! impl_rdp {
             }
 
             #[inline]
-            fn queue_mut(&mut self) -> &mut Vec<Token<Rule>>{
-                &mut self.queue
-            }
-
-            #[inline]
-            fn skip_ws(&mut self) {
+            fn skip(&mut self) {
                 if self.atomic {
                     return
                 }
@@ -258,24 +294,13 @@ macro_rules! impl_rdp {
                         break
                     }
                 }
-            }
 
-            #[inline]
-            fn skip_com(&mut self) {
-                if self.atomic {
-                    return
-                }
-
-                if !self.comment {
-                    self.comment = true;
-
+                while self.comment() {
                     loop {
-                        if !self.comment() {
+                        if !self.whitespace() {
                             break
                         }
                     }
-
-                    self.comment = false;
                 }
             }
 
@@ -311,8 +336,8 @@ macro_rules! impl_rdp {
                 }
             }
 
-            fn tracked_len(&self) -> usize {
-                self.failures.len()
+            fn tracked_len_pos(&self) -> (usize, usize) {
+                (self.failures.len(), self.fail_pos)
             }
 
             fn expected(&mut self) -> (Vec<Rule>, usize) {
@@ -320,6 +345,16 @@ macro_rules! impl_rdp {
                 self.failures.dedup();
 
                 (self.failures.iter().cloned().collect(), self.fail_pos)
+            }
+
+            #[inline]
+            fn stack(&self) -> &Vec<String> {
+                &self.stack
+            }
+
+            #[inline]
+            fn stack_mut(&mut self) -> &mut Vec<String> {
+                &mut self.stack
             }
         }
     };
@@ -336,6 +371,7 @@ mod tests {
             zero = { ["a"]* }
             one = { ["a"]+ }
             comment = _{ ["//"] ~ (!["\n"] ~ any)* ~ ["\n"] }
+            soi_eoi = { soi ~ ["a"] ~ eoi }
             whitespace = _{ [" "] }
         }
     }
@@ -379,19 +415,19 @@ mod tests {
 
     #[test]
     fn whitespace_seq() {
-        let mut parser = Rdp::new(StringInput::new("  (  ( ))(( () )() )() "));
+        let mut parser = Rdp::new(StringInput::new("(  ( ))(( () )() )() "));
 
         assert!(parser.expression());
         assert!(!parser.end());
 
         let queue = vec![
-            Token::new(Rule::paren, 2, 9),
-            Token::new(Rule::paren, 5, 8),
-            Token::new(Rule::paren, 9, 20),
-            Token::new(Rule::paren, 10, 16),
-            Token::new(Rule::paren, 12, 14),
-            Token::new(Rule::paren, 16, 18),
-            Token::new(Rule::paren, 20, 22)
+            Token::new(Rule::paren, 0, 7),
+            Token::new(Rule::paren, 3, 6),
+            Token::new(Rule::paren, 7, 18),
+            Token::new(Rule::paren, 8, 14),
+            Token::new(Rule::paren, 10, 12),
+            Token::new(Rule::paren, 14, 16),
+            Token::new(Rule::paren, 18, 20)
         ];
 
         assert_eq!(parser.queue(), &queue);
@@ -399,13 +435,13 @@ mod tests {
 
     #[test]
     fn whitespace_zero() {
-        let mut parser = Rdp::new(StringInput::new("  a a aa aaaa a  "));
+        let mut parser = Rdp::new(StringInput::new("a a aa aaaa a  "));
 
         assert!(parser.zero());
         assert!(!parser.end());
 
         let queue = vec![
-            Token::new(Rule::zero, 2, 15)
+            Token::new(Rule::zero, 0, 13)
         ];
 
         assert_eq!(parser.queue(), &queue);
@@ -413,30 +449,26 @@ mod tests {
 
     #[test]
     fn whitespace_one() {
-        let mut parser = Rdp::new(StringInput::new("  a a aa aaaa a  "));
+        let mut parser = Rdp::new(StringInput::new("a a aa aaaa a  "));
 
         assert!(parser.one());
         assert!(!parser.end());
 
-        let queue = vec![Token {
-                             rule: Rule::one,
-                             start: 2,
-                             end: 15,
-                         }];
+        let queue = vec![Token::new(Rule::one, 0, 13)];
 
         assert_eq!(parser.queue(), &queue);
     }
 
     #[test]
     fn comment() {
-        let mut parser = Rdp::new(StringInput::new("// hi\n(())"));
+        let mut parser = Rdp::new(StringInput::new("((// hi\n))"));
 
         assert!(parser.expression());
         assert!(parser.end());
 
         let queue = vec![
-            Token::new(Rule::paren, 6, 10),
-            Token::new(Rule::paren, 7, 9)
+            Token::new(Rule::paren, 0, 10),
+            Token::new(Rule::paren, 1, 9)
         ];
 
         assert_eq!(parser.queue(), &queue);
@@ -444,16 +476,44 @@ mod tests {
 
     #[test]
     fn comment_whitespace() {
-        let mut parser = Rdp::new(StringInput::new("   // hi\n  (())"));
+        let mut parser = Rdp::new(StringInput::new("((  // hi\n  ))"));
 
         assert!(parser.expression());
         assert!(parser.end());
 
         let queue = vec![
-            Token::new(Rule::paren, 11, 15),
-            Token::new(Rule::paren, 12, 14)
+            Token::new(Rule::paren, 0, 14),
+            Token::new(Rule::paren, 1, 13)
         ];
 
         assert_eq!(parser.queue(), &queue);
+    }
+
+    #[test]
+    fn soi_eoi() {
+        let mut parser = Rdp::new(StringInput::new("  a  "));
+
+        assert!(parser.soi_eoi());
+        assert!(parser.end());
+    }
+
+    #[test]
+    fn queue_with_captures() {
+        let mut parser = Rdp::new(StringInput::new("(  ( ))(( () )() )() "));
+
+        assert!(parser.expression());
+        assert!(!parser.end());
+
+        let queue = vec![
+            (Token::new(Rule::paren, 0, 7), "(  ( ))".to_owned()),
+            (Token::new(Rule::paren, 3, 6), "( )".to_owned()),
+            (Token::new(Rule::paren, 7, 18), "(( () )() )".to_owned()),
+            (Token::new(Rule::paren, 8, 14), "( () )".to_owned()),
+            (Token::new(Rule::paren, 10, 12), "()".to_owned()),
+            (Token::new(Rule::paren, 14, 16), "()".to_owned()),
+            (Token::new(Rule::paren, 18, 20), "()".to_owned()),
+        ];
+
+        assert_eq!(parser.queue_with_captures(), queue);
     }
 }

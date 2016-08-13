@@ -15,8 +15,9 @@
 /// pest has four special rules:
 ///
 /// * `whitespace` - gets run between rules and sub-rules
-/// * `comment` - gets run only between rules
+/// * `comment` - gets run between rules and sub-rules
 /// * `any` - matches exactly one `char`
+/// * `soi` - (start-of-input) matches only when a `Parser` is still at the starting position
 /// * `eoi` - (end-of-input) matches only when a `Parser` has reached its
 ///   [end](trait.Parser#tymethod.end)
 ///
@@ -54,6 +55,21 @@
 /// being matched in an atomic context. In other words, `a` and `b` will also be atomic when being
 /// matched inside of `ab`.
 ///
+/// # Non-atomic rules `!@`
+///
+/// Non-atomic act like normal rules but also stop atomic rules from cascading. So, if any atomic
+/// rule contains a non-atomic rule, the cascading atomic effect will not apply to it.
+///
+/// ```ignore
+/// atomic = @{ non_atomic }
+/// non_atomic = !@{ a ~ b } // whitespace accepted between a and b.
+/// ```
+///
+/// In the rule above, there cannot be anything between `a` and `b` for `ab` to match. This rule
+/// has a *cascading* effect, so any rules called from an atomic rule will also be atomic while
+/// being matched in an atomic context. In other words, `a` and `b` will also be atomic when being
+/// matched inside of `ab`.
+///
 /// # Silent rules `_`
 ///
 /// Silent rules work like normal rules without appearing in
@@ -69,18 +85,22 @@
 ///
 /// # Syntax
 ///
-/// | Rule         | What it does                                         |
-/// |--------------|------------------------------------------------------|
-/// | `["a"]`      | matches the exact string `"a"`                       |
-/// | `['a'..'z']` | matches one character between `'a'` and `'z'`        |
-/// | `a`          | matches rule `a`                                     |
-/// | `a ~ b`      | matches the sequence `a` `b`                         |
-/// | `a | b`      | matches either `a` or `b`                            |
-/// | `a*`         | matches `a` zero or more times                       |
-/// | `a+`         | matches `a` one or more times                        |
-/// | `a?`         | optionally matches `a`                               |
-/// | `&a`         | matches `a` without making progress                  |
-/// | `!a`         | matches if `a` doesn't match without making progress |
+/// | Rule         | What it does                                                   |
+/// |--------------|----------------------------------------------------------------|
+/// | `["a"]`      | matches the exact string `"a"`                                 |
+/// | `[i"a"]`     | matches the exact string `"a"` case insensitively (ASCII only) |
+/// | `['a'..'z']` | matches one character between `'a'` and `'z'`                  |
+/// | `a`          | matches rule `a`                                               |
+/// | `a ~ b`      | matches the sequence `a` `b`                                   |
+/// | `a | b`      | matches either `a` or `b`                                      |
+/// | `a*`         | matches `a` zero or more times                                 |
+/// | `a+`         | matches `a` one or more times                                  |
+/// | `a?`         | optionally matches `a`                                         |
+/// | `&a`         | matches `a` without making progress                            |
+/// | `!a`         | matches if `a` doesn't match without making progress           |
+/// | [push(a)]    | matches a and pushes it's captured string down the stack       |
+/// | [pop()]      | pops a string from the stack and matches it                    |
+/// | [peek()]     | peeks a string from the stack and matches it                   |
 ///
 /// ## Precedence climbing
 ///
@@ -132,8 +152,6 @@ macro_rules! grammar {
     // handle precedence climbing
     ( @conv_prec $pos:ident ($_prec:expr) $_atomic:tt $slf:ident [] [] [] ) => {
         {
-            $slf.input_mut().set_pos($pos);
-
             None
         }
     };
@@ -159,6 +177,17 @@ macro_rules! grammar {
             }
         }
     };
+    // non-atomic
+    ( @conv_prec $pos:ident ($prec:expr) $atomic:tt $slf:ident
+      [ $name:ident = !@{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
+        {
+            if grammar!(@conv false $slf [ $( $head )* ] [] []) {
+                return Some((Some(Rule::$name), $prec, grammar!(@assoc $( $head )*)))
+            } else {
+                grammar!(@conv_prec $pos ($prec + 1) $atomic $slf [ $( $tail )* ] [] [])
+            }
+        }
+    };
     // silent
     ( @conv_prec $pos:ident ($prec:expr) $atomic:tt $slf:ident
       [ $name:ident = _{ $( $head:tt )* } $( $tail:tt )* ] [] [] ) => {
@@ -175,36 +204,46 @@ macro_rules! grammar {
           {
               let mut primary = |slf: &mut Self| {
                   let pos = slf.input().pos();
+                  let len = slf.queue().len();
 
-                  grammar!(@skip $atomic slf);
+                  slf.skip();
 
                   let result = grammar!(@conv $atomic slf [ $( $primary )* ] [] []);
 
                   if !result {
                       slf.input_mut().set_pos(pos);
+                      slf.queue_mut().truncate(len);
                   }
 
                   result
               };
               let mut climb = |slf: &mut Self| {
                   let pos = slf.input().pos();
+                  let len = slf.queue().len();
 
-                  grammar!(@skip $atomic slf);
+                  slf.skip();
 
-                  grammar!(@conv_prec pos (0u8) $atomic slf [ $( $ts )* ] [] [])
+                  let result = grammar!(@conv_prec pos (0u8) $atomic slf [ $( $ts )* ] [] []);
+
+                  if result.is_none() {
+                      slf.input_mut().set_pos(pos);
+                      slf.queue_mut().truncate(len);
+                  }
+
+                  result
               };
 
               let mut pos = $slf.input().pos();
-              let queue_pos = $slf.queue().len();
+              let len = $slf.queue().len();
 
-              let result = primary($slf);
+              let result = grammar!(@conv $atomic $slf [ $( $primary )* ] [] []);
 
-              if let Some(token) = $slf.queue().get(queue_pos) {
+              if let Some(token) = $slf.queue().get(len) {
                   pos = token.start;
               }
 
               if result {
-                  $slf.prec_climb(queue_pos, pos, 0, None, &mut primary, &mut climb);
+                  $slf.prec_climb(len, pos, 0, None, &mut primary, &mut climb);
               }
 
               result
@@ -270,13 +309,43 @@ macro_rules! grammar {
     };
 
     // match
-    ( @mtc $slf:ident (( $exp:expr )) ) => (($exp));
-    ( @mtc $slf:ident [ $left:tt .. $right:tt ]) => (grammar!(@mtc $slf [$left, $right]));
-    ( @mtc $slf:ident [ $left:expr, $right:expr ]) => {
+    ( @mtc $slf:ident (( $exp:expr )) )             => (($exp));
+    ( @mtc $slf:ident [ $left:tt .. $right:tt ] )   => (grammar!(@mtc $slf [$left, $right]));
+    ( @mtc $slf:ident [ $left:expr, $right:expr ] ) => {
         $slf.input_mut().match_range($left, $right)
     };
-    ( @mtc $slf:ident [ $str:expr ]) => ($slf.input_mut().match_string($str));
-    ( @mtc $slf:ident $rule:ident) => ($slf.$rule());
+    ( @mtc $slf:ident [ push( $rule:ident ) ] )     => {
+        {
+            let start = $slf.input().pos();
+
+            let result = $slf.$rule();
+
+            if result {
+                let slice = $slf.input().slice(start, $slf.input().pos());
+
+                $slf.stack_mut().push(slice.to_owned());
+            }
+
+            result
+        }
+    };
+    ( @mtc $slf:ident [ pop() ] )     => {
+        {
+            let string = $slf.stack_mut().pop().expect("can't pop empty slots");
+
+            $slf.input_mut().match_string(&string)
+        }
+    };
+    ( @mtc $slf:ident [ peek() ] )     => {
+        {
+            let string = $slf.stack().last().expect("can't peek empty slots").clone();
+
+            $slf.input_mut().match_string(&string)
+        }
+    };
+    ( @mtc $slf:ident [ $str:expr ] )               => ($slf.input_mut().match_string($str));
+    ( @mtc $slf:ident [ i $str:expr ] )             => ($slf.input_mut().match_insensitive($str));
+    ( @mtc $slf:ident $rule:ident)                 => ($slf.$rule());
 
     // process postfix
     ( @process $_atomic:tt $_slf:ident [( $result:expr )] [] ) => ($result);
@@ -284,17 +353,18 @@ macro_rules! grammar {
         {
             grammar!(@process false $slf [(( $slf.try(false, |$slf| {
                 if grammar!(@mtc $slf $a) {
-                    let original = $slf.input().pos();
+                    let original_pos = $slf.input().pos();
+                    let original_len = $slf.queue().len();
 
-                    $slf.skip_ws();
+                    $slf.skip();
 
                     let pos = $slf.input().pos();
-                    let len = $slf.queue().len();
 
                     let result = grammar!(@mtc $slf $b);
 
                     if $slf.input().pos() == pos && !$slf.eoi_matched() {
-                        $slf.input_mut().set_pos(original);
+                        $slf.input_mut().set_pos(original_pos);
+                        $slf.queue_mut().truncate(original_len);
                     }
 
                     result
@@ -322,17 +392,20 @@ macro_rules! grammar {
         {
             grammar!(@process false $slf [(( {
                 let mut pos = $slf.input().pos();
+                let mut len = $slf.queue().len();
 
                 loop {
                     if !grammar!(@mtc $slf $a) {
                         $slf.input_mut().set_pos(pos);
+                        $slf.queue_mut().truncate(len);
 
                         break
                     }
 
                     pos = $slf.input().pos();
+                    len = $slf.queue().len();
 
-                    $slf.skip_ws();
+                    $slf.skip();
                 }
 
                 true
@@ -357,11 +430,13 @@ macro_rules! grammar {
             grammar!(@process false $slf [(( if grammar!(@mtc $slf $a) {
                 loop {
                     let pos = $slf.input().pos();
+                    let len = $slf.queue().len();
 
-                    $slf.skip_ws();
+                    $slf.skip();
 
                     if !grammar!(@mtc $slf $a) {
                         $slf.input_mut().set_pos(pos);
+                        $slf.queue_mut().truncate(len);
 
                         break
                     }
@@ -418,24 +493,6 @@ macro_rules! grammar {
         grammar!(@process $atomic $slf [ $head $( $optail )* ] [ $( $tail )* ])
     };
 
-    // skip only if not whitespace
-    ( @skip whitespace $_slf:ident )  => ();
-    ( @skip comment $slf:ident )      => ($slf.skip_ws());
-    ( @skip $_name:ident $slf:ident ) => {
-        {
-            $slf.skip_com();
-            $slf.skip_ws();
-        }
-    };
-    // skip if not atomic
-    ( @skip false $slf:ident ) => ();
-    ( @skip true $slf:ident ) => {
-        {
-            $slf.skip_com();
-            $slf.skip_ws();
-        }
-    };
-
     // whitespace and comment are always atomic
     ( @atomic whitespace $_atomic:tt $slf:ident $rules:tt ) => {
         grammar!(@conv true $slf $rules [] [])
@@ -460,9 +517,6 @@ macro_rules! grammar {
 
             if revert || !result {
                 self.input_mut().set_pos(pos);
-            }
-
-            if !result {
                 self.queue_mut().truncate(len);
             }
 
@@ -490,7 +544,14 @@ macro_rules! grammar {
                     let mut right = self.input().pos();
                     let queue_pos = self.queue().len();
 
-                    primary(self);
+                    if !primary(self) {
+                        let last_pos = self.queue().get(pos).unwrap().end;
+
+                        self.input_mut().set_pos(last_pos);
+                        self.queue_mut().truncate(pos + 1);
+
+                        break
+                    }
 
                     if let Some(token) = self.queue().get(queue_pos) {
                         new_pos = token.start;
@@ -542,11 +603,10 @@ macro_rules! grammar {
         #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
-            grammar!(@skip $name slf);
 
             let pos = slf.input().pos();
             let len = slf.queue().len();
-            let tracked_len = slf.tracked_len();
+            let tracked_len_pos = slf.tracked_len_pos();
 
             let result = grammar!(@atomic $name false slf [ $( $ts )* ]);
 
@@ -563,7 +623,7 @@ macro_rules! grammar {
             } else {
                 slf.queue_mut().truncate(len);
 
-                if slf.tracked_len() == tracked_len {
+                if slf.tracked_len_pos() == tracked_len_pos {
                     slf.track(Rule::$name, pos);
                 }
             }
@@ -580,7 +640,6 @@ macro_rules! grammar {
         #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
-            grammar!(@skip $name slf);
 
             let pos = slf.input().pos();
             let len = slf.queue().len();
@@ -619,13 +678,59 @@ macro_rules! grammar {
         grammar!($( $tail )*);
     };
 
+    // non-atomic rule
+    ( $name:ident = !@{ $( $ts:tt )* } $( $tail:tt )* ) => {
+        #[allow(unused_parens, unused_variables)]
+        #[inline]
+        pub fn $name(&mut self) -> bool {
+            let slf = self;
+
+            let pos = slf.input().pos();
+            let len = slf.queue().len();
+            let tracked_len_pos = slf.tracked_len_pos();
+
+            let toggled = slf.is_atomic();
+
+            if toggled {
+                slf.set_atomic(false);
+            }
+
+            let result = grammar!(@atomic $name false slf [ $( $ts )* ]);
+
+            if result {
+                let new_pos = slf.input().pos();
+
+                let token = Token {
+                    rule:  Rule::$name,
+                    start: pos,
+                    end:   new_pos
+                };
+
+                slf.queue_mut().insert(len, token);
+            } else {
+                slf.queue_mut().truncate(len);
+
+                if slf.tracked_len_pos() == tracked_len_pos {
+                    slf.track(Rule::$name, pos);
+                }
+            }
+
+            if toggled {
+                slf.set_atomic(true);
+            }
+
+            result
+        }
+
+        grammar!($( $tail )*);
+    };
+
     // silent rule
     ( $name:ident = _{ $( $ts:tt )* } $( $tail:tt )* ) => {
         #[allow(unused_parens, unused_variables)]
         #[inline]
         pub fn $name(&mut self) -> bool {
             let slf = self;
-            grammar!(@skip $name slf);
 
             let result = grammar!(@atomic $name false slf [ $( $ts )* ]);
 

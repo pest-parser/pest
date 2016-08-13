@@ -29,6 +29,10 @@ pub trait Input<'a> {
     /// `string.len()` in case it did.
     fn match_string(&mut self, string: &str) -> bool;
 
+    /// Matches `string` to an `Input` case insensitively, returns whether it matched, and advances
+    /// the position with `string.len()` in case it did.
+    fn match_insensitive(&mut self, string: &str) -> bool;
+
     /// Matches if an `Input`'s current `char` is between `left` and `right`, and advances the
     /// position with one `char` in case it did.
     fn match_range(&mut self, left: char, right: char) -> bool;

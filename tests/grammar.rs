@@ -19,6 +19,10 @@ impl_rdp! {
         opt = { ["a"]? }
         pres = { &["a"] }
         abs = { !(["a"] | ["b"]) ~ any }
+        ins = { [i"seLeCT"] }
+        push_pop = { [push(opt)] ~ [pop()] }
+        pop_twice = { [push(opt)] ~ [pop()] ~ [pop()] }
+        push_peek_pop = { [push(opt)] ~ [peek()] ~ [pop()] }
         digit = { ['0'..'9'] }
         number = { ['0'..'9']+ }
         plus = { ["+"] }
@@ -33,6 +37,7 @@ impl_rdp! {
         }
 
         whitespace = _{ [" "] }
+        comment = _{ ["//"] }
     }
 }
 
@@ -344,16 +349,41 @@ fn expression_spaced() {
 }
 
 #[test]
-fn expression_space_after() {
-    let mut parser = Rdp::new(StringInput::new("1 "));
+fn comment_between_subrules() {
+    let mut parser = Rdp::new(StringInput::new("a//a//a"));
 
-    assert!(parser.expression());
-    assert!(!parser.end());
+    assert!(parser.rep_one());
+    assert!(parser.end());
+}
 
-    let queue = vec![
-        Token::new(Rule::expression, 0, 1),
-        Token::new(Rule::number, 0, 1)
-    ];
+#[test]
+fn insensitive() {
+    let mut parser = Rdp::new(StringInput::new("SeleCt"));
 
-    assert_eq!(parser.queue(), &queue);
+    assert!(parser.ins());
+    assert!(parser.end());
+}
+
+#[test]
+fn stack_push_pop() {
+    let mut parser = Rdp::new(StringInput::new("a a"));
+
+    assert!(parser.push_pop());
+    assert!(parser.end());
+}
+
+#[test]
+#[should_panic]
+fn stack_pop_twice() {
+    let mut parser = Rdp::new(StringInput::new("a a a"));
+
+    assert!(parser.pop_twice());
+}
+
+#[test]
+fn stack_push_peek_pop() {
+    let mut parser = Rdp::new(StringInput::new("a a a"));
+
+    assert!(parser.push_peek_pop());
+    assert!(parser.end());
 }

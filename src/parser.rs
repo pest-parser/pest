@@ -31,6 +31,9 @@ pub trait Parser<'a, T: Input<'a>> {
     /// Returns the mutable queue of all matched `Token`s.
     fn queue_mut(&mut self) -> &mut Vec<Self::Token>;
 
+    /// Returns the queue of all matched `(Token, value)`s.
+    fn queue_with_captures(&self) -> Vec<(Self::Token, String)>;
+
     /// Returns the current index within the queue. Used in `process!`.
     fn queue_index(&self) -> usize;
 
@@ -40,11 +43,8 @@ pub trait Parser<'a, T: Input<'a>> {
     /// Set the current index within the queue. Used in `process!`.
     fn set_queue_index(&self, index: usize);
 
-    /// Skips white-space.
-    fn skip_ws(&mut self);
-
-    /// Skips comments.
-    fn skip_com(&mut self);
+    /// Skips whitespace and comments.
+    fn skip(&mut self);
 
     /// Returns whether a `Parser` is currently inside an atomic rule.
     fn is_atomic(&self) -> bool;
@@ -56,9 +56,15 @@ pub trait Parser<'a, T: Input<'a>> {
     fn track(&mut self, failed: Self::Rule, pos: usize);
 
     /// Returns the length of the tracked `Rule`s.
-    fn tracked_len(&self) -> usize;
+    fn tracked_len_pos(&self) -> (usize, usize);
 
     /// Retuns a `Vec` of all expected `Rule`s at the deepest position where the parsing last
     /// stopped. It only returns leafs from the rule tree. Used for error reporting.
     fn expected(&mut self) -> (Vec<Self::Rule>, usize);
+
+    /// Returns the stack `Vec`.
+    fn stack(&self) -> &Vec<String>;
+
+    /// Returns the mutable stack `Vec`.
+    fn stack_mut(&mut self) -> &mut Vec<String>;
 }
