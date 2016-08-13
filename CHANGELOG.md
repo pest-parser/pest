@@ -1,11 +1,27 @@
 # Change Log
 
+## [v0.4.0](https://github.com/dragostis/pest/tree/v0.4.0) (2016-08-13)
+[Full Changelog](https://github.com/dragostis/pest/compare/v0.3.3...v0.4.0)
+
+**Implemented enhancements:**
+
+- Add build instructions to README. [\#64](https://github.com/dragostis/pest/issues/64)
+
+**Merged pull requests:**
+
+- Update readme with install/build/test [\#77](https://github.com/dragostis/pest/pull/77) ([Keats](https://github.com/Keats))
+- V0.4.0 [\#69](https://github.com/dragostis/pest/pull/69) ([dragostis](https://github.com/dragostis))
+
 ## [v0.3.3](https://github.com/dragostis/pest/tree/v0.3.3) (2016-08-03)
 [Full Changelog](https://github.com/dragostis/pest/compare/v0.3.2...v0.3.3)
 
 **Implemented enhancements:**
 
 - Case insensitive keywords [\#71](https://github.com/dragostis/pest/issues/71)
+
+**Fixed bugs:**
+
+- Some instances of whitespace skipping don't remove the whitespace rules. \(same with comment\) [\#68](https://github.com/dragostis/pest/issues/68)
 
 **Closed issues:**
 
