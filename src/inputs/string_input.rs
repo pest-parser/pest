@@ -25,7 +25,7 @@ use super::super::Input;
 /// ```
 pub struct StringInput<'a> {
     string: &'a str,
-    pos: usize,
+    pos: usize
 }
 
 impl<'a> StringInput<'a> {
@@ -43,7 +43,7 @@ impl<'a> StringInput<'a> {
     pub fn new(string: &'a str) -> StringInput<'a> {
         StringInput {
             string: string,
-            pos: 0,
+            pos: 0
         }
     }
 }
@@ -108,11 +108,11 @@ impl<'a> Input<'a> for StringInput<'a> {
                     pos -= 1;
                     line_col = (line_col.0 + 1, 1);
                 },
-                Some(c)    => {
+                Some(c) => {
                     pos -= c.len_utf8();
                     line_col = (line_col.0, line_col.1 + 1);
                 },
-                None       => unreachable!(),
+                None => unreachable!(),
             }
         }
 

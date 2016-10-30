@@ -98,9 +98,9 @@
 /// | `a?`         | optionally matches `a`                                         |
 /// | `&a`         | matches `a` without making progress                            |
 /// | `!a`         | matches if `a` doesn't match without making progress           |
-/// | [push(a)]    | matches a and pushes it's captured string down the stack       |
-/// | [pop()]      | pops a string from the stack and matches it                    |
-/// | [peek()]     | peeks a string from the stack and matches it                   |
+/// | `[push(a)]`  | matches a and pushes it's captured string down the stack       |
+/// | `[pop()]`    | pops a string from the stack and matches it                    |
+/// | `[peek()]`   | peeks a string from the stack and matches it                   |
 ///
 /// ## Precedence climbing
 ///
