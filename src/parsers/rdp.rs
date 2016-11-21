@@ -126,13 +126,10 @@ macro_rules! impl_rdp {
     };
 
     ( grammar! { $( $ts:tt )* } $( $mac:ident! { $( $rest:tt )* } )* ) => {
-        use std::cell::Cell;
-        use std::cmp;
-
         pub struct Rdp<T> {
             input:       T,
             queue:       Vec<Token<Rule>>,
-            queue_index: Cell<usize>,
+            queue_index: ::std::cell::Cell<usize>,
             failures:    Vec<Rule>,
             fail_pos:    usize,
             stack:       Vec<String>,
@@ -142,12 +139,12 @@ macro_rules! impl_rdp {
 
         impl_rdp!(@filter [ $( $ts )* ] []);
 
-        impl<'input, T: Input<'input>> Rdp<T> {
+        impl<'input, T: $crate::Input<'input>> Rdp<T> {
             pub fn new(input: T) -> Rdp<T> {
                 Rdp {
                     input:       input,
                     queue:       vec![],
-                    queue_index: Cell::new(0),
+                    queue_index: ::std::cell::Cell::new(0),
                     failures:    vec![],
                     fail_pos:    0,
                     stack:       vec![],
@@ -217,7 +214,7 @@ macro_rules! impl_rdp {
             )*
         }
 
-        impl<'input, T: Input<'input>> Parser<'input, T> for Rdp<T> {
+        impl<'input, T: $crate::Input<'input>> $crate::Parser<'input, T> for Rdp<T> {
             type Rule = Rule;
             type Token = Token<Rule>;
 

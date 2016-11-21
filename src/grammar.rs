@@ -574,7 +574,7 @@ macro_rules! grammar {
                     }
 
                     if let Some(pos) = last_right {
-                        right = cmp::max(pos, right);
+                        right = ::std::cmp::max(pos, right);
                     } else {
                         last_right = Some(right);
                     }
