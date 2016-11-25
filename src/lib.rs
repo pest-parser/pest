@@ -326,7 +326,8 @@
 //! # }
 //! ```
 //!
-//! Before we get to the processing of the `Token`s, let's also add white-space to the grammar.
+//! Before we get to the processing of the `Token`s, let's also add white-space to the grammar. This
+//! will match automatically between any rules and sub-rules.
 //!
 //! ```
 //! # #[macro_use] extern crate pest;
