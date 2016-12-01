@@ -21,42 +21,31 @@ git:
 branches:
   only:
     - master
+    - procedural
 notifications:
   email: false
 cache:
   directories:
-    - $TRAVIS_BUILD_DIR/target
+    - $TRAVIS_BUILD_DIR/pest/target
     - $HOME/.cargo
 before_script:
   - |
-    if [[ $TRAVIS_OS_NAME =~ linux ]]; then
+    if [[ $TRAVIS_OS_NAME =~ linux && $TRAVIS_BRANCH =~ master ]]; then
       pip install 'travis-cargo<0.2' --user &&
       export PATH=$HOME/.local/bin:$PATH
     fi
 script:
   - |
-    if [[ $TRAVIS_OS_NAME =~ linux ]]; then
+    cd pest &&
+    if [[ $TRAVIS_OS_NAME =~ linux && $TRAVIS_BRANCH =~ master ]]; then
       travis-cargo test &&
-      travis-cargo --only stable doc &&
-      python -c '
-    import os
-    import re
-
-    for path, subdirs, files in os.walk("."):
-        for name in files:
-            if "macro" in name:
-                with open(os.path.join(path, name), "r") as inputfile:
-                    out = re.sub(" *\( (<[^>]*>)?@((?!\{ \.\.\. \};)(.|\\n))*{ \.\.\. \};\\n", "",
-                                 inputfile.read())
-
-                with open(os.path.join(path, name), "w") as outputfile:
-                    outputfile.write(out)
-      '
+      travis-cargo --only stable doc
     else
       cargo test
     fi
 after_success: |
-  if [[ $TRAVIS_OS_NAME =~ linux && $TRAVIS_RUST_VERSION =~ stable ]]; then
+  if [[ $TRAVIS_OS_NAME =~ linux && $TRAVIS_BRANCH =~ master && $TRAVIS_RUST_VERSION =~ stable ]]; then
+    cd pest &&
     travis-cargo coveralls --no-sudo --verify \
     --kcov-options="--exclude-path=target/,tests/"
   fi
