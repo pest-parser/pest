@@ -10,12 +10,14 @@ impl_rdp! {
             { ["("] ~ expression ~ [")"] | number } // primary
             addition       = { plus  | minus } // precedence 0
             multiplication = { times | slash } // precedence 1
+            exponention    = {< pow }          // precedence 2; NB: exponention is right associative.
         }
         number = @{ ["-"]? ~ (["0"] | ['1'..'9'] ~ ['0'..'9']*) } // atomic because it cannot
         plus   =  { ["+"] }                                       // accept white-space
         minus  =  { ["-"] }
         times  =  { ["*"] }
         slash  =  { ["/"] }
+        pow    =  { ["^"] } 
 
         whitespace = _{ [" "] } // whitespce gets run between all rules
     }
@@ -36,15 +38,25 @@ impl_rdp! {
                     Rule::slash => left / right,
                     _ => unreachable!()
                 }
+            },
+            (_: exponention, left: compute(), sign, right: compute()) => {
+                match sign.rule {
+                    Rule::pow => left.pow(right as u32),
+                    _ => unreachable!()
+                }
             }
         }
     }
 }
 
 fn main() {
-    let mut parser = Rdp::new(StringInput::new("(3 + (9 + 3 * 4 + (3 + 1) / 2 - 4)) * 2"));
-
-    parser.expression();
-
-    println!("{}", parser.compute()); // prints 44
+    let expressions = [
+        "(3 + (9 + 3 * 4 + (3 + 1) / 2 - 4)) * 2",
+        "2^2^2^2", // This should be 65536 and not 256 because it is right associative.
+    ];
+    for exp in expressions.into_iter() {
+        let mut parser = Rdp::new(StringInput::new(exp.clone()));
+        parser.expression();
+        println!("{} = {}", exp, parser.compute());
+    }
 }
