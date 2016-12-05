@@ -3,12 +3,11 @@ language: rust
 cache: cargo
 os:
   - linux
-  - osx
+#  - osx
 rust:
-  - stable
-  - beta
+#  - stable
+#  - beta
   - nightly
-  - 1.9.0
 addons:
   apt:
     packages:
@@ -36,11 +35,16 @@ before_script:
     fi
 script:
   - |
-    cd pest &&
     if [[ $TRAVIS_OS_NAME =~ linux && $TRAVIS_BRANCH =~ master ]]; then
+      cd pest &&
       travis-cargo test &&
-      travis-cargo --only stable doc
+      travis-cargo --only stable doc &&
+      cd ../pest_derive &&
+      travis-cargo test
     else
+      cd pest &&
+      cargo test &&
+      cd ../pest_derive &&
       cargo test
     fi
 after_success: |
