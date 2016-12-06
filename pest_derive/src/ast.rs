@@ -1,11 +1,13 @@
-#[derive(Debug, Eq, PartialEq)]
+use quote::Ident;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rule {
-    pub name: String,
+    pub name: Ident,
     pub ty:   RuleType,
     pub body: Body
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RuleType {
     Normal,
     Silent,
@@ -13,19 +15,19 @@ pub enum RuleType {
     NonAtomic
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Body {
     Normal(Expr),
     Infix(Expr,Vec<(Rule, bool)>)
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expr {
     Char(String),
     Str(String),
     Insens(String),
     Range(String, String),
-    Ident(String),
+    Ident(Ident),
     Seq(Vec<Expr>),
     Choice(Vec<Expr>),
     RepZero(Box<Expr>),
