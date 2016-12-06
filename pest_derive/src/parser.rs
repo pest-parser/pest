@@ -1,6 +1,8 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
+use quote::Ident;
+
 use super::ast::*;
 
 macro_rules! err {
@@ -102,7 +104,7 @@ impl<'a> PestParser<'a> {
             }
         }
 
-        Ok(Expr::Ident(ident.into_iter().collect()))
+        Ok(Expr::Ident(Ident::new(ident.into_iter().collect::<String>())))
     }
 
     pub fn char(&mut self) -> Result<Expr, String> {
@@ -495,7 +497,7 @@ mod tests {
     fn ident() {
         let mut parser = PestParser::new("abc".chars().peekable());
 
-        assert_eq!(parser.ident(), Ok(Expr::Ident("abc".to_owned())));
+        assert_eq!(parser.ident(), Ok(Expr::Ident(Ident::new("abc"))));
         assert_eq!(parser.ident(), Err("Unexpected end of input at line 1, column 4".to_owned()));
     }
 
@@ -588,14 +590,14 @@ mod tests {
     fn term_underscore_ident() {
         let mut parser = PestParser::new("_hi".chars().peekable());
 
-        assert_eq!(parser.term(), Ok(Expr::Ident("_hi".to_owned())));
+        assert_eq!(parser.term(), Ok(Expr::Ident(Ident::new("_hi"))));
     }
 
     #[test]
     fn term_ident() {
         let mut parser = PestParser::new("hi".chars().peekable());
 
-        assert_eq!(parser.term(), Ok(Expr::Ident("hi".to_owned())));
+        assert_eq!(parser.term(), Ok(Expr::Ident(Ident::new("hi"))));
     }
 
     #[test]
@@ -608,7 +610,7 @@ mod tests {
                     Expr::RepOne(Box::new(
                         Expr::RepZero(Box::new(
                             Expr::Opt(Box::new(
-                                Expr::Ident("hi".to_owned())
+                                Expr::Ident(Ident::new("hi"))
                             ))
                         ))
                     ))
@@ -638,12 +640,12 @@ mod tests {
         assert_eq!(parser.expr(), Ok(
             Expr::Choice(vec![
                 Expr::Seq(vec![
-                    Expr::Ident("a".to_owned()),
-                    Expr::Ident("b".to_owned())
+                    Expr::Ident(Ident::new("a")),
+                    Expr::Ident(Ident::new("b"))
                 ]),
                 Expr::Seq(vec![
-                    Expr::Ident("c".to_owned()),
-                    Expr::Ident("d".to_owned())
+                    Expr::Ident(Ident::new("c")),
+                    Expr::Ident(Ident::new("d"))
                 ])
             ])
         ));
@@ -655,14 +657,14 @@ mod tests {
 
         assert_eq!(parser.expr(), Ok(
             Expr::Choice(vec![
-                Expr::Ident("a".to_owned()),
+                Expr::Ident(Ident::new("a")),
                 Expr::Seq(vec![
-                    Expr::Ident("b".to_owned()),
-                    Expr::Ident("c".to_owned()),
-                    Expr::Ident("d".to_owned())
+                    Expr::Ident(Ident::new("b")),
+                    Expr::Ident(Ident::new("c")),
+                    Expr::Ident(Ident::new("d"))
                 ]),
-                Expr::Ident("e".to_owned()),
-                Expr::Ident("f".to_owned())
+                Expr::Ident(Ident::new("e")),
+                Expr::Ident(Ident::new("f"))
             ])
         ));
     }
@@ -673,7 +675,7 @@ mod tests {
 
         assert_eq!(parser.expr(), Ok(
             Expr::Choice(vec![
-                Expr::Ident("_a".to_owned()),
+                Expr::Ident(Ident::new("_a")),
                 Expr::Seq(vec![
                     Expr::Range("'a'".to_owned(), "'b'".to_owned()),
                     Expr::NegLhd(Box::new(
@@ -682,8 +684,8 @@ mod tests {
                     Expr::Opt(Box::new(
                         Expr::RepZero(Box::new(
                             Expr::Choice(vec![
-                                Expr::Ident("d".to_owned()),
-                                Expr::Ident("e".to_owned())
+                                Expr::Ident(Ident::new("d")),
+                                Expr::Ident(Ident::new("e"))
                             ])
                         ))
                     ))
@@ -698,9 +700,9 @@ mod tests {
 
         assert_eq!(parser.rule(), Ok(
             Rule {
-                name: "rule".to_owned(),
+                name: Ident::new("rule"),
                 ty:   RuleType::Normal,
-                body: Body::Normal(Expr::Ident("a".to_owned()))
+                body: Body::Normal(Expr::Ident(Ident::new("a")))
             }
         ));
     }
@@ -711,9 +713,9 @@ mod tests {
 
         assert_eq!(parser.rule(), Ok(
             Rule {
-                name: "rule".to_owned(),
+                name: Ident::new("rule"),
                 ty:   RuleType::Silent,
-                body: Body::Normal(Expr::Ident("a".to_owned()))
+                body: Body::Normal(Expr::Ident(Ident::new("a")))
             }
         ));
     }
@@ -724,9 +726,9 @@ mod tests {
 
         assert_eq!(parser.rule(), Ok(
             Rule {
-                name: "rule".to_owned(),
+                name: Ident::new("rule"),
                 ty:   RuleType::Atomic,
-                body: Body::Normal(Expr::Ident("a".to_owned()))
+                body: Body::Normal(Expr::Ident(Ident::new("a")))
             }
         ));
     }
@@ -737,9 +739,9 @@ mod tests {
 
         assert_eq!(parser.rule(), Ok(
             Rule {
-                name: "rule".to_owned(),
+                name: Ident::new("rule"),
                 ty:   RuleType::NonAtomic,
-                body: Body::Normal(Expr::Ident("a".to_owned()))
+                body: Body::Normal(Expr::Ident(Ident::new("a")))
             }
         ));
     }
@@ -750,20 +752,20 @@ mod tests {
 
         assert_eq!(parser.rule(), Ok(
             Rule {
-                name: "rule".to_owned(),
+                name: Ident::new("rule"),
                 ty:   RuleType::Silent,
                 body: Body::Infix(
-                    Expr::Ident("a".to_owned()),
+                    Expr::Ident(Ident::new("a")),
                     vec![
                         (Rule {
-                            name: "b".to_owned(),
+                            name: Ident::new("b"),
                             ty:   RuleType::Atomic,
-                            body: Body::Normal(Expr::Ident("c".to_owned()))
+                            body: Body::Normal(Expr::Ident(Ident::new("c")))
                         }, false),
                         (Rule {
-                            name: "d".to_owned(),
+                            name: Ident::new("d"),
                             ty:   RuleType::Normal,
-                            body: Body::Normal(Expr::Ident("e".to_owned()))
+                            body: Body::Normal(Expr::Ident(Ident::new("e")))
                         }, true)
                     ]
                 )
