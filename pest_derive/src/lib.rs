@@ -12,6 +12,7 @@ use syn::{Attribute, Lit, MetaItem, NestedMetaItem};
 mod ast;
 mod generator;
 mod parser;
+mod validator;
 
 #[cfg(not(test))]
 #[proc_macro_derive(Parser)]
