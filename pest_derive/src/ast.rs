@@ -18,7 +18,7 @@ pub enum RuleType {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Body {
     Normal(Expr),
-    Infix(Expr,Vec<(Rule, bool)>)
+    Infix(Expr, Vec<(Rule, bool)>)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
