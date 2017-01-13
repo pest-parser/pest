@@ -4,26 +4,28 @@ use quote::Ident;
 
 use super::ast::*;
 
-pub fn validate(rules: &Vec<Rule>) {
-    left_recursion(to_hash_map(&rules));
+pub fn validate(rules: Vec<Rule>) {
+    left_recursion(to_hash_map(rules));
 }
 
-fn to_hash_map(rules: &Vec<Rule>) -> HashMap<&Ident, &Body> {
+fn to_hash_map(rules: Vec<Rule>) -> HashMap<Ident, Body> {
     let mut hash_map = HashMap::new();
 
-    for rule in rules {
+    map_rules(rules, |rule| {
         if hash_map.contains_key(&rule.name) {
-            panic!("Rule {} is defined multiple times", &rule.name);
+            panic!("Rule {} is defined multiple times", rule.name);
         } else {
-            hash_map.insert(&rule.name, &rule.body);
+            hash_map.insert(rule.name.clone(), rule.body.clone());
         }
-    }
+
+        rule
+    });
 
     hash_map
 }
 
-fn left_recursion(rules: HashMap<&Ident, &Body>) {
-    fn check_expr(mut names: HashSet<Ident>, expr: &Expr, rules: &HashMap<&Ident, &Body>) {
+fn left_recursion(rules: HashMap<Ident, Body>) {
+    fn check_expr(mut names: HashSet<Ident>, expr: &Expr, rules: &HashMap<Ident, Body>) {
         match expr {
             &Expr::Ident(ref other)  => {println!("{}", other);
                 if names.contains(other) {
@@ -46,7 +48,7 @@ fn left_recursion(rules: HashMap<&Ident, &Body>) {
         }
     }
 
-    fn check_body(names: HashSet<Ident>, body: &Body, rules: &HashMap<&Ident, &Body>) {
+    fn check_body(names: HashSet<Ident>, body: &Body, rules: &HashMap<Ident, Body>) {
         match body {
             &Body::Normal(ref expr)   => check_expr(names, expr, rules),
             &Body::Infix(ref expr, _) => check_expr(names, expr, rules)
@@ -86,7 +88,7 @@ mod tests {
             },
         ];
 
-        to_hash_map(&rules);
+        to_hash_map(rules);
     }
 
     #[test]
@@ -108,7 +110,7 @@ mod tests {
             },
         ];
 
-        to_hash_map(&rules);
+        to_hash_map(rules);
     }
 
     #[test]
@@ -135,7 +137,7 @@ mod tests {
             },
         ];
 
-        left_recursion(to_hash_map(&rules));
+        left_recursion(to_hash_map(rules));
     }
 
     #[test]
@@ -162,7 +164,7 @@ mod tests {
             },
         ];
 
-        left_recursion(to_hash_map(&rules));
+        left_recursion(to_hash_map(rules));
     }
 
     #[test]
@@ -188,6 +190,31 @@ mod tests {
             },
         ];
 
-        left_recursion(to_hash_map(&rules));
+        left_recursion(to_hash_map(rules));
+    }
+
+    #[test]
+    #[should_panic(expected = "Rule a is defined multiple times")]
+    fn duplicate_definition_nested() {
+        let rules = vec![
+            Rule {
+                name: Ident::new("a"),
+                ty:   RuleType::Normal,
+                body: Body::Infix(
+                    Expr::Str("b".to_owned()),
+                    vec![
+                        (Rule {
+                            name: Ident::new("a"),
+                            ty:   RuleType::Normal,
+                            body: Body::Normal(
+                                Expr::Str("b".to_owned())
+                            )
+                        }, false)
+                    ]
+                )
+            },
+        ];
+
+        to_hash_map(rules);
     }
 }
