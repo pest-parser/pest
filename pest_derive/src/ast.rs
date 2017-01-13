@@ -37,3 +37,24 @@ pub enum Expr {
     NegLhd(Box<Expr>),
     Push(Box<Expr>)
 }
+
+pub fn map_rules<F>(rules: Vec<Rule>, mut f: F) -> Vec<Rule> where F: FnMut(Rule) -> Rule {
+    rules.into_iter().map(move |rule| {
+        match rule {
+            Rule { body: Body::Normal(_), .. } => f(rule),
+            Rule { name, ty, body: Body::Infix(expr, rules) } => {
+                let rule = Rule {
+                    name: name,
+                    ty:   ty,
+                    body: Body::Infix(expr, rules.into_iter().map(|pair| {
+                        let (rule, assoc) = pair;
+
+                        (f(rule), assoc)
+                    }).collect())
+                };
+
+                f(rule)
+            }
+        }
+    }).collect()
+}
