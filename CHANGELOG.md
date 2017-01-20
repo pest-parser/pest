@@ -1,5 +1,28 @@
 # Change Log
 
+## [Unreleased](https://github.com/dragostis/pest/tree/HEAD)
+
+[Full Changelog](https://github.com/dragostis/pest/compare/v0.4.0...HEAD)
+
+**Implemented enhancements:**
+
+- Use SIMD for parsing. [\#87](https://github.com/dragostis/pest/issues/87)
+- Expand example to include right associative exponention \(please\) [\#85](https://github.com/dragostis/pest/issues/85)
+- Sanitize macros. [\#81](https://github.com/dragostis/pest/issues/81)
+- Explain that "whitespace" is special in example [\#78](https://github.com/dragostis/pest/issues/78)
+- Cache Cargo on Travis. [\#70](https://github.com/dragostis/pest/issues/70)
+- Replace queue indexing method with a single method that can be used for manual matching. [\#66](https://github.com/dragostis/pest/issues/66)
+
+**Closed issues:**
+
+- Give precedence to keywords over free identifiers [\#80](https://github.com/dragostis/pest/issues/80)
+- Need some help on parsing alternatives [\#79](https://github.com/dragostis/pest/issues/79)
+
+**Merged pull requests:**
+
+- Show an example how to use different associativities. [\#89](https://github.com/dragostis/pest/pull/89) ([ehiggs](https://github.com/ehiggs))
+- Show an example how to use different associativities. [\#86](https://github.com/dragostis/pest/pull/86) ([ehiggs](https://github.com/ehiggs))
+
 ## [v0.4.0](https://github.com/dragostis/pest/tree/v0.4.0) (2016-08-13)
 [Full Changelog](https://github.com/dragostis/pest/compare/v0.3.3...v0.4.0)
 
