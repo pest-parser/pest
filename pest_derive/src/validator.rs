@@ -27,7 +27,7 @@ fn to_hash_map(rules: Vec<Rule>) -> HashMap<Ident, Body> {
 fn left_recursion(rules: HashMap<Ident, Body>) {
     fn check_expr(mut names: HashSet<Ident>, expr: &Expr, rules: &HashMap<Ident, Body>) {
         match expr {
-            &Expr::Ident(ref other)  => {println!("{}", other);
+            &Expr::Ident(ref other)  => {
                 if names.contains(other) {
                     panic!("Rule {} is left-recursive", other);
                 }
