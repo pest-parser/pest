@@ -11,6 +11,7 @@ use syn::{Attribute, Lit, MetaItem, NestedMetaItem};
 
 mod ast;
 mod generator;
+mod optimizer;
 mod parser;
 mod validator;
 
@@ -118,4 +119,3 @@ mod tests {
         ".to_owned());
     }
 }
-
