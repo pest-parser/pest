@@ -59,7 +59,7 @@ pub fn map_rules<F>(rules: Vec<Rule>, mut f: F) -> Vec<Rule> where F: FnMut(Rule
     }).collect()
 }
 
-fn map_expr<F>(expr: Expr, f: &mut F) -> Expr where F: FnMut(Expr) -> Expr {
+pub fn map_expr<F>(expr: Expr, f: &mut F) -> Expr where F: FnMut(Expr) -> Expr {
     match expr {
         Expr::Char(_)       => f(expr),
         Expr::Str(_)        => f(expr),
