@@ -1,8 +1,12 @@
 use super::ast::*;
 
-//pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
-//
-//}
+pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
+    let optimized = concat_string_sequences(rules);
+    let optimized = concat_insensitive_sequences(optimized);
+    let optimized = extract_common_choice_sequences(optimized);
+
+    optimized
+}
 
 fn push_string(option: Option<String>, string: String) -> Option<String> {
     match option {
@@ -76,6 +80,110 @@ fn concat_insensitive_sequences(rules: Vec<Rule>) -> Vec<Rule> {
             expr => expr
         }
     })
+}
+
+fn extract_common_choice_sequences(rules: Vec<Rule>) -> Vec<Rule> {
+    map_all_exprs(rules, |expr| {
+        match expr {
+            Expr::Choice(exprs) => {
+                let choice = Expr::Choice(extract_common_sequences(exprs));
+
+                map_expr(choice, &mut |expr| {
+                    match expr {
+                        Expr::Choice(exprs) => {
+                            if exprs.len() == 1 {
+                                exprs[0].clone()
+                            } else {
+                                Expr::Choice(exprs)
+                            }
+                        },
+                        expr => expr
+                    }
+                })
+            },
+            expr => expr
+        }
+    })
+}
+
+fn extract_common_sequences(choices: Vec<Expr>) -> Vec<Expr> {
+    fn skip(expr: Expr, choices: Vec<Expr>) -> Vec<Expr> {
+        choices.into_iter().skip_while(|other_expr| {
+            match other_expr.clone() {
+                Expr::Seq(exprs) => {
+                    !exprs.is_empty() && expr == exprs[0]
+                },
+                other_expr => expr == other_expr
+            }
+        }).collect()
+    }
+
+    if choices.len() <= 1 {
+        return choices;
+    }
+
+    match choices[0].clone() {
+        Expr::Seq(exprs) => {
+            let mut i = 0;
+            let common = choices.iter().cloned().take_while(|expr| {
+                let matches = match expr.clone() {
+                    Expr::Seq(other_exprs) => exprs[0] == other_exprs[0],
+                    _ => false
+                };
+
+                if matches {
+                    i += 1;
+                }
+
+                matches
+            }).map(|expr| {
+                match expr.clone() {
+                    Expr::Seq(mut exprs) => {
+                        match exprs.len() {
+                            2 => {
+                                exprs[1].clone()
+                            },
+                            _ => {
+                                exprs.remove(0);
+                                Expr::Seq(exprs)
+                            }
+                        }
+                    }
+                    _ => unreachable!()
+                }
+            }).collect();
+
+            let common = extract_common_sequences(common);
+
+            let mut skipped = skip(exprs[0].clone(), extract_common_sequences(choices.clone().split_off(i)));
+
+            let mut extracted = if common.len() == 1 {
+                match common[0].clone() {
+                    Expr::Seq(mut other_exprs) => {
+                        other_exprs.insert(0, exprs[0].clone());
+                        vec![Expr::Seq(other_exprs)]
+                    },
+                    _ => unreachable!()
+                }
+            } else {
+                vec![
+                    Expr::Seq(vec![
+                        exprs[0].clone(),
+                        Expr::Choice(common)
+                    ])
+                ]
+            };
+            extracted.append(&mut skipped);
+
+            extracted
+        },
+        expr => {
+            let mut skipped = skip(expr.clone(), choices[1..].iter().cloned().collect());
+            skipped.insert(0, expr);
+
+            skipped
+        }
+    }
 }
 
 #[cfg(test)]
@@ -162,5 +270,233 @@ mod tests {
         ];
 
         assert_eq!(concat_insensitive_sequences(rules), concatenated);
+    }
+
+    #[test]
+    fn extract_empty() {
+        assert_eq!(extract_common_sequences(vec![]), vec![]);
+    }
+
+    #[test]
+    fn simple_common_sequence() {
+        let choices = vec![
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("b".to_owned())
+            ]),
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("c".to_owned())
+            ])
+        ];
+        let common = vec![
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Choice(vec![
+                    Expr::Str("b".to_owned()),
+                    Expr::Str("c".to_owned())
+                ])
+            ])
+        ];
+
+        assert_eq!(extract_common_sequences(choices), common);
+    }
+
+    #[test]
+    fn long_common_sequence() {
+        let choices = vec![
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("b".to_owned()),
+                Expr::Str("c".to_owned())
+            ]),
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("b".to_owned()),
+                Expr::Str("d".to_owned())
+            ])
+        ];
+        let common = vec![
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("b".to_owned()),
+                Expr::Choice(vec![
+                    Expr::Str("c".to_owned()),
+                    Expr::Str("d".to_owned())
+                ])
+            ])
+        ];
+
+        assert_eq!(extract_common_sequences(choices), common);
+    }
+
+    #[test]
+    fn complex_common_sequences() {
+        let choices = vec![
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("b".to_owned()),
+                Expr::Str("c".to_owned())
+            ]),
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("b".to_owned()),
+                Expr::Str("d".to_owned())
+            ]),
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("e".to_owned())
+            ])
+        ];
+        let common = vec![
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Choice(vec![
+                    Expr::Seq(vec![
+                        Expr::Str("b".to_owned()),
+                        Expr::Choice(vec![
+                            Expr::Str("c".to_owned()),
+                            Expr::Str("d".to_owned())
+                        ])
+                    ]),
+                    Expr::Str("e".to_owned())
+                ])
+            ])
+        ];
+
+        assert_eq!(extract_common_sequences(choices), common);
+    }
+
+    #[test]
+    fn two_common_sequences() {
+        let choices = vec![
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("b".to_owned()),
+            ]),
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("c".to_owned()),
+            ]),
+            Expr::Seq(vec![
+                Expr::Str("d".to_owned()),
+                Expr::Str("b".to_owned()),
+            ]),
+            Expr::Seq(vec![
+                Expr::Str("d".to_owned()),
+                Expr::Str("c".to_owned()),
+            ]),
+        ];
+        let common = vec![
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Choice(vec![
+                    Expr::Str("b".to_owned()),
+                    Expr::Str("c".to_owned())
+                ])
+            ]),
+            Expr::Seq(vec![
+                Expr::Str("d".to_owned()),
+                Expr::Choice(vec![
+                    Expr::Str("b".to_owned()),
+                    Expr::Str("c".to_owned())
+                ])
+            ])
+        ];
+
+        assert_eq!(extract_common_sequences(choices), common);
+    }
+
+    #[test]
+    fn skip_same_expr() {
+        let choices = vec![
+            Expr::Str("a".to_owned()),
+            Expr::Str("a".to_owned())
+        ];
+        let skipped = vec![
+            Expr::Str("a".to_owned())
+        ];
+
+        assert_eq!(extract_common_sequences(choices), skipped);
+    }
+
+    #[test]
+    fn skip_seuqnce() {
+        let choices = vec![
+            Expr::Str("a".to_owned()),
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("b".to_owned())
+            ])
+        ];
+        let skipped = vec![
+            Expr::Str("a".to_owned())
+        ];
+
+        assert_eq!(extract_common_sequences(choices), skipped);
+    }
+
+    #[test]
+    fn skip_after_extraction() {
+        let choices = vec![
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("b".to_owned())
+            ]),
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Str("c".to_owned())
+            ]),
+            Expr::Str("a".to_owned()),
+            Expr::Str("a".to_owned())
+        ];
+        let common = vec![
+            Expr::Seq(vec![
+                Expr::Str("a".to_owned()),
+                Expr::Choice(vec![
+                    Expr::Str("b".to_owned()),
+                    Expr::Str("c".to_owned())
+                ])
+            ])
+        ];
+
+        assert_eq!(extract_common_sequences(choices), common);
+    }
+
+    #[test]
+    fn extract_common_choice() {
+        let rules = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty:   RuleType::Silent,
+                body: Body::Normal(
+                    Expr::Choice(vec![
+                        Expr::Seq(vec![
+                            Expr::Str("a".to_owned()),
+                            Expr::Str("b".to_owned())
+                        ]),
+                        Expr::Seq(vec![
+                            Expr::Str("a".to_owned()),
+                            Expr::Str("c".to_owned())
+                        ])
+                    ])
+                )
+            }
+        ];
+        let optimized = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty:   RuleType::Silent,
+                body: Body::Normal(
+                    Expr::Seq(vec![
+                        Expr::Str("a".to_owned()),
+                        Expr::Choice(vec![
+                            Expr::Str("b".to_owned()),
+                            Expr::Str("c".to_owned())
+                        ])
+                    ])
+                )
+            }
+        ];
     }
 }
