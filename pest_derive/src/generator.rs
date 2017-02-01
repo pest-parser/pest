@@ -53,16 +53,16 @@ mod tests {
                 body: Body::Infix(
                     Expr::Ident(Ident::new("a")),
                     vec![
-                    (Rule {
-                        name: Ident::new("b"),
-                        ty:   RuleType::Atomic,
-                        body: Body::Normal(Expr::Ident(Ident::new("c")))
-                    }, false),
-                    (Rule {
-                        name: Ident::new("d"),
-                        ty:   RuleType::Normal,
-                        body: Body::Normal(Expr::Ident(Ident::new("e")))
-                    }, true)
+                        (Rule {
+                            name: Ident::new("b"),
+                            ty:   RuleType::Atomic,
+                            body: Body::Normal(Expr::Ident(Ident::new("c")))
+                        }, false),
+                        (Rule {
+                            name: Ident::new("d"),
+                            ty:   RuleType::Normal,
+                            body: Body::Normal(Expr::Ident(Ident::new("e")))
+                        }, true)
                     ]
                 )
             },
@@ -74,16 +74,16 @@ mod tests {
         ];
 
         assert_eq!(rule_enum(rules.iter().collect()), quote! {
-        #[allow(dead_code, non_camel_case_types)]
-        #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-        pub enum Rule {
-            any,
-            soi,
-            eoi,
-            b,
-            d,
-            f
-        }
+            #[allow(dead_code, non_camel_case_types)]
+            #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+            pub enum Rule {
+                any,
+                soi,
+                eoi,
+                b,
+                d,
+                f
+            }
         });
     }
 }
