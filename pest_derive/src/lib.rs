@@ -1,5 +1,3 @@
-#![feature(proc_macro, proc_macro_lib)]
-
 extern crate proc_macro;
 #[macro_use]
 extern crate quote;
@@ -15,7 +13,6 @@ mod optimizer;
 mod parser;
 mod validator;
 
-#[cfg(not(test))]
 #[proc_macro_derive(Parser)]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
     let source = input.to_string();
