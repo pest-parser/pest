@@ -210,9 +210,9 @@ mod tests {
 
     #[test]
     fn match_insensitive() {
-        let input = StringInput::new("AaaAAaA");
+        let input = StringInput::new("AsdASdF");
 
-        assert!(input.match_insensitive("aaaa", 0));
-        assert!(input.match_insensitive("aaa", 3));
+        assert!(input.match_insensitive("asd", 0));
+        assert!(input.match_insensitive("asdf", 3));
     }
 }

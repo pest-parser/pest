@@ -2,7 +2,7 @@
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Token<Rule> {
     /// The starting bit of the `Token`.
-    TokenStart(Rule, usize),
+    Start(Rule, usize),
     /// The ending bit of the `Token`.
-    TokenEnd(Rule, usize)
+    End(Rule, usize)
 }
