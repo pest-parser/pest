@@ -10,7 +10,7 @@ pub struct TokenStream<Rule> {
 }
 
 impl<Rule> TokenStream<Rule> {
-    /// Creates a new `TokenStream` from a `Token`-generating `Receiver`.
+    /// Creates a new `TokenStream` from a `Token`-generating `UnboundedReceiver`.
     ///
     /// # Examples
     ///
