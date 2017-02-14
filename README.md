@@ -9,8 +9,8 @@
 [![Coverage Status]
 (https://coveralls.io/repos/github/dragostis/pest/badge.svg?branch=master)]
 (https://coveralls.io/github/dragostis/pest?branch=master)
-[![Cargo Crate](http://meritbadge.herokuapp.com/pest)]
-(https://crates.io/crates/pest)
+[![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
+[![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
 
 pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
 generator with *simplicity* and *speed* in mind.
