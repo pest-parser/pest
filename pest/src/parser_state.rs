@@ -12,14 +12,18 @@ enum TokenDestination {
 
 /// A `struct` which contains the complete state of a `Parser`.
 pub struct ParserState<'a, Rule> {
-    input:       &'a Input,
-    pos:         usize,
-    sender:      UnboundedSender<Token<Rule>>,
-    queue:       Vec<Token<Rule>>,
-    dest:        TokenDestination,
-    is_atomic:   bool,
-    attempts:    Vec<Rule>,
-    attempt_pos: usize
+    input:           &'a Input,
+    pos:             usize,
+    sender:          UnboundedSender<Token<Rule>>,
+    queue:           Vec<Token<Rule>>,
+    dest:            TokenDestination,
+    is_atomic:       bool,
+    attempts:        Vec<Rule>,
+    attempt_pos:     usize,
+    /// Stack of captured strings
+    pub stack:       Vec<&'a str>,
+    /// End-of-input matched flag
+    pub eoi_matched: bool
 }
 
 impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
@@ -48,7 +52,9 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
             dest:        TokenDestination::Stream,
             is_atomic:   false,
             attempts:    vec![],
-            attempt_pos: 0
+            attempt_pos: 0,
+            stack:       vec![],
+            eoi_matched: false
         }
     }
 
@@ -77,6 +83,54 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
             TokenDestination::Queue  => self.queue.push(token),
             TokenDestination::Ignore => ()
         };
+    }
+
+    /// Returns whether the position is at the start of the `Input`.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # extern crate futures;
+    /// # extern crate pest;
+    /// # use futures::sync::mpsc::unbounded;
+    /// # use pest::{ParserState, StringInput, Token};
+    /// # fn main() {
+    /// let (s, _) = unbounded::<Token<()>>();
+    /// let input = StringInput::new("ab");
+    /// let mut state = ParserState::new(&input, s);
+    ///
+    /// assert!(state.at_start());
+    /// state.match_string("ab");
+    /// assert!(!state.at_start());
+    /// # }
+    /// ```
+    #[inline]
+    pub fn at_start(&self) -> bool {
+        self.pos == 0
+    }
+
+    /// Returns whether the position is at the end of the `Input`.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # extern crate futures;
+    /// # extern crate pest;
+    /// # use futures::sync::mpsc::unbounded;
+    /// # use pest::{ParserState, StringInput, Token};
+    /// # fn main() {
+    /// let (s, _) = unbounded::<Token<()>>();
+    /// let input = StringInput::new("ab");
+    /// let mut state = ParserState::new(&input, s);
+    ///
+    /// assert!(!state.at_end());
+    /// state.match_string("ab");
+    /// assert!(state.at_end());
+    /// # }
+    /// ```
+    #[inline]
+    pub fn at_end(&self) -> bool {
+        self.pos == self.input.len()
     }
 
     /// Matches `string`, returns whether it matched, and advances the position with `string.len()`
