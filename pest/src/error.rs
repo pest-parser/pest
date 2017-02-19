@@ -6,9 +6,9 @@ pub enum Error<Rule> {
     /// Generated parsing error with expected and unexpected `Rule`s and a position
     ParsingError(Vec<Rule>, Vec<Rule>, usize),
     /// Custom error with a message and a position
-    CustomPos(String, usize),
+    CustomErrorPos(String, usize),
     /// Custom error with a message and a span defined by a start and end position
-    CustomSpan(String, usize, usize)
+    CustomErrorSpan(String, usize, usize)
 }
 
 impl<Rule> Error<Rule> {
@@ -19,7 +19,7 @@ impl<Rule> Error<Rule> {
     /// ```
     /// # use pest::{Error, StringInput};
     /// let input = StringInput::new("ab\ncd\nef");
-    /// let error: Error<()> = Error::CustomPos("error: big one".to_owned(), 4);
+    /// let error: Error<()> = Error::CustomErrorPos("error: big one".to_owned(), 4);
     ///
     /// assert_eq!(error.format(&input), vec![
     ///     " --> 2:2",
@@ -41,7 +41,7 @@ impl<Rule> Error<Rule> {
     /// ```
     /// # use pest::{Error, StringInput};
     /// let input = StringInput::new("ab\ncd\nefghi");
-    /// let error: Error<()> = Error::CustomSpan("error: big one".to_owned(), 7, 11);
+    /// let error: Error<()> = Error::CustomErrorSpan("error: big one".to_owned(), 7, 11);
     ///
     /// assert_eq!(error.format_with_filename(&input, "file.ext"), vec![
     ///     " --> file.ext:3:2",
