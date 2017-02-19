@@ -9,8 +9,11 @@ pub trait Input {
     /// Slices an `Input`.
     fn slice(&self, start: usize, end: usize) -> &str;
 
-    /// Returns the line and column of a position for an `Input`.
+    /// Returns the line and column numbers of a position for an `Input`.
     fn line_col(&self, pos: usize) -> (usize, usize);
+
+    /// Returns the line of a position for an `Input`.
+    fn line_of(&self, pos: usize) -> &str;
 
     /// Matches `string` to an `Input` at `pos` and returns whether it matched.
     fn match_string(&self, string: &str, pos: usize) -> bool;
