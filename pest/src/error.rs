@@ -59,18 +59,18 @@ impl<Rule> Error<Rule> {
     fn message(&self) -> &str {
         match self {
             &Error::ParsingError(_, _, _)         => unimplemented!(),
-            &Error::CustomPos(ref message, _)     => message,
-            &Error::CustomSpan(ref message, _, _) => message
+            &Error::CustomErrorPos(ref message, _)     => message,
+            &Error::CustomErrorSpan(ref message, _, _) => message
         }
     }
 
-    fn underline(&self, line: &str, offset: usize) -> String {
+    fn underline(&self, offset: usize) -> String {
         let mut underline = String::new();
 
         for _ in 0..offset { underline.push(' '); }
 
         match self {
-            &Error::CustomSpan(_, start, end) => {
+            &Error::CustomErrorSpan(_, start, end) => {
                 underline.push('^');
                 for _ in 2..(end - start) { underline.push('-'); }
                 underline.push('^');
@@ -84,8 +84,8 @@ impl<Rule> Error<Rule> {
     fn format_option(&self, input: &Input, option: Option<&str>) -> String {
         let pos = match self {
             &Error::ParsingError(_, _, pos) => pos,
-            &Error::CustomPos(_, pos)       => pos,
-            &Error::CustomSpan(_, pos, _)   => pos
+            &Error::CustomErrorPos(_, pos)       => pos,
+            &Error::CustomErrorSpan(_, pos, _)   => pos
         };
         let (line, col) = input.line_col(pos);
         let line_str_len = format!("{}", line).len();
@@ -103,7 +103,7 @@ impl<Rule> Error<Rule> {
 
         let line = input.line_of(pos);
         result.push_str(&format!("{}\n", line));
-        result.push_str(&format!("{} | {}\n", spacing, self.underline(&line, col - 1)));
+        result.push_str(&format!("{} | {}\n", spacing, self.underline(col - 1)));
         result.push_str(&format!("{} |\n", spacing));
         result.push_str(&format!("{} = {}", spacing, self.message()));
 
