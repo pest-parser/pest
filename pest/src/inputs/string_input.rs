@@ -8,8 +8,7 @@ use super::Input;
 /// # Examples
 ///
 /// ```
-/// # use pest::Input;
-/// # use pest::StringInput;
+/// # use pest::{Input, StringInput};
 /// let mut input = StringInput::new("asdasdf");
 ///
 /// assert!(input.match_string("asd", 0));
@@ -26,8 +25,7 @@ impl<'a> StringInput<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::Input;
-    /// # use pest::StringInput;
+    /// # use pest::{Input, StringInput};
     /// let mut input = StringInput::new("asd");
     ///
     /// assert_eq!(input.len(), 3);
@@ -82,7 +80,7 @@ impl<'a> Input for StringInput<'a> {
                         }
                     } else {
                         pos -= 1;
-                        line_col = (line_col.0 + 1, 1);
+                        line_col = (line_col.0, line_col.1 + 1);
                     }
                 }
                 Some('\n') => {
@@ -98,6 +96,39 @@ impl<'a> Input for StringInput<'a> {
         }
 
         line_col
+    }
+
+    #[inline]
+    fn line_of(&self, mut pos: usize) -> &str {
+        if pos > self.string.len() {
+            panic!("position out of bounds");
+        }
+
+        if unsafe { self.string.slice_unchecked(pos, pos + 1) == "\n" } {
+            pos -= 1;
+        }
+
+        let start = self.string.char_indices()
+                               .rev()
+                               .skip_while(|&(i, _)| i > pos)
+                               .find(|&(_, c)| c == '\n');
+        let start = match start {
+            Some((i, _)) => i + 1,
+            None         => 0
+        };
+
+        let end = self.string.char_indices()
+                             .skip_while(|&(i, _)| i < pos)
+                             .find(|&(_, c)| c == '\n');
+        let mut end = match end {
+            Some((i, _)) => i,
+            None         => self.string.len()
+        };
+        if end > 0 && unsafe { self.string.slice_unchecked(end - 1, end) == "\r" } {
+            end -= 1;
+        }
+
+        unsafe { &self.string.slice_unchecked(start, end) }
     }
 
     #[inline]
@@ -188,14 +219,30 @@ mod tests {
 
         assert_eq!(input.line_col(0), (1, 1));
         assert_eq!(input.line_col(1), (1, 2));
-        assert_eq!(input.line_col(2), (2, 1));
-        assert_eq!(input.line_col(3), (2, 2));
-        assert_eq!(input.line_col(4), (3, 1));
-        assert_eq!(input.line_col(5), (3, 2));
-        assert_eq!(input.line_col(6), (4, 1));
-        assert_eq!(input.line_col(7), (4, 1));
-        assert_eq!(input.line_col(8), (4, 2));
-        assert_eq!(input.line_col(11), (4, 3));
+        assert_eq!(input.line_col(2), (1, 3));
+        assert_eq!(input.line_col(3), (1, 4));
+        assert_eq!(input.line_col(4), (2, 1));
+        assert_eq!(input.line_col(5), (2, 2));
+        assert_eq!(input.line_col(6), (2, 3));
+        assert_eq!(input.line_col(7), (3, 1));
+        assert_eq!(input.line_col(8), (3, 2));
+        assert_eq!(input.line_col(11), (3, 3));
+    }
+
+    #[test]
+    fn line_of() {
+        let input = StringInput::new("a\rb\nc\r\nd嗨");
+
+        assert_eq!(input.line_of(0), "a\rb");
+        assert_eq!(input.line_of(1), "a\rb");
+        assert_eq!(input.line_of(2), "a\rb");
+        assert_eq!(input.line_of(3), "a\rb");
+        assert_eq!(input.line_of(4), "c");
+        assert_eq!(input.line_of(5), "c");
+        assert_eq!(input.line_of(6), "c");
+        assert_eq!(input.line_of(7), "d嗨");
+        assert_eq!(input.line_of(8), "d嗨");
+        assert_eq!(input.line_of(11), "d嗨");
     }
 
     #[test]
