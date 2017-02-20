@@ -419,12 +419,6 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// let mut state = ParserState::new(&input, s);
     ///
     /// state.track_pos(Rule::a);
-    /// assert_eq!(state.pos_attempts(), (vec![Rule::a], 0));
-    ///
-    /// state.match_string("a");
-    ///
-    /// state.track_pos(Rule::b);
-    /// assert_eq!(state.pos_attempts(), (vec![Rule::b], 1));
     /// # }
     /// ```
     #[inline]
@@ -472,12 +466,6 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// let mut state = ParserState::new(&input, s);
     ///
     /// state.track_neg(Rule::a);
-    /// assert_eq!(state.neg_attempts(), (vec![Rule::a], 0));
-    ///
-    /// state.match_string("a");
-    ///
-    /// state.track_neg(Rule::b);
-    /// assert_eq!(state.neg_attempts(), (vec![Rule::b], 1));
     /// # }
     /// ```
     #[inline]
@@ -501,63 +489,5 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
                 self.attempt_pos = self.pos;
             }
         }
-    }
-
-    /// Returns a `Vec` of all attempted positive `Rule`s at the deepest position where the parsing
-    /// last stopped. It only returns leaves from the rule tree.
-    ///
-    /// It is commonly used for error reporting and debugging grammars.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
-    /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
-    /// let input = StringInput::new("");
-    /// let mut state = ParserState::new(&input, s);
-    ///
-    /// state.track_pos(());
-    /// assert_eq!(state.pos_attempts(), (vec![()], 0));
-    /// # }
-    /// ```
-    #[inline]
-    pub fn pos_attempts(&mut self) -> (Vec<Rule>, usize) {
-        self.pos_attempts.sort();
-        self.pos_attempts.dedup();
-
-        (self.pos_attempts.iter().cloned().collect(), self.attempt_pos)
-    }
-
-    /// Returns a `Vec` of all attempted negative `Rule`s at the deepest position where the parsing
-    /// last stopped. It only returns leaves from the rule tree.
-    ///
-    /// It is commonly used for error reporting and debugging grammars.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
-    /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
-    /// let input = StringInput::new("");
-    /// let mut state = ParserState::new(&input, s);
-    ///
-    /// state.track_neg(());
-    /// assert_eq!(state.neg_attempts(), (vec![()], 0));
-    /// # }
-    /// ```
-    #[inline]
-    pub fn neg_attempts(&mut self) -> (Vec<Rule>, usize) {
-        self.neg_attempts.sort();
-        self.neg_attempts.dedup();
-
-        (self.neg_attempts.iter().cloned().collect(), self.attempt_pos)
     }
 }
