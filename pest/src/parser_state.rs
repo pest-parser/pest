@@ -1,7 +1,7 @@
 use futures::sync::mpsc::UnboundedSender;
 
 use super::inputs::Input;
-use super::token::Token;
+use super::tokens::Token;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum TokenDestination {
@@ -36,7 +36,8 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("a");
@@ -69,13 +70,14 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("");
     /// let mut state = ParserState::new(&input, s);
     ///
-    /// state.send(Token::Start((), 0));
+    /// state.send(Token::Start { rule: (), pos: 0 });
     /// # }
     /// ```
     #[inline]
@@ -95,7 +97,8 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("ab");
@@ -119,7 +122,8 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("ab");
@@ -144,7 +148,8 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("abcd");
@@ -174,7 +179,8 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("AbcD");
@@ -204,7 +210,8 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("Cd");
@@ -234,7 +241,8 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("abacad");
@@ -291,22 +299,23 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("ab");
     /// let mut state = ParserState::new(&input, s);
     ///
     /// assert!(state.ignored(|state| {
-    ///     state.send(Token::Start((), 0));
+    ///     state.send(Token::Start { rule: (), pos: 0 });
     ///     state.match_string("a") && state.match_string("b")
     /// }));
     /// assert!(state.ignored(|state| {
-    ///     state.send(Token::Start((), 0));
+    ///     state.send(Token::Start { rule: (), pos: 0 });
     ///     state.match_string("a") && state.match_string("b")
     /// }));
     /// assert!(!state.ignored(|state| {
-    ///     state.send(Token::Start((), 0));
+    ///     state.send(Token::Start { rule: (), pos: 0 });
     ///     state.match_string("a") && state.match_string("c")
     /// }));
     /// # }
@@ -342,7 +351,8 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("");
@@ -383,7 +393,8 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("");
@@ -406,7 +417,8 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
@@ -453,7 +465,8 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # extern crate futures;
     /// # extern crate pest;
     /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{ParserState, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
     /// #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
