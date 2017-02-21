@@ -1,5 +1,5 @@
 mod token;
-mod token_stream;
+mod token_data;
 
 pub use self::token::Token;
-pub use self::token_stream::TokenStream;
+pub use self::token_data::TokenData;
