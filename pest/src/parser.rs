@@ -1,5 +1,5 @@
 use super::inputs::Input;
-use super::token_stream::TokenStream;
+use super::tokens::TokenStream;
 
 /// A `trait` that defines a `Parser`.
 pub trait Parser<Rule> {
