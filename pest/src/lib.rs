@@ -4,7 +4,6 @@ mod inputs;
 mod parser;
 mod parser_state;
 mod error;
-mod streams;
 pub mod tokens;
 
 pub use error::Error;
@@ -12,4 +11,3 @@ pub use inputs::Input;
 pub use inputs::StringInput;
 pub use parser::Parser;
 pub use parser_state::{state, ParserState};
-pub use streams::parser_stream::ParserStream;

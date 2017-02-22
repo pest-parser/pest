@@ -1,9 +1,9 @@
-use futures::sync::mpsc::{unbounded, UnboundedSender};
+use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 
 use super::inputs::Input;
 use super::error::Error;
-use super::streams::parser_stream::{self, ParserStream};
 use super::tokens::Token;
+use super::tokens::TokenStream;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum TokenDestination {
@@ -45,7 +45,7 @@ pub struct ParserState<'a, Rule> {
 /// let (state, stream) = state::<()>(&input);
 /// # }
 /// ```
-pub fn state<'a, Rule>(input: &'a Input) -> (ParserState<'a, Rule>, ParserStream<Rule>) {
+pub fn state<'a, Rule>(input: &'a Input) -> (ParserState<'a, Rule>, TokenStream<Rule, UnboundedReceiver<Result<Token<Rule>, Error<Rule>>>>) {
     let (sender, receiver) = unbounded();
 
     let state = ParserState {
@@ -62,7 +62,7 @@ pub fn state<'a, Rule>(input: &'a Input) -> (ParserState<'a, Rule>, ParserStream
         eoi_matched:  false
     };
 
-    let stream = parser_stream::new(receiver);
+    let stream = TokenStream::new(receiver);
 
     (state, stream)
 }
