@@ -86,19 +86,19 @@
 ///
 /// let mut parser = Rdp::new(StringInput::new("b"));
 ///
-/// // Notice that you have to call b() here so that there are some tokens in the queue
+/// // Notice that b() is called here so that there are some tokens in the queue.
 /// parser.b();
 /// parser.ab();
 /// # }
 /// ```
 ///
-/// The reason for using a `panic!` instead of a `Result` is because this error is not common
-/// once the matcher method is fully defined. A matcher method should be able to match everything
-/// the grammar can provide. This `panic!` is designed to help the developer find the cases they
-/// missed.
+/// The reason for using a `panic!` instead of `Result` is because match mistakes should not be
+/// handled at runtime. The parser should take care of syntax errors using the definitions in
+/// `grammar!`. This `panic!` is designed to help the developer find the cases their matcher
+/// methods missed.
 ///
-/// An added benefit of using `panic!` over `Result` here is avoiding unnecessary `Result`
-/// management on code that will never result in an error once written correctly.
+/// Using `panic!` over `Result` here avoids unnecessary `Result` management on code that will
+/// never result in an error once written correctly.
 ///
 /// # Examples
 ///
