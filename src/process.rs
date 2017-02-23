@@ -32,7 +32,7 @@
 ///
 /// Patterns are constructed using a comma-separated list of the items above in a matcher method:
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// impl_rdp! {
 ///     grammar! {
 ///         // a = { ... }
