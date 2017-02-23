@@ -3,11 +3,8 @@ language: rust
 cache: cargo
 os:
   - linux
-#  - osx
 rust:
-#  - stable
-#  - beta
-  - nightly
+  - stable
 addons:
   apt:
     packages:
