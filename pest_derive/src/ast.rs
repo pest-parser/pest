@@ -105,7 +105,7 @@ pub fn map_all_exprs<F>(rules: Vec<Rule>, mut f: F) -> Vec<Rule> where F: FnMut(
     fn map_rec<F>(rules: Vec<Rule>, f: &mut F) -> Vec<Rule> where F: FnMut(Expr) -> Expr {
         rules.into_iter().map(move |rule| {
             match rule {
-                Rule { name, ty, body: Body::Normal(expr), .. } => {
+                Rule { name, ty, body: Body::Normal(expr) } => {
                     Rule {
                         name: name,
                         ty:   ty,
