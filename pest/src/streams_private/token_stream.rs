@@ -434,7 +434,7 @@ mod tests {
     }
 
     #[test]
-    fn expand_error() {
+    fn expand_error_future_first() {
         let r = {
             let (s, r) = unbounded();
 
@@ -446,11 +446,54 @@ mod tests {
         let stream = parser_stream::new(r);
 
         let (_, stream) = stream.expand(Rule::a, |data, stream| {
-//            assert_eq!(data.wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
-//            assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+            assert_eq!(data.wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+            assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
         });
 
 
         assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+    }
+
+    #[test]
+    fn expand_error_expand_first() {
+        let r = {
+            let (s, r) = unbounded();
+
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        let (_, stream) = stream.expand(Rule::a, |data, stream| {
+            assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+            assert_eq!(data.wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+        });
+
+
+        assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+    }
+
+    #[test]
+    fn expand_error_tail_first() {
+        let r = {
+            let (s, r) = unbounded();
+
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        let ((data, expanded), stream) = stream.expand(Rule::a, |data, stream| {
+            (data, stream)
+        });
+
+
+        assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+        assert_eq!(data.wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+        assert_eq!(expanded.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
     }
 }
