@@ -12,6 +12,9 @@ addons:
       - libelf-dev
       - libdw-dev
       - binutils-dev
+      - cmake
+    sources:
+      - kalakris-cmake
 git:
   depth: 1
 branches:
@@ -20,36 +23,15 @@ branches:
     - procedural
 notifications:
   email: false
-cache:
-  directories:
-    - $TRAVIS_BUILD_DIR/pest/target
-    - $HOME/.cargo
 before_script:
   - |
-    if [[ $TRAVIS_OS_NAME =~ linux && $TRAVIS_BRANCH =~ master ]]; then
-      pip install 'travis-cargo<0.2' --user &&
-      export PATH=$HOME/.local/bin:$PATH
-    fi
+      cargo install --force cargo-travis &&
+      export PATH=$HOME/.cargo/bin:$PATH
 script:
   - |
-    if [[ $TRAVIS_OS_NAME =~ linux && $TRAVIS_BRANCH =~ master ]]; then
       cd pest &&
-      travis-cargo test &&
-      travis-cargo --only stable doc &&
-      cd ../pest_derive &&
-      travis-cargo test
-    else
-      cd pest &&
+      cargo build &&
       cargo test &&
-      cd ../pest_derive &&
-      cargo test
-    fi
-after_success: |
-  if [[ $TRAVIS_OS_NAME =~ linux && $TRAVIS_BRANCH =~ master && $TRAVIS_RUST_VERSION =~ stable ]]; then
-    cd pest &&
-    travis-cargo coveralls --no-sudo --verify \
-    --kcov-options="--exclude-path=target/,tests/"
-  fi
-env:
-  global:
-    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
+      cargo doc
+after_success:
+  - cargo coveralls

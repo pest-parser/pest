@@ -35,7 +35,7 @@ extern crate pest;
 You can run the calculator example by using `cargo run --example calculator`.
 
 
-## [Documentation](http://pest-parser.github.io/pest/pest)
+## [Documentation](https://docs.rs/pest)
 
 ## Elegant
 
