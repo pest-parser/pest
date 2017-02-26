@@ -1,5 +1,3 @@
-//! A `mod` containing `Stream` implementations used in `Token` processing.
-
 mod expandable_stream;
 mod expanded_stream;
 pub mod parser_stream;
