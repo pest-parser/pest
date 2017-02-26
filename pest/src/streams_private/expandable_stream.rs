@@ -14,7 +14,8 @@ pub struct ExpandableStream<Rule, S>
     queue:  LinkedList<Token<Rule>>,
     depth:  u32,
     start:  Option<usize>,
-    end:    Option<usize>
+    end:    Option<usize>,
+    error:  Option<Error<Rule>>
 }
 
 impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
@@ -26,11 +27,16 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
             queue:  LinkedList::new(),
             depth:  0,
             start:  None,
-            end:    None
+            end:    None,
+            error:  None
         }
     }
 
     pub fn poll_token_data(&mut self) -> Poll<TokenData<Rule>, Error<Rule>> {
+        if let Some(ref error) = self.error {
+            return Err(error.clone());
+        }
+
         if let (Some(start), Some(end)) = (self.start, self.end) {
             Ok(Async::Ready(
                 TokenData {
@@ -93,13 +99,21 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                         }
                     },
                     Ok(Async::NotReady) => return Ok(Async::NotReady),
-                    Err(e)              => return Err(e)
-                }
+                    Err(e) => {
+                        self.error = Some(e.clone());
+
+                        return Err(e);
+                    }
+                };
             }
         }
     }
 
     pub fn poll_expanded(&mut self) -> Poll<Option<Token<Rule>>, Error<Rule>> {
+        if let Some(ref error) = self.error {
+            return Err(error.clone());
+        }
+
         if !self.queue.is_empty() {
             Ok(Async::Ready(Some(self.queue.pop_front().unwrap())))
         } else {
@@ -157,14 +171,22 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                                     but found nothing", self.rule);
                         }
                     }
-                    Ok(Async::NotReady)    => Ok(Async::NotReady),
-                    Err(e)                 => Err(e)
+                    Ok(Async::NotReady) => Ok(Async::NotReady),
+                    Err(e) => {
+                        self.error = Some(e.clone());
+
+                        Err(e)
+                    }
                 }
             }
         }
     }
 
     pub fn poll_tail(&mut self) -> Poll<Option<Token<Rule>>, Error<Rule>> {
+        if let Some(ref error) = self.error {
+            return Err(error.clone());
+        }
+
         if self.end.is_none() {
             match self.stream.poll() {
                 Ok(Async::Ready(Some(token))) => {
@@ -200,15 +222,17 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                     if self.start.is_none() {
                         panic!("expected Token::Start {{ rule: {:?}, .. }}, \
                                 but found nothing", self.rule);
-                    } else if self.end.is_none() {
+                    } else {
                         panic!("expected Token::End {{ rule: {:?}, .. }}, \
                                 but found nothing", self.rule);
                     }
-
-                    return Ok(Async::Ready(None));
                 },
-                Ok(Async::NotReady)    => return Ok(Async::NotReady),
-                Err(e)                 => return Err(e)
+                Ok(Async::NotReady) => return Ok(Async::NotReady),
+                Err(e) => {
+                    self.error = Some(e.clone());
+
+                    return Err(e);
+                }
             };
 
             self.poll_tail()
