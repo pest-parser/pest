@@ -89,6 +89,7 @@ mod tests {
 
     use super::TokenStream;
     use super::super::parser_stream;
+    use super::super::super::error::Error;
     use super::super::super::tokens::{Token, TokenData};
 
 
@@ -381,7 +382,7 @@ mod tests {
     }
 
     #[test]
-    fn expand_data_first() {
+    fn expand_future_first() {
         let r = {
             let (s, r) = unbounded();
 
@@ -430,5 +431,26 @@ mod tests {
             Token::Start { rule: Rule::a, pos: 1 },
             Token::End   { rule: Rule::a, pos: 2 }
         ]);
+    }
+
+    #[test]
+    fn expand_error() {
+        let r = {
+            let (s, r) = unbounded();
+
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        let (_, stream) = stream.expand(Rule::a, |data, stream| {
+//            assert_eq!(data.wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+//            assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+        });
+
+
+        assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
     }
 }
