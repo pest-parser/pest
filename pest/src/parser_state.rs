@@ -1,9 +1,11 @@
-use futures::sync::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
+use std::fmt::Debug;
+
+use futures::sync::mpsc::{unbounded, UnboundedSender};
 
 use super::inputs::Input;
 use super::error::Error;
+use super::streams_private::parser_stream;
 use super::tokens::Token;
-use super::tokens::TokenStream;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum TokenDestination {
@@ -45,7 +47,9 @@ pub struct ParserState<'a, Rule> {
 /// let (state, stream) = state::<()>(&input);
 /// # }
 /// ```
-pub fn state<'a, Rule>(input: &'a Input) -> (ParserState<'a, Rule>, TokenStream<Rule, UnboundedReceiver<Result<Token<Rule>, Error<Rule>>>>) {
+pub fn state<'a, Rule: Copy+ Debug + Eq + 'static>(input: &'a Input)
+    -> (ParserState<'a, Rule>, parser_stream::ParserStream<Rule>) {
+
     let (sender, receiver) = unbounded();
 
     let state = ParserState {
@@ -62,7 +66,7 @@ pub fn state<'a, Rule>(input: &'a Input) -> (ParserState<'a, Rule>, TokenStream<
         eoi_matched:  false
     };
 
-    let stream = TokenStream::new(receiver);
+    let stream = parser_stream::new(receiver);
 
     (state, stream)
 }
@@ -417,7 +421,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::{state, StringInput};
     /// # use pest::tokens::Token;
     /// # fn main() {
-    /// #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+    /// #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a,
     ///     b
@@ -464,7 +468,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::{state, StringInput};
     /// # use pest::tokens::Token;
     /// # fn main() {
-    /// #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+    /// #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a,
     ///     b
