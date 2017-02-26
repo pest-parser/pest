@@ -8,7 +8,8 @@ use super::token_stream::TokenStream;
 use super::super::error::Error;
 use super::super::tokens::Token;
 
-/// A `struct` which implements `Stream` and `TokenStream`, and is created by the `state` function.
+/// A `struct` which implements `Stream` and `TokenStream`, and is created by the
+/// [`state`](../fn.state) function.
 pub struct ParserStream<Rule> {
     stream: UnboundedReceiver<Result<Token<Rule>, Error<Rule>>>
 }

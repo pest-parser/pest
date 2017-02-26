@@ -11,7 +11,7 @@ use super::super::error::Error;
 use super::super::tokens::{Token, TokenData};
 
 /// A `struct` which implements `Future` and is the `TokenData`-returning future which is fed to the
-/// closure in `TokenStream::expanded`.
+/// closure in [`TokenStream::expanded`](trait.TokenStream#method.expand).
 pub struct TokenDataFuture<Rule, S>
     where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
 

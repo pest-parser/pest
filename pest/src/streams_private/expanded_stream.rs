@@ -11,7 +11,7 @@ use super::super::error::Error;
 use super::super::tokens::Token;
 
 /// A `struct` which implements `Stream` and `TokenStream`, and is the expanded stream which is fed
-/// to the closure in `TokenStream::expanded`.
+/// to the closure in [`TokenStream::expanded`](trait.TokenStream#method.expand).
 pub struct ExpandedStream<Rule, S>
     where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
 
