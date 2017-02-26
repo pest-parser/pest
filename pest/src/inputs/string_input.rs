@@ -9,7 +9,7 @@ use super::Input;
 ///
 /// ```
 /// # use pest::{Input, StringInput};
-/// let mut input = StringInput::new("asdasdf");
+/// let input = StringInput::new("asdasdf");
 ///
 /// assert!(input.match_string("asd", 0));
 /// assert!(input.match_string("asd", 3));
@@ -26,7 +26,7 @@ impl<'a> StringInput<'a> {
     ///
     /// ```
     /// # use pest::{Input, StringInput};
-    /// let mut input = StringInput::new("asd");
+    /// let input = StringInput::new("asd");
     ///
     /// assert_eq!(input.len(), 3);
     /// ```
