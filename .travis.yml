@@ -29,7 +29,10 @@ before_script:
       export PATH=$HOME/.cargo/bin:$PATH
 script:
   - |
-      cd pest &&
+      cd pest_derive &&
+      cargo build &&
+      cargo test &&
+      cd ../pest &&
       cargo build &&
       cargo test &&
       cargo doc
