@@ -1,10 +1,16 @@
 extern crate futures;
 
+mod error;
 mod inputs;
 mod parser;
 mod parser_state;
-mod error;
+mod streams_private;
 pub mod tokens;
+
+pub mod streams {
+    pub use super::streams_private::{ExpandedStream, ParserStream, TokenDataFuture, TokenStream,
+                                     TailStream};
+}
 
 pub use error::Error;
 pub use inputs::Input;
