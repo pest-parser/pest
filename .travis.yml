@@ -57,11 +57,9 @@ script:
     fi
 after_success: |
   if [[ $TRAVIS_OS_NAME =~ linux && $TRAVIS_RUST_VERSION =~ stable ]]; then
-    travis-cargo --only stable doc-upload
     travis-cargo coveralls --no-sudo --verify \
     --kcov-options="--exclude-path=target/,tests/"
   fi
 env:
   global:
     - TRAVIS_CARGO_NIGHTLY_FEATURE=""
-    - secure: Q8eNX72Ukmoo34FuX6Mr1IMEM1tSSJYgz+gfyOTonOHQn2ueICiXxImUEE+5kZqyRsEO00RlmkA1jytm/tHrxdtvm0Usz/C+Ypo3e/QYgJIcOCAULHryeoDdJnrRWuFvifHUhFT0UX5qmfrC8+K7d0LsJZfqXK4dGIkFSCBDqdKNzPoHE94+6OO99TdDaQ1dtcmn4l0N75CcAXcYbmZ2U9D3O5AO3Y1MuZnZI6ruqiTj1AJ2+NBhe079+5+9RLRWYP+dpc8Gbq7bBssaVF/iY0p4CQ1NvsmCBSnBwhQZQPTOyPjmH88cfv6w0/NO7XZsrvNpe32wtRjj1LPUDlXkcQxDWZwOCV/IrGWv77oOkYMeVzsVBeqqsBtXG5sC2R4DzLi9YF1mGTD8M1czOO3sqFCLUkh5dzaEdUz1p0pmdYeFuO9xWO9RGS8MNDKUhiBpSjGjxS45sKJzs8hRTBFTrUXccolSHXooC1yI+MP2JN5VhribXand+IoK40QiKNTQZA7VoyUMPM4qE6ZhIXGDWQYyebU3yGZZ9xb5Tjx6Ccz2yBpciMnI6I+zs4kxm1hNQd0rJWxQf94tvyIbFkMd+NIfjTRRzme/ejr2Q6Krgz6xYujUa9pH1SXTw0xo+8W0Nq9+big7bCNMiKbERw1s0UK+K+nst3SI6imC3JKfObU=
