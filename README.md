@@ -2,13 +2,14 @@
   <img src="https://cdn.rawgit.com/dragostis/pest/9605855a9c4e86d5e89bc963fe50ee344d8a40e6/pest-logo.svg"/>
 </p>
 
-# pest. Elegant, efficient grammars
+# pest. The Elegant Parser
 
 [![Join the chat at https://gitter.im/dragostis/pest](https://badges.gitter.im/dragostis/pest.svg)](https://gitter.im/dragostis/pest?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/dragostis/pest.svg?branch=master)](https://travis-ci.org/dragostis/pest)
 [![Coverage Status](https://coveralls.io/repos/github/dragostis/pest/badge.svg?branch=master)](https://coveralls.io/github/dragostis/pest?branch=master)
 [![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
+[![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)
 
 pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
 generator with *simplicity* and *speed* in mind.
@@ -20,7 +21,7 @@ to get them.
 Add the following to `Cargo.toml`:
 
 ```toml
-pest = "0.4"
+pest = "1.0"
 ```
 
 and in your Rust `lib.rs` or `main.rs`:
