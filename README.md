@@ -5,8 +5,8 @@
 # pest. The Elegant Parser
 
 [![Join the chat at https://gitter.im/dragostis/pest](https://badges.gitter.im/dragostis/pest.svg)](https://gitter.im/dragostis/pest?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/dragostis/pest.svg?branch=master)](https://travis-ci.org/dragostis/pest)
-[![Coverage Status](https://coveralls.io/repos/github/dragostis/pest/badge.svg?branch=master)](https://coveralls.io/github/dragostis/pest?branch=master)
+[![Build Status](https://travis-ci.org/pest-parser/pest.svg?branch=master)](https://travis-ci.org/pest-parser/pest)
+[![codecov](https://codecov.io/gh/pest-parser/pest/branch/master/graph/badge.svg)](https://codecov.io/gh/pest-parser/pest)
 [![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
 [![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)

@@ -35,6 +35,12 @@ script:
       cd ../pest &&
       cargo build &&
       cargo test &&
-      cargo doc
+      cargo doc &&
+      cd ..
 after_success:
-  - cargo coveralls
+  - |
+      cd pest_derive &&
+      cargo coverage &&
+      cd ../pest &&
+      cargo coverage &&
+      bash <(curl -s https://codecov.io/bash)
