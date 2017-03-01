@@ -56,7 +56,7 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                                 Token::Start { rule, pos } if rule == self.rule => {
                                     self.start = Some(pos);
                                 },
-                                token => panic!("expected Token::Start {{ rule: {:?}, .. }}, \
+                                token => panic!("expected Start {{ rule: {:?}, .. }}, \
                                                  but found {:?} instead", self.rule, token)
                             };
                         } else {
@@ -91,10 +91,10 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                     },
                     Ok(Async::Ready(None)) => {
                         if self.start.is_none() {
-                            panic!("expected Token::Start {{ rule: {:?}, .. }}, \
+                            panic!("expected Start {{ rule: {:?}, .. }}, \
                                     but found nothing", self.rule);
                         } else {
-                            panic!("expected Token::End {{ rule: {:?}, .. }}, \
+                            panic!("expected End {{ rule: {:?}, .. }}, \
                                     but found nothing", self.rule);
                         }
                     },
@@ -129,7 +129,7 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
 
                                     self.poll_expanded()
                                 },
-                                token => panic!("expected Token::Start {{ rule: {:?}, .. }}, \
+                                token => panic!("expected Start {{ rule: {:?}, .. }}, \
                                                  but found {:?} instead", self.rule, token)
                             }
                         } else {
@@ -162,10 +162,10 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                     },
                     Ok(Async::Ready(None)) => {
                         if self.start.is_none() {
-                            panic!("expected Token::Start {{ rule: {:?}, .. }}, \
+                            panic!("expected Start {{ rule: {:?}, .. }}, \
                                     but found nothing", self.rule);
                         } else {
-                            panic!("expected Token::End {{ rule: {:?}, .. }}, \
+                            panic!("expected End {{ rule: {:?}, .. }}, \
                                     but found nothing", self.rule);
                         }
                     }
@@ -193,7 +193,7 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                             Token::Start { rule, pos } if rule == self.rule => {
                                 self.start = Some(pos);
                             },
-                            token => panic!("expected Token::Start {{ rule: {:?}, .. }}, \
+                            token => panic!("expected Start {{ rule: {:?}, .. }}, \
                                              but found {:?} instead", self.rule, token)
                         };
                     } else {
@@ -216,10 +216,10 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                 },
                 Ok(Async::Ready(None)) => {
                     if self.start.is_none() {
-                        panic!("expected Token::Start {{ rule: {:?}, .. }}, \
+                        panic!("expected Start {{ rule: {:?}, .. }}, \
                                 but found nothing", self.rule);
                     } else {
-                        panic!("expected Token::End {{ rule: {:?}, .. }}, \
+                        panic!("expected End {{ rule: {:?}, .. }}, \
                                 but found nothing", self.rule);
                     }
                 },
