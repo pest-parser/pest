@@ -128,12 +128,8 @@ impl<Rule: Copy + Debug + Eq, S> SliceableStream<Rule, S>
                             self.poll_pair(index)
                         },
                         Ok(Async::Ready(None)) => {
-                            if self.depth == 0 {
-                                Ok(Async::Ready(None))
-                            } else {
-                                panic!("expected Token::End {{ rule: {:?}, .. }}, \
-                                        but found nothing", self.rule.as_ref().unwrap())
-                            }
+                            panic!("expected Token::End {{ rule: {:?}, .. }}, \
+                                    but found nothing", self.rule.as_ref().unwrap())
                         },
                         Ok(Async::NotReady) => Ok(Async::NotReady),
                         Err(e) => {
