@@ -6,6 +6,7 @@ use futures::stream::Stream;
 
 use super::expandable_stream::ExpandableStream;
 use super::expanded_stream as es;
+use super::peek_rule_future as prf;
 use super::sliced_stream as ss;
 use super::sliceable_stream::SliceableStream;
 use super::tail_stream as ts;
@@ -15,6 +16,56 @@ use super::super::tokens::Token;
 
 /// A `trait` that defines common methods on `Token` `Stream`s.
 pub trait TokenStream<Rule: Copy + Debug + Eq> {
+    /// Peeks at the following `Token`'s `Rule` and returns a `PeekRuleFuture` containing the
+    /// possible `Rule` and a `Peekable` stream.
+    ///
+    /// This method is used primarily as an easy means to decide what to do at any certain point
+    /// in the stream.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the first `Token` in the stream is not a `Token::Start`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # extern crate futures;
+    /// # extern crate pest;
+    /// # use futures::future::Future;
+    /// # use futures::stream::Stream;
+    /// # use pest::{state, StringInput};
+    /// # use pest::streams::TokenStream;
+    /// # use pest::tokens::Token;
+    /// # fn main() {
+    /// # #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     a
+    /// }
+    ///
+    /// let input = StringInput::new("");
+    /// let (mut state, stream) = state(&input);
+    ///
+    /// state.send(Token::Start { rule: Rule::a, pos: 0 });
+    /// state.send(Token::End   { rule: Rule::a, pos: 1 });
+    ///
+    /// stream.peek_rule().and_then(|(rule, stream)| {
+    ///     assert_eq!(rule, Some(Rule::a));
+    ///     assert_eq!(stream.take(2).collect().wait().unwrap(), vec![
+    ///         Token::Start { rule: Rule::a, pos: 0 },
+    ///         Token::End   { rule: Rule::a, pos: 1 }
+    ///     ]);
+    ///
+    ///     Ok(())
+    /// }).wait().unwrap();
+    /// # }
+    /// ```
+    fn peek_rule(self) -> prf::PeekRuleFuture<Rule, Self>
+        where Self: Stream<Item=Token<Rule>, Error=Error<Rule>> + Sized {
+
+        prf::new(self)
+    }
+
     /// Expands a matching `Token` pair to a `TokenDataFuture`, containing the `TokenData` crated
     /// from the pair, and an `ExpandedStream`, containing all the `Token`s between the matching
     /// pair.
@@ -173,6 +224,84 @@ mod tests {
     }
 
     #[test]
+    fn peek_rule_sleep() {
+        let r = {
+            let (s, r) = unbounded();
+
+            thread::spawn(move || {
+                thread::sleep(Duration::from_millis(10));
+
+                s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+            });
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        stream.peek_rule().and_then(|(rule, stream)| {
+            assert_eq!(rule, Some(Rule::a));
+            assert_eq!(stream.collect().wait().unwrap(), vec![
+                Token::Start { rule: Rule::a, pos: 0 }
+            ]);
+
+            Ok(())
+        }).wait().unwrap();
+    }
+
+    #[test]
+    fn peek_rule_empty() {
+        let r = {
+            let (_, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        stream.peek_rule().and_then(|(rule, stream)| {
+            assert_eq!(rule, None);
+            assert_eq!(stream.collect().wait().unwrap(), vec![]);
+
+            Ok(())
+        }).wait().unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "expected Start { .. }, \
+                               but found End { rule: a, pos: 0 } instead")]
+    fn peek_rule_end() {
+        let r = {
+            let (s, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
+
+            s.send(Ok(Token::End { rule: Rule::a, pos: 0 })).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        stream.peek_rule().wait().unwrap();
+    }
+
+    #[test]
+    fn peek_rule_error() {
+        let r = {
+            let (s, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
+
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        let err = stream.peek_rule().wait().err().unwrap();
+
+        assert_eq!(err, Error::CustomErrorPos("e".to_owned(), 2));
+    }
+
+    #[test]
     fn expand_sleep() {
         let r = {
             let (s, r) = unbounded();
@@ -267,7 +396,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::Start { rule: b, .. }, \
+    #[should_panic(expected = "expected Start { rule: b, .. }, \
                                but found Start { rule: a, pos: 0 } instead")]
     fn expand_wrong_start_future() {
         let r = {
@@ -287,7 +416,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::Start { rule: a, .. }, \
+    #[should_panic(expected = "expected Start { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_start_future() {
         let r = {
@@ -304,7 +433,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::End { rule: a, .. }, \
+    #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_end_future() {
         let r = {
@@ -323,7 +452,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::Start { rule: b, .. }, \
+    #[should_panic(expected = "expected Start { rule: b, .. }, \
                                but found Start { rule: a, pos: 0 } instead")]
     fn expand_wrong_start_expanded_stream() {
         let r = {
@@ -343,7 +472,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::Start { rule: a, .. }, \
+    #[should_panic(expected = "expected Start { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_start_expanded_stream() {
         let r = {
@@ -360,7 +489,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::End { rule: a, .. }, \
+    #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_end_expanded_stream() {
         let r = {
@@ -379,7 +508,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::Start { rule: b, .. }, \
+    #[should_panic(expected = "expected Start { rule: b, .. }, \
                                but found Start { rule: a, pos: 0 } instead")]
     fn expand_wrong_start_tail_stream() {
         let r = {
@@ -399,7 +528,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::Start { rule: a, .. }, \
+    #[should_panic(expected = "expected Start { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_start_tail_stream() {
         let r = {
@@ -416,7 +545,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::End { rule: a, .. }, \
+    #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_end_tail_stream() {
         let r = {
@@ -726,7 +855,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::Start { .. }, \
+    #[should_panic(expected = "expected Start { .. }, \
                                but found End { rule: a, pos: 0 } instead")]
     fn sliced_end() {
         let r = {
@@ -743,7 +872,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::End { rule: a, .. }, \
+    #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
     fn sliced_no_end_sliced() {
         let r = {
@@ -775,7 +904,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "expected Token::End { rule: a, .. }, \
+    #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
     fn sliced_no_end_pair() {
         let r = {
