@@ -11,7 +11,7 @@ use super::super::error::Error;
 use super::super::tokens::Token;
 
 /// A `struct` which implements `Stream` and `TokenStream`, and is contained withing the
-/// `SlicedStream` which is returned by [`TokenStream::expanded`](trait.TokenStream#method.sliced).
+/// `SlicedStream` which is returned by [`TokenStream::sliced`](trait.TokenStream#method.sliced).
 pub struct PairStream<Rule, S>
     where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
 
