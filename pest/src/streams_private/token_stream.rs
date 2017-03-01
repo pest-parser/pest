@@ -604,9 +604,11 @@ mod tests {
                 s.send(Ok(Token::Start { rule: Rule::b, pos: 2 })).unwrap();
                 s.send(Ok(Token::End   { rule: Rule::b, pos: 3 })).unwrap();
                 s.send(Ok(Token::Start { rule: Rule::c, pos: 4 })).unwrap();
-                s.send(Ok(Token::Start { rule: Rule::d, pos: 5 })).unwrap();
-                s.send(Ok(Token::End   { rule: Rule::d, pos: 6 })).unwrap();
-                s.send(Ok(Token::End   { rule: Rule::c, pos: 7 })).unwrap();
+                s.send(Ok(Token::Start { rule: Rule::c, pos: 5 })).unwrap();
+                s.send(Ok(Token::Start { rule: Rule::d, pos: 6 })).unwrap();
+                s.send(Ok(Token::End   { rule: Rule::d, pos: 7 })).unwrap();
+                s.send(Ok(Token::End   { rule: Rule::c, pos: 8 })).unwrap();
+                s.send(Ok(Token::End   { rule: Rule::c, pos: 9 })).unwrap();
             });
 
             r
@@ -629,15 +631,62 @@ mod tests {
             ],
             vec![
                 Token::Start { rule: Rule::c, pos: 4 },
-                Token::Start { rule: Rule::d, pos: 5 },
-                Token::End   { rule: Rule::d, pos: 6 },
-                Token::End   { rule: Rule::c, pos: 7 }
+                Token::Start { rule: Rule::c, pos: 5 },
+                Token::Start { rule: Rule::d, pos: 6 },
+                Token::End   { rule: Rule::d, pos: 7 },
+                Token::End   { rule: Rule::c, pos: 8 },
+                Token::End   { rule: Rule::c, pos: 9 }
             ]
         ]);
     }
 
     #[test]
-    fn slice_empty() {
+    fn sliced_wait() {
+        let r = {
+            let (s, r) = unbounded();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::b, pos: 2 })).unwrap();
+            s.send(Ok(Token::End   { rule: Rule::b, pos: 3 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::c, pos: 4 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::c, pos: 5 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::d, pos: 6 })).unwrap();
+            s.send(Ok(Token::End   { rule: Rule::d, pos: 7 })).unwrap();
+            s.send(Ok(Token::End   { rule: Rule::c, pos: 8 })).unwrap();
+            s.send(Ok(Token::End   { rule: Rule::c, pos: 9 })).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        let pairs = stream.sliced().map(|stream| stream).collect().wait().unwrap();
+        let pairs: Vec<_> = pairs.into_iter().map(|stream| {
+            stream.collect().wait().unwrap()
+        }).collect();
+
+        assert_eq!(pairs, vec![
+            vec![
+                Token::Start { rule: Rule::a, pos: 0 },
+                Token::End   { rule: Rule::a, pos: 1 }
+            ],
+            vec![
+                Token::Start { rule: Rule::b, pos: 2 },
+                Token::End   { rule: Rule::b, pos: 3 }
+            ],
+            vec![
+                Token::Start { rule: Rule::c, pos: 4 },
+                Token::Start { rule: Rule::c, pos: 5 },
+                Token::Start { rule: Rule::d, pos: 6 },
+                Token::End   { rule: Rule::d, pos: 7 },
+                Token::End   { rule: Rule::c, pos: 8 },
+                Token::End   { rule: Rule::c, pos: 9 }
+            ]
+        ]);
+    }
+
+    #[test]
+    fn sliced_empty() {
         let r = {
             let (_, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
 
@@ -652,7 +701,7 @@ mod tests {
     }
 
     #[test]
-    fn slice_one_pair() {
+    fn sliced_one_pair() {
         let r = {
             let (s, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
 
@@ -764,7 +813,7 @@ mod tests {
     }
 
     #[test]
-    fn sliced_error() {
+    fn sliced_error_pair() {
         let r = {
             let (s, r) = unbounded();
 
@@ -781,5 +830,26 @@ mod tests {
         }).into_future().wait().map_err(|_| ()).unwrap();
 
         assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+    }
+
+    #[test]
+    fn sliced_error_sliced() {
+        let r = {
+            let (s, r) = unbounded();
+
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        let (pair, stream) = stream.sliced().into_future().wait().map_err(|_| ()).unwrap();
+
+        assert_eq!(stream.collect().wait().err().unwrap(),
+                   Error::CustomErrorPos("e".to_owned(), 2));
+        assert_eq!(pair.unwrap().collect().wait().err().unwrap(),
+                   Error::CustomErrorPos("e".to_owned(), 2));
     }
 }
