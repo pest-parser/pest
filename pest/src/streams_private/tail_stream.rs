@@ -11,7 +11,7 @@ use super::super::error::Error;
 use super::super::tokens::Token;
 
 /// A `struct` which implements `Stream` and `TokenStream`, and is the returned tail stream which is
-/// returned in [`TokenStream::expanded`](trait.TokenStream#method.expand).
+/// returned by [`TokenStream::expanded`](trait.TokenStream#method.expand).
 pub struct TailStream<Rule, S>
     where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
 

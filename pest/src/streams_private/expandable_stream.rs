@@ -56,10 +56,8 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                                 Token::Start { rule, pos } if rule == self.rule => {
                                     self.start = Some(pos);
                                 },
-                                token => {
-                                    panic!("expected Token::Start {{ rule: {:?}, .. }}, \
-                                            but found {:?} instead", self.rule, token);
-                                }
+                                token => panic!("expected Token::Start {{ rule: {:?}, .. }}, \
+                                                 but found {:?} instead", self.rule, token)
                             };
                         } else {
                             match token {
@@ -117,7 +115,7 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
         }
 
         if !self.queue.is_empty() {
-            Ok(Async::Ready(Some(self.queue.pop_front().unwrap())))
+            Ok(Async::Ready(self.queue.pop_front()))
         } else {
             if self.end.is_some() {
                 Ok(Async::Ready(None))
@@ -131,10 +129,8 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
 
                                     self.poll_expanded()
                                 },
-                                token => {
-                                    panic!("expected Token::Start {{ rule: {:?}, .. }}, \
-                                            but found {:?} instead", self.rule, token)
-                                }
+                                token => panic!("expected Token::Start {{ rule: {:?}, .. }}, \
+                                                 but found {:?} instead", self.rule, token)
                             }
                         } else {
                             match token {
@@ -197,10 +193,8 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                             Token::Start { rule, pos } if rule == self.rule => {
                                 self.start = Some(pos);
                             },
-                            token => {
-                                panic!("expected Token::Start {{ rule: {:?}, .. }}, \
-                                        but found {:?} instead", self.rule, token);
-                            }
+                            token => panic!("expected Token::Start {{ rule: {:?}, .. }}, \
+                                             but found {:?} instead", self.rule, token)
                         };
                     } else {
                         match token {

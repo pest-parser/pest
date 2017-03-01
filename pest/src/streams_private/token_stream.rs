@@ -6,6 +6,8 @@ use futures::stream::Stream;
 
 use super::expandable_stream::ExpandableStream;
 use super::expanded_stream as es;
+use super::sliced_stream as ss;
+use super::sliceable_stream::SliceableStream;
 use super::tail_stream as ts;
 use super::token_data_future as tdf;
 use super::super::error::Error;
@@ -21,6 +23,11 @@ pub trait TokenStream<Rule: Copy + Debug + Eq> {
     /// same `Rule` with the condition that all `Token`s between them can form such pairs as well.
     /// This is similar to the
     /// [brace matching problem](https://en.wikipedia.org/wiki/Brace_matching) in editors.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the first `Token` in the stream is not a `Token::Start` with the matching `rule`
+    /// or if a pair if not found before the stream ends.
     ///
     /// # Examples
     ///
@@ -75,6 +82,69 @@ pub trait TokenStream<Rule: Copy + Debug + Eq> {
         let tail_stream = ts::new(stream.clone());
 
         (f(token_data_future, expanded_stream), tail_stream)
+    }
+
+    /// Returns a `SlicedStream` of `PairStream`s, with each `PairStream` containing all the
+    /// `Token`s between the matching pair *inclusively*.
+    ///
+    /// A matching `Token` pair is formed by a `Token::Start` followed by a `Token::End` with the
+    /// same `Rule` with the condition that all `Token`s between them can form such pairs as well.
+    /// This is similar to the
+    /// [brace matching problem](https://en.wikipedia.org/wiki/Brace_matching) in editors.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the first `Token` in the stream is not a `Token::Start` or if a pair if not found
+    /// before the stream ends.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # extern crate futures;
+    /// # extern crate pest;
+    /// # use futures::future::Future;
+    /// # use futures::stream::Stream;
+    /// # use pest::{state, StringInput};
+    /// # use pest::streams::TokenStream;
+    /// # use pest::tokens::Token;
+    /// # fn main() {
+    /// # #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     a,
+    ///     b
+    /// }
+    ///
+    /// let input = StringInput::new("");
+    /// let (mut state, stream) = state(&input);
+    ///
+    /// state.send(Token::Start { rule: Rule::a, pos: 0 });
+    /// state.send(Token::End   { rule: Rule::a, pos: 1 });
+    /// state.send(Token::Start { rule: Rule::b, pos: 2 });
+    /// state.send(Token::End   { rule: Rule::b, pos: 3 });
+    ///
+    /// let pairs = stream.sliced().map(|stream| {
+    ///     stream.collect().wait().unwrap()
+    /// }).take(2).collect().wait().unwrap();
+    ///
+    /// assert_eq!(pairs, vec![
+    ///     vec![
+    ///         Token::Start { rule: Rule::a, pos: 0 },
+    ///         Token::End   { rule: Rule::a, pos: 1 }
+    ///     ],
+    ///     vec![
+    ///         Token::Start { rule: Rule::b, pos: 2 },
+    ///         Token::End   { rule: Rule::b, pos: 3 }
+    ///     ]
+    /// ]);
+    /// # }
+    /// ```
+    fn sliced(self) -> ss::SlicedStream<Rule, Self>
+        where Self: Stream<Item=Token<Rule>, Error=Error<Rule>> + Sized {
+
+        let stream = Rc::new(RefCell::new(SliceableStream::new(self)));
+
+        ss::new(stream)
     }
 }
 
@@ -519,5 +589,197 @@ mod tests {
                 })
             })
         });
+    }
+
+    #[test]
+    fn sliced_sleep() {
+        let r = {
+            let (s, r) = unbounded();
+
+            thread::spawn(move || {
+                thread::sleep(Duration::from_millis(10));
+
+                s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+                s.send(Ok(Token::End   { rule: Rule::a, pos: 1 })).unwrap();
+                s.send(Ok(Token::Start { rule: Rule::b, pos: 2 })).unwrap();
+                s.send(Ok(Token::End   { rule: Rule::b, pos: 3 })).unwrap();
+                s.send(Ok(Token::Start { rule: Rule::c, pos: 4 })).unwrap();
+                s.send(Ok(Token::Start { rule: Rule::d, pos: 5 })).unwrap();
+                s.send(Ok(Token::End   { rule: Rule::d, pos: 6 })).unwrap();
+                s.send(Ok(Token::End   { rule: Rule::c, pos: 7 })).unwrap();
+            });
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        let pairs = stream.sliced().map(|stream| {
+            stream.collect().wait().unwrap()
+        }).collect().wait().unwrap();
+
+        assert_eq!(pairs, vec![
+            vec![
+                Token::Start { rule: Rule::a, pos: 0 },
+                Token::End   { rule: Rule::a, pos: 1 }
+            ],
+            vec![
+                Token::Start { rule: Rule::b, pos: 2 },
+                Token::End   { rule: Rule::b, pos: 3 }
+            ],
+            vec![
+                Token::Start { rule: Rule::c, pos: 4 },
+                Token::Start { rule: Rule::d, pos: 5 },
+                Token::End   { rule: Rule::d, pos: 6 },
+                Token::End   { rule: Rule::c, pos: 7 }
+            ]
+        ]);
+    }
+
+    #[test]
+    fn slice_empty() {
+        let r = {
+            let (_, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        let pairs = stream.sliced().map(|_| ()).collect().wait().unwrap();
+
+        assert_eq!(pairs, vec![]);
+    }
+
+    #[test]
+    fn slice_one_pair() {
+        let r = {
+            let (s, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
+
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 })).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        let pairs = stream.sliced().map(|stream| {
+            stream.collect().wait().unwrap()
+        }).collect().wait().unwrap();
+
+        assert_eq!(pairs, vec![
+            vec![
+                Token::Start { rule: Rule::a, pos: 0 },
+                Token::End   { rule: Rule::a, pos: 1 }
+            ]
+        ]);
+    }
+
+    #[test]
+    #[should_panic(expected = "expected Token::Start { .. }, \
+                               but found End { rule: a, pos: 0 } instead")]
+    fn sliced_end() {
+        let r = {
+            let (s, r) = unbounded();
+
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 0 })).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        stream.sliced().collect().wait().unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "expected Token::End { rule: a, .. }, \
+                               but found nothing")]
+    fn sliced_no_end_sliced() {
+        let r = {
+            let (s, r) = unbounded();
+
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        stream.sliced().collect().wait().unwrap();
+    }
+
+    #[test]
+    fn sliced_no_end_future_slice_no_panic() {
+        let r = {
+            let (s, r) = unbounded();
+
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        assert!(stream.sliced().into_future().wait().is_ok());
+    }
+
+    #[test]
+    #[should_panic(expected = "expected Token::End { rule: a, .. }, \
+                               but found nothing")]
+    fn sliced_no_end_pair() {
+        let r = {
+            let (s, r) = unbounded();
+
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        stream.sliced().map(|stream| {
+            stream.collect().wait().unwrap()
+        }).collect().wait().unwrap();
+    }
+
+    #[test]
+    fn sliced_incomplete_slice() {
+        let (s, r) = unbounded();
+
+        s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+        s.send(Ok(Token::End   { rule: Rule::a, pos: 1 })).unwrap();
+
+        let stream = parser_stream::new(r);
+
+        let (pair, _) = stream.sliced().map(|stream| {
+            stream.collect().wait().unwrap()
+        }).into_future().wait().map_err(|_| ()).unwrap();
+
+        assert_eq!(pair.unwrap(), vec![
+            Token::Start { rule: Rule::a, pos: 0 },
+            Token::End   { rule: Rule::a, pos: 1 }
+        ]);
+    }
+
+    #[test]
+    fn sliced_error() {
+        let r = {
+            let (s, r) = unbounded();
+
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+
+            r
+        };
+
+        let stream = parser_stream::new(r);
+
+        let (_, stream) = stream.sliced().map(|stream| {
+            assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+        }).into_future().wait().map_err(|_| ()).unwrap();
+
+        assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
     }
 }
