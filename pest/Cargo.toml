@@ -13,4 +13,4 @@ license = "MPL-2.0"
 futures = "^0.1"
 
 [badges]
-travis-ci = { repository = "dragostis/pest" }
+travis-ci = { repository = "pest-parser/pest" }
