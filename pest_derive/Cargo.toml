@@ -18,4 +18,4 @@ quote = "^0.3"
 syn = "^0.10"
 
 [badges]
-travis-ci = { repository = "dragostis/pest" }
+travis-ci = { repository = "pest-parser/pest" }
