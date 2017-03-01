@@ -9,10 +9,11 @@ use super::super::tokens::{Token, TokenData};
 
 pub struct ExpandableStream<Rule, S>
     where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+
     stream: S,
     rule:   Rule,
-    queue:  LinkedList<Token<Rule>>,
     depth:  u32,
+    queue:  LinkedList<Token<Rule>>,
     start:  Option<usize>,
     end:    Option<usize>,
     error:  Option<Error<Rule>>
@@ -20,12 +21,13 @@ pub struct ExpandableStream<Rule, S>
 
 impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
     where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+
     pub fn new(stream: S, rule: Rule) -> ExpandableStream<Rule, S> {
         ExpandableStream {
             stream: stream,
             rule:   rule,
-            queue:  LinkedList::new(),
             depth:  0,
+            queue:  LinkedList::new(),
             start:  None,
             end:    None,
             error:  None

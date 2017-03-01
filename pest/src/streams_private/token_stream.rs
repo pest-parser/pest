@@ -98,7 +98,8 @@ mod tests {
     enum Rule {
         a,
         b,
-        c
+        c,
+        d
     }
 
     #[test]
@@ -495,5 +496,28 @@ mod tests {
         assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
         assert_eq!(data.wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
         assert_eq!(expanded.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
+    }
+
+    #[test]
+    fn expand_nested() {
+        let (s, r) = unbounded();
+
+        s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+        s.send(Ok(Token::Start { rule: Rule::b, pos: 1 })).unwrap();
+        s.send(Ok(Token::Start { rule: Rule::c, pos: 2 })).unwrap();
+        s.send(Ok(Token::Start { rule: Rule::d, pos: 3 })).unwrap();
+        s.send(Ok(Token::End   { rule: Rule::d, pos: 4 })).unwrap();
+
+        let stream = parser_stream::new(r);
+
+        stream.expand(Rule::a, |_, stream| {
+            stream.expand(Rule::b, |_, stream| {
+                stream.expand(Rule::c, |_, stream| {
+                    stream.expand(Rule::d, |_, stream| {
+                        assert_eq!(stream.collect().wait().unwrap(), vec![]);
+                    })
+                })
+            })
+        });
     }
 }
