@@ -44,7 +44,7 @@ pub trait TokenStream<Rule: Copy + Debug + Eq> {
     /// }
     ///
     /// let input = StringInput::new("");
-    /// let (mut state, stream) = state(&input);
+    /// let (stream, mut state) = state(&input);
     ///
     /// state.send(Token::Start { rule: Rule::a, pos: 0 });
     /// state.send(Token::End   { rule: Rule::a, pos: 1 });
@@ -99,7 +99,7 @@ pub trait TokenStream<Rule: Copy + Debug + Eq> {
     /// }
     ///
     /// let input = StringInput::new("");
-    /// let (mut state, stream) = state(&input);
+    /// let (stream, mut state) = state(&input);
     ///
     /// state.send(Token::Start { rule: Rule::a, pos: 0 });
     /// state.send(Token::Start { rule: Rule::b, pos: 1 });
@@ -167,7 +167,7 @@ pub trait TokenStream<Rule: Copy + Debug + Eq> {
     /// }
     ///
     /// let input = StringInput::new("");
-    /// let (mut state, stream) = state(&input);
+    /// let (stream, mut state) = state(&input);
     ///
     /// state.send(Token::Start { rule: Rule::a, pos: 0 });
     /// state.send(Token::End   { rule: Rule::a, pos: 1 });
