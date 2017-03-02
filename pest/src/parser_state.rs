@@ -45,8 +45,8 @@ pub struct ParserState<'a, Rule> {
 /// let (_, _) = state::<()>(&input);
 /// # }
 /// ```
-pub fn state<'a, Rule: Copy+ Debug + Eq + 'static>(input: &'a Input)
-    -> (ParserState<'a, Rule>, parser_stream::ParserStream<Rule>) {
+pub fn state<Rule: Copy+ Debug + Eq + 'static>(input: &Input)
+    -> (ParserState<Rule>, parser_stream::ParserStream<Rule>) {
 
     let (sender, receiver) = unbounded();
 
@@ -421,16 +421,14 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
             self.pos_attempts.push(rule);
 
             self.attempt_pos = self.pos;
-        } else {
-            if self.pos == self.attempt_pos {
-                self.pos_attempts.push(rule);
-            } else if self.pos > self.attempt_pos {
-                self.pos_attempts.clear();
-                self.neg_attempts.clear();
-                self.pos_attempts.push(rule);
+        } else if self.pos == self.attempt_pos {
+            self.pos_attempts.push(rule);
+        } else if self.pos > self.attempt_pos {
+            self.pos_attempts.clear();
+            self.neg_attempts.clear();
+            self.pos_attempts.push(rule);
 
-                self.attempt_pos = self.pos;
-            }
+            self.attempt_pos = self.pos;
         }
     }
 
@@ -466,16 +464,14 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
             self.neg_attempts.push(rule);
 
             self.attempt_pos = self.pos;
-        } else {
-            if self.pos == self.attempt_pos {
-                self.neg_attempts.push(rule);
-            } else if self.pos > self.attempt_pos {
-                self.pos_attempts.clear();
-                self.neg_attempts.clear();
-                self.neg_attempts.push(rule);
+        } else if self.pos == self.attempt_pos {
+            self.neg_attempts.push(rule);
+        } else if self.pos > self.attempt_pos {
+            self.pos_attempts.clear();
+            self.neg_attempts.clear();
+            self.neg_attempts.push(rule);
 
-                self.attempt_pos = self.pos;
-            }
+            self.attempt_pos = self.pos;
         }
     }
 }

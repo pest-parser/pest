@@ -128,7 +128,7 @@ impl<'a> Input for StringInput<'a> {
             end -= 1;
         }
 
-        unsafe { &self.string.slice_unchecked(start, end) }
+        unsafe { self.string.slice_unchecked(start, end) }
     }
 
     #[inline]
