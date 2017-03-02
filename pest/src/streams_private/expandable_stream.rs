@@ -1,4 +1,4 @@
-use std::collections::LinkedList;
+use std::collections::VecDeque;
 use std::fmt::Debug;
 
 use futures::{Async, Poll};
@@ -13,7 +13,7 @@ pub struct ExpandableStream<Rule, S>
     stream: S,
     rule:   Rule,
     depth:  u32,
-    queue:  LinkedList<Token<Rule>>,
+    queue:  VecDeque<Token<Rule>>,
     start:  Option<usize>,
     end:    Option<usize>,
     error:  Option<Error<Rule>>
@@ -27,7 +27,7 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
             stream: stream,
             rule:   rule,
             depth:  0,
-            queue:  LinkedList::new(),
+            queue:  VecDeque::new(),
             start:  None,
             end:    None,
             error:  None
