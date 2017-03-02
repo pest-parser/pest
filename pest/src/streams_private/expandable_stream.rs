@@ -116,65 +116,63 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
 
         if !self.queue.is_empty() {
             Ok(Async::Ready(self.queue.pop_front()))
+        } else if self.end.is_some() {
+            Ok(Async::Ready(None))
         } else {
-            if self.end.is_some() {
-                Ok(Async::Ready(None))
-            } else {
-                match self.stream.poll() {
-                    Ok(Async::Ready(Some(token))) => {
-                        if self.start.is_none() {
-                            match token {
-                                Token::Start { rule, pos } if rule == self.rule => {
-                                    self.start = Some(pos);
+            match self.stream.poll() {
+                Ok(Async::Ready(Some(token))) => {
+                    if self.start.is_none() {
+                        match token {
+                            Token::Start { rule, pos } if rule == self.rule => {
+                                self.start = Some(pos);
 
-                                    self.poll_expanded()
-                                },
-                                token => panic!("expected Start {{ rule: {:?}, .. }}, \
-                                                 but found {:?} instead", self.rule, token)
-                            }
-                        } else {
-                            match token {
-                                Token::Start { rule, pos } if rule == self.rule => {
-                                    self.depth += 1;
+                                self.poll_expanded()
+                            },
+                            token => panic!("expected Start {{ rule: {:?}, .. }}, \
+                                             but found {:?} instead", self.rule, token)
+                        }
+                    } else {
+                        match token {
+                            Token::Start { rule, pos } if rule == self.rule => {
+                                self.depth += 1;
+
+                                Ok(Async::Ready(Some(
+                                    Token::Start { rule: rule, pos: pos }
+                                )))
+                            },
+                            Token::End { rule, pos } if rule == self.rule => {
+                                if self.depth == 0 {
+                                    self.end = Some(pos);
+
+                                    Ok(Async::Ready(None))
+                                } else {
+                                    self.depth -= 1;
 
                                     Ok(Async::Ready(Some(
-                                        Token::Start { rule: rule, pos: pos }
+                                        Token::End { rule: rule, pos: pos }
                                     )))
-                                },
-                                Token::End { rule, pos } if rule == self.rule => {
-                                    if self.depth == 0 {
-                                        self.end = Some(pos);
-
-                                        Ok(Async::Ready(None))
-                                    } else {
-                                        self.depth -= 1;
-
-                                        Ok(Async::Ready(Some(
-                                            Token::End { rule: rule, pos: pos }
-                                        )))
-                                    }
-                                },
-                                token => {
-                                    Ok(Async::Ready(Some(token)))
                                 }
+                            },
+                            token => {
+                                Ok(Async::Ready(Some(token)))
                             }
                         }
-                    },
-                    Ok(Async::Ready(None)) => {
-                        if self.start.is_none() {
-                            panic!("expected Start {{ rule: {:?}, .. }}, \
-                                    but found nothing", self.rule);
-                        } else {
-                            panic!("expected End {{ rule: {:?}, .. }}, \
-                                    but found nothing", self.rule);
-                        }
                     }
-                    Ok(Async::NotReady) => Ok(Async::NotReady),
-                    Err(e) => {
-                        self.error = Some(e.clone());
+                },
+                Ok(Async::Ready(None)) => {
+                    if self.start.is_none() {
+                        panic!("expected Start {{ rule: {:?}, .. }}, \
+                                but found nothing", self.rule);
+                    } else {
+                        panic!("expected End {{ rule: {:?}, .. }}, \
+                                but found nothing", self.rule);
+                    }
+                }
+                Ok(Async::NotReady) => Ok(Async::NotReady),
+                Err(e) => {
+                    self.error = Some(e.clone());
 
-                        Err(e)
-                    }
+                    Err(e)
                 }
             }
         }

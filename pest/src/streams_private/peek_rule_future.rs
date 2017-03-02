@@ -32,9 +32,9 @@ impl <Rule: Copy + Debug, S> Future for PeekRuleFuture<Rule, S>
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let rule = match self.peekable.as_mut().expect("called poll twice").peek() {
             Ok(Async::Ready(Some(token))) => {
-                let rule = match token {
-                    &Token::Start { rule, .. } => rule,
-                    &Token::End   { .. } => {
+                let rule = match *token {
+                    Token::Start { rule, .. } => rule,
+                    Token::End   { .. } => {
                         panic!("expected Start {{ .. }}, but found {:?} instead", token)
                     }
                 };
