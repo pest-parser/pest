@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "pest",
+    "pest_derive"
+]
