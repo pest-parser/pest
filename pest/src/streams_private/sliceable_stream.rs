@@ -1,4 +1,4 @@
-use std::collections::LinkedList;
+use std::collections::VecDeque;
 use std::fmt::Debug;
 
 use futures::{Async, Poll};
@@ -12,7 +12,7 @@ pub struct SliceableStream<Rule, S>
 
     stream: S,
     depth:  usize,
-    queues: Vec<LinkedList<Token<Rule>>>,
+    queues: Vec<VecDeque<Token<Rule>>>,
     rule:   Option<Rule>,
     error:  Option<Error<Rule>>
 }
@@ -42,7 +42,7 @@ impl<Rule: Copy + Debug + Eq, S> SliceableStream<Rule, S>
                     match token {
                         Token::Start { rule, pos } => {
                             self.depth += 1;
-                            self.queues.push(LinkedList::new());
+                            self.queues.push(VecDeque::new());
                             self.rule = Some(rule);
 
                             self.queues.last_mut().unwrap().push_back(
