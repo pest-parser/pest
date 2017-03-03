@@ -36,6 +36,3 @@ impl<Rule: Copy + Debug + Eq, S> Stream for TailStream<Rule, S>
         self.stream.borrow_mut().poll_tail()
     }
 }
-
-impl<Rule: Copy + Debug + Eq, S> TokenStream<Rule> for TailStream<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {}
