@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
 
-use futures::stream::Stream;
+use futures::stream::{Peekable, Stream};
 
 use super::expandable_stream::ExpandableStream;
 use super::expanded_stream as es;
@@ -15,7 +15,9 @@ use super::super::error::Error;
 use super::super::tokens::Token;
 
 /// A `trait` that defines common methods on `Token` `Stream`s.
-pub trait TokenStream<Rule: Copy + Debug + Eq> {
+pub trait TokenStream<Rule: Copy + Debug + Eq>:
+    Stream<Item=Token<Rule>, Error=Error<Rule>> + Sized {
+
     /// Peeks at the following `Token`'s `Rule` and returns a `PeekRuleFuture` containing the
     /// possible `Rule` and a `Peekable` stream.
     ///
@@ -60,9 +62,7 @@ pub trait TokenStream<Rule: Copy + Debug + Eq> {
     /// }).wait().unwrap();
     /// # }
     /// ```
-    fn peek_rule(self) -> prf::PeekRuleFuture<Rule, Self>
-        where Self: Stream<Item=Token<Rule>, Error=Error<Rule>> + Sized {
-
+    fn peek_rule(self) -> prf::PeekRuleFuture<Rule, Self> {
         prf::new(self)
     }
 
@@ -123,8 +123,7 @@ pub trait TokenStream<Rule: Copy + Debug + Eq> {
     /// # }
     /// ```
     fn expand<F, T>(self, rule: Rule, f: F) -> (T, ts::TailStream<Rule, Self>)
-        where F: FnOnce(tdf::TokenDataFuture<Rule, Self>, es::ExpandedStream<Rule, Self>) -> T,
-              Self: Stream<Item=Token<Rule>, Error=Error<Rule>> + Sized {
+        where F: FnOnce(tdf::TokenDataFuture<Rule, Self>, es::ExpandedStream<Rule, Self>) -> T {
 
         let stream = Rc::new(RefCell::new(ExpandableStream::new(self, rule)));
 
@@ -190,14 +189,15 @@ pub trait TokenStream<Rule: Copy + Debug + Eq> {
     /// ]);
     /// # }
     /// ```
-    fn sliced(self) -> ss::SlicedStream<Rule, Self>
-        where Self: Stream<Item=Token<Rule>, Error=Error<Rule>> + Sized {
-
+    fn sliced(self) -> ss::SlicedStream<Rule, Self> {
         let stream = Rc::new(RefCell::new(SliceableStream::new(self)));
 
         ss::new(stream)
     }
 }
+
+impl<Rule: Copy + Debug + Eq, S> TokenStream<Rule> for S
+    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {}
 
 #[cfg(test)]
 mod tests {
