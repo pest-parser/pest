@@ -36,6 +36,3 @@ impl<Rule: Copy + Debug + Eq, S> Stream for ExpandedStream<Rule, S>
         self.stream.borrow_mut().poll_expanded()
     }
 }
-
-impl<Rule: Copy + Debug + Eq, S> TokenStream<Rule> for ExpandedStream<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {}

@@ -39,6 +39,3 @@ impl<Rule: Copy + Debug + Eq, S> Stream for PairStream<Rule, S>
         self.stream.borrow_mut().poll_pair(self.index)
     }
 }
-
-impl<Rule: Copy + Debug + Eq, S> TokenStream<Rule> for PairStream<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {}

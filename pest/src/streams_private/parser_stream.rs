@@ -40,5 +40,3 @@ impl<Rule> Stream for ParserStream<Rule> {
         }
     }
 }
-
-impl<Rule: Copy + Debug + Eq> TokenStream<Rule> for ParserStream<Rule> {}
