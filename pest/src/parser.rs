@@ -1,8 +1,11 @@
+use std::fmt::Debug;
+use std::sync::Arc;
+
 use super::inputs::Input;
-use super::token_stream::TokenStream;
+use super::streams_private::parser_stream::ParserStream;
 
 /// A `trait` that defines a `Parser`.
-pub trait Parser<Rule> {
-    /// Parses `input` starting from `rule` and returns a stream of `Token`s.
-    fn parse(rule: Rule, input: &Input) -> TokenStream<Rule>;
+pub trait Parser<Rule: Debug + Eq + 'static> {
+    /// Parses `input` starting from `rule` and returns a `ParserStream` of `Token`s.
+    fn parse<I: Input>(rule: Rule, input: Arc<I>) -> ParserStream<Rule>;
 }

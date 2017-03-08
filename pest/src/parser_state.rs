@@ -1,7 +1,11 @@
-use futures::sync::mpsc::UnboundedSender;
+use std::fmt::Debug;
+
+use futures::sync::mpsc::{unbounded, UnboundedSender};
 
 use super::inputs::Input;
-use super::token::Token;
+use super::error::Error;
+use super::streams_private::parser_stream;
+use super::tokens::Token;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum TokenDestination {
@@ -11,10 +15,10 @@ enum TokenDestination {
 }
 
 /// A `struct` which contains the complete state of a `Parser`.
-pub struct ParserState<'a, Rule> {
-    input:           &'a Input,
+pub struct ParserState<'a, Rule, I: 'a + Input> {
+    input:           &'a I,
     pos:             usize,
-    sender:          UnboundedSender<Token<Rule>>,
+    sender:          UnboundedSender<Result<Token<Rule>, Error<Rule>>>,
     queue:           Vec<Token<Rule>>,
     dest:            TokenDestination,
     is_atomic:       bool,
@@ -27,39 +31,45 @@ pub struct ParserState<'a, Rule> {
     pub eoi_matched: bool
 }
 
-impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
-    /// Creates a new `ParserState` from an `Input` and an `UnboundedSender`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
-    /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
-    /// let input = StringInput::new("a");
-    ///
-    /// let state = ParserState::new(&input, s);
-    /// # }
-    /// ```
-    pub fn new(input: &'a Input, sender: UnboundedSender<Token<Rule>>) -> ParserState<'a, Rule> {
-        ParserState {
-            input:        input,
-            pos:          0,
-            sender:       sender,
-            queue:        vec![],
-            dest:         TokenDestination::Stream,
-            is_atomic:    false,
-            pos_attempts: vec![],
-            neg_attempts: vec![],
-            attempt_pos:  0,
-            stack:        vec![],
-            eoi_matched:  false
-        }
-    }
+/// Creates a new `(ParserStream, ParserState)` tuple from an `Input`.
+///
+/// # Examples
+///
+/// ```
+/// # extern crate futures;
+/// # extern crate pest;
+/// # use pest::{state, StringInput};
+/// # fn main() {
+/// let input = StringInput::new("a");
+///
+/// let (_, _) = state::<(), _>(&input);
+/// # }
+/// ```
+pub fn state<Rule: Copy+ Debug + Eq + 'static, I: Input>(input: &I)
+    -> (parser_stream::ParserStream<Rule>, ParserState<Rule, I>) {
 
+    let (sender, receiver) = unbounded();
+
+    let state = ParserState {
+        input:        input,
+        pos:          0,
+        sender:       sender,
+        queue:        vec![],
+        dest:         TokenDestination::Stream,
+        is_atomic:    false,
+        pos_attempts: vec![],
+        neg_attempts: vec![],
+        attempt_pos:  0,
+        stack:        vec![],
+        eoi_matched:  false
+    };
+
+    let stream = parser_stream::new(receiver);
+
+    (stream, state)
+}
+
+impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
     /// Sends `token` according to the state's destination. The `Token` will get sent to the
     /// `TokenStream`, queued up to be sent later, or ignored.
     ///
@@ -68,20 +78,19 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```no_run
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
-    /// state.send(Token::Start((), 0));
+    /// state.send(Token::Start { rule: (), pos: 0 });
     /// # }
     /// ```
     #[inline]
     pub fn send(&mut self, token: Token<Rule>) {
         match self.dest {
-            TokenDestination::Stream => self.sender.send(token).unwrap(),
+            TokenDestination::Stream => self.sender.send(Ok(token)).unwrap(),
             TokenDestination::Queue  => self.queue.push(token),
             TokenDestination::Ignore => ()
         };
@@ -94,12 +103,10 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```no_run
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
     /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("ab");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.at_start());
     /// state.match_string("ab");
@@ -118,12 +125,10 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```no_run
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
     /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("ab");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(!state.at_end());
     /// state.match_string("ab");
@@ -143,12 +148,10 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
     /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("abcd");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.match_string("ab"));
     /// assert!(state.match_string("cd"));
@@ -173,12 +176,10 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
     /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("AbcD");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.match_insensitive("ab"));
     /// assert!(state.match_insensitive("cd"));
@@ -203,12 +204,10 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
     /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("Cd");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.match_range('A', 'Z'));
     /// assert!(state.match_range('a', 'z'));
@@ -233,12 +232,10 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
     /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("abacad");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.queued(|state| {
     ///     state.match_string("a") && state.match_string("b")
@@ -253,7 +250,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     #[inline]
     pub fn queued<F>(&mut self, rule: F) -> bool
-        where F: FnOnce(&mut ParserState<'a, Rule>) -> bool {
+        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> bool {
 
         let initial_pos = self.pos;
         let should_toggle = self.dest == TokenDestination::Stream;
@@ -269,7 +266,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
 
             if result {
                 for token in self.queue.drain(..) {
-                    self.sender.send(token).unwrap();
+                    self.sender.send(Ok(token)).unwrap();
                 }
             } else {
                 self.queue.clear();
@@ -290,30 +287,29 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
+    /// # use pest::tokens::Token;
     /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("ab");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.ignored(|state| {
-    ///     state.send(Token::Start((), 0));
+    ///     state.send(Token::Start { rule: (), pos: 0 });
     ///     state.match_string("a") && state.match_string("b")
     /// }));
     /// assert!(state.ignored(|state| {
-    ///     state.send(Token::Start((), 0));
+    ///     state.send(Token::Start { rule: (), pos: 0 });
     ///     state.match_string("a") && state.match_string("b")
     /// }));
     /// assert!(!state.ignored(|state| {
-    ///     state.send(Token::Start((), 0));
+    ///     state.send(Token::Start { rule: (), pos: 0 });
     ///     state.match_string("a") && state.match_string("c")
     /// }));
     /// # }
     /// ```
     #[inline]
     pub fn ignored<F>(&mut self, rule: F) -> bool
-        where F: FnOnce(&mut ParserState<'a, Rule>) -> bool {
+        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> bool {
 
         let initial_pos = self.pos;
         let should_toggle = self.dest != TokenDestination::Ignore;
@@ -341,12 +337,10 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
     /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(!state.is_atomic());
     /// state.atomic(true, |state| {
@@ -358,7 +352,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     #[inline]
     pub fn atomic<F>(&mut self, is_atomic: bool, rule: F) -> bool
-        where F: FnOnce(&mut ParserState<'a, Rule>) -> bool {
+        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> bool {
 
         let should_toggle = self.is_atomic != is_atomic;
 
@@ -382,12 +376,10 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
     /// # fn main() {
-    /// let (s, _) = unbounded::<Token<()>>();
     /// let input = StringInput::new("");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, state) = state::<(), _>(&input);
     ///
     /// assert!(!state.is_atomic());
     /// # }
@@ -405,18 +397,16 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
     /// # fn main() {
-    /// #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+    /// # #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
-    ///     a,
-    ///     b
+    ///     a
     /// }
     ///
-    /// let (s, _) = unbounded::<Token<Rule>>();
     /// let input = StringInput::new("a");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, mut state) = state::<Rule, _>(&input);
     ///
     /// state.track_pos(Rule::a);
     /// # }
@@ -431,16 +421,14 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
             self.pos_attempts.push(rule);
 
             self.attempt_pos = self.pos;
-        } else {
-            if self.pos == self.attempt_pos {
-                self.pos_attempts.push(rule);
-            } else if self.pos > self.attempt_pos {
-                self.pos_attempts.clear();
-                self.neg_attempts.clear();
-                self.pos_attempts.push(rule);
+        } else if self.pos == self.attempt_pos {
+            self.pos_attempts.push(rule);
+        } else if self.pos > self.attempt_pos {
+            self.pos_attempts.clear();
+            self.neg_attempts.clear();
+            self.pos_attempts.push(rule);
 
-                self.attempt_pos = self.pos;
-            }
+            self.attempt_pos = self.pos;
         }
     }
 
@@ -452,18 +440,16 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     /// # extern crate futures;
     /// # extern crate pest;
-    /// # use futures::sync::mpsc::unbounded;
-    /// # use pest::{ParserState, StringInput, Token};
+    /// # use pest::{state, StringInput};
     /// # fn main() {
-    /// #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+    /// # #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
-    ///     a,
-    ///     b
+    ///     a
     /// }
     ///
-    /// let (s, _) = unbounded::<Token<Rule>>();
     /// let input = StringInput::new("a");
-    /// let mut state = ParserState::new(&input, s);
+    /// let (_, mut state) = state::<Rule, _>(&input);
     ///
     /// state.track_neg(Rule::a);
     /// # }
@@ -478,16 +464,14 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
             self.neg_attempts.push(rule);
 
             self.attempt_pos = self.pos;
-        } else {
-            if self.pos == self.attempt_pos {
-                self.neg_attempts.push(rule);
-            } else if self.pos > self.attempt_pos {
-                self.pos_attempts.clear();
-                self.neg_attempts.clear();
-                self.neg_attempts.push(rule);
+        } else if self.pos == self.attempt_pos {
+            self.neg_attempts.push(rule);
+        } else if self.pos > self.attempt_pos {
+            self.pos_attempts.clear();
+            self.neg_attempts.clear();
+            self.neg_attempts.push(rule);
 
-                self.attempt_pos = self.pos;
-            }
+            self.attempt_pos = self.pos;
         }
     }
 }
