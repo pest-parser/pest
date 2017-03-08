@@ -6,7 +6,6 @@ use futures::Poll;
 use futures::stream::Stream;
 
 use super::expandable_stream::ExpandableStream;
-use super::token_stream::TokenStream;
 use super::super::error::Error;
 use super::super::tokens::Token;
 

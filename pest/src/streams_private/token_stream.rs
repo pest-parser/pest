@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
 
-use futures::stream::{Peekable, Stream};
+use futures::stream::Stream;
 
 use super::expandable_stream::ExpandableStream;
 use super::expanded_stream as es;
