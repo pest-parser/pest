@@ -32,9 +32,6 @@ extern crate pest;
 
 You can run the calculator example by using `cargo run --example calculator`.
 
-
-## [Documentation](https://docs.rs/pest)
-
 ## Elegant
 
 pest uses PEG syntax to enable expressive grammar creation.
