@@ -11,8 +11,7 @@
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
 [![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)
 
-pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
-generator with *simplicity* and *speed* in mind.
+pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser with *simplicity* and *speed* in mind.
 
 ## Usage
 You will need Cargo and Rust, follow the [installation instructions](https://www.rust-lang.org/en-US/downloads.html) 
@@ -21,7 +20,7 @@ to get them.
 Add the following to `Cargo.toml`:
 
 ```toml
-pest = "1.0"
+pest = "^1.0"
 ```
 
 and in your Rust `lib.rs` or `main.rs`:
@@ -103,13 +102,3 @@ pest is the youngest among them, but is continuously improving.
 
 [1]: https://github.com/Geal/nom
 [2]: https://github.com/nikomatsakis/lalrpop
-
-## Roadmap
-
-* [Packrat parsing](issues/7)
-* [parsing parallelization](issues/25)
-
-## FAQ
-
-### I get recursion errors, what should I do?
-You will need to increase the recursion limit of the crate by adding `#![recursion_limit = "x"]` in your `lib.rs` or `main.rs`. Try different values for `x` until it doesn't error anymore. You can start with a value of 200 and go up or down.
