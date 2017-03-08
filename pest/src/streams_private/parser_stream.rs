@@ -1,10 +1,7 @@
-use std::fmt::Debug;
-
 use futures::{Async, Poll};
 use futures::stream::Stream;
 use futures::sync::mpsc::UnboundedReceiver;
 
-use super::token_stream::TokenStream;
 use super::super::error::Error;
 use super::super::tokens::Token;
 
