@@ -30,7 +30,7 @@ impl<Rule> Error<Rule> {
     ///     "  = error: big one"
     /// ].join("\n"));
     /// ```
-    pub fn format(&self, input: &Input) -> String {
+    pub fn format<I: Input>(&self, input: &I) -> String {
         self.format_option(input, None)
     }
 
@@ -52,7 +52,7 @@ impl<Rule> Error<Rule> {
     ///     "  = error: big one"
     /// ].join("\n"));
     /// ```
-    pub fn format_with_filename(&self, input: &Input, filename: &str) -> String {
+    pub fn format_with_filename<I: Input>(&self, input: &I, filename: &str) -> String {
         self.format_option(input, Some(filename))
     }
 
@@ -81,7 +81,7 @@ impl<Rule> Error<Rule> {
         underline
     }
 
-    fn format_option(&self, input: &Input, option: Option<&str>) -> String {
+    fn format_option<I: Input>(&self, input: &I, option: Option<&str>) -> String {
         let pos = match self {
             &Error::ParsingError(_, _, pos) => pos,
             &Error::CustomErrorPos(_, pos)       => pos,

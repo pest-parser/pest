@@ -15,8 +15,8 @@ enum TokenDestination {
 }
 
 /// A `struct` which contains the complete state of a `Parser`.
-pub struct ParserState<'a, Rule> {
-    input:           &'a Input,
+pub struct ParserState<'a, Rule, I: 'a + Input> {
+    input:           &'a I,
     pos:             usize,
     sender:          UnboundedSender<Result<Token<Rule>, Error<Rule>>>,
     queue:           Vec<Token<Rule>>,
@@ -42,11 +42,11 @@ pub struct ParserState<'a, Rule> {
 /// # fn main() {
 /// let input = StringInput::new("a");
 ///
-/// let (_, _) = state::<()>(&input);
+/// let (_, _) = state::<(), _>(&input);
 /// # }
 /// ```
-pub fn state<Rule: Copy+ Debug + Eq + 'static>(input: &Input)
-    -> (parser_stream::ParserStream<Rule>, ParserState<Rule>) {
+pub fn state<Rule: Copy+ Debug + Eq + 'static, I: Input>(input: &I)
+    -> (parser_stream::ParserStream<Rule>, ParserState<Rule, I>) {
 
     let (sender, receiver) = unbounded();
 
@@ -69,7 +69,7 @@ pub fn state<Rule: Copy+ Debug + Eq + 'static>(input: &Input)
     (stream, state)
 }
 
-impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
+impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
     /// Sends `token` according to the state's destination. The `Token` will get sent to the
     /// `TokenStream`, queued up to be sent later, or ignored.
     ///
@@ -82,7 +82,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::tokens::Token;
     /// # fn main() {
     /// let input = StringInput::new("");
-    /// let (_, mut state) = state::<()>(&input);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// state.send(Token::Start { rule: (), pos: 0 });
     /// # }
@@ -106,7 +106,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::{state, StringInput};
     /// # fn main() {
     /// let input = StringInput::new("ab");
-    /// let (_, mut state) = state::<()>(&input);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.at_start());
     /// state.match_string("ab");
@@ -128,7 +128,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::{state, StringInput};
     /// # fn main() {
     /// let input = StringInput::new("ab");
-    /// let (_, mut state) = state::<()>(&input);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(!state.at_end());
     /// state.match_string("ab");
@@ -151,7 +151,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::{state, StringInput};
     /// # fn main() {
     /// let input = StringInput::new("abcd");
-    /// let (_, mut state) = state::<()>(&input);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.match_string("ab"));
     /// assert!(state.match_string("cd"));
@@ -179,7 +179,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::{state, StringInput};
     /// # fn main() {
     /// let input = StringInput::new("AbcD");
-    /// let (_, mut state) = state::<()>(&input);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.match_insensitive("ab"));
     /// assert!(state.match_insensitive("cd"));
@@ -207,7 +207,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::{state, StringInput};
     /// # fn main() {
     /// let input = StringInput::new("Cd");
-    /// let (_, mut state) = state::<()>(&input);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.match_range('A', 'Z'));
     /// assert!(state.match_range('a', 'z'));
@@ -235,7 +235,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::{state, StringInput};
     /// # fn main() {
     /// let input = StringInput::new("abacad");
-    /// let (_, mut state) = state::<()>(&input);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.queued(|state| {
     ///     state.match_string("a") && state.match_string("b")
@@ -250,7 +250,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     #[inline]
     pub fn queued<F>(&mut self, rule: F) -> bool
-        where F: FnOnce(&mut ParserState<'a, Rule>) -> bool {
+        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> bool {
 
         let initial_pos = self.pos;
         let should_toggle = self.dest == TokenDestination::Stream;
@@ -291,7 +291,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::tokens::Token;
     /// # fn main() {
     /// let input = StringInput::new("ab");
-    /// let (_, mut state) = state::<()>(&input);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(state.ignored(|state| {
     ///     state.send(Token::Start { rule: (), pos: 0 });
@@ -309,7 +309,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     #[inline]
     pub fn ignored<F>(&mut self, rule: F) -> bool
-        where F: FnOnce(&mut ParserState<'a, Rule>) -> bool {
+        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> bool {
 
         let initial_pos = self.pos;
         let should_toggle = self.dest != TokenDestination::Ignore;
@@ -340,7 +340,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::{state, StringInput};
     /// # fn main() {
     /// let input = StringInput::new("");
-    /// let (_, mut state) = state::<()>(&input);
+    /// let (_, mut state) = state::<(), _>(&input);
     ///
     /// assert!(!state.is_atomic());
     /// state.atomic(true, |state| {
@@ -352,7 +352,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// ```
     #[inline]
     pub fn atomic<F>(&mut self, is_atomic: bool, rule: F) -> bool
-        where F: FnOnce(&mut ParserState<'a, Rule>) -> bool {
+        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> bool {
 
         let should_toggle = self.is_atomic != is_atomic;
 
@@ -379,7 +379,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// # use pest::{state, StringInput};
     /// # fn main() {
     /// let input = StringInput::new("");
-    /// let (_, state) = state::<()>(&input);
+    /// let (_, state) = state::<(), _>(&input);
     ///
     /// assert!(!state.is_atomic());
     /// # }
@@ -406,7 +406,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// }
     ///
     /// let input = StringInput::new("a");
-    /// let (_, mut state) = state::<Rule>(&input);
+    /// let (_, mut state) = state::<Rule, _>(&input);
     ///
     /// state.track_pos(Rule::a);
     /// # }
@@ -449,7 +449,7 @@ impl<'a, Rule: Clone + Ord> ParserState<'a, Rule> {
     /// }
     ///
     /// let input = StringInput::new("a");
-    /// let (_, mut state) = state::<Rule>(&input);
+    /// let (_, mut state) = state::<Rule, _>(&input);
     ///
     /// state.track_neg(Rule::a);
     /// # }
