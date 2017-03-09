@@ -19,6 +19,7 @@ pub struct TokenData<Rule> {
 }
 
 impl<Rule> TokenData<Rule> {
+    // TODO: This should not check boundaries.
     pub fn capture<'a, I: Input>(&self, input: &'a I) -> &'a str {
         input.slice(self.start, self.end)
     }

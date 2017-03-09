@@ -7,10 +7,9 @@
 
 use std::fmt::Debug;
 
-use futures::sync::mpsc::{unbounded, UnboundedSender};
-
 use super::inputs::Input;
 use super::error::Error;
+use super::streams_private::buffered::{buffered, BufferedSender};
 use super::streams_private::parser_stream;
 use super::tokens::Token;
 
@@ -25,7 +24,7 @@ enum TokenDestination {
 pub struct ParserState<'a, Rule, I: 'a + Input> {
     input:           &'a I,
     pos:             usize,
-    sender:          UnboundedSender<Result<Token<Rule>, Error<Rule>>>,
+    sender:          BufferedSender<Result<Token<Rule>, Error<Rule>>>,
     queue:           Vec<Token<Rule>>,
     dest:            TokenDestination,
     is_atomic:       bool,
@@ -55,7 +54,7 @@ pub struct ParserState<'a, Rule, I: 'a + Input> {
 pub fn state<Rule: Copy+ Debug + Eq + 'static, I: Input>(input: &I)
     -> (parser_stream::ParserStream<Rule>, ParserState<Rule, I>) {
 
-    let (sender, receiver) = unbounded();
+    let (sender, stream) = buffered(1024);
 
     let state = ParserState {
         input:        input,
@@ -71,7 +70,7 @@ pub fn state<Rule: Copy+ Debug + Eq + 'static, I: Input>(input: &I)
         eoi_matched:  false
     };
 
-    let stream = parser_stream::new(receiver);
+    let stream = parser_stream::new(stream);
 
     (stream, state)
 }
@@ -97,7 +96,7 @@ impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
     #[inline]
     pub fn send(&mut self, token: Token<Rule>) {
         match self.dest {
-            TokenDestination::Stream => self.sender.send(Ok(token)).unwrap(),
+            TokenDestination::Stream => self.sender.send(Ok(token)),
             TokenDestination::Queue  => self.queue.push(token),
             TokenDestination::Ignore => ()
         };
@@ -273,7 +272,7 @@ impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
 
             if result {
                 for token in self.queue.drain(..) {
-                    self.sender.send(Ok(token)).unwrap();
+                    self.sender.send(Ok(token));
                 }
             } else {
                 self.queue.clear();

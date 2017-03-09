@@ -213,9 +213,9 @@ mod tests {
 
     use futures::future::Future;
     use futures::stream::Stream;
-    use futures::sync::mpsc::unbounded;
 
     use super::TokenStream;
+    use super::super::buffered::buffered;
     use super::super::parser_stream;
     use super::super::super::error::Error;
     use super::super::super::tokens::{Token, TokenData};
@@ -233,12 +233,12 @@ mod tests {
     #[test]
     fn peek_rule_sleep() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
             thread::spawn(move || {
                 thread::sleep(Duration::from_millis(10));
 
-                s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+                s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
             });
 
             r
@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn peek_rule_empty() {
         let r = {
-            let (_, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
+            let (_, r) = buffered::<Result<Token<Rule>, Error<Rule>>>(16);
 
             r
         };
@@ -279,9 +279,9 @@ mod tests {
                                but found End { rule: a, pos: 0 } instead")]
     fn peek_rule_end() {
         let r = {
-            let (s, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
+            let (s, r) = buffered::<Result<Token<Rule>, Error<Rule>>>(16);
 
-            s.send(Ok(Token::End { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Ok(Token::End { rule: Rule::a, pos: 0 }));
 
             r
         };
@@ -294,9 +294,9 @@ mod tests {
     #[test]
     fn peek_rule_error() {
         let r = {
-            let (s, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
+            let (s, r) = buffered::<Result<Token<Rule>, Error<Rule>>>(16);
 
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
 
             r
         };
@@ -311,17 +311,17 @@ mod tests {
     #[test]
     fn expand_sleep() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
             thread::spawn(move || {
                 thread::sleep(Duration::from_millis(10));
 
-                s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-                s.send(Ok(Token::Start { rule: Rule::b, pos: 1 })).unwrap();
-                s.send(Ok(Token::End   { rule: Rule::b, pos: 2 })).unwrap();
-                s.send(Ok(Token::End   { rule: Rule::a, pos: 3 })).unwrap();
-                s.send(Ok(Token::Start { rule: Rule::c, pos: 4 })).unwrap();
-                s.send(Ok(Token::End   { rule: Rule::c, pos: 5 })).unwrap();
+                s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+                s.send(Ok(Token::Start { rule: Rule::b, pos: 1 }));
+                s.send(Ok(Token::End   { rule: Rule::b, pos: 2 }));
+                s.send(Ok(Token::End   { rule: Rule::a, pos: 3 }));
+                s.send(Ok(Token::Start { rule: Rule::c, pos: 4 }));
+                s.send(Ok(Token::End   { rule: Rule::c, pos: 5 }));
             });
 
             r
@@ -351,14 +351,14 @@ mod tests {
     #[test]
     fn expand_tail() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-            s.send(Ok(Token::Start { rule: Rule::b, pos: 1 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::b, pos: 2 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 })).unwrap();
-            s.send(Ok(Token::Start { rule: Rule::c, pos: 4 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::c, pos: 5 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Ok(Token::Start { rule: Rule::b, pos: 1 }));
+            s.send(Ok(Token::End   { rule: Rule::b, pos: 2 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 }));
+            s.send(Ok(Token::Start { rule: Rule::c, pos: 4 }));
+            s.send(Ok(Token::End   { rule: Rule::c, pos: 5 }));
 
             r
         };
@@ -376,14 +376,14 @@ mod tests {
     #[test]
     fn expand_streams() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 1 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 2 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 })).unwrap();
-            s.send(Ok(Token::Start { rule: Rule::c, pos: 4 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::c, pos: 5 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 1 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 2 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 }));
+            s.send(Ok(Token::Start { rule: Rule::c, pos: 4 }));
+            s.send(Ok(Token::End   { rule: Rule::c, pos: 5 }));
 
             r
         };
@@ -407,10 +407,10 @@ mod tests {
                                but found Start { rule: a, pos: 0 } instead")]
     fn expand_wrong_start_future() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
 
             r
         };
@@ -427,7 +427,7 @@ mod tests {
                                but found nothing")]
     fn expand_no_start_future() {
         let r = {
-            let (_, r) = unbounded();
+            let (_, r) = buffered(16);
 
             r
         };
@@ -444,9 +444,9 @@ mod tests {
                                but found nothing")]
     fn expand_no_end_future() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
 
             r
         };
@@ -463,10 +463,10 @@ mod tests {
                                but found Start { rule: a, pos: 0 } instead")]
     fn expand_wrong_start_expanded_stream() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
 
             r
         };
@@ -483,7 +483,7 @@ mod tests {
                                but found nothing")]
     fn expand_no_start_expanded_stream() {
         let r = {
-            let (_, r) = unbounded();
+            let (_, r) = buffered(16);
 
             r
         };
@@ -500,9 +500,9 @@ mod tests {
                                but found nothing")]
     fn expand_no_end_expanded_stream() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
 
             r
         };
@@ -519,10 +519,10 @@ mod tests {
                                but found Start { rule: a, pos: 0 } instead")]
     fn expand_wrong_start_tail_stream() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
 
             r
         };
@@ -539,7 +539,7 @@ mod tests {
                                but found nothing")]
     fn expand_no_start_tail_stream() {
         let r = {
-            let (_, r) = unbounded();
+            let (_, r) = buffered(16);
 
             r
         };
@@ -556,9 +556,9 @@ mod tests {
                                but found nothing")]
     fn expand_no_end_tail_stream() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
 
             r
         };
@@ -572,11 +572,11 @@ mod tests {
 
     #[test]
     fn expand_incomplete_future() {
-        let (s, r) = unbounded();
+        let (s, r) = buffered(16);
 
-        s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-        s.send(Ok(Token::Start { rule: Rule::b, pos: 1 })).unwrap();
-        s.send(Ok(Token::End { rule: Rule::b, pos: 2 })).unwrap();
+        s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+        s.send(Ok(Token::Start { rule: Rule::b, pos: 1 }));
+        s.send(Ok(Token::End { rule: Rule::b, pos: 2 }));
 
         let stream = parser_stream::new(r);
 
@@ -591,12 +591,12 @@ mod tests {
     #[test]
     fn expand_future_first() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 1 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 2 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 1 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 2 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 }));
 
             r
         };
@@ -615,12 +615,12 @@ mod tests {
     #[test]
     fn expand_tail_first() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 1 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 2 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 1 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 2 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 }));
 
             r
         };
@@ -643,9 +643,9 @@ mod tests {
     #[test]
     fn expand_error_future_first() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
 
             r
         };
@@ -664,9 +664,9 @@ mod tests {
     #[test]
     fn expand_error_expand_first() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
 
             r
         };
@@ -685,9 +685,9 @@ mod tests {
     #[test]
     fn expand_error_tail_first() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
 
             r
         };
@@ -706,13 +706,13 @@ mod tests {
 
     #[test]
     fn expand_nested() {
-        let (s, r) = unbounded();
+        let (s, r) = buffered(16);
 
-        s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-        s.send(Ok(Token::Start { rule: Rule::b, pos: 1 })).unwrap();
-        s.send(Ok(Token::Start { rule: Rule::c, pos: 2 })).unwrap();
-        s.send(Ok(Token::Start { rule: Rule::d, pos: 3 })).unwrap();
-        s.send(Ok(Token::End   { rule: Rule::d, pos: 4 })).unwrap();
+        s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+        s.send(Ok(Token::Start { rule: Rule::b, pos: 1 }));
+        s.send(Ok(Token::Start { rule: Rule::c, pos: 2 }));
+        s.send(Ok(Token::Start { rule: Rule::d, pos: 3 }));
+        s.send(Ok(Token::End   { rule: Rule::d, pos: 4 }));
 
         let stream = parser_stream::new(r);
 
@@ -730,21 +730,21 @@ mod tests {
     #[test]
     fn sliced_sleep() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
             thread::spawn(move || {
                 thread::sleep(Duration::from_millis(10));
 
-                s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-                s.send(Ok(Token::End   { rule: Rule::a, pos: 1 })).unwrap();
-                s.send(Ok(Token::Start { rule: Rule::b, pos: 2 })).unwrap();
-                s.send(Ok(Token::End   { rule: Rule::b, pos: 3 })).unwrap();
-                s.send(Ok(Token::Start { rule: Rule::c, pos: 4 })).unwrap();
-                s.send(Ok(Token::Start { rule: Rule::c, pos: 5 })).unwrap();
-                s.send(Ok(Token::Start { rule: Rule::d, pos: 6 })).unwrap();
-                s.send(Ok(Token::End   { rule: Rule::d, pos: 7 })).unwrap();
-                s.send(Ok(Token::End   { rule: Rule::c, pos: 8 })).unwrap();
-                s.send(Ok(Token::End   { rule: Rule::c, pos: 9 })).unwrap();
+                s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+                s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
+                s.send(Ok(Token::Start { rule: Rule::b, pos: 2 }));
+                s.send(Ok(Token::End   { rule: Rule::b, pos: 3 }));
+                s.send(Ok(Token::Start { rule: Rule::c, pos: 4 }));
+                s.send(Ok(Token::Start { rule: Rule::c, pos: 5 }));
+                s.send(Ok(Token::Start { rule: Rule::d, pos: 6 }));
+                s.send(Ok(Token::End   { rule: Rule::d, pos: 7 }));
+                s.send(Ok(Token::End   { rule: Rule::c, pos: 8 }));
+                s.send(Ok(Token::End   { rule: Rule::c, pos: 9 }));
             });
 
             r
@@ -779,17 +779,17 @@ mod tests {
     #[test]
     fn sliced_wait() {
         let r = {
-            let (s, r) = unbounded();
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 })).unwrap();
-            s.send(Ok(Token::Start { rule: Rule::b, pos: 2 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::b, pos: 3 })).unwrap();
-            s.send(Ok(Token::Start { rule: Rule::c, pos: 4 })).unwrap();
-            s.send(Ok(Token::Start { rule: Rule::c, pos: 5 })).unwrap();
-            s.send(Ok(Token::Start { rule: Rule::d, pos: 6 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::d, pos: 7 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::c, pos: 8 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::c, pos: 9 })).unwrap();
+            let (s, r) = buffered(16);
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
+            s.send(Ok(Token::Start { rule: Rule::b, pos: 2 }));
+            s.send(Ok(Token::End   { rule: Rule::b, pos: 3 }));
+            s.send(Ok(Token::Start { rule: Rule::c, pos: 4 }));
+            s.send(Ok(Token::Start { rule: Rule::c, pos: 5 }));
+            s.send(Ok(Token::Start { rule: Rule::d, pos: 6 }));
+            s.send(Ok(Token::End   { rule: Rule::d, pos: 7 }));
+            s.send(Ok(Token::End   { rule: Rule::c, pos: 8 }));
+            s.send(Ok(Token::End   { rule: Rule::c, pos: 9 }));
 
             r
         };
@@ -824,7 +824,7 @@ mod tests {
     #[test]
     fn sliced_empty() {
         let r = {
-            let (_, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
+            let (_, r) = buffered::<Result<Token<Rule>, Error<Rule>>>(16);
 
             r
         };
@@ -839,10 +839,10 @@ mod tests {
     #[test]
     fn sliced_one_pair() {
         let r = {
-            let (s, r) = unbounded::<Result<Token<Rule>, Error<Rule>>>();
+            let (s, r) = buffered::<Result<Token<Rule>, Error<Rule>>>(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
 
             r
         };
@@ -866,9 +866,9 @@ mod tests {
                                but found End { rule: a, pos: 0 } instead")]
     fn sliced_end() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Ok(Token::End   { rule: Rule::a, pos: 0 }));
 
             r
         };
@@ -883,9 +883,9 @@ mod tests {
                                but found nothing")]
     fn sliced_no_end_sliced() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
 
             r
         };
@@ -898,9 +898,9 @@ mod tests {
     #[test]
     fn sliced_no_end_future_slice_no_panic() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
 
             r
         };
@@ -915,9 +915,9 @@ mod tests {
                                but found nothing")]
     fn sliced_no_end_pair() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
 
             r
         };
@@ -931,10 +931,10 @@ mod tests {
 
     #[test]
     fn sliced_incomplete_slice() {
-        let (s, r) = unbounded();
+        let (s, r) = buffered(16);
 
-        s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-        s.send(Ok(Token::End   { rule: Rule::a, pos: 1 })).unwrap();
+        s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+        s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
 
         let stream = parser_stream::new(r);
 
@@ -951,10 +951,10 @@ mod tests {
     #[test]
     fn sliced_error_pair() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
 
             r
         };
@@ -971,10 +971,10 @@ mod tests {
     #[test]
     fn sliced_error_sliced() {
         let r = {
-            let (s, r) = unbounded();
+            let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 })).unwrap();
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2))).unwrap();
+            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
 
             r
         };

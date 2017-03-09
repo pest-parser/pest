@@ -7,18 +7,18 @@
 
 use futures::{Async, Poll};
 use futures::stream::Stream;
-use futures::sync::mpsc::UnboundedReceiver;
 
+use super::buffered::BufferedStream;
 use super::super::error::Error;
 use super::super::tokens::Token;
 
 /// A `struct` which implements `Stream` and `TokenStream`, and is created by the
 /// [`state`](../fn.state) function.
 pub struct ParserStream<Rule> {
-    stream: UnboundedReceiver<Result<Token<Rule>, Error<Rule>>>
+    stream: BufferedStream<Result<Token<Rule>, Error<Rule>>>
 }
 
-pub fn new<Rule>(stream: UnboundedReceiver<Result<Token<Rule>, Error<Rule>>>)
+pub fn new<Rule>(stream: BufferedStream<Result<Token<Rule>, Error<Rule>>>)
     -> ParserStream<Rule> {
 
     ParserStream {
