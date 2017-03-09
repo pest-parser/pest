@@ -5,7 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use futures::{Async, Poll};
+use futures::Poll;
 use futures::stream::Stream;
 
 use super::buffered::BufferedStream;
@@ -15,10 +15,10 @@ use super::super::tokens::Token;
 /// A `struct` which implements `Stream` and `TokenStream`, and is created by the
 /// [`state`](../fn.state) function.
 pub struct ParserStream<Rule> {
-    stream: BufferedStream<Result<Token<Rule>, Error<Rule>>>
+    stream: BufferedStream<Token<Rule>, Error<Rule>>
 }
 
-pub fn new<Rule>(stream: BufferedStream<Result<Token<Rule>, Error<Rule>>>)
+pub fn new<Rule>(stream: BufferedStream<Token<Rule>, Error<Rule>>)
     -> ParserStream<Rule> {
 
     ParserStream {
@@ -31,16 +31,6 @@ impl<Rule> Stream for ParserStream<Rule> {
     type Error = Error<Rule>;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        match self.stream.poll() {
-            Ok(Async::Ready(Some(result))) => {
-                match result {
-                    Ok(token)  => Ok(Async::Ready(Some(token))),
-                    Err(error) => Err(error)
-                }
-            },
-            Ok(Async::Ready(None)) => Ok(Async::Ready(None)),
-            Ok(Async::NotReady)    => Ok(Async::NotReady),
-            Err(_) => unreachable!()
-        }
+        self.stream.poll()
     }
 }

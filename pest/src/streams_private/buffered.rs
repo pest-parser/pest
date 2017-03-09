@@ -7,25 +7,27 @@ use futures::{Async, Poll};
 use futures::stream::Stream;
 use futures::task::{park, Task};
 
-struct RingBuffer<T> {
+struct RingBuffer<T, E> {
     buffer:        UnsafeCell<Vec<Option<T>>>,
     read:          AtomicUsize,
     write:         AtomicUsize,
+    pub error:     AtomicPtr<E>,
     pub is_closed: AtomicBool,
     pub task:      AtomicPtr<Task>,
     capacity:      usize,
     size:          usize
 }
 
-impl<T> RingBuffer<T> {
+impl<T, E> RingBuffer<T, E> {
     #[inline]
-    pub fn new(capacity: usize) -> RingBuffer<T> {
+    pub fn new(capacity: usize) -> RingBuffer<T, E> {
         let size = capacity.next_power_of_two();
 
         RingBuffer {
             buffer:    UnsafeCell::new(Vec::with_capacity(size)),
             read:      AtomicUsize::new(0),
             write:     AtomicUsize::new(0),
+            error:     AtomicPtr::new(ptr::null_mut()),
             is_closed: AtomicBool::new(false),
             task:      AtomicPtr::new(ptr::null_mut()),
             capacity:  capacity,
@@ -79,7 +81,8 @@ impl<T> RingBuffer<T> {
         let task = self.task.load(Ordering::Acquire);
 
         if !task.is_null() {
-            unsafe { (*task).unpark(); }
+            unsafe { Box::from_raw(task).unpark(); }
+            self.task.store(ptr::null_mut(), Ordering::Release);
         }
 
     }
@@ -90,17 +93,26 @@ impl<T> RingBuffer<T> {
     }
 }
 
-unsafe impl<T: Sync> Sync for RingBuffer<T> {}
+unsafe impl<T: Sync, E: Sync> Sync for RingBuffer<T, E> {}
 
-pub struct BufferedStream<T> {
-    buffer: Arc<RingBuffer<T>>
+pub struct BufferedStream<T, E> {
+    buffer: Arc<RingBuffer<T, E>>
 }
 
-impl<T> Stream for BufferedStream<T> {
+impl<T, E> Stream for BufferedStream<T, E> {
     type Item  = T;
-    type Error = ();
+    type Error = E;
 
-    fn poll(&mut self) -> Poll<Option<T>, ()> {
+    fn poll(&mut self) -> Poll<Option<T>, E> {
+        let error = self.buffer.error.load(Ordering::Acquire);
+
+        if !error.is_null() {
+            let error = unsafe { Err(*Box::from_raw(error)) };
+            self.buffer.error.store(ptr::null_mut(), Ordering::Release);
+
+            return error;
+        }
+
         match self.buffer.try_pop() {
             Some(value) => Ok(Async::Ready(Some(value))),
             None => {
@@ -117,11 +129,11 @@ impl<T> Stream for BufferedStream<T> {
     }
 }
 
-pub struct BufferedSender<T> {
-    buffer: Arc<RingBuffer<T>>
+pub struct BufferedSender<T, E> {
+    buffer: Arc<RingBuffer<T, E>>
 }
 
-impl<T> BufferedSender<T> {
+impl<T, E> BufferedSender<T, E> {
     #[inline]
     pub fn send(&self, value: T) {
         let mut value = value;
@@ -133,9 +145,15 @@ impl<T> BufferedSender<T> {
             };
         }
     }
+
+    #[inline]
+    pub fn fail(self, error: E) {
+        let boxed = Box::new(error);
+        self.buffer.error.store(Box::into_raw(boxed), Ordering::Release);
+    }
 }
 
-impl<T> Drop for BufferedSender<T> {
+impl<T, E> Drop for BufferedSender<T, E> {
     fn drop(&mut self) {
         self.buffer.try_unpark();
 
@@ -143,7 +161,7 @@ impl<T> Drop for BufferedSender<T> {
     }
 }
 
-pub fn buffered<T>(capacity: usize) -> (BufferedSender<T>, BufferedStream<T>) {
+pub fn buffered<T, E>(capacity: usize) -> (BufferedSender<T, E>, BufferedStream<T, E>) {
     let buffer = Arc::new(RingBuffer::new(capacity));
 
     (BufferedSender { buffer: buffer.clone() }, BufferedStream { buffer: buffer })
@@ -162,7 +180,7 @@ mod tests {
 
     #[test]
     fn ring_push_pop() {
-        let ring = RingBuffer::new(3);
+        let ring: RingBuffer<i32, ()> = RingBuffer::new(3);
 
         assert_eq!(ring.try_push(1), None);
         assert_eq!(ring.try_push(2), None);
@@ -186,8 +204,17 @@ mod tests {
     }
 
     #[test]
+    fn buffer_fail() {
+        let (sender, stream) = buffered::<(), String>(1);
+
+        sender.fail("error".to_owned());
+
+        assert_eq!(stream.collect().wait(), Err("error".to_owned()))
+    }
+
+    #[test]
     fn ring_async() {
-        let ring = Arc::new(RingBuffer::new(3));
+        let ring: Arc<RingBuffer<i32, ()>> = Arc::new(RingBuffer::new(3));
         let clone = ring.clone();
 
         thread::spawn(move || {
@@ -213,7 +240,7 @@ mod tests {
 
     #[test]
     fn sender_stream() {
-        let (sender, stream) = buffered::<i32>(3);
+        let (sender, stream) = buffered::<i32, ()>(3);
 
         thread::spawn(move || {
             thread::sleep(Duration::from_millis(10));
