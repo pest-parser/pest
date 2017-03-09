@@ -238,7 +238,7 @@ mod tests {
             thread::spawn(move || {
                 thread::sleep(Duration::from_millis(10));
 
-                s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+                s.send(Token::Start { rule: Rule::a, pos: 0 });
             });
 
             r
@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn peek_rule_empty() {
         let r = {
-            let (_, r) = buffered::<Result<Token<Rule>, Error<Rule>>>(16);
+            let (_, r) = buffered::<Token<Rule>, Error<Rule>>(16);
 
             r
         };
@@ -279,9 +279,9 @@ mod tests {
                                but found End { rule: a, pos: 0 } instead")]
     fn peek_rule_end() {
         let r = {
-            let (s, r) = buffered::<Result<Token<Rule>, Error<Rule>>>(16);
+            let (s, r) = buffered::<Token<Rule>, Error<Rule>>(16);
 
-            s.send(Ok(Token::End { rule: Rule::a, pos: 0 }));
+            s.send(Token::End { rule: Rule::a, pos: 0 });
 
             r
         };
@@ -294,9 +294,9 @@ mod tests {
     #[test]
     fn peek_rule_error() {
         let r = {
-            let (s, r) = buffered::<Result<Token<Rule>, Error<Rule>>>(16);
+            let (s, r) = buffered::<Token<Rule>, Error<Rule>>(16);
 
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
+            s.fail(Error::CustomErrorPos("e".to_owned(), 2));
 
             r
         };
@@ -316,12 +316,12 @@ mod tests {
             thread::spawn(move || {
                 thread::sleep(Duration::from_millis(10));
 
-                s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-                s.send(Ok(Token::Start { rule: Rule::b, pos: 1 }));
-                s.send(Ok(Token::End   { rule: Rule::b, pos: 2 }));
-                s.send(Ok(Token::End   { rule: Rule::a, pos: 3 }));
-                s.send(Ok(Token::Start { rule: Rule::c, pos: 4 }));
-                s.send(Ok(Token::End   { rule: Rule::c, pos: 5 }));
+                s.send(Token::Start { rule: Rule::a, pos: 0 });
+                s.send(Token::Start { rule: Rule::b, pos: 1 });
+                s.send(Token::End   { rule: Rule::b, pos: 2 });
+                s.send(Token::End   { rule: Rule::a, pos: 3 });
+                s.send(Token::Start { rule: Rule::c, pos: 4 });
+                s.send(Token::End   { rule: Rule::c, pos: 5 });
             });
 
             r
@@ -353,12 +353,12 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-            s.send(Ok(Token::Start { rule: Rule::b, pos: 1 }));
-            s.send(Ok(Token::End   { rule: Rule::b, pos: 2 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 }));
-            s.send(Ok(Token::Start { rule: Rule::c, pos: 4 }));
-            s.send(Ok(Token::End   { rule: Rule::c, pos: 5 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
+            s.send(Token::Start { rule: Rule::b, pos: 1 });
+            s.send(Token::End   { rule: Rule::b, pos: 2 });
+            s.send(Token::End   { rule: Rule::a, pos: 3 });
+            s.send(Token::Start { rule: Rule::c, pos: 4 });
+            s.send(Token::End   { rule: Rule::c, pos: 5 });
 
             r
         };
@@ -378,12 +378,12 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 1 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 2 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 }));
-            s.send(Ok(Token::Start { rule: Rule::c, pos: 4 }));
-            s.send(Ok(Token::End   { rule: Rule::c, pos: 5 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
+            s.send(Token::Start { rule: Rule::a, pos: 1 });
+            s.send(Token::End   { rule: Rule::a, pos: 2 });
+            s.send(Token::End   { rule: Rule::a, pos: 3 });
+            s.send(Token::Start { rule: Rule::c, pos: 4 });
+            s.send(Token::End   { rule: Rule::c, pos: 5 });
 
             r
         };
@@ -409,8 +409,8 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
+            s.send(Token::End   { rule: Rule::a, pos: 1 });
 
             r
         };
@@ -446,7 +446,7 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
 
             r
         };
@@ -465,8 +465,8 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
+            s.send(Token::End   { rule: Rule::a, pos: 1 });
 
             r
         };
@@ -502,7 +502,7 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
 
             r
         };
@@ -521,8 +521,8 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
+            s.send(Token::End   { rule: Rule::a, pos: 1 });
 
             r
         };
@@ -558,7 +558,7 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
 
             r
         };
@@ -574,9 +574,9 @@ mod tests {
     fn expand_incomplete_future() {
         let (s, r) = buffered(16);
 
-        s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-        s.send(Ok(Token::Start { rule: Rule::b, pos: 1 }));
-        s.send(Ok(Token::End { rule: Rule::b, pos: 2 }));
+        s.send(Token::Start { rule: Rule::a, pos: 0 });
+        s.send(Token::Start { rule: Rule::b, pos: 1 });
+        s.send(Token::End { rule: Rule::b, pos: 2 });
 
         let stream = parser_stream::new(r);
 
@@ -593,10 +593,10 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 1 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 2 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
+            s.send(Token::Start { rule: Rule::a, pos: 1 });
+            s.send(Token::End   { rule: Rule::a, pos: 2 });
+            s.send(Token::End   { rule: Rule::a, pos: 3 });
 
             r
         };
@@ -617,10 +617,10 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 1 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 2 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 3 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
+            s.send(Token::Start { rule: Rule::a, pos: 1 });
+            s.send(Token::End   { rule: Rule::a, pos: 2 });
+            s.send(Token::End   { rule: Rule::a, pos: 3 });
 
             r
         };
@@ -645,7 +645,7 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
+            s.fail(Error::CustomErrorPos("e".to_owned(), 2));
 
             r
         };
@@ -666,7 +666,7 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
+            s.fail(Error::CustomErrorPos("e".to_owned(), 2));
 
             r
         };
@@ -687,7 +687,7 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
+            s.fail(Error::CustomErrorPos("e".to_owned(), 2));
 
             r
         };
@@ -708,11 +708,11 @@ mod tests {
     fn expand_nested() {
         let (s, r) = buffered(16);
 
-        s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-        s.send(Ok(Token::Start { rule: Rule::b, pos: 1 }));
-        s.send(Ok(Token::Start { rule: Rule::c, pos: 2 }));
-        s.send(Ok(Token::Start { rule: Rule::d, pos: 3 }));
-        s.send(Ok(Token::End   { rule: Rule::d, pos: 4 }));
+        s.send(Token::Start { rule: Rule::a, pos: 0 });
+        s.send(Token::Start { rule: Rule::b, pos: 1 });
+        s.send(Token::Start { rule: Rule::c, pos: 2 });
+        s.send(Token::Start { rule: Rule::d, pos: 3 });
+        s.send(Token::End   { rule: Rule::d, pos: 4 });
 
         let stream = parser_stream::new(r);
 
@@ -735,16 +735,16 @@ mod tests {
             thread::spawn(move || {
                 thread::sleep(Duration::from_millis(10));
 
-                s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-                s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
-                s.send(Ok(Token::Start { rule: Rule::b, pos: 2 }));
-                s.send(Ok(Token::End   { rule: Rule::b, pos: 3 }));
-                s.send(Ok(Token::Start { rule: Rule::c, pos: 4 }));
-                s.send(Ok(Token::Start { rule: Rule::c, pos: 5 }));
-                s.send(Ok(Token::Start { rule: Rule::d, pos: 6 }));
-                s.send(Ok(Token::End   { rule: Rule::d, pos: 7 }));
-                s.send(Ok(Token::End   { rule: Rule::c, pos: 8 }));
-                s.send(Ok(Token::End   { rule: Rule::c, pos: 9 }));
+                s.send(Token::Start { rule: Rule::a, pos: 0 });
+                s.send(Token::End   { rule: Rule::a, pos: 1 });
+                s.send(Token::Start { rule: Rule::b, pos: 2 });
+                s.send(Token::End   { rule: Rule::b, pos: 3 });
+                s.send(Token::Start { rule: Rule::c, pos: 4 });
+                s.send(Token::Start { rule: Rule::c, pos: 5 });
+                s.send(Token::Start { rule: Rule::d, pos: 6 });
+                s.send(Token::End   { rule: Rule::d, pos: 7 });
+                s.send(Token::End   { rule: Rule::c, pos: 8 });
+                s.send(Token::End   { rule: Rule::c, pos: 9 });
             });
 
             r
@@ -780,16 +780,16 @@ mod tests {
     fn sliced_wait() {
         let r = {
             let (s, r) = buffered(16);
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
-            s.send(Ok(Token::Start { rule: Rule::b, pos: 2 }));
-            s.send(Ok(Token::End   { rule: Rule::b, pos: 3 }));
-            s.send(Ok(Token::Start { rule: Rule::c, pos: 4 }));
-            s.send(Ok(Token::Start { rule: Rule::c, pos: 5 }));
-            s.send(Ok(Token::Start { rule: Rule::d, pos: 6 }));
-            s.send(Ok(Token::End   { rule: Rule::d, pos: 7 }));
-            s.send(Ok(Token::End   { rule: Rule::c, pos: 8 }));
-            s.send(Ok(Token::End   { rule: Rule::c, pos: 9 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
+            s.send(Token::End   { rule: Rule::a, pos: 1 });
+            s.send(Token::Start { rule: Rule::b, pos: 2 });
+            s.send(Token::End   { rule: Rule::b, pos: 3 });
+            s.send(Token::Start { rule: Rule::c, pos: 4 });
+            s.send(Token::Start { rule: Rule::c, pos: 5 });
+            s.send(Token::Start { rule: Rule::d, pos: 6 });
+            s.send(Token::End   { rule: Rule::d, pos: 7 });
+            s.send(Token::End   { rule: Rule::c, pos: 8 });
+            s.send(Token::End   { rule: Rule::c, pos: 9 });
 
             r
         };
@@ -824,7 +824,7 @@ mod tests {
     #[test]
     fn sliced_empty() {
         let r = {
-            let (_, r) = buffered::<Result<Token<Rule>, Error<Rule>>>(16);
+            let (_, r) = buffered::<Token<Rule>, Error<Rule>>(16);
 
             r
         };
@@ -839,10 +839,10 @@ mod tests {
     #[test]
     fn sliced_one_pair() {
         let r = {
-            let (s, r) = buffered::<Result<Token<Rule>, Error<Rule>>>(16);
+            let (s, r) = buffered::<Token<Rule>, Error<Rule>>(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
+            s.send(Token::End   { rule: Rule::a, pos: 1 });
 
             r
         };
@@ -868,7 +868,7 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::End   { rule: Rule::a, pos: 0 }));
+            s.send(Token::End   { rule: Rule::a, pos: 0 });
 
             r
         };
@@ -885,7 +885,7 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
 
             r
         };
@@ -900,7 +900,7 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
 
             r
         };
@@ -917,7 +917,7 @@ mod tests {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
 
             r
         };
@@ -933,8 +933,8 @@ mod tests {
     fn sliced_incomplete_slice() {
         let (s, r) = buffered(16);
 
-        s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-        s.send(Ok(Token::End   { rule: Rule::a, pos: 1 }));
+        s.send(Token::Start { rule: Rule::a, pos: 0 });
+        s.send(Token::End   { rule: Rule::a, pos: 1 });
 
         let stream = parser_stream::new(r);
 
@@ -949,43 +949,19 @@ mod tests {
     }
 
     #[test]
-    fn sliced_error_pair() {
+    fn sliced_error() {
         let r = {
             let (s, r) = buffered(16);
 
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
+            s.send(Token::Start { rule: Rule::a, pos: 0 });
+            s.fail(Error::CustomErrorPos("e".to_owned(), 2));
 
             r
         };
 
         let stream = parser_stream::new(r);
 
-        let (_, stream) = stream.sliced().map(|stream| {
-            assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
-        }).into_future().wait().map_err(|_| ()).unwrap();
-
-        assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos("e".to_owned(), 2)));
-    }
-
-    #[test]
-    fn sliced_error_sliced() {
-        let r = {
-            let (s, r) = buffered(16);
-
-            s.send(Ok(Token::Start { rule: Rule::a, pos: 0 }));
-            s.send(Err(Error::CustomErrorPos("e".to_owned(), 2)));
-
-            r
-        };
-
-        let stream = parser_stream::new(r);
-
-        let (pair, stream) = stream.sliced().into_future().wait().map_err(|_| ()).unwrap();
-
-        assert_eq!(stream.collect().wait().err().unwrap(),
-                   Error::CustomErrorPos("e".to_owned(), 2));
-        assert_eq!(pair.unwrap().collect().wait().err().unwrap(),
-                   Error::CustomErrorPos("e".to_owned(), 2));
+        assert_eq!(stream.sliced().collect().map(|_| ()).wait(),
+                   Err(Error::CustomErrorPos("e".to_owned(), 2)));
     }
 }
