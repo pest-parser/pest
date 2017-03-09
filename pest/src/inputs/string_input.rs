@@ -61,6 +61,11 @@ impl<'a> Input for StringInput<'a> {
     }
 
     #[inline]
+    unsafe fn slice_unchecked(&self, start: usize, end: usize) -> &str {
+        self.string.slice_unchecked(start, end)
+    }
+
+    #[inline]
     fn line_col(&self, pos: usize) -> (usize, usize) {
         if pos > self.string.len() {
             panic!("position out of bounds");
