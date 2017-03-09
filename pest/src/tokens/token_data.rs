@@ -19,9 +19,50 @@ pub struct TokenData<Rule> {
 }
 
 impl<Rule> TokenData<Rule> {
-    // TODO: This should not check boundaries.
+    /// Captures a `&str` slice of an `Input` according to a `TokenData`'s `start` and `end`
+    /// positions.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::{Input, StringInput};
+    /// # use pest::tokens::TokenData;
+    /// let input = StringInput::new("abcd");
+    /// let data = TokenData {
+    ///     rule:  (),
+    ///     start: 1,
+    ///     end:   3
+    /// };
+    ///
+    /// assert_eq!(data.capture(&input), "bc");
+    /// ```
     pub fn capture<'a, I: Input>(&self, input: &'a I) -> &'a str {
         input.slice(self.start, self.end)
+    }
+
+    /// Unsafely captures a `&str` slice of an `Input` according to a `TokenData`'s `start` and
+    /// `end` positions without checking `char` boundaries.
+    ///
+    /// This offers a speedup and is guaranteed not to cause undefined behavior with pest-produced
+    /// `TokenData` and matching `Input`, i.e. by using the same `Input` as the one used in the
+    /// `Parser::parse` call.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::{Input, StringInput};
+    /// # use pest::tokens::TokenData;
+    /// let input = StringInput::new("abcd");
+    /// let data = TokenData { // Only use with auto-generated TokenData.
+    ///     rule:  (),
+    ///     start: 1,
+    ///     end:   3
+    /// };
+    ///
+    /// assert_eq!(unsafe { data.capture_unchecked(&input) }, "bc");
+    /// ```
+    pub unsafe fn capture_unchecked<'a, I: Input>(&self, input: &'a I) -> &'a str {
+        input.slice_unchecked(self.start, self.end)
     }
 }
 
