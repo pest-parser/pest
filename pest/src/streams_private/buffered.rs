@@ -84,7 +84,6 @@ impl<T, E> RingBuffer<T, E> {
             unsafe { Box::from_raw(task).unpark(); }
             self.task.store(ptr::null_mut(), Ordering::Release);
         }
-
     }
 
     #[inline]

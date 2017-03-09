@@ -47,9 +47,9 @@ fn synchronous(b: &mut Bencher) {
 
 //        stream.sliced().map(|pair| {
 //            pair.expand((), |data, _| {
-//                data.wait().unwrap().capture(&input).to_owned()
+//                data.wait().unwrap().capture(&input)
 //            }).0
-//        }).collect().wait()
+//        }).collect().wait();
     });
 }
 

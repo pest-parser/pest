@@ -16,6 +16,9 @@ pub trait Input {
     /// Slices an `Input`.
     fn slice(&self, start: usize, end: usize) -> &str;
 
+    /// Unsafely slices an `Input` without checking the `char` boundaries.
+    unsafe fn slice_unchecked(&self, start: usize, end: usize) -> &str;
+
     /// Returns the line and column numbers of a position for an `Input`.
     fn line_col(&self, pos: usize) -> (usize, usize);
 
