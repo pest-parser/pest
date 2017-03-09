@@ -24,7 +24,7 @@ enum TokenDestination {
 pub struct ParserState<'a, Rule, I: 'a + Input> {
     input:           &'a I,
     pos:             usize,
-    sender:          BufferedSender<Result<Token<Rule>, Error<Rule>>>,
+    sender:          BufferedSender<Token<Rule>, Error<Rule>>,
     queue:           Vec<Token<Rule>>,
     dest:            TokenDestination,
     is_atomic:       bool,
@@ -76,7 +76,7 @@ pub fn state<Rule: Copy+ Debug + Eq + 'static, I: Input>(input: &I)
 }
 
 impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
-    /// Sends `token` according to the state's destination. The `Token` will get sent to the
+    /// Sends `token` according to the `ParserState`'s destination. The `Token` will get sent to the
     /// `TokenStream`, queued up to be sent later, or ignored.
     ///
     /// # Examples
@@ -96,10 +96,31 @@ impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
     #[inline]
     pub fn send(&mut self, token: Token<Rule>) {
         match self.dest {
-            TokenDestination::Stream => self.sender.send(Ok(token)),
+            TokenDestination::Stream => self.sender.send(token),
             TokenDestination::Queue  => self.queue.push(token),
             TokenDestination::Ignore => ()
         };
+    }
+
+    /// Consumes the `ParserState` and causes the matching `ParserStream` to fail.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # extern crate futures;
+    /// # extern crate pest;
+    /// # use pest::{state, StringInput};
+    /// # use pest::Error;
+    /// # fn main() {
+    /// let input = StringInput::new("");
+    /// let (_, state) = state::<(), _>(&input);
+    ///
+    /// state.fail(Error::CustomErrorPos("error".to_owned(), 0));
+    /// # }
+    /// ```
+    #[inline]
+    pub fn fail(self, error: Error<Rule>) {
+        self.sender.fail(error);
     }
 
     /// Returns whether the position is at the start of the `Input`.
@@ -272,7 +293,7 @@ impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
 
             if result {
                 for token in self.queue.drain(..) {
-                    self.sender.send(Ok(token));
+                    self.sender.send(token);
                 }
             } else {
                 self.queue.clear();

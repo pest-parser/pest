@@ -13,9 +13,6 @@ extern crate futures;
 
 extern crate pest;
 
-use std::sync::Arc;
-use std::thread;
-
 use test::Bencher;
 
 use futures::future::Future;
@@ -28,7 +25,6 @@ use pest::tokens::Token;
 const TOKENS: usize = 1024;
 
 struct SynchronousParser;
-struct ArcParser;
 
 impl Parser<()> for SynchronousParser {
     fn parse<I: Input>(_: (), input: &I) -> ParserStream<()> {
@@ -60,11 +56,11 @@ fn synchronous(b: &mut Bencher) {
 #[bench]
 fn vec(b: &mut Bencher) {
     b.iter(|| {
-        let mut vec: Vec<Result<Token<()>, Error<()>>> = vec![];
+        let mut vec = vec![];
 
         for _ in 0..TOKENS / 2 {
-            vec.push(Ok(Token::Start { rule: (), pos: 0 }));
-            vec.push(Ok(Token::End   { rule: (), pos: 5 }));
+            vec.push(Token::Start { rule: (), pos: 0 });
+            vec.push(Token::End   { rule: (), pos: 5 });
         }
 
         vec
