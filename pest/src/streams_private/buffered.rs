@@ -2,6 +2,7 @@ use std::cell::UnsafeCell;
 use std::ptr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicUsize, Ordering};
+use std::vec::Drain;
 
 use futures::{Async, Poll};
 use futures::stream::Stream;
@@ -41,13 +42,7 @@ impl<T, E> RingBuffer<T, E> {
         let write = self.write.load(Ordering::Relaxed);
 
         if write - read < self.capacity {
-            let mut buffer = unsafe { &mut *self.buffer.get() };
-
-            if buffer.len() < buffer.capacity() {
-                buffer.push(Some(value));
-            } else {
-                buffer[self.index(write)] = Some(value);
-            }
+            self.push(write, value);
 
             self.write.store(write.wrapping_add(1), Ordering::Relaxed);
 
@@ -56,6 +51,36 @@ impl<T, E> RingBuffer<T, E> {
             None
         } else {
             Some(value)
+        }
+    }
+
+    #[inline]
+    pub fn try_push_all<'a>(&self, mut drain: Drain<'a, T>) -> Option<Drain<'a, T>> {
+        let read = self.read.load(Ordering::Relaxed);
+        let write = self.write.load(Ordering::Relaxed);
+        let mut difference = write - read;
+
+        if difference < self.capacity {
+            while let Some(value) = drain.next() {
+                self.push(write, value);
+                write.wrapping_add(1);
+
+                difference -= 1;
+
+                if difference == 0 {
+                    break;
+                }
+            }
+
+            self.try_unpark();
+
+            if drain.len() != 0 {
+                Some(drain)
+            } else {
+                None
+            }
+        } else {
+            Some(drain)
         }
     }
 
@@ -87,8 +112,19 @@ impl<T, E> RingBuffer<T, E> {
     }
 
     #[inline]
-    fn index(&self, pos: usize) -> usize {
-        pos & (self.size - 1)
+    fn push(&self, index: usize, value: T) {
+        let mut buffer = unsafe { &mut *self.buffer.get() };
+
+        if buffer.len() < buffer.capacity() {
+            buffer.push(Some(value));
+        } else {
+            buffer[self.index(index)] = Some(value);
+        }
+    }
+
+    #[inline]
+    fn index(&self, index: usize) -> usize {
+        index & (self.size - 1)
     }
 }
 
@@ -140,6 +176,18 @@ impl<T, E> BufferedSender<T, E> {
         loop {
             value = match self.buffer.try_push(value) {
                 Some(value) => value,
+                None        => break
+            };
+        }
+    }
+
+    #[inline]
+    pub fn send_all(&self, drain: Drain<T>) {
+        let mut drain = drain;
+
+        loop {
+            drain = match self.buffer.try_push_all(drain) {
+                Some(drain) => drain,
                 None        => break
             };
         }
