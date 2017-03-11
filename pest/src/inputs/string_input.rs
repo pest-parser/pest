@@ -169,22 +169,10 @@ impl<'a> Input for StringInput<'a> {
 
     #[inline]
     fn match_range(&self, left: char, right: char, pos: usize) -> bool {
-        let len = left.len_utf8();
+        let slice = unsafe { self.string.slice_unchecked(pos, self.string.len()) };
 
-        if len != right.len_utf8() {
-            panic!("ranges should have same-sized UTF-8 limits");
-        }
-
-        let to = pos + len;
-
-        if to <= self.string.len() {
-            if let Ok(string) = str::from_utf8(&self.string.as_bytes()[pos..to]) {
-                let c = string.chars().next().unwrap();
-
-                left <= c && c <= right
-            } else {
-                false
-            }
+        if let Some(char) = slice.chars().next() {
+            left <= char && char <= right
         } else {
             false
         }
@@ -265,6 +253,7 @@ mod tests {
         assert!(input.match_range('b', 'b', 0));
         assert!(!input.match_range('a', 'a', 0));
         assert!(!input.match_range('c', 'c', 0));
+        assert!(input.match_range('a', '嗨', 0));
     }
 
     #[test]
