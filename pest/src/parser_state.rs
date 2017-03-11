@@ -292,7 +292,9 @@ impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
             self.dest = TokenDestination::Stream;
 
             if result {
-                self.sender.send_all(self.queue.drain(..));
+                for token in self.queue.drain(..) {
+                    self.sender.send(token);
+                }
             } else {
                 self.queue.clear();
             }

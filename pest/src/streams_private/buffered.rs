@@ -5,107 +5,104 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::cell::UnsafeCell;
-use std::ptr;
+use std::cell::Cell;
+use std::{mem, ptr};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicUsize, Ordering};
-use std::vec::Drain;
 
 use futures::{Async, Poll};
 use futures::stream::Stream;
 use futures::task::{park, Task};
 
+#[cfg(target_pointer_width = "32")]
+const PAD: usize = 16;
+#[cfg(target_pointer_width = "64")]
+const PAD: usize = 8;
+
+
+#[repr(C)]
 struct RingBuffer<T, E> {
-    buffer:        UnsafeCell<Vec<Option<T>>>,
     read:          AtomicUsize,
+    last_write:    Cell<usize>,
+    _padding1:     [usize; PAD - 2],
     write:         AtomicUsize,
+    last_read:     Cell<usize>,
+    _padding2:     [usize; PAD - 2],
+    buffer:        *mut T,
+    capacity:      usize,
+    size:          usize,
     pub error:     AtomicPtr<E>,
     pub is_closed: AtomicBool,
-    pub task:      AtomicPtr<Task>,
-    capacity:      usize,
-    size:          usize
+    pub task:      AtomicPtr<Task>
 }
 
 impl<T, E> RingBuffer<T, E> {
     #[inline]
     pub fn new(capacity: usize) -> RingBuffer<T, E> {
         let size = capacity.next_power_of_two();
+        let mut vec = Vec::with_capacity(size);
+        let ptr = vec.as_mut_ptr();
+
+        mem::forget(vec);
 
         RingBuffer {
-            buffer:    UnsafeCell::new(Vec::with_capacity(size)),
-            read:      AtomicUsize::new(0),
-            write:     AtomicUsize::new(0),
-            error:     AtomicPtr::new(ptr::null_mut()),
-            is_closed: AtomicBool::new(false),
-            task:      AtomicPtr::new(ptr::null_mut()),
-            capacity:  capacity,
-            size:      size
+            read:       AtomicUsize::new(0),
+            last_write: Cell::new(0),
+            _padding1:  [0; PAD - 2],
+            write:      AtomicUsize::new(0),
+            last_read:  Cell::new(0),
+            _padding2:  [0; PAD - 2],
+            buffer:     ptr,
+            capacity:   capacity,
+            size:       size,
+            error:      AtomicPtr::new(ptr::null_mut()),
+            is_closed:  AtomicBool::new(false),
+            task:       AtomicPtr::new(ptr::null_mut())
         }
     }
 
     #[inline]
     pub fn try_push(&self, value: T) -> Option<T> {
-        let read = self.read.load(Ordering::Relaxed);
+        let read = self.last_read.get();
         let write = self.write.load(Ordering::Relaxed);
 
-        if write - read < self.capacity {
-            self.push(write, value);
+        if read + self.capacity <= write {
+            let read = self.read.load(Ordering::Relaxed);
+            self.last_read.set(read);
 
-            self.write.store(write.wrapping_add(1), Ordering::Relaxed);
-
-            self.try_unpark();
-
-            None
-        } else {
-            Some(value)
-        }
-    }
-
-    #[inline]
-    pub fn try_push_all<'a>(&self, mut drain: Drain<'a, T>) -> Option<Drain<'a, T>> {
-        let read = self.read.load(Ordering::Relaxed);
-        let write = self.write.load(Ordering::Relaxed);
-        let mut difference = write - read;
-
-        if difference < self.capacity {
-            while let Some(value) = drain.next() {
-                self.push(write, value);
-                write.wrapping_add(1);
-
-                difference -= 1;
-
-                if difference == 0 {
-                    break;
-                }
+            if read + self.capacity <= write {
+                return Some(value);
             }
-
-            self.try_unpark();
-
-            if drain.len() != 0 {
-                Some(drain)
-            } else {
-                None
-            }
-        } else {
-            Some(drain)
         }
+
+        self.push(write, value);
+
+        self.write.store(write.wrapping_add(1), Ordering::Relaxed);
+
+        self.try_unpark();
+
+        None
     }
 
     #[inline]
     pub fn try_pop(&self) -> Option<T> {
         let read = self.read.load(Ordering::Relaxed);
-        let write = self.write.load(Ordering::Relaxed);
+        let write = self.last_write.get();
 
-        if read != write {
-            let mut buffer = unsafe { &mut *self.buffer.get() };
-            let result = buffer[self.index(read)].take().unwrap();
+        if read == write {
+            let write = self.write.load(Ordering::Relaxed);
+            self.last_write.set(write);
 
-            self.read.store(read.wrapping_add(1), Ordering::Relaxed);
-
-            Some(result)
-        } else {
-            None
+            if read == write {
+                return None;
+            }
         }
+
+        let result = self.pop(read);
+
+        self.read.store(read.wrapping_add(1), Ordering::Relaxed);
+
+        Some(result)
     }
 
     #[inline]
@@ -120,21 +117,33 @@ impl<T, E> RingBuffer<T, E> {
 
     #[inline]
     fn push(&self, index: usize, value: T) {
-        let mut buffer = unsafe { &mut *self.buffer.get() };
-
-        if buffer.len() < buffer.capacity() {
-            buffer.push(Some(value));
-        } else {
-            buffer[self.index(index)] = Some(value);
+        unsafe {
+            ptr::write(&mut *self.buffer.offset(self.index(index)), value);
         }
     }
 
     #[inline]
-    fn index(&self, index: usize) -> usize {
-        index & (self.size - 1)
+    fn pop(&self, index: usize) -> T {
+        unsafe {
+            ptr::read(self.buffer.offset(self.index(index)))
+        }
+    }
+
+    #[inline]
+    fn index(&self, index: usize) -> isize {
+        (index & (self.size - 1)) as isize
     }
 }
 
+impl<T, E> Drop for RingBuffer<T, E> {
+    fn drop(&mut self) {
+        unsafe  {
+            Vec::from_raw_parts(self.buffer, 0, self.size);
+        }
+    }
+}
+
+unsafe impl<T: Send, E: Send> Send for RingBuffer<T, E> {}
 unsafe impl<T: Sync, E: Sync> Sync for RingBuffer<T, E> {}
 
 pub struct BufferedStream<T, E> {
@@ -183,18 +192,6 @@ impl<T, E> BufferedSender<T, E> {
         loop {
             value = match self.buffer.try_push(value) {
                 Some(value) => value,
-                None        => break
-            };
-        }
-    }
-
-    #[inline]
-    pub fn send_all(&self, drain: Drain<T>) {
-        let mut drain = drain;
-
-        loop {
-            drain = match self.buffer.try_push_all(drain) {
-                Some(drain) => drain,
                 None        => break
             };
         }
