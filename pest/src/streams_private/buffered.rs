@@ -5,14 +5,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::cell::Cell;
+use std::cell::{Cell, UnsafeCell};
 use std::{mem, ptr};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicUsize, Ordering};
 
 use futures::{Async, Poll};
 use futures::stream::Stream;
-use futures::task::{park, Task};
+use futures::task::{self, Task};
 
 #[cfg(target_pointer_width = "32")]
 const PAD: usize = 16;
@@ -33,7 +33,8 @@ struct RingBuffer<T, E> {
     size:          usize,
     pub error:     AtomicPtr<E>,
     pub is_closed: AtomicBool,
-    pub task:      AtomicPtr<Task>
+    task:          UnsafeCell<Option<Task>>,
+    pub task_lock: AtomicBool
 }
 
 impl<T, E> RingBuffer<T, E> {
@@ -57,7 +58,8 @@ impl<T, E> RingBuffer<T, E> {
             size:       size,
             error:      AtomicPtr::new(ptr::null_mut()),
             is_closed:  AtomicBool::new(false),
-            task:       AtomicPtr::new(ptr::null_mut())
+            task:       UnsafeCell::new(None),
+            task_lock:  AtomicBool::new(false)
         }
     }
 
@@ -106,13 +108,39 @@ impl<T, E> RingBuffer<T, E> {
     }
 
     #[inline]
-    pub fn try_unpark(&self) {
-        let task = self.task.load(Ordering::Acquire);
+    pub fn try_park(&self) -> bool {
+        let locked = self.task_lock.swap(true, Ordering::Relaxed);
 
-        if !task.is_null() {
-            unsafe { Box::from_raw(task).unpark(); }
-            self.task.store(ptr::null_mut(), Ordering::Release);
+        if !locked {
+            self.swap(Some(task::park()));
+
+            self.task_lock.store(false, Ordering::Relaxed);
         }
+
+        !locked
+    }
+
+    #[inline]
+    pub fn try_unpark(&self) -> bool {
+        let locked = self.task_lock.swap(true, Ordering::Relaxed);
+
+        if !locked {
+            let task = self.swap(None);
+
+            if let Some(task) = task {
+                task.unpark();
+            }
+
+            self.task_lock.store(false, Ordering::Relaxed);
+        }
+
+        !locked
+    }
+
+    #[inline]
+    pub fn swap(&self, option: Option<Task>) -> Option<Task> {
+        let mut task = unsafe { &mut *self.task.get()};
+        mem::replace(task, option)
     }
 
     #[inline]
@@ -170,8 +198,11 @@ impl<T, E> Stream for BufferedStream<T, E> {
                 if self.buffer.is_closed.load(Ordering::Relaxed) {
                     Ok(Async::Ready(None))
                 } else {
-                    let boxed = Box::new(park());
-                    self.buffer.task.store(Box::into_raw(boxed), Ordering::Release);
+                    loop {
+                        if self.buffer.try_park() {
+                            break;
+                        }
+                    }
 
                     Ok(Async::NotReady)
                 }
@@ -206,9 +237,13 @@ impl<T, E> BufferedSender<T, E> {
 
 impl<T, E> Drop for BufferedSender<T, E> {
     fn drop(&mut self) {
-        self.buffer.try_unpark();
-
         self.buffer.is_closed.store(true, Ordering::Relaxed);
+
+        loop {
+            if self.buffer.try_unpark() {
+                break;
+            }
+        }
     }
 }
 
