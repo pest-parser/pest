@@ -6,22 +6,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::ascii::AsciiExt;
+use std::ops::Range;
 use std::str;
 
 use super::Input;
 
 /// A `struct` useful for matching in-memory `String`s.
-///
-/// # Examples
-///
-/// ```
-/// # use pest::{Input, StringInput};
-/// let input = StringInput::new("asdasdf");
-///
-/// assert!(input.match_string("asd", 0));
-/// assert!(input.match_string("asd", 3));
-/// assert!(!input.match_string("asd", 4));
-/// ```
+#[derive(Debug)]
 pub struct StringInput<'a> {
     string: &'a str
 }
@@ -32,7 +23,7 @@ impl<'a> StringInput<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::{Input, StringInput};
+    /// # use pest::inputs::{Input, StringInput};
     /// let input = StringInput::new("asd");
     ///
     /// assert_eq!(input.len(), 3);
@@ -56,17 +47,12 @@ impl<'a> Input for StringInput<'a> {
     }
 
     #[inline]
-    fn slice(&self, start: usize, end: usize) -> &str {
-        &self.string[start..end]
-    }
-
-    #[inline]
-    unsafe fn slice_unchecked(&self, start: usize, end: usize) -> &str {
+    unsafe fn slice(&self, start: usize, end: usize) -> &str {
         self.string.slice_unchecked(start, end)
     }
 
     #[inline]
-    fn line_col(&self, pos: usize) -> (usize, usize) {
+    unsafe fn line_col(&self, pos: usize) -> (usize, usize) {
         if pos > self.string.len() {
             panic!("position out of bounds");
         }
@@ -111,12 +97,12 @@ impl<'a> Input for StringInput<'a> {
     }
 
     #[inline]
-    fn line_of(&self, mut pos: usize) -> &str {
+    unsafe fn line_of(&self, mut pos: usize) -> &str {
         if pos > self.string.len() {
             panic!("position out of bounds");
         }
 
-        if unsafe { self.string.slice_unchecked(pos, pos + 1) == "\n" } {
+        if self.string.slice_unchecked(pos, pos + 1) == "\n" {
             pos -= 1;
         }
 
@@ -136,19 +122,19 @@ impl<'a> Input for StringInput<'a> {
             Some((i, _)) => i,
             None         => self.string.len()
         };
-        if end > 0 && unsafe { self.string.slice_unchecked(end - 1, end) == "\r" } {
+        if end > 0 && self.string.slice_unchecked(end - 1, end) == "\r" {
             end -= 1;
         }
 
-        unsafe { self.string.slice_unchecked(start, end) }
+        self.string.slice_unchecked(start, end)
     }
 
     #[inline]
-    fn match_string(&self, string: &str, pos: usize) -> bool {
+    unsafe fn match_string(&self, string: &str, pos: usize) -> bool {
         let to = pos + string.len();
 
         if to <= self.string.len() {
-            let slice = unsafe { self.string.slice_unchecked(pos, to) };
+            let slice = self.string.slice_unchecked(pos, to);
             slice == string
         } else {
             false
@@ -156,11 +142,11 @@ impl<'a> Input for StringInput<'a> {
     }
 
     #[inline]
-    fn match_insensitive(&self, string: &str, pos: usize) -> bool {
-        let slice = unsafe { self.string.slice_unchecked(pos, self.string.len()) };
+    unsafe fn match_insensitive(&self, string: &str, pos: usize) -> bool {
+        let slice = self.string.slice_unchecked(pos, self.string.len());
 
         if slice.is_char_boundary(string.len()) {
-            let slice = unsafe { slice.slice_unchecked(0, string.len()) };
+            let slice = slice.slice_unchecked(0, string.len());
             slice.eq_ignore_ascii_case(string)
         } else {
             false
@@ -168,13 +154,17 @@ impl<'a> Input for StringInput<'a> {
     }
 
     #[inline]
-    fn match_range(&self, left: char, right: char, pos: usize) -> bool {
-        let slice = unsafe { self.string.slice_unchecked(pos, self.string.len()) };
+    unsafe fn match_range(&self, range: Range<char>, pos: usize) -> Option<usize> {
+        let slice = self.string.slice_unchecked(pos, self.string.len());
 
         if let Some(char) = slice.chars().next() {
-            left <= char && char <= right
+            if range.start <= char && char <= range.end {
+                Some(char.len_utf8())
+            } else {
+                None
+            }
         } else {
-            false
+            None
         }
     }
 }
@@ -187,18 +177,22 @@ mod tests {
     fn empty() {
         let input = StringInput::new("");
 
-        assert!(input.is_empty());
-        assert!(input.match_string("", 0));
-        assert!(!input.match_string("a", 0));
+        unsafe {
+            assert!(input.is_empty());
+            assert!(input.match_string("", 0));
+            assert!(!input.match_string("a", 0));
+        }
     }
 
     #[test]
     fn parts() {
         let input = StringInput::new("asdasdf");
 
-        assert!(!input.is_empty());
-        assert!(input.match_string("asd", 0));
-        assert!(input.match_string("asdf", 3));
+        unsafe {
+            assert!(!input.is_empty());
+            assert!(input.match_string("asd", 0));
+            assert!(input.match_string("asdf", 3));
+        }
     }
 
     #[test]
@@ -210,57 +204,67 @@ mod tests {
     fn slice() {
         let input = StringInput::new("asdasdf");
 
-        assert_eq!(input.slice(1, 3), "sd");
+        unsafe {
+            assert_eq!(input.slice(1, 3), "sd");
+        }
     }
 
     #[test]
     fn line_col() {
         let input = StringInput::new("a\rb\nc\r\nd嗨");
 
-        assert_eq!(input.line_col(0), (1, 1));
-        assert_eq!(input.line_col(1), (1, 2));
-        assert_eq!(input.line_col(2), (1, 3));
-        assert_eq!(input.line_col(3), (1, 4));
-        assert_eq!(input.line_col(4), (2, 1));
-        assert_eq!(input.line_col(5), (2, 2));
-        assert_eq!(input.line_col(6), (2, 3));
-        assert_eq!(input.line_col(7), (3, 1));
-        assert_eq!(input.line_col(8), (3, 2));
-        assert_eq!(input.line_col(11), (3, 3));
+        unsafe {
+            assert_eq!(input.line_col(0), (1, 1));
+            assert_eq!(input.line_col(1), (1, 2));
+            assert_eq!(input.line_col(2), (1, 3));
+            assert_eq!(input.line_col(3), (1, 4));
+            assert_eq!(input.line_col(4), (2, 1));
+            assert_eq!(input.line_col(5), (2, 2));
+            assert_eq!(input.line_col(6), (2, 3));
+            assert_eq!(input.line_col(7), (3, 1));
+            assert_eq!(input.line_col(8), (3, 2));
+            assert_eq!(input.line_col(11), (3, 3));
+        }
     }
 
     #[test]
     fn line_of() {
         let input = StringInput::new("a\rb\nc\r\nd嗨");
 
-        assert_eq!(input.line_of(0), "a\rb");
-        assert_eq!(input.line_of(1), "a\rb");
-        assert_eq!(input.line_of(2), "a\rb");
-        assert_eq!(input.line_of(3), "a\rb");
-        assert_eq!(input.line_of(4), "c");
-        assert_eq!(input.line_of(5), "c");
-        assert_eq!(input.line_of(6), "c");
-        assert_eq!(input.line_of(7), "d嗨");
-        assert_eq!(input.line_of(8), "d嗨");
-        assert_eq!(input.line_of(11), "d嗨");
+        unsafe {
+            assert_eq!(input.line_of(0), "a\rb");
+            assert_eq!(input.line_of(1), "a\rb");
+            assert_eq!(input.line_of(2), "a\rb");
+            assert_eq!(input.line_of(3), "a\rb");
+            assert_eq!(input.line_of(4), "c");
+            assert_eq!(input.line_of(5), "c");
+            assert_eq!(input.line_of(6), "c");
+            assert_eq!(input.line_of(7), "d嗨");
+            assert_eq!(input.line_of(8), "d嗨");
+            assert_eq!(input.line_of(11), "d嗨");
+        }
     }
 
     #[test]
     fn match_range() {
         let input = StringInput::new("b");
 
-        assert!(input.match_range('a', 'c', 0));
-        assert!(input.match_range('b', 'b', 0));
-        assert!(!input.match_range('a', 'a', 0));
-        assert!(!input.match_range('c', 'c', 0));
-        assert!(input.match_range('a', '嗨', 0));
+        unsafe {
+            assert!(input.match_range('a'..'c', 0).is_some());
+            assert!(input.match_range('b'..'b', 0).is_some());
+            assert!(input.match_range('a'..'a', 0).is_none());
+            assert!(input.match_range('c'..'c', 0).is_none());
+            assert!(input.match_range('a'..'嗨', 0).is_some());
+        }
     }
 
     #[test]
     fn match_insensitive() {
         let input = StringInput::new("AsdASdF");
 
-        assert!(input.match_insensitive("asd", 0));
-        assert!(input.match_insensitive("asdf", 3));
+        unsafe {
+            assert!(input.match_insensitive("asd", 0));
+            assert!(input.match_insensitive("asdf", 3));
+        }
     }
 }

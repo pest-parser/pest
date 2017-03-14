@@ -12,22 +12,23 @@ use futures::{Async, Poll};
 use futures::stream::Stream;
 
 use super::super::error::Error;
+use super::super::inputs::Input;
 use super::super::tokens::Token;
 
-pub struct SliceableStream<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+pub struct SliceableStream<Rule, I: Input, S>
+    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
     stream: S,
     depth:  usize,
-    queues: Vec<VecDeque<Token<Rule>>>,
+    queues: Vec<VecDeque<Token<Rule, I>>>,
     rule:   Option<Rule>,
-    error:  Option<Error<Rule>>
+    error:  Option<Error<Rule, I>>
 }
 
-impl<Rule: Copy + Debug + Eq, S> SliceableStream<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> SliceableStream<Rule, I, S>
+    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
-    pub fn new(stream: S) -> SliceableStream<Rule, S> {
+    pub fn new(stream: S) -> SliceableStream<Rule, I, S> {
         SliceableStream {
             stream: stream,
             depth:  0,
@@ -37,7 +38,7 @@ impl<Rule: Copy + Debug + Eq, S> SliceableStream<Rule, S>
         }
     }
 
-    pub fn poll_split(&mut self) -> Poll<Option<usize>, Error<Rule>> {
+    pub fn poll_split(&mut self) -> Poll<Option<usize>, Error<Rule, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
         }
@@ -65,15 +66,15 @@ impl<Rule: Copy + Debug + Eq, S> SliceableStream<Rule, S>
                     let current_rule = *self.rule.as_ref().unwrap();
 
                     match token {
-                        Token::Start { rule, pos } if rule == current_rule => {
+                        Token::Start { ref rule, ref pos } if *rule == current_rule => {
                             self.queues.last_mut().unwrap().push_back(
-                                Token::Start { rule: rule, pos: pos }
+                                Token::Start { rule: *rule, pos: pos.clone() }
                             );
                             self.depth += 1;
                         },
-                        Token::End { rule, pos } if rule == current_rule => {
+                        Token::End { ref rule, ref pos } if *rule == current_rule => {
                             self.queues.last_mut().unwrap().push_back(
-                                Token::End { rule: rule, pos: pos }
+                                Token::End { rule: *rule, pos: pos.clone() }
                             );
                             self.depth -= 1;
                         },
@@ -100,7 +101,7 @@ impl<Rule: Copy + Debug + Eq, S> SliceableStream<Rule, S>
         }
     }
 
-    pub fn poll_pair(&mut self, index: usize) -> Poll<Option<Token<Rule>>, Error<Rule>> {
+    pub fn poll_pair(&mut self, index: usize) -> Poll<Option<Token<Rule, I>>, Error<Rule, I>> {
         if !self.queues[index].is_empty() {
             Ok(Async::Ready(self.queues[index].pop_front()))
         } else if index == self.queues.len() - 1 {
@@ -116,15 +117,15 @@ impl<Rule: Copy + Debug + Eq, S> SliceableStream<Rule, S>
                         let current_rule = *self.rule.as_ref().unwrap();
 
                         match token {
-                            Token::Start { rule, pos } if rule == current_rule => {
+                            Token::Start { ref rule, ref pos } if *rule == current_rule => {
                                 self.queues.last_mut().unwrap().push_back(
-                                    Token::Start { rule: rule, pos: pos }
+                                    Token::Start { rule: *rule, pos: pos.clone() }
                                 );
                                 self.depth += 1;
                             },
-                            Token::End { rule, pos } if rule == current_rule => {
+                            Token::End { ref rule, ref pos } if *rule == current_rule => {
                                 self.queues.last_mut().unwrap().push_back(
-                                    Token::End { rule: rule, pos: pos }
+                                    Token::End { rule: *rule, pos: pos.clone() }
                                 );
                                 self.depth -= 1;
                             },

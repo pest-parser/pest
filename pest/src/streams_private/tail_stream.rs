@@ -14,29 +14,31 @@ use futures::stream::Stream;
 
 use super::expandable_stream::ExpandableStream;
 use super::super::error::Error;
+use super::super::inputs::Input;
 use super::super::tokens::Token;
 
 /// A `struct` which implements `Stream` and `TokenStream`, and is the returned tail stream which is
 /// returned by [`TokenStream::expanded`](trait.TokenStream#method.expand).
-pub struct TailStream<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+pub struct TailStream<Rule, I: Input, S>
+    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
-    stream: Rc<RefCell<ExpandableStream<Rule, S>>>
+    stream: Rc<RefCell<ExpandableStream<Rule, I, S>>>
 }
 
-pub fn new<Rule, S>(stream: Rc<RefCell<ExpandableStream<Rule, S>>>) -> TailStream<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+pub fn new<Rule, I: Input, S>(stream: Rc<RefCell<ExpandableStream<Rule, I, S>>>)
+    -> TailStream<Rule, I, S>
+    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
     TailStream {
         stream: stream
     }
 }
 
-impl<Rule: Copy + Debug + Eq, S> Stream for TailStream<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> Stream for TailStream<Rule, I, S>
+    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
-    type Item  = Token<Rule>;
-    type Error = Error<Rule>;
+    type Item  = Token<Rule, I>;
+    type Error = Error<Rule, I>;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         self.stream.borrow_mut().poll_tail()

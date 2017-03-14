@@ -5,10 +5,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! A `mod` containing the `Input` `trait` and implementations.
-
 mod input;
+pub mod position;
+pub mod span;
 mod string_input;
 
 pub use self::input::Input;
+pub use self::position::Position;
 pub use self::string_input::StringInput;
+pub use self::span::Span;

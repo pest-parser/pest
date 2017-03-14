@@ -12,24 +12,25 @@ use futures::{Async, Poll};
 use futures::stream::Stream;
 
 use super::super::error::Error;
+use super::super::inputs::{Input, Position};
 use super::super::tokens::{Token, TokenData};
 
-pub struct ExpandableStream<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+pub struct ExpandableStream<Rule, I: Input, S>
+    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
     stream: S,
     rule:   Rule,
     depth:  u32,
-    queue:  VecDeque<Token<Rule>>,
-    start:  Option<usize>,
-    end:    Option<usize>,
-    error:  Option<Error<Rule>>
+    queue:  VecDeque<Token<Rule, I>>,
+    start:  Option<Position<I>>,
+    end:    Option<Position<I>>,
+    error:  Option<Error<Rule, I>>
 }
 
-impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> ExpandableStream<Rule, I, S>
+    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
-    pub fn new(stream: S, rule: Rule) -> ExpandableStream<Rule, S> {
+    pub fn new(stream: S, rule: Rule) -> ExpandableStream<Rule, I, S> {
         ExpandableStream {
             stream: stream,
             rule:   rule,
@@ -41,17 +42,19 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
         }
     }
 
-    pub fn poll_token_data(&mut self) -> Poll<TokenData<Rule>, Error<Rule>> {
+    pub fn poll_token_data(&mut self) -> Poll<TokenData<Rule, I>, Error<Rule, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
         }
 
-        if let (Some(start), Some(end)) = (self.start, self.end) {
+        if self.start.is_some() && self.end.is_some() {
+            let start = self.start.as_ref().unwrap();
+            let end = self.end.as_ref().unwrap();
+
             Ok(Async::Ready(
                 TokenData {
-                    rule:  self.rule,
-                    start: start,
-                    end:   end
+                    rule: self.rule,
+                    span: start.clone().span(end.clone())
                 }
             ))
         } else {
@@ -60,35 +63,38 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                     Ok(Async::Ready(Some(token))) => {
                         if self.start.is_none() {
                             match token {
-                                Token::Start { rule, pos } if rule == self.rule => {
-                                    self.start = Some(pos);
+                                Token::Start { ref rule, ref pos } if *rule == self.rule => {
+                                    self.start = Some(pos.clone());
                                 },
                                 token => panic!("expected Start {{ rule: {:?}, .. }}, \
                                                  but found {:?} instead", self.rule, token)
                             };
                         } else {
                             match token {
-                                Token::Start { rule, pos } if rule == self.rule => {
-                                    self.queue.push_back(Token::Start { rule: rule, pos: pos });
+                                Token::Start { ref rule, ref pos } if *rule == self.rule => {
+                                    self.queue.push_back(
+                                        Token::Start { rule: *rule, pos: pos.clone() }
+                                    );
                                     self.depth += 1;
                                 },
-                                Token::End { rule, pos } if rule == self.rule => {
+                                Token::End { ref rule, ref pos } if *rule == self.rule => {
                                     if self.depth == 0 {
-                                        self.end = Some(pos);
+                                        self.end = Some(pos.clone());
 
-                                        if let Some(start) = self.start {
+                                        if let Some(ref start) = self.start {
                                             return Ok(Async::Ready(
                                                 TokenData {
-                                                    rule:  self.rule,
-                                                    start: start,
-                                                    end:   pos
+                                                    rule: self.rule,
+                                                    span: start.clone().span(pos.clone())
                                                 }
                                             ));
                                         } else {
                                             unreachable!();
                                         }
                                     } else {
-                                        self.queue.push_back(Token::End { rule: rule, pos: pos });
+                                        self.queue.push_back(
+                                            Token::End { rule: *rule, pos: pos.clone() }
+                                        );
                                         self.depth -= 1;
                                     }
                                 },
@@ -116,7 +122,7 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
         }
     }
 
-    pub fn poll_expanded(&mut self) -> Poll<Option<Token<Rule>>, Error<Rule>> {
+    pub fn poll_expanded(&mut self) -> Poll<Option<Token<Rule, I>>, Error<Rule, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
         }
@@ -130,8 +136,8 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                 Ok(Async::Ready(Some(token))) => {
                     if self.start.is_none() {
                         match token {
-                            Token::Start { rule, pos } if rule == self.rule => {
-                                self.start = Some(pos);
+                            Token::Start { ref rule, ref pos } if *rule == self.rule => {
+                                self.start = Some(pos.clone());
 
                                 self.poll_expanded()
                             },
@@ -140,23 +146,23 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                         }
                     } else {
                         match token {
-                            Token::Start { rule, pos } if rule == self.rule => {
+                            Token::Start { ref rule, ref pos } if *rule == self.rule => {
                                 self.depth += 1;
 
                                 Ok(Async::Ready(Some(
-                                    Token::Start { rule: rule, pos: pos }
+                                    Token::Start { rule: *rule, pos: pos.clone() }
                                 )))
                             },
-                            Token::End { rule, pos } if rule == self.rule => {
+                            Token::End { ref rule, ref pos } if *rule == self.rule => {
                                 if self.depth == 0 {
-                                    self.end = Some(pos);
+                                    self.end = Some(pos.clone());
 
                                     Ok(Async::Ready(None))
                                 } else {
                                     self.depth -= 1;
 
                                     Ok(Async::Ready(Some(
-                                        Token::End { rule: rule, pos: pos }
+                                        Token::End { rule: *rule, pos: pos.clone() }
                                     )))
                                 }
                             },
@@ -185,7 +191,7 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
         }
     }
 
-    pub fn poll_tail(&mut self) -> Poll<Option<Token<Rule>>, Error<Rule>> {
+    pub fn poll_tail(&mut self) -> Poll<Option<Token<Rule, I>>, Error<Rule, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
         }
@@ -195,23 +201,27 @@ impl<Rule: Copy + Debug + Eq, S> ExpandableStream<Rule, S>
                 Ok(Async::Ready(Some(token))) => {
                     if self.start.is_none() {
                         match token {
-                            Token::Start { rule, pos } if rule == self.rule => {
-                                self.start = Some(pos);
+                            Token::Start { ref rule, ref pos } if *rule == self.rule => {
+                                self.start = Some(pos.clone());
                             },
                             token => panic!("expected Start {{ rule: {:?}, .. }}, \
                                              but found {:?} instead", self.rule, token)
                         };
                     } else {
                         match token {
-                            Token::Start { rule, pos } if rule == self.rule => {
-                                self.queue.push_back(Token::Start { rule: rule, pos: pos });
+                            Token::Start { ref rule, ref pos } if *rule == self.rule => {
+                                self.queue.push_back(
+                                    Token::Start { rule: *rule, pos: pos.clone() }
+                                );
                                 self.depth += 1;
                             },
-                            Token::End { rule, pos } if rule == self.rule => {
+                            Token::End { ref rule, ref pos } if *rule == self.rule => {
                                 if self.depth == 0 {
-                                    self.end = Some(pos);
+                                    self.end = Some(pos.clone());
                                 } else {
-                                    self.queue.push_back(Token::End { rule: rule, pos: pos });
+                                    self.queue.push_back(
+                                        Token::End { rule: *rule, pos: pos.clone() }
+                                    );
                                     self.depth -= 1;
                                 }
                             },
