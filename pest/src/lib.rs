@@ -8,11 +8,16 @@
 extern crate futures;
 
 mod error;
-mod inputs;
+mod inputs_private;
 mod parser;
 mod parser_state;
 mod streams_private;
 pub mod tokens;
+
+/// A `mod` containing the `Input` `trait` and implementations.
+pub mod inputs {
+    pub use super::inputs_private::{Input, Position, Span, StringInput};
+}
 
 /// A `mod` containing `Stream` implementations used in `Token` processing.
 pub mod streams {
@@ -21,7 +26,5 @@ pub mod streams {
 }
 
 pub use error::Error;
-pub use inputs::Input;
-pub use inputs::StringInput;
 pub use parser::Parser;
 pub use parser_state::{state, ParserState};

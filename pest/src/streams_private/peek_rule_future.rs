@@ -12,29 +12,30 @@ use futures::future::Future;
 use futures::stream::{Peekable, Stream};
 
 use super::super::error::Error;
+use super::super::inputs::Input;
 use super::super::tokens::Token;
 
 /// A `struct` which implements `Future`. It contains a peeked `Rule` and stream, and is returned by
 /// [`TokenStream::peek_rule`](trait.TokenStream#method.peek_rule).
-pub struct PeekRuleFuture<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+pub struct PeekRuleFuture<Rule, I: Input, S>
+    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
     peekable: Option<Peekable<S>>
 }
 
-pub fn new<Rule, S>(stream: S) -> PeekRuleFuture<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+pub fn new<Rule, I: Input, S>(stream: S) -> PeekRuleFuture<Rule, I, S>
+    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
     PeekRuleFuture {
         peekable: Some(stream.peekable())
     }
 }
 
-impl <Rule: Copy + Debug, S> Future for PeekRuleFuture<Rule, S>
-    where S: Stream<Item=Token<Rule>, Error=Error<Rule>> {
+impl <Rule: Copy + Debug, I: Input + Debug, S> Future for PeekRuleFuture<Rule, I, S>
+    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
     type Item  = (Option<Rule>, Peekable<S>);
-    type Error = Error<Rule>;
+    type Error = Error<Rule, I>;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let rule = match self.peekable.as_mut().expect("called poll twice").peek() {

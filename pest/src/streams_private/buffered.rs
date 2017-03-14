@@ -19,7 +19,6 @@ const PAD: usize = 16;
 #[cfg(target_pointer_width = "64")]
 const PAD: usize = 8;
 
-
 #[repr(C)]
 struct RingBuffer<T, E> {
     read:          AtomicUsize,
@@ -264,6 +263,34 @@ pub fn buffered<T, E>(capacity: usize) -> (BufferedSender<T, E>, BufferedStream<
     let buffer = Arc::new(RingBuffer::new(capacity));
 
     (BufferedSender { buffer: buffer.clone() }, BufferedStream { buffer: buffer })
+}
+
+pub enum SendableToken<Rule> {
+    Start {
+        rule: Rule,
+        pos:  usize
+    },
+    End {
+        rule: Rule,
+        pos:  usize
+    }
+}
+
+pub enum SendableError<Rule> {
+    ParsingError {
+        positives: Vec<Rule>,
+        negatives: Vec<Rule>,
+        pos:       usize
+    },
+    CustomErrorPos {
+        message: String,
+        pos:     usize
+    },
+    CustomErrorSpan {
+        message: String,
+        start:   usize,
+        end:     usize
+    }
 }
 
 #[cfg(test)]
