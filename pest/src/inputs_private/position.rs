@@ -64,56 +64,53 @@ impl<I: Input> Position<I> {
     }
 
     #[inline]
-    pub fn skip(self, n: usize) -> Option<Position<I>> {
+    pub fn skip(self, n: usize) -> Result<Position<I>, Position<I>> {
         let skipped = unsafe { self.input.skip(n, self.pos) };
-        skipped.map(move |p| new(self.input, p))
+
+        match skipped {
+            Some(len) => Ok(new(self.input, self.pos + len)),
+            None      => Err(self)
+        }
     }
 
     #[inline]
-    pub fn match_string(self, string: &str) -> Option<Position<I>> {
+    pub fn match_string(self, string: &str) -> Result<Position<I>, Position<I>> {
         if unsafe { self.input.match_string(string, self.pos) } {
-            Some(new(self.input, self.pos + string.len()))
+            Ok(new(self.input, self.pos + string.len()))
         } else {
-            None
+            Err(self)
         }
     }
 
     #[inline]
-    pub fn match_insensitive(self, string: &str) -> Option<Position<I>> {
+    pub fn match_insensitive(self, string: &str) -> Result<Position<I>, Position<I>> {
         if unsafe { self.input.match_insensitive(string, self.pos) } {
-            Some(new(self.input, self.pos + string.len()))
+            Ok(new(self.input, self.pos + string.len()))
         } else {
-            None
+            Err(self)
         }
     }
 
     #[inline]
-    pub fn match_range(self, range: Range<char>) -> Option<Position<I>> {
+    pub fn match_range(self, range: Range<char>) -> Result<Position<I>, Position<I>> {
         let len = unsafe { self.input.match_range(range, self.pos) };
-        len.map(move |len| new(self.input, self.pos + len))
+
+        match len {
+            Some(len) => Ok(new(self.input, self.pos + len)),
+            None      => Err(self)
+        }
     }
 
     #[inline]
-    pub fn repeat<F>(self, mut f: F) -> Option<Position<I>>
-        where F: FnMut(Position<I>) -> Option<Position<I>> {
+    pub fn repeat<F>(self, mut f: F) -> Result<Position<I>, Position<I>>
+        where F: FnMut(Position<I>) -> Result<Position<I>, Position<I>> {
 
-        let mut option = Some(self);
+        let result = f(self);
 
-        loop {
-            let result = if let Some(ref pos) = option {
-                f(pos.clone())
-            } else {
-                unreachable!();
-            };
-
-            if result.is_some() {
-                option = result;
-            } else {
-                break;
-            }
+        match result {
+            Ok(pos)  => pos.repeat(f),
+            Err(pos) => Ok(pos)
         }
-
-        option
     }
 }
 
