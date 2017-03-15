@@ -54,7 +54,7 @@ pub struct ParserState<'a, Rule, I: Input> {
 /// let (_, _) = state::<(), _>(input);
 /// # }
 /// ```
-pub fn state<'a, Rule: Copy+ Debug + Eq + 'static, I: Input>(input: I)
+pub fn state<'a, Rule: Copy + Debug + Eq + 'static, I: Input>(input: I)
     -> (ParserState<'a, Rule, I>, parser_stream::ParserStream<Rule, I>) {
 
     let (sender, stream) = buffered(1024);
@@ -78,7 +78,7 @@ pub fn state<'a, Rule: Copy+ Debug + Eq + 'static, I: Input>(input: I)
     (state, stream)
 }
 
-impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
+impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
     /// Creates the initial `Position` of the state's `Input` with the value `0`.
     ///
     /// # Examples
