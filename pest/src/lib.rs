@@ -9,6 +9,7 @@ extern crate futures;
 
 mod error;
 mod inputs_private;
+mod macros;
 mod parser;
 mod parser_state;
 mod streams_private;

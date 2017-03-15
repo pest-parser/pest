@@ -5,10 +5,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::fmt::Debug;
 use std::ops::Range;
 
 /// A `trait` that defines an input for a `Parser`.
-pub trait Input {
+pub trait Input: Debug {
     /// Returns length of the input.
     fn len(&self) -> usize;
 
