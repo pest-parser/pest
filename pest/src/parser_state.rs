@@ -207,22 +207,22 @@ impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
     /// let first = state.queued(|state| {
     ///     state.start().match_string("a").and_then(|p| p.match_string("b"))
     /// });
-    /// assert!(first.is_some());
+    /// assert!(first.is_ok());
     ///
     /// let second = state.queued(|_| {
     ///     first.and_then(|p| p.match_string("a")).and_then(|p| p.match_string("c"))
     /// });
-    /// assert!(second.is_some());
+    /// assert!(second.is_ok());
     ///
     /// let third = state.queued(|_| {
     ///     second.and_then(|p| p.match_string("a")).and_then(|p| p.match_string("d"))
     /// });
-    /// assert!(third.is_some());
+    /// assert!(third.is_ok());
     /// # }
     /// ```
     #[inline]
-    pub fn queued<F>(&mut self, rule: F) -> Option<Position<I>>
-        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Option<Position<I>> {
+    pub fn queued<F>(&mut self, rule: F) -> Result<Position<I>, Position<I>>
+        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Result<Position<I>, Position<I>> {
 
         let should_toggle = self.dest == TokenDestination::Stream;
 
@@ -235,7 +235,7 @@ impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
         if should_toggle {
             self.dest = TokenDestination::Stream;
 
-            if result.is_some() {
+            if result.is_ok() {
                 for token in self.queue.drain(..) {
                     self.sender.send(token);
                 }
@@ -266,12 +266,12 @@ impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
     ///     state.send(Token::Start { rule: (), pos: pos }); // Won't actually be sent.
     ///
     ///     state.start().match_string("b")
-    /// }).is_none());
+    /// }).is_err());
     /// # }
     /// ```
     #[inline]
-    pub fn ignored<F>(&mut self, rule: F) -> Option<Position<I>>
-        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Option<Position<I>> {
+    pub fn ignored<F>(&mut self, rule: F) -> Result<Position<I>, Position<I>>
+        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Result<Position<I>, Position<I>> {
 
         let should_toggle = self.dest != TokenDestination::Ignore;
         let initial_dest = self.dest;
@@ -305,14 +305,14 @@ impl<'a, Rule: Clone + Ord, I: Input> ParserState<'a, Rule, I> {
     /// assert!(!state.is_atomic());
     /// state.atomic(true, |state| {
     ///     assert!(state.is_atomic());
-    ///     None
-    /// });
+    ///     Ok(state.start())
+    /// }).unwrap();
     /// assert!(!state.is_atomic());
     /// # }
     /// ```
     #[inline]
-    pub fn atomic<F>(&mut self, is_atomic: bool, rule: F) -> Option<Position<I>>
-        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Option<Position<I>> {
+    pub fn atomic<F>(&mut self, is_atomic: bool, rule: F) -> Result<Position<I>, Position<I>>
+        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Result<Position<I>, Position<I>> {
 
         let should_toggle = self.is_atomic != is_atomic;
 

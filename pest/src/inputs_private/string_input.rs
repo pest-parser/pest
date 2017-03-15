@@ -132,7 +132,7 @@ impl<'a> Input for StringInput<'a> {
     #[inline]
     unsafe fn skip(&self, n: usize, pos: usize) -> Option<usize> {
         let mut chars = 0;
-        let skipped_len = self.string.char_indices()
+        let len = self.string.char_indices()
                                      .skip_while(|&(i, _)| i < pos)
                                      .take(n)
                                      .fold(0, |s, (_, c)| {
@@ -141,7 +141,7 @@ impl<'a> Input for StringInput<'a> {
                                      });
 
         if chars == n {
-            Some(pos + skipped_len)
+            Some(len)
         } else {
             None
         }
@@ -280,7 +280,7 @@ mod tests {
         unsafe {
             assert_eq!(input.skip(0, 0), Some(0));
             assert_eq!(input.skip(1, 0), Some(1));
-            assert_eq!(input.skip(1, 1), Some(4));
+            assert_eq!(input.skip(1, 1), Some(3));
         }
     }
 

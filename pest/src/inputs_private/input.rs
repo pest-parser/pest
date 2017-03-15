@@ -24,8 +24,8 @@ pub trait Input {
     /// Returns the line of the input at `pos`.
     unsafe fn line_of(&self, pos: usize) -> &str;
 
-    /// Tries to skip `n` `char`s at `pos`. Returns `Some(pos)` with the new position or `None` if
-    /// there are not enough `char` left to skip.
+    /// Tries to skip `n` `char`s at `pos`. Returns `Some(len)` with the UTF-8 length of the skipped
+    /// `char`s position or `None` if there are not enough `char`s left to skip.
     unsafe fn skip(&self, n: usize, pos: usize) -> Option<usize>;
 
     /// Matches `string` at `pos` and returns whether it matched.
