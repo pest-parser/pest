@@ -45,6 +45,15 @@ impl<I: Input> Position<I> {
     }
 
     #[inline]
+    pub fn span(self, other: Position<I>) -> span::Span<I> {
+        if &**self.input as *const I == &**other.input as *const I {
+            span::new(self.input, self.pos, other.pos)
+        } else {
+            panic!("Span created from positions coming from different inputs")
+        }
+    }
+
+    #[inline]
     pub fn line_col(&self) -> (usize, usize) {
         unsafe { self.input.line_col(self.pos) }
     }
@@ -55,36 +64,33 @@ impl<I: Input> Position<I> {
     }
 
     #[inline]
-    pub fn span(self, other: Position<I>) -> span::Span<I> {
-        if &**self.input as *const I == &**other.input as *const I {
-            span::new(self.input, self.pos, other.pos)
-        } else {
-            panic!("Span created from positions coming from different inputs")
-        }
+    pub fn skip(self, n: usize) -> Option<Position<I>> {
+        let skipped = unsafe { self.input.skip(n, self.pos) };
+        skipped.map(move |p| new(self.input, p))
     }
 
     #[inline]
-    pub fn match_string(&self, string: &str) -> Option<Position<I>> {
+    pub fn match_string(self, string: &str) -> Option<Position<I>> {
         if unsafe { self.input.match_string(string, self.pos) } {
-            Some(new(self.input.clone(), self.pos + string.len()))
+            Some(new(self.input, self.pos + string.len()))
         } else {
             None
         }
     }
 
     #[inline]
-    pub fn match_insensitive(&self, string: &str) -> Option<Position<I>> {
+    pub fn match_insensitive(self, string: &str) -> Option<Position<I>> {
         if unsafe { self.input.match_insensitive(string, self.pos) } {
-            Some(new(self.input.clone(), self.pos + string.len()))
+            Some(new(self.input, self.pos + string.len()))
         } else {
             None
         }
     }
 
     #[inline]
-    pub fn match_range(&self, range: Range<char>) -> Option<Position<I>> {
+    pub fn match_range(self, range: Range<char>) -> Option<Position<I>> {
         let len = unsafe { self.input.match_range(range, self.pos) };
-        len.map(|len| new(self.input.clone(), self.pos + len))
+        len.map(move |len| new(self.input, self.pos + len))
     }
 
     #[inline]

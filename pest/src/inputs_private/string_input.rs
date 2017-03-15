@@ -130,6 +130,24 @@ impl<'a> Input for StringInput<'a> {
     }
 
     #[inline]
+    unsafe fn skip(&self, n: usize, pos: usize) -> Option<usize> {
+        let mut chars = 0;
+        let skipped_len = self.string.char_indices()
+                                     .skip_while(|&(i, _)| i < pos)
+                                     .take(n)
+                                     .fold(0, |s, (_, c)| {
+                                         chars += 1;
+                                         s + c.len_utf8()
+                                     });
+
+        if chars == n {
+            Some(pos + skipped_len)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
     unsafe fn match_string(&self, string: &str, pos: usize) -> bool {
         let to = pos + string.len();
 
@@ -242,6 +260,27 @@ mod tests {
             assert_eq!(input.line_of(7), "d嗨");
             assert_eq!(input.line_of(8), "d嗨");
             assert_eq!(input.line_of(11), "d嗨");
+        }
+    }
+
+    #[test]
+    fn skip_empty() {
+        let input = StringInput::new("");
+
+        unsafe {
+            assert_eq!(input.skip(0, 0), Some(0));
+            assert_eq!(input.skip(1, 0), None);
+        }
+    }
+
+    #[test]
+    fn skip() {
+        let input = StringInput::new("d嗨");
+
+        unsafe {
+            assert_eq!(input.skip(0, 0), Some(0));
+            assert_eq!(input.skip(1, 0), Some(1));
+            assert_eq!(input.skip(1, 1), Some(4));
         }
     }
 
