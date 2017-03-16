@@ -40,7 +40,7 @@ script:
 after_success:
   - |
       cd pest_derive &&
-      cargo coverage &&
+      cargo coverage -m ../kcov &&
       cd ../pest &&
-      cargo coverage &&
+      cargo coverage -m ../kcov &&
       bash <(curl -s https://codecov.io/bash)
