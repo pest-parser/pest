@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -12,7 +13,7 @@ use std::sync::Arc;
 use super::input::Input;
 use super::position;
 
-#[derive(Debug, Eq)]
+#[derive(Eq)]
 pub struct Span<I: Input> {
     input: Rc<Arc<I>>,
     start: usize,
@@ -50,6 +51,12 @@ impl<I: Input> Span<I> {
     #[inline]
     pub fn capture(&self) -> &str {
         unsafe { self.input.slice(self.start, self.end) }
+    }
+}
+
+impl<I: Input> fmt::Debug for Span<I> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Span {{ start: {}, end: {} }}", self.start, self.end)
     }
 }
 

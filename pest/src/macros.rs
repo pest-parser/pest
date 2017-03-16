@@ -7,93 +7,137 @@
 
 #[macro_export]
 macro_rules! expands_to {
-    ( $_rules:ident, $_tokens:expr, [] ) => ();
+    ( $_rules:ident, $tokens:expr, [] ) => {
+        let rest: Vec<_> = $tokens.map(|r| r.unwrap()).collect();
+
+        assert!(rest.is_empty(), format!("expected end of stream, but found {:?}", rest));
+    };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr ) ] ) => {
-        let expected = format!("expected Start {{ rule: {:?}, .. }}", $rules::$name);
+        let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
+                               $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
             $crate::tokens::Token::Start { rule, pos } => {
-                assert_eq!(rule, $rules::$name);
-                assert_eq!(pos.pos(), $start);
+                let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
+                                      expected, rule, pos.pos());
+
+                if rule != $rules::$name && pos.pos() != $start {
+                    panic!("{}", message);
+                }
             },
-            _ => panic!("{}", format!("{} but found End", expected))
+            token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
 
-        let expected = format!("expected End {{ rule: {:?}, .. }}", $rules::$name);
+        let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
+                               $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
             $crate::tokens::Token::End { rule, pos } => {
-                assert_eq!(rule, $rules::$name);
-                assert_eq!(pos.pos(), $end);
+                let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
+                                      expected, rule, pos.pos());
+
+                if rule != $rules::$name && pos.pos() != $end {
+                    panic!("{}", message);
+                }
             },
-            _ => panic!("{}", format!("{} but found Start", expected))
+            token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
     };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr ),
                                     $( $names:ident $calls:tt ),* ] ) => {
 
-        let expected = format!("expected Start {{ rule: {:?}, .. }}", $rules::$name);
+        let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
+                               $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
             $crate::tokens::Token::Start { rule, pos } => {
-                assert_eq!(rule, $rules::$name);
-                assert_eq!(pos.pos(), $start);
+                let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
+                                      expected, rule, pos.pos());
+
+                if rule != $rules::$name && pos.pos() != $start {
+                    panic!("{}", message);
+                }
             },
-            _ => panic!("{}", format!("{} but found End", expected))
+            token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
 
-        let expected = format!("expected End {{ rule: {:?}, .. }}", $rules::$name);
+        let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
+                               $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
             $crate::tokens::Token::End { rule, pos } => {
-                assert_eq!(rule, $rules::$name);
-                assert_eq!(pos.pos(), $end);
+                let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
+                                      expected, rule, pos.pos());
+
+                if rule != $rules::$name && pos.pos() != $end {
+                    panic!("{}", message);
+                }
             },
-            _ => panic!("{}", format!("{} but found Start", expected))
+            token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
 
         expands_to!($rules, $tokens, [ $( $names $calls ),* ]);
     };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr,
                                                   [ $( $names:ident $calls:tt ),* ] ) ] ) => {
-        let expected = format!("expected Start {{ rule: {:?}, .. }}", $rules::$name);
+        let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
+                               $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
             $crate::tokens::Token::Start { rule, pos } => {
-                assert_eq!(rule, $rules::$name);
-                assert_eq!(pos.pos(), $start);
+                let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
+                                      expected, rule, pos.pos());
+
+                if rule != $rules::$name && pos.pos() != $start {
+                    panic!("{}", message);
+                }
             },
-            _ => panic!("{}", format!("{} but found End", expected))
+            token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
 
         expands_to!($rules, $tokens, [ $( $names $calls ),* ]);
 
-        let expected = format!("expected End {{ rule: {:?}, .. }}", $rules::$name);
+        let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
+                               $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
             $crate::tokens::Token::End { rule, pos } => {
-                assert_eq!(rule, $rules::$name);
-                assert_eq!(pos.pos(), $end);
+                let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
+                                      expected, rule, pos.pos());
+
+                if rule != $rules::$name && pos.pos() != $end {
+                    panic!("{}", message);
+                }
             },
-            _ => panic!("{}", format!("{} but found Start", expected))
+            token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
     };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr,
                                                   [ $( $nested_names:ident $nested_calls:tt ),* ] ),
                                     $( $names:ident $calls:tt ),* ] ) => {
 
-        let expected = format!("expected Start {{ rule: {:?}, .. }}", $rules::$name);
+        let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
+                               $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
             $crate::tokens::Token::Start { rule, pos } => {
-                assert_eq!(rule, $rules::$name);
-                assert_eq!(pos.pos(), $start);
+                let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
+                                      expected, rule, pos.pos());
+
+                if rule != $rules::$name && pos.pos() != $start {
+                    panic!("{}", message);
+                }
             },
-            _ => panic!("{}", format!("{} but found End", expected))
+            token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
 
         expands_to!($rules, $tokens, [ $( $nested_names $nested_calls ),* ]);
 
-        let expected = format!("expected End {{ rule: {:?}, .. }}", $rules::$name);
+        let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
+                               $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
             $crate::tokens::Token::End { rule, pos } => {
-                assert_eq!(rule, $rules::$name);
-                assert_eq!(pos.pos(), $end);
+                let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
+                                      expected, rule, pos.pos());
+
+                if rule != $rules::$name && pos.pos() != $end {
+                    panic!("{}", message);
+                }
             },
-            _ => panic!("{}", format!("{} but found Start", expected))
+            token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
 
         expands_to!($rules, $tokens, [ $( $names $calls ),* ]);

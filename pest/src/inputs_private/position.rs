@@ -6,6 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::cmp::Ordering;
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::rc::Rc;
@@ -14,7 +15,7 @@ use std::sync::Arc;
 use super::input::Input;
 use super::span;
 
-#[derive(Debug, Eq, Ord)]
+#[derive(Eq, Ord)]
 pub struct Position<I: Input> {
     input: Rc<Arc<I>>,
     pos:   usize
@@ -35,16 +36,6 @@ impl<I: Input> Position<I> {
     }
 
     #[inline]
-    pub fn at_start(&self) -> bool {
-        self.pos == 0
-    }
-
-    #[inline]
-    pub fn at_end(&self) -> bool {
-        self.pos == self.input.len()
-    }
-
-    #[inline]
     pub fn span(self, other: Position<I>) -> span::Span<I> {
         if &**self.input as *const I == &**other.input as *const I {
             span::new(self.input, self.pos, other.pos)
@@ -61,6 +52,24 @@ impl<I: Input> Position<I> {
     #[inline]
     pub fn line_of(&self) -> &str {
         unsafe { self.input.line_of(self.pos) }
+    }
+
+    #[inline]
+    pub fn at_start(self) -> Result<Position<I>, Position<I>> {
+        if self.pos == 0 {
+            Ok(self)
+        } else {
+            Err(self)
+        }
+    }
+
+    #[inline]
+    pub fn at_end(self) -> Result<Position<I>, Position<I>> {
+        if self.pos == self.input.len() {
+            Ok(self)
+        } else {
+            Err(self)
+        }
     }
 
     #[inline]
@@ -102,6 +111,54 @@ impl<I: Input> Position<I> {
     }
 
     #[inline]
+    pub fn sequence<F>(self, f: F) -> Result<Position<I>, Position<I>>
+        where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
+
+        let result = f(self.clone());
+
+        match result {
+            Ok(pos) => Ok(pos),
+            Err(_)  => Err(self)
+        }
+    }
+
+    #[inline]
+    pub fn lookahead<F>(self, f: F) -> Result<Position<I>, Position<I>>
+        where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
+
+        let result = f(self.clone());
+
+        match result {
+            Ok(_)  => Ok(self),
+            Err(_) => Err(self)
+        }
+    }
+
+    #[inline]
+    pub fn negate<F>(self, f: F) -> Result<Position<I>, Position<I>>
+        where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
+
+        let result = f(self);
+
+        match result {
+            Ok(pos)  => Err(pos),
+            Err(pos) => Ok(pos)
+        }
+    }
+
+    #[inline]
+    pub fn optional<F>(self, f: F) -> Result<Position<I>, Position<I>>
+        where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
+
+        let result = f(self);
+
+        match result {
+            Ok(pos)  => Ok(pos),
+            Err(pos) => Ok(pos)
+        }
+    }
+
+    #[inline]
     pub fn repeat<F>(self, mut f: F) -> Result<Position<I>, Position<I>>
         where F: FnMut(Position<I>) -> Result<Position<I>, Position<I>> {
 
@@ -111,6 +168,12 @@ impl<I: Input> Position<I> {
             Ok(pos)  => pos.repeat(f),
             Err(pos) => Ok(pos)
         }
+    }
+}
+
+impl<I: Input> fmt::Debug for Position<I> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Position {{ pos: {} }}", self.pos)
     }
 }
 
