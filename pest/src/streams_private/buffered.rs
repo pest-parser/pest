@@ -300,7 +300,7 @@ mod tests {
 
     #[test]
     fn ring_async() {
-        let ring: Arc<RingBuffer<i32, ()>> = Arc::new(RingBuffer::new(3));
+        let ring: Arc<RingBuffer<i32, ()>> = Arc::new(RingBuffer::new(10));
         let clone = ring.clone();
 
         thread::spawn(move || {
