@@ -20,7 +20,7 @@ use super::tokens::Token;
 enum TokenDestination {
     Stream,
     Queue,
-    Ignore
+    Lookahead
 }
 
 /// A `struct` which contains the complete state of a `Parser`.
@@ -29,6 +29,7 @@ pub struct ParserState<'a, Rule, I: Input> {
     sender:          BufferedSender<SendableToken<Rule>, SendableError<Rule>>,
     queue:           Vec<SendableToken<Rule>>,
     dest:            TokenDestination,
+    pos_lookahead:   bool,
     is_atomic:       bool,
     pos_attempts:    Vec<Rule>,
     neg_attempts:    Vec<Rule>,
@@ -61,16 +62,17 @@ pub fn state<'a, Rule: Copy + Debug + Eq + 'static, I: Input>(input: I)
     let input = Arc::new(input);
 
     let state = ParserState {
-        input:        Rc::new(input.clone()),
-        sender:       sender,
-        queue:        vec![],
-        dest:         TokenDestination::Stream,
-        is_atomic:    false,
-        pos_attempts: vec![],
-        neg_attempts: vec![],
-        attempt_pos:  0,
-        stack:        vec![],
-        eoi_matched:  false
+        input:         Rc::new(input.clone()),
+        sender:        sender,
+        queue:         vec![],
+        dest:          TokenDestination::Stream,
+        pos_lookahead: false,
+        is_atomic:     false,
+        pos_attempts:  vec![],
+        neg_attempts:  vec![],
+        attempt_pos:   0,
+        stack:         vec![],
+        eoi_matched:   false
     };
 
     let stream = parser_stream::new(stream, input);
@@ -78,7 +80,7 @@ pub fn state<'a, Rule: Copy + Debug + Eq + 'static, I: Input>(input: I)
     (state, stream)
 }
 
-impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
+impl<'a, Rule: Copy, I: Input> ParserState<'a, Rule, I> {
     /// Creates the initial `Position` of the state's `Input` with the value `0`.
     ///
     /// # Examples
@@ -99,6 +101,44 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
     #[inline]
     pub fn start(&self) -> Position<I> {
         position::new(self.input.clone(), 0)
+    }
+
+    #[inline]
+    pub fn rule<F>(&mut self, rule: Rule, pos: Position<I>, must_match: bool, f: F)
+        -> Result<Position<I>, Position<I>>
+        where F: FnOnce(Position<I>,
+                        &mut ParserState<'a, Rule, I>) -> Result<Position<I>, Position<I>> {
+
+        let should_toggle = !must_match && self.dest == TokenDestination::Stream;
+        let index = self.queue.len();
+
+        if should_toggle {
+            self.dest = TokenDestination::Queue;
+        }
+
+        self.send(Token::Start { rule: rule, pos: pos.clone() });
+
+        let result = f(pos.clone(), self);
+
+        if let Ok(ref pos) = result {
+            self.send(Token::End { rule: rule, pos: pos.clone() });
+        }
+
+        if self.dest == TokenDestination::Queue && result.is_err() {
+            self.queue.truncate(index);
+        }
+
+        if should_toggle {
+            self.dest = TokenDestination::Stream;
+
+            if result.is_ok() {
+                for token in self.queue.drain(..) {
+                    self.sender.send(token);
+                }
+            }
+        }
+
+        result
     }
 
     /// Sends `token` according to the `ParserState`'s destination. The `Token` will get sent to the
@@ -139,10 +179,18 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
             }
         }
 
+        match token {
+            Token::Start { ref rule, ref pos } => {
+                let is_positive = !(self.dest == TokenDestination::Lookahead) || self.pos_lookahead;
+                self.track(is_positive, *rule, pos.pos());
+            },
+            _ => ()
+        };
+
         match self.dest {
-            TokenDestination::Stream => self.sender.send(to_sendable(token)),
-            TokenDestination::Queue  => self.queue.push(to_sendable(token)),
-            TokenDestination::Ignore => ()
+            TokenDestination::Stream    => self.sender.send(to_sendable(token)),
+            TokenDestination::Queue     => self.queue.push(to_sendable(token)),
+            TokenDestination::Lookahead => ()
         };
     }
 
@@ -165,7 +213,7 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
     /// # }
     /// ```
     #[inline]
-    pub fn fail(self, error: Error<Rule, I>) {
+    pub fn fail(&self, error: Error<Rule, I>) {
         self.sender.fail(match error {
             Error::ParsingError { positives, negatives, pos } => {
                 SendableError::ParsingError {
@@ -190,8 +238,20 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
         });
     }
 
-    /// Matches the current `rule`, queues up all generated `Token`s, and reverts the state if the
-    /// `rule` fails.
+    #[inline]
+    pub fn fail_with_attempts(&mut self) {
+        let positives = self.pos_attempts.drain(..).collect();
+        let negatives = self.neg_attempts.drain(..).collect();
+
+        self.fail(Error::ParsingError {
+            positives: positives,
+            negatives: negatives,
+            pos:       position::new(self.input.clone(), self.attempt_pos)
+        });
+    }
+
+    /// Matches `f`, queues up all generated `Token`s, and reverts the state if the
+    /// `rule` fails. Otherwise, it sends all queues `Token`s.
     ///
     /// # Examples
     ///
@@ -221,7 +281,7 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
     /// # }
     /// ```
     #[inline]
-    pub fn queued<F>(&mut self, rule: F) -> Result<Position<I>, Position<I>>
+    pub fn queued<F>(&mut self, f: F) -> Result<Position<I>, Position<I>>
         where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Result<Position<I>, Position<I>> {
 
         let should_toggle = self.dest == TokenDestination::Stream;
@@ -230,7 +290,7 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
             self.dest = TokenDestination::Queue;
         }
 
-        let result = rule(self);
+        let result = f(self);
 
         if should_toggle {
             self.dest = TokenDestination::Stream;
@@ -247,7 +307,8 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
         result
     }
 
-    /// Matches the current `rule`, ignores all `Token`s, and reverts the state.
+    /// Matches `f` while ignoring all `Token` sending. However, it still keeps track of rule
+    /// matching according to `is_positive`.
     ///
     /// # Examples
     ///
@@ -261,7 +322,7 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
     /// let input = StringInput::new("a");
     /// let (mut state, _) = state::<(), _>(input);
     ///
-    /// assert!(state.ignored(|state| {
+    /// assert!(state.lookahead(true, |state| {
     ///     let pos = state.start();
     ///     state.send(Token::Start { rule: (), pos: pos }); // Won't actually be sent.
     ///
@@ -270,17 +331,18 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
     /// # }
     /// ```
     #[inline]
-    pub fn ignored<F>(&mut self, rule: F) -> Result<Position<I>, Position<I>>
+    pub fn lookahead<F>(&mut self, is_positive: bool, f: F) -> Result<Position<I>, Position<I>>
         where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Result<Position<I>, Position<I>> {
 
-        let should_toggle = self.dest != TokenDestination::Ignore;
+        let should_toggle = self.dest != TokenDestination::Lookahead;
         let initial_dest = self.dest;
 
         if should_toggle {
-            self.dest = TokenDestination::Ignore;
+            self.dest = TokenDestination::Lookahead;
+            self.pos_lookahead = is_positive;
         }
 
-        let result = rule(self);
+        let result = f(self);
 
         if should_toggle {
             self.dest = initial_dest;
@@ -289,7 +351,7 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
         result
     }
 
-    /// Matches the current `rule` while toggling atomicity.
+    /// Matches `f` while toggling atomicity.
     ///
     /// # Examples
     ///
@@ -311,7 +373,7 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
     /// # }
     /// ```
     #[inline]
-    pub fn atomic<F>(&mut self, is_atomic: bool, rule: F) -> Result<Position<I>, Position<I>>
+    pub fn atomic<F>(&mut self, is_atomic: bool, f: F) -> Result<Position<I>, Position<I>>
         where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Result<Position<I>, Position<I>> {
 
         let should_toggle = self.is_atomic != is_atomic;
@@ -320,7 +382,7 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
             self.is_atomic = is_atomic;
         }
 
-        let result = rule(self);
+        let result = f(self);
 
         if should_toggle {
             self.is_atomic = !is_atomic;
@@ -350,71 +412,13 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
         self.is_atomic
     }
 
-    /// Keeps track of failed positive rule attempts. It should be called when a `Rule` fails at the
-    /// current position.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use pest::inputs::StringInput;
-    /// # use pest::state;
-    /// # fn main() {
-    /// # #[allow(non_camel_case_types)]
-    /// #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-    /// enum Rule {
-    ///     a
-    /// }
-    ///
-    /// let input = StringInput::new("a");
-    /// let (mut state, _) = state::<Rule, _>(input);
-    /// let pos = state.start();
-    ///
-    /// state.track_pos(Rule::a, pos);
-    /// # }
-    /// ```
     #[inline]
-    pub fn track_pos(&mut self, rule: Rule, pos: Position<I>) {
-        self.track(true, rule, pos)
-    }
-
-    /// Keeps track of failed negative rule attempts. It should be called when a `Rule` fails at the
-    /// current position.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use pest::inputs::StringInput;
-    /// # use pest::state;
-    /// # fn main() {
-    /// # #[allow(non_camel_case_types)]
-    /// #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-    /// enum Rule {
-    ///     a
-    /// }
-    ///
-    /// let input = StringInput::new("a");
-    /// let (mut state, _) = state::<Rule, _>(input);
-    /// let pos = state.start();
-    ///
-    /// state.track_neg(Rule::a, pos);
-    /// # }
-    /// ```
-    #[inline]
-    pub fn track_neg(&mut self, rule: Rule, pos: Position<I>) {
-        self.track(false, rule, pos)
-    }
-
-    #[inline]
-    fn track(&mut self, positive: bool, rule: Rule, pos: Position<I>) {
-        if self.is_atomic || self.dest == TokenDestination::Ignore {
+    fn track(&mut self, is_positive: bool, rule: Rule, pos: usize) {
+        if self.is_atomic || self.dest == TokenDestination::Lookahead {
             return
         }
 
-        let mut attempts = if positive {
+        let mut attempts = if is_positive {
             &mut self.pos_attempts
         } else {
             &mut self.neg_attempts
@@ -423,15 +427,15 @@ impl<'a, Rule: Clone, I: Input> ParserState<'a, Rule, I> {
         if attempts.is_empty() {
             attempts.push(rule);
 
-            self.attempt_pos = pos.pos();
-        } else if pos.pos() == self.attempt_pos {
+            self.attempt_pos = pos;
+        } else if pos == self.attempt_pos {
             attempts.push(rule);
-        } else if pos.pos() > self.attempt_pos {
+        } else if pos > self.attempt_pos {
             attempts.clear();
             attempts.clear();
             attempts.push(rule);
 
-            self.attempt_pos = pos.pos();
+            self.attempt_pos = pos;
         }
     }
 }

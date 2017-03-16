@@ -231,7 +231,7 @@ impl<T, E> BufferedSender<T, E> {
     }
 
     #[inline]
-    pub fn fail(self, error: E) {
+    pub fn fail(&self, error: E) {
         let boxed = Box::new(error);
         self.buffer.error.store(Box::into_raw(boxed), Ordering::Relaxed);
     }
@@ -265,6 +265,7 @@ pub fn buffered<T, E>(capacity: usize) -> (BufferedSender<T, E>, BufferedStream<
     (BufferedSender { buffer: buffer.clone() }, BufferedStream { buffer: buffer })
 }
 
+#[derive(Debug)]
 pub enum SendableToken<Rule> {
     Start {
         rule: Rule,
@@ -276,6 +277,7 @@ pub enum SendableToken<Rule> {
     }
 }
 
+#[derive(Debug)]
 pub enum SendableError<Rule> {
     ParsingError {
         positives: Vec<Rule>,

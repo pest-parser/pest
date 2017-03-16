@@ -301,8 +301,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "expected Start { .. }, \
-                               but found End { rule: a, pos: Position { \
-                               input: StringInput { string: \"\" }, pos: 0 } } instead")]
+                               but found End { rule: a, pos: Position { pos: 0 } } instead")]
     fn peek_rule_end() {
         let arc = Arc::new(StringInput::new(""));
 
@@ -456,8 +455,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "expected Start { rule: b, .. }, \
-                               but found Start { rule: a, pos: Position { \
-                               input: StringInput { string: \"\" }, pos: 0 } } instead")]
+                               but found Start { rule: a, pos: Position { pos: 0 } } instead")]
     fn expand_wrong_start_future() {
         let arc = Arc::new(StringInput::new(""));
 
@@ -519,8 +517,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "expected Start { rule: b, .. }, \
-                               but found Start { rule: a, pos: Position { \
-                               input: StringInput { string: \"\" }, pos: 0 } } instead")]
+                               but found Start { rule: a, pos: Position { pos: 0 } } instead")]
     fn expand_wrong_start_expanded_stream() {
         let arc = Arc::new(StringInput::new(""));
 
@@ -582,8 +579,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "expected Start { rule: b, .. }, \
-                               but found Start { rule: a, pos: Position { \
-                               input: StringInput { string: \"\" }, pos: 0 } } instead")]
+                               but found Start { rule: a, pos: Position { pos: 0 } } instead")]
     fn expand_wrong_start_tail_stream() {
         let arc = Arc::new(StringInput::new(""));
 
@@ -1000,8 +996,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "expected Start { .. }, \
-                               but found End { rule: a, pos: Position { \
-                               input: StringInput { string: \"\" }, pos: 0 } } instead")]
+                               but found End { rule: a, pos: Position { pos: 0 } } instead")]
     fn sliced_end() {
         let arc = Arc::new(StringInput::new(""));
 
