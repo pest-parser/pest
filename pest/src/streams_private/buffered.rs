@@ -73,6 +73,10 @@ impl<T, E> RingBuffer<T, E> {
             self.last_read.set(read);
 
             if read + self.capacity <= write {
+                // Last park might have happened while we were pushing, so we need to try and unpark
+                // in order to make sure that we don't dead lock at full capacity.
+                self.try_unpark();
+
                 return Some(value);
             }
         }
@@ -108,20 +112,7 @@ impl<T, E> RingBuffer<T, E> {
     }
 
     #[inline]
-    pub fn try_park(&self) -> bool {
-        let locked = self.task_lock.swap(true, Ordering::Relaxed);
-
-        if !locked {
-            self.swap(Some(task::park()));
-
-            self.task_lock.store(false, Ordering::Relaxed);
-        }
-
-        !locked
-    }
-
-    #[inline]
-    pub fn try_unpark(&self) -> bool {
+    pub fn try_unpark(&self) {
         let locked = self.task_lock.swap(true, Ordering::Relaxed);
 
         if !locked {
@@ -133,8 +124,6 @@ impl<T, E> RingBuffer<T, E> {
 
             self.task_lock.store(false, Ordering::Relaxed);
         }
-
-        !locked
     }
 
     #[inline]
@@ -183,28 +172,42 @@ impl<T, E> Stream for BufferedStream<T, E> {
     type Error = E;
 
     fn poll(&mut self) -> Poll<Option<T>, E> {
-        let error = self.buffer.error.load(Ordering::Acquire);
+        let error = self.buffer.error.load(Ordering::Relaxed);
 
         if !error.is_null() {
             let error = unsafe { Err(*Box::from_raw(error)) };
-            self.buffer.error.store(ptr::null_mut(), Ordering::Release);
+            self.buffer.error.store(ptr::null_mut(), Ordering::Relaxed);
 
-            return error;
-        }
-
-        match self.buffer.try_pop() {
-            Some(value) => Ok(Async::Ready(Some(value))),
-            None => {
-                if self.buffer.is_closed.load(Ordering::Relaxed) {
-                    Ok(Async::Ready(None))
-                } else {
+            error
+        } else {
+            match self.buffer.try_pop() {
+                Some(value) => Ok(Async::Ready(Some(value))),
+                None => {
                     loop {
-                        if self.buffer.try_park() {
-                            break;
+                        let locked = self.buffer.task_lock.swap(true, Ordering::Relaxed);
+
+                        if !locked {
+                            match self.buffer.try_pop() {
+                                Some(value) => {
+                                    self.buffer.task_lock.store(false, Ordering::Relaxed);
+
+                                    return Ok(Async::Ready(Some(value)));
+                                }
+                                None => {
+                                    if self.buffer.is_closed.load(Ordering::Relaxed) {
+                                        self.buffer.task_lock.store(false, Ordering::Relaxed);
+
+                                        return Ok(Async::Ready(None));
+                                    } else {
+                                        self.buffer.swap(Some(task::park()));
+                                        self.buffer.task_lock.store(false, Ordering::Relaxed);
+
+                                        return Ok(Async::NotReady);
+                                    }
+                                }
+                            };
                         }
                     }
-
-                    Ok(Async::NotReady)
                 }
             }
         }
@@ -231,16 +234,26 @@ impl<T, E> BufferedSender<T, E> {
     #[inline]
     pub fn fail(self, error: E) {
         let boxed = Box::new(error);
-        self.buffer.error.store(Box::into_raw(boxed), Ordering::Release);
+        self.buffer.error.store(Box::into_raw(boxed), Ordering::Relaxed);
     }
 }
 
 impl<T, E> Drop for BufferedSender<T, E> {
     fn drop(&mut self) {
-        self.buffer.is_closed.store(true, Ordering::Relaxed);
-
         loop {
-            if self.buffer.try_unpark() {
+            let locked = self.buffer.task_lock.swap(true, Ordering::Relaxed);
+
+            if !locked {
+                self.buffer.is_closed.store(true, Ordering::Relaxed);
+
+                let task = self.buffer.swap(None);
+
+                if let Some(task) = task {
+                    task.unpark();
+                }
+
+                self.buffer.task_lock.store(false, Ordering::Relaxed);
+
                 break;
             }
         }
@@ -329,9 +342,7 @@ mod tests {
         let (sender, stream) = buffered::<i32, ()>(3);
 
         thread::spawn(move || {
-            thread::sleep(Duration::from_millis(10));
-
-            for _ in 0..100 {
+            for _ in 0..1000 {
                 sender.send(1);
             }
         });
@@ -340,6 +351,7 @@ mod tests {
             Ok(sum + value)
         }).wait().unwrap();
 
-        assert_eq!(sum, 100);
+        assert_eq!(sum, 1000);
     }
 }
+
