@@ -131,20 +131,18 @@ impl<'a> Input for StringInput<'a> {
 
     #[inline]
     unsafe fn skip(&self, n: usize, pos: usize) -> Option<usize> {
-        let mut chars = 0;
-        let len = self.string.char_indices()
-                                     .skip_while(|&(i, _)| i < pos)
-                                     .take(n)
-                                     .fold(0, |s, (_, c)| {
-                                         chars += 1;
-                                         s + c.len_utf8()
-                                     });
+        let mut len = 0;
+        let mut chars = self.string.slice_unchecked(pos, self.string.len()).chars();
 
-        if chars == n {
-            Some(len)
-        } else {
-            None
+        for _ in 0..n {
+            if let Some(c) = chars.next() {
+                len += c.len_utf8();
+            } else {
+                return None;
+            }
         }
+
+        Some(len)
     }
 
     #[inline]
