@@ -162,10 +162,14 @@ impl<I: Input> Position<I> {
     pub fn repeat<F>(self, mut f: F) -> Result<Position<I>, Position<I>>
         where F: FnMut(Position<I>) -> Result<Position<I>, Position<I>> {
 
-        let result = f(self);
+        let mut result = f(self);
+
+        while result.is_ok() {
+            result = f(result.unwrap());
+        }
 
         match result {
-            Ok(pos)  => pos.repeat(f),
+            Ok(pos)  => Ok(pos),
             Err(pos) => Ok(pos)
         }
     }
