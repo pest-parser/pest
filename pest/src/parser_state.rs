@@ -162,6 +162,7 @@ impl<'a, Rule: Copy, I: Input> ParserState<'a, Rule, I> {
     /// ```
     #[inline]
     pub fn send(&mut self, token: Token<Rule, I>) {
+        #[inline]
         fn to_sendable<Rule, I: Input>(token: Token<Rule, I>) -> SendableToken<Rule> {
             match token {
                 Token::Start { rule, pos } => {
@@ -415,7 +416,7 @@ impl<'a, Rule: Copy, I: Input> ParserState<'a, Rule, I> {
     #[inline]
     fn track(&mut self, is_positive: bool, rule: Rule, pos: usize) {
         if self.is_atomic || self.dest == TokenDestination::Lookahead {
-            return
+            return;
         }
 
         let mut attempts = if is_positive {
