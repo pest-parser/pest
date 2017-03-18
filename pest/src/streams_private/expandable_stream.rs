@@ -30,6 +30,7 @@ pub struct ExpandableStream<Rule, I: Input, S>
 impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> ExpandableStream<Rule, I, S>
     where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
+    #[inline]
     pub fn new(stream: S, rule: Rule) -> ExpandableStream<Rule, I, S> {
         ExpandableStream {
             stream: stream,
@@ -42,6 +43,7 @@ impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> ExpandableStream<Rule, I, S>
         }
     }
 
+    #[inline]
     pub fn poll_token_data(&mut self) -> Poll<TokenData<Rule, I>, Error<Rule, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
@@ -122,6 +124,7 @@ impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> ExpandableStream<Rule, I, S>
         }
     }
 
+    #[inline]
     pub fn poll_expanded(&mut self) -> Poll<Option<Token<Rule, I>>, Error<Rule, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
@@ -191,6 +194,7 @@ impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> ExpandableStream<Rule, I, S>
         }
     }
 
+    #[inline]
     pub fn poll_tail(&mut self) -> Poll<Option<Token<Rule, I>>, Error<Rule, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
