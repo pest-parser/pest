@@ -7,6 +7,9 @@
 
 extern crate futures;
 
+use std::fmt::Debug;
+use std::hash::Hash;
+
 mod error;
 mod inputs_private;
 mod macros;
@@ -25,6 +28,9 @@ pub mod streams {
     pub use super::streams_private::{ExpandedStream, ParserStream, TokenDataFuture, TokenStream,
                                      TailStream};
 }
+
+pub trait RuleType: Copy + Debug + Eq + Hash + Ord + Send + Sync {}
+impl<T: Copy + Debug + Eq + Hash + Ord + Send + Sync> RuleType for T {}
 
 pub use error::Error;
 pub use parser::Parser;

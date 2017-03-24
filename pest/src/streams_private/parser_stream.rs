@@ -19,15 +19,15 @@ use super::super::tokens::Token;
 
 /// A `struct` which implements `Stream` and `TokenStream`, and is created by the
 /// [`state`](../fn.state) function.
-pub struct ParserStream<Rule, I: Input> {
-    stream: BufferedStream<SendableToken<Rule>, SendableError<Rule>>,
+pub struct ParserStream<R, I: Input> {
+    stream: BufferedStream<SendableToken<R>, SendableError<R>>,
     input:  Rc<Arc<I>>
 }
 
-pub fn new<Rule, I: Input>(
-    stream: BufferedStream<SendableToken<Rule>, SendableError<Rule>>,
+pub fn new<R, I: Input>(
+    stream: BufferedStream<SendableToken<R>, SendableError<R>>,
     input:  Arc<I>
-) -> ParserStream<Rule, I> {
+) -> ParserStream<R, I> {
 
     ParserStream {
         stream: stream,
@@ -35,9 +35,9 @@ pub fn new<Rule, I: Input>(
     }
 }
 
-impl<Rule, I: Input> Stream for ParserStream<Rule, I> {
-    type Item  = Token<Rule, I>;
-    type Error = Error<Rule, I>;
+impl<R, I: Input> Stream for ParserStream<R, I> {
+    type Item  = Token<R, I>;
+    type Error = Error<R, I>;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         match self.stream.poll() {

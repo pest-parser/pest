@@ -12,11 +12,11 @@ use super::inputs::{Input, Position, Span};
 
 /// An `enum` which defines possible errors.
 #[derive(Debug, Eq)]
-pub enum Error<Rule, I: Input> {
+pub enum Error<R, I: Input> {
     /// Generated parsing error with expected and unexpected `Rule`s and a position
     ParsingError {
-        positives: Vec<Rule>,
-        negatives: Vec<Rule>,
+        positives: Vec<R>,
+        negatives: Vec<R>,
         pos:       Position<I>
     },
     /// Custom error with a message and a position
@@ -31,7 +31,7 @@ pub enum Error<Rule, I: Input> {
     }
 }
 
-fn message<Rule, I: Input>(error: &Error<Rule, I>) -> &str {
+fn message<R, I: Input>(error: &Error<R, I>) -> &str {
     match error {
         &Error::ParsingError { .. }                 => unimplemented!(),
         &Error::CustomErrorPos { ref message, .. }  => message,
@@ -39,7 +39,7 @@ fn message<Rule, I: Input>(error: &Error<Rule, I>) -> &str {
     }
 }
 
-fn underline<Rule, I: Input>(error: &Error<Rule, I>, offset: usize) -> String {
+fn underline<R, I: Input>(error: &Error<R, I>, offset: usize) -> String {
     let mut underline = String::new();
 
     for _ in 0..offset { underline.push(' '); }
@@ -57,7 +57,7 @@ fn underline<Rule, I: Input>(error: &Error<Rule, I>, offset: usize) -> String {
 }
 
 // TODO: Replace None with filename.
-fn format<Rule, I: Input>(error: &Error<Rule, I>) -> String {
+fn format<R, I: Input>(error: &Error<R, I>) -> String {
     let pos = match *error {
         Error::ParsingError { ref pos, .. }     => pos.clone(),
         Error::CustomErrorPos { ref pos, .. }   => pos.clone(),
@@ -88,14 +88,14 @@ fn format<Rule, I: Input>(error: &Error<Rule, I>) -> String {
     result
 }
 
-impl<Rule, I: Input> fmt::Display for Error<Rule, I> {
+impl<R, I: Input> fmt::Display for Error<R, I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format(self))
     }
 }
 
-impl<Rule: Copy, I: Input> Clone for Error<Rule, I> {
-    fn clone(&self) -> Error<Rule, I> {
+impl<R: Clone, I: Input> Clone for Error<R, I> {
+    fn clone(&self) -> Error<R, I> {
         match *self {
             Error::ParsingError { ref positives, ref negatives, ref pos } => {
                 Error::ParsingError {
@@ -120,8 +120,8 @@ impl<Rule: Copy, I: Input> Clone for Error<Rule, I> {
     }
 }
 
-impl<Rule: PartialEq, I: Input> PartialEq for Error<Rule, I> {
-    fn eq(&self, other: &Error<Rule, I>) -> bool {
+impl<R: PartialEq, I: Input> PartialEq for Error<R, I> {
+    fn eq(&self, other: &Error<R, I>) -> bool {
         match *self {
             Error::ParsingError { ref positives, ref negatives, ref pos } => {
                 match *other {
@@ -162,7 +162,7 @@ impl<Rule: PartialEq, I: Input> PartialEq for Error<Rule, I> {
     }
 }
 
-impl<Rule: Hash, I: Input> Hash for Error<Rule, I> {
+impl<R: Hash, I: Input> Hash for Error<R, I> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match *self {
             Error::ParsingError { ref positives, ref negatives, ref pos } => {

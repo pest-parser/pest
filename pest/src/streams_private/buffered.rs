@@ -266,22 +266,22 @@ pub fn buffered<T, E>(capacity: usize) -> (BufferedSender<T, E>, BufferedStream<
 }
 
 #[derive(Debug)]
-pub enum SendableToken<Rule> {
+pub enum SendableToken<R> {
     Start {
-        rule: Rule,
+        rule: R,
         pos:  usize
     },
     End {
-        rule: Rule,
+        rule: R,
         pos:  usize
     }
 }
 
 #[derive(Debug)]
-pub enum SendableError<Rule> {
+pub enum SendableError<R> {
     ParsingError {
-        positives: Vec<Rule>,
-        negatives: Vec<Rule>,
+        positives: Vec<R>,
+        negatives: Vec<R>,
         pos:       usize
     },
     CustomErrorPos {

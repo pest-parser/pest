@@ -13,22 +13,23 @@ use futures::stream::Stream;
 
 use super::super::error::Error;
 use super::super::inputs::Input;
+use super::super::RuleType;
 use super::super::tokens::Token;
 
-pub struct SliceableStream<Rule, I: Input, S>
-    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
+pub struct SliceableStream<R, I: Input, S>
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
     stream: S,
     depth:  usize,
-    queues: Vec<VecDeque<Token<Rule, I>>>,
-    rule:   Option<Rule>,
-    error:  Option<Error<Rule, I>>
+    queues: Vec<VecDeque<Token<R, I>>>,
+    rule:   Option<R>,
+    error:  Option<Error<R, I>>
 }
 
-impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> SliceableStream<Rule, I, S>
-    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
+impl<R: RuleType, I: Input, S> SliceableStream<R, I, S>
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
-    pub fn new(stream: S) -> SliceableStream<Rule, I, S> {
+    pub fn new(stream: S) -> SliceableStream<R, I, S> {
         SliceableStream {
             stream: stream,
             depth:  0,
@@ -38,7 +39,7 @@ impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> SliceableStream<Rule, I, S>
         }
     }
 
-    pub fn poll_split(&mut self) -> Poll<Option<usize>, Error<Rule, I>> {
+    pub fn poll_split(&mut self) -> Poll<Option<usize>, Error<R, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
         }
@@ -101,7 +102,7 @@ impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> SliceableStream<Rule, I, S>
         }
     }
 
-    pub fn poll_pair(&mut self, index: usize) -> Poll<Option<Token<Rule, I>>, Error<Rule, I>> {
+    pub fn poll_pair(&mut self, index: usize) -> Poll<Option<Token<R, I>>, Error<R, I>> {
         if !self.queues[index].is_empty() {
             Ok(Async::Ready(self.queues[index].pop_front()))
         } else if index == self.queues.len() - 1 {

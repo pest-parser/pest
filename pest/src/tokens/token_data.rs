@@ -11,29 +11,29 @@ use super::super::inputs::{Input, Span};
 
 /// A `struct` that captures the essential data of a `Token` pair.
 #[derive(Debug, Eq)]
-pub struct TokenData<Rule, I: Input> {
+pub struct TokenData<R, I: Input> {
     /// The `Rule` of the `Token` pair
-    pub rule:  Rule,
+    pub rule: R,
     /// The `Span` of the `Token` pair
     pub span: Span<I>
 }
 
-impl<Rule: Copy, I: Input> Clone for TokenData<Rule, I> {
-    fn clone(&self) -> TokenData<Rule, I> {
+impl<R: Clone, I: Input> Clone for TokenData<R, I> {
+    fn clone(&self) -> TokenData<R, I> {
         TokenData {
-            rule: self.rule,
+            rule: self.rule.clone(),
             span: self.span.clone()
         }
     }
 }
 
-impl<Rule: PartialEq, I: Input> PartialEq for TokenData<Rule, I> {
-    fn eq(&self, other: &TokenData<Rule, I>) -> bool {
+impl<R: PartialEq, I: Input> PartialEq for TokenData<R, I> {
+    fn eq(&self, other: &TokenData<R, I>) -> bool {
         self.rule == other.rule && self.span == other.span
     }
 }
 
-impl<Rule: Hash, I: Input> Hash for TokenData<Rule, I> {
+impl<R: Hash, I: Input> Hash for TokenData<R, I> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.rule.hash(state);
         self.span.hash(state);

@@ -166,7 +166,7 @@ mod tests {
     use super::super::tokens::Token;
 
     #[allow(non_camel_case_types)]
-    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     enum Rule {
         a,
         b,

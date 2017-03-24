@@ -15,20 +15,21 @@ use futures::stream::Stream;
 use super::sliceable_stream::SliceableStream;
 use super::super::error::Error;
 use super::super::inputs::Input;
+use super::super::RuleType;
 use super::super::tokens::Token;
 
 /// A `struct` which implements `Stream` and `TokenStream`, and is contained withing the
 /// `SlicedStream` which is returned by [`TokenStream::sliced`](trait.TokenStream#method.sliced).
-pub struct PairStream<Rule, I: Input, S>
-    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
+pub struct PairStream<R, I: Input, S>
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
-    stream: Rc<RefCell<SliceableStream<Rule, I, S>>>,
+    stream: Rc<RefCell<SliceableStream<R, I, S>>>,
     index:  usize
 }
 
-pub fn new<Rule, I: Input, S>(stream: Rc<RefCell<SliceableStream<Rule, I, S>>>, index: usize)
-    -> PairStream<Rule, I, S>
-    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
+pub fn new<R, I: Input, S>(stream: Rc<RefCell<SliceableStream<R, I, S>>>, index: usize)
+                           -> PairStream<R, I, S>
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
     PairStream {
         stream: stream,
@@ -36,11 +37,11 @@ pub fn new<Rule, I: Input, S>(stream: Rc<RefCell<SliceableStream<Rule, I, S>>>, 
     }
 }
 
-impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> Stream for PairStream<Rule, I, S>
-    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
+impl<R: RuleType, I: Input, S> Stream for PairStream<R, I, S>
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
-    type Item  = Token<Rule, I>;
-    type Error = Error<Rule, I>;
+    type Item  = Token<R, I>;
+    type Error = Error<R, I>;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         self.stream.borrow_mut().poll_pair(self.index)
