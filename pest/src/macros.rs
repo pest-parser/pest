@@ -165,7 +165,6 @@ mod tests {
     use super::super::inputs::Input;
     use super::super::{Parser, state};
     use super::super::streams::ParserStream;
-    use super::super::tokens::Token;
 
     #[allow(non_camel_case_types)]
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -183,11 +182,11 @@ mod tests {
                 let pos = state.start();
 
                 state.rule(Rule::a, pos, true, |pos, state| {
-                    state.rule(Rule::b, pos.skip(1).unwrap(), true, |pos, state| {
+                    state.rule(Rule::b, pos.skip(1).unwrap(), true, |pos, _| {
                         pos.skip(1)
                     }).unwrap().skip(1)
                 }).and_then(|p| {
-                    state.rule(Rule::c, p.skip(1).unwrap(), true, |pos, state| {
+                    state.rule(Rule::c, p.skip(1).unwrap(), true, |pos, _| {
                         pos.skip(1)
                     })
                 }).unwrap();

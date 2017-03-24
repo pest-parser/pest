@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 // pest. The Elegant Parser
 // Copyright (C) 2017  Dragoș Tiselice
 //
@@ -6,7 +5,7 @@ use std::cell::RefCell;
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::fmt::Debug;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use futures::Poll;
