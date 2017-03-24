@@ -55,7 +55,7 @@ pub trait TokenStream<R: RuleType, I: Input>:
     ///     a
     /// }
     ///
-    /// let input = StringInput::new("");
+    /// let input = StringInput::new("".to_owned());
     /// let (mut state, stream) = state(input);
     ///
     /// let pos = state.start();
@@ -110,7 +110,7 @@ pub trait TokenStream<R: RuleType, I: Input>:
     ///     b
     /// }
     ///
-    /// let input = StringInput::new("abc");
+    /// let input = StringInput::new("abc".to_owned());
     /// let (mut state, stream) = state(input);
     ///
     /// let pos0 = state.start();
@@ -184,7 +184,7 @@ pub trait TokenStream<R: RuleType, I: Input>:
     ///     b
     /// }
     ///
-    /// let input = StringInput::new("abc");
+    /// let input = StringInput::new("abc".to_owned());
     /// let (mut state, stream) = state(input);
     ///
     /// let pos0 = state.start();
@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn peek_rule_sleep() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
         
         let r = {
@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn peek_rule_empty() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (_, r) = buffered::<SendableToken<Rule>, SendableError<Rule>>(16);
@@ -304,7 +304,7 @@ mod tests {
     #[should_panic(expected = "expected Start { .. }, \
                                but found End { rule: a, pos: Position { pos: 0 } } instead")]
     fn peek_rule_end() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered::<SendableToken<Rule>, SendableError<Rule>>(16);
@@ -321,7 +321,7 @@ mod tests {
 
     #[test]
     fn peek_rule_error() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn expand_sleep() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -396,7 +396,7 @@ mod tests {
 
     #[test]
     fn expand_tail() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -424,7 +424,7 @@ mod tests {
 
     #[test]
     fn expand_streams() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -458,7 +458,7 @@ mod tests {
     #[should_panic(expected = "expected Start { rule: b, .. }, \
                                but found Start { rule: a, pos: Position { pos: 0 } } instead")]
     fn expand_wrong_start_future() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered(16);
@@ -480,7 +480,7 @@ mod tests {
     #[should_panic(expected = "expected Start { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_start_future() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (_, r) = buffered(16);
@@ -499,7 +499,7 @@ mod tests {
     #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_end_future() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered(16);
@@ -520,7 +520,7 @@ mod tests {
     #[should_panic(expected = "expected Start { rule: b, .. }, \
                                but found Start { rule: a, pos: Position { pos: 0 } } instead")]
     fn expand_wrong_start_expanded_stream() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered(16);
@@ -542,7 +542,7 @@ mod tests {
     #[should_panic(expected = "expected Start { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_start_expanded_stream() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (_, r) = buffered(16);
@@ -561,7 +561,7 @@ mod tests {
     #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_end_expanded_stream() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered(16);
@@ -582,7 +582,7 @@ mod tests {
     #[should_panic(expected = "expected Start { rule: b, .. }, \
                                but found Start { rule: a, pos: Position { pos: 0 } } instead")]
     fn expand_wrong_start_tail_stream() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered(16);
@@ -604,7 +604,7 @@ mod tests {
     #[should_panic(expected = "expected Start { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_start_tail_stream() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (_, r) = buffered(16);
@@ -623,7 +623,7 @@ mod tests {
     #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
     fn expand_no_end_tail_stream() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered(16);
@@ -642,7 +642,7 @@ mod tests {
 
     #[test]
     fn expand_incomplete_future() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let (s, r) = buffered(16);
@@ -663,7 +663,7 @@ mod tests {
 
     #[test]
     fn expand_future_first() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -693,7 +693,7 @@ mod tests {
 
     #[test]
     fn expand_tail_first() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -727,7 +727,7 @@ mod tests {
 
     #[test]
     fn expand_error_future_first() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -760,7 +760,7 @@ mod tests {
 
     #[test]
     fn expand_error_expand_first() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -793,7 +793,7 @@ mod tests {
 
     #[test]
     fn expand_error_tail_first() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -827,7 +827,7 @@ mod tests {
 
     #[test]
     fn expand_nested() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let (s, r) = buffered(16);
 
@@ -852,7 +852,7 @@ mod tests {
 
     #[test]
     fn sliced_sleep() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -904,7 +904,7 @@ mod tests {
 
     #[test]
     fn sliced_wait() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -952,7 +952,7 @@ mod tests {
 
     #[test]
     fn sliced_empty() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (_, r) = buffered::<SendableToken<Rule>, SendableError<Rule>>(16);
@@ -969,7 +969,7 @@ mod tests {
 
     #[test]
     fn sliced_one_pair() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
@@ -999,7 +999,7 @@ mod tests {
     #[should_panic(expected = "expected Start { .. }, \
                                but found End { rule: a, pos: Position { pos: 0 } } instead")]
     fn sliced_end() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered(16);
@@ -1018,7 +1018,7 @@ mod tests {
     #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
     fn sliced_no_end_sliced() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered(16);
@@ -1035,7 +1035,7 @@ mod tests {
 
     #[test]
     fn sliced_no_end_future_slice_no_panic() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered(16);
@@ -1054,7 +1054,7 @@ mod tests {
     #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
     fn sliced_no_end_pair() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered(16);
@@ -1073,7 +1073,7 @@ mod tests {
 
     #[test]
     fn sliced_incomplete_slice() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let (s, r) = buffered(16);
@@ -1095,7 +1095,7 @@ mod tests {
 
     #[test]
     fn sliced_error() {
-        let arc = Arc::new(StringInput::new(""));
+        let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {

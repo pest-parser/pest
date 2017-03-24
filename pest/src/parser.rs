@@ -6,6 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use super::inputs::Input;
 use super::RuleType;
@@ -14,5 +15,5 @@ use super::streams_private::parser_stream::ParserStream;
 /// A `trait` that defines a `Parser`.
 pub trait Parser<R: RuleType + 'static> {
     /// Parses `input` starting from `rule` and returns a `ParserStream` of `Token`s.
-    fn parse<I: Input>(rule: R, input: I) -> ParserStream<R, I>;
+    fn parse<I: Input + 'static>(rule: R, input: Arc<I>) -> ParserStream<R, I>;
 }

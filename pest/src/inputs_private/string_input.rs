@@ -13,29 +13,29 @@ use super::Input;
 
 /// A `struct` useful for matching in-memory `String`s.
 #[derive(Debug)]
-pub struct StringInput<'a> {
-    string: &'a str
+pub struct StringInput {
+    string: String
 }
 
-impl<'a> StringInput<'a> {
+impl StringInput {
     /// Creates a new `StringInput` from a `&str`.
     ///
     /// # Examples
     ///
     /// ```
     /// # use pest::inputs::{Input, StringInput};
-    /// let input = StringInput::new("asd");
+    /// let input = StringInput::new("asd".to_owned());
     ///
     /// assert_eq!(input.len(), 3);
     /// ```
-    pub fn new(string: &str) -> StringInput {
+    pub fn new(string: String) -> StringInput {
         StringInput {
             string: string
         }
     }
 }
 
-impl<'a> Input for StringInput<'a> {
+impl Input for StringInput {
     #[inline]
     fn len(&self) -> usize {
         self.string.len()
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn empty() {
-        let input = StringInput::new("");
+        let input = StringInput::new("".to_owned());
 
         unsafe {
             assert!(input.is_empty());
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn parts() {
-        let input = StringInput::new("asdasdf");
+        let input = StringInput::new("asdasdf".to_owned());
 
         unsafe {
             assert!(!input.is_empty());
@@ -213,12 +213,12 @@ mod tests {
 
     #[test]
     fn len() {
-        assert_eq!(StringInput::new("asdasdf").len(), 7);
+        assert_eq!(StringInput::new("asdasdf".to_owned()).len(), 7);
     }
 
     #[test]
     fn slice() {
-        let input = StringInput::new("asdasdf");
+        let input = StringInput::new("asdasdf".to_owned());
 
         unsafe {
             assert_eq!(input.slice(1, 3), "sd");
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn line_col() {
-        let input = StringInput::new("a\rb\nc\r\nd嗨");
+        let input = StringInput::new("a\rb\nc\r\nd嗨".to_owned());
 
         unsafe {
             assert_eq!(input.line_col(0), (1, 1));
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn line_of() {
-        let input = StringInput::new("a\rb\nc\r\nd嗨");
+        let input = StringInput::new("a\rb\nc\r\nd嗨".to_owned());
 
         unsafe {
             assert_eq!(input.line_of(0), "a\rb");
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn skip_empty() {
-        let input = StringInput::new("");
+        let input = StringInput::new("".to_owned());
 
         unsafe {
             assert_eq!(input.skip(0, 0), Some(0));
@@ -273,7 +273,7 @@ mod tests {
 
     #[test]
     fn skip() {
-        let input = StringInput::new("d嗨");
+        let input = StringInput::new("d嗨".to_owned());
 
         unsafe {
             assert_eq!(input.skip(0, 0), Some(0));
@@ -284,7 +284,7 @@ mod tests {
 
     #[test]
     fn match_range() {
-        let input = StringInput::new("b");
+        let input = StringInput::new("b".to_owned());
 
         unsafe {
             assert!(input.match_range('a'..'c', 0).is_some());
@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn match_insensitive() {
-        let input = StringInput::new("AsdASdF");
+        let input = StringInput::new("AsdASdF".to_owned());
 
         unsafe {
             assert!(input.match_insensitive("asd", 0));

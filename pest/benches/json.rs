@@ -13,6 +13,7 @@ extern crate pest;
 
 use std::fs::File;
 use std::io::Read;
+use std::sync::Arc;
 
 use test::Bencher;
 
@@ -46,7 +47,7 @@ enum Rule {
 struct JsonParser;
 
 impl Parser<Rule> for JsonParser {
-    fn parse<I: Input>(rule: Rule, input: I) -> ParserStream<Rule, I> {
+    fn parse<I: Input + 'static>(rule: Rule, input: Arc<I>) -> ParserStream<Rule, I> {
         fn json<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
                           -> Result<Position<I>, Position<I>> {
 
@@ -341,28 +342,26 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        let (mut state, stream) = state(input);
-
-        if match rule {
-            Rule::json    =>    json(state.start(), &mut state, true),
-            Rule::object  =>  object(state.start(), &mut state, true),
-            Rule::pair    =>    pair(state.start(), &mut state, true),
-            Rule::array   =>   array(state.start(), &mut state, true),
-            Rule::value   =>   value(state.start(), &mut state, true),
-            Rule::string  =>  string(state.start(), &mut state, true),
-            Rule::escape  =>  escape(state.start(), &mut state, true),
-            Rule::unicode => unicode(state.start(), &mut state, true),
-            Rule::hex     =>     hex(state.start(), &mut state, true),
-            Rule::number  =>  number(state.start(), &mut state, true),
-            Rule::int     =>     int(state.start(), &mut state, true),
-            Rule::exp     =>     exp(state.start(), &mut state, true),
-            Rule::bool    =>    bool(state.start(), &mut state, true),
-            Rule::null    =>    null(state.start(), &mut state, true)
-        }.is_err() {
-            state.fail_with_attempts();
-        }
-
-        stream
+        state(input, move |mut state| {
+            if match rule {
+                Rule::json    =>    json(state.start(), &mut state, true),
+                Rule::object  =>  object(state.start(), &mut state, true),
+                Rule::pair    =>    pair(state.start(), &mut state, true),
+                Rule::array   =>   array(state.start(), &mut state, true),
+                Rule::value   =>   value(state.start(), &mut state, true),
+                Rule::string  =>  string(state.start(), &mut state, true),
+                Rule::escape  =>  escape(state.start(), &mut state, true),
+                Rule::unicode => unicode(state.start(), &mut state, true),
+                Rule::hex     =>     hex(state.start(), &mut state, true),
+                Rule::number  =>  number(state.start(), &mut state, true),
+                Rule::int     =>     int(state.start(), &mut state, true),
+                Rule::exp     =>     exp(state.start(), &mut state, true),
+                Rule::bool    =>    bool(state.start(), &mut state, true),
+                Rule::null    =>    null(state.start(), &mut state, true)
+            }.is_err() {
+                state.fail_with_attempts();
+            }
+        })
     }
 }
 
@@ -373,8 +372,9 @@ fn data(b: &mut Bencher) {
 
     file.read_to_string(&mut data).unwrap();
 
+    let input = Arc::new(StringInput::new(data.to_owned()));
+
     b.iter(|| {
-        let input = StringInput::new(&data);
-        JsonParser::parse(Rule::json, input).wait().count()
+        JsonParser::parse(Rule::json, input.clone()).wait().count()
     });
 }

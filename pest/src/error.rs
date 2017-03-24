@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn display() {
-        let input = StringInput::new("ab\ncd\nef");
+        let input = StringInput::new("ab\ncd\nef".to_owned());
         let pos = position::new(Rc::new(Arc::new(input)), 4);
         let error: Error<(), _> = Error::CustomErrorPos {
             message: "error: big one".to_owned(),
