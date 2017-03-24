@@ -110,18 +110,19 @@ impl<'a, Rule: Copy, I: Input> ParserState<'a, Rule, I> {
                         &mut ParserState<'a, Rule, I>) -> Result<Position<I>, Position<I>> {
 
         let should_toggle = !must_match && self.dest == TokenDestination::Stream;
+        let actual_pos = pos.pos();
         let index = self.queue.len();
 
         if should_toggle {
             self.dest = TokenDestination::Queue;
         }
 
-        self.send(Token::Start { rule: rule, pos: pos.clone() });
+        self.send(SendableToken::Start { rule: rule, pos: actual_pos });
 
-        let result = f(pos.clone(), self);
+        let result = f(pos, self);
 
         if let Ok(ref pos) = result {
-            self.send(Token::End { rule: rule, pos: pos.clone() });
+            self.send(SendableToken::End { rule: rule, pos: pos.pos() });
         }
 
         if self.dest == TokenDestination::Queue && result.is_err() {
@@ -142,36 +143,18 @@ impl<'a, Rule: Copy, I: Input> ParserState<'a, Rule, I> {
     }
 
     #[inline]
-    fn send(&mut self, token: Token<Rule, I>) {
-        #[inline]
-        fn to_sendable<Rule, I: Input>(token: Token<Rule, I>) -> SendableToken<Rule> {
-            match token {
-                Token::Start { rule, pos } => {
-                    SendableToken::Start {
-                        rule: rule,
-                        pos:  pos.pos()
-                    }
-                },
-                Token::End { rule, pos } => {
-                    SendableToken::End {
-                        rule: rule,
-                        pos:  pos.pos()
-                    }
-                }
-            }
-        }
-
+    fn send(&mut self, token: SendableToken<Rule>) {
         match token {
-            Token::Start { ref rule, ref pos } => {
+            SendableToken::Start { rule, pos } => {
                 let is_positive = !(self.dest == TokenDestination::Lookahead) || self.pos_lookahead;
-                self.track(is_positive, *rule, pos.pos());
+                self.track(is_positive, rule, pos);
             },
             _ => ()
         };
 
         match self.dest {
-            TokenDestination::Stream    => self.sender.send(to_sendable(token)),
-            TokenDestination::Queue     => self.queue.push(to_sendable(token)),
+            TokenDestination::Stream    => self.sender.send(token),
+            TokenDestination::Queue     => self.queue.push(token),
             TokenDestination::Lookahead => ()
         };
     }
