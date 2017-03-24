@@ -149,10 +149,10 @@ macro_rules! parses_to {
     ( parser: $parser:ident, input: $string:expr, rule: $rules:tt :: $rule:tt,
       tokens: [ $( $names:ident $calls:tt ),* ] ) => {
 
-        use futures::stream::Stream;
+        use ::futures::stream::Stream;
 
-        let input = $crate::inputs::StringInput::new($string);
-        let mut tokens = $parser::parse($rules::$rule, input).wait();
+        let input = $crate::inputs::StringInput::new($string.to_owned());
+        let mut tokens = $parser::parse($rules::$rule, ::std::sync::Arc::new(input)).wait();
 
         expands_to!($rules, tokens, [ $( $names $calls ),* ]);
     };
@@ -160,6 +160,8 @@ macro_rules! parses_to {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::super::inputs::Input;
     use super::super::{Parser, state};
     use super::super::streams::ParserStream;
@@ -176,21 +178,20 @@ mod tests {
     struct AbcParser;
 
     impl Parser<Rule> for AbcParser {
-        fn parse<I: Input>(_: Rule, input: I) -> ParserStream<Rule, I> {
-            let (mut state, stream) = state(input);
-            let pos = state.start();
+        fn parse<I: Input + 'static>(_: Rule, input: Arc<I>) -> ParserStream<Rule, I> {
+            state(input, |mut state| {
+                let pos = state.start();
 
-            state.rule(Rule::a, pos, true, |pos, state| {
-                state.rule(Rule::b, pos.skip(1).unwrap(), true, |pos, state| {
-                    pos.skip(1)
-                }).unwrap().skip(1)
-            }).and_then(|p| {
-                state.rule(Rule::c, p.skip(1).unwrap(), true, |pos, state| {
-                    pos.skip(1)
-                })
-            }).unwrap();
-
-            stream
+                state.rule(Rule::a, pos, true, |pos, state| {
+                    state.rule(Rule::b, pos.skip(1).unwrap(), true, |pos, state| {
+                        pos.skip(1)
+                    }).unwrap().skip(1)
+                }).and_then(|p| {
+                    state.rule(Rule::c, p.skip(1).unwrap(), true, |pos, state| {
+                        pos.skip(1)
+                    })
+                }).unwrap();
+            })
         }
     }
 

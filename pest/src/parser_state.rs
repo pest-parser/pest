@@ -8,6 +8,7 @@
 use std::fmt::Debug;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::thread;
 
 use super::error::Error;
 use super::inputs::{Input, Position};
@@ -51,34 +52,37 @@ pub struct ParserState<'a, R, I: Input> {
 /// # use pest::inputs::StringInput;
 /// # use pest::state;
 /// # fn main() {
-/// let input = StringInput::new("a");
+/// let input = StringInput::new("a".to_owned());
 ///
 /// let (_, _) = state::<(), _>(input);
 /// # }
 /// ```
-pub fn state<'a, R: RuleType + 'static, I: Input>(input: I)
-    -> (ParserState<'a, R, I>, parser_stream::ParserStream<R, I>) {
+pub fn state<'a, R: RuleType + 'static, I: Input + 'static, F>(input: Arc<I>, f: F)
+    -> parser_stream::ParserStream<R, I>
+    where F: FnOnce(ParserState<'a, R, I>) + Send + 'static {
 
     let (sender, stream) = buffered(1024);
-    let input = Arc::new(input);
+    let clone = input.clone();
 
-    let state = ParserState {
-        input:         Rc::new(input.clone()),
-        sender:        sender,
-        queue:         vec![],
-        dest:          TokenDestination::Stream,
-        pos_lookahead: false,
-        is_atomic:     false,
-        pos_attempts:  vec![],
-        neg_attempts:  vec![],
-        attempt_pos:   0,
-        stack:         vec![],
-        eoi_matched:   false
-    };
+    thread::spawn(move || {
+        let state = ParserState {
+            input:         Rc::new(clone),
+            sender:        sender,
+            queue:         vec![],
+            dest:          TokenDestination::Stream,
+            pos_lookahead: false,
+            is_atomic:     false,
+            pos_attempts:  vec![],
+            neg_attempts:  vec![],
+            attempt_pos:   0,
+            stack:         vec![],
+            eoi_matched:   false
+        };
 
-    let stream = parser_stream::new(stream, input);
+        f(state);
+    });
 
-    (state, stream)
+    parser_stream::new(stream, input)
 }
 
 impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
@@ -92,7 +96,7 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
     /// # use pest::inputs::StringInput;
     /// # use pest::state;
     /// # fn main() {
-    /// let input = StringInput::new("a");
+    /// let input = StringInput::new("a".to_owned());
     ///
     /// let (state, _) = state::<(), _>(input);
     ///
@@ -171,7 +175,7 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
     /// # use pest::state;
     /// # use pest::Error;
     /// # fn main() {
-    /// let input = StringInput::new("");
+    /// let input = StringInput::new("".to_owned());
     /// let (state, _) = state::<(), _>(input);
     /// let pos = state.start();
     ///
@@ -268,7 +272,7 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
     /// # use pest::inputs::StringInput;
     /// # use pest::state;
     /// # fn main() {
-    /// let input = StringInput::new("");
+    /// let input = StringInput::new("".to_owned());
     /// let (state, _) = state::<(), _>(input);
     ///
     /// assert!(!state.is_atomic());
