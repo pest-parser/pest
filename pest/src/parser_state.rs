@@ -5,7 +5,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::fmt::Debug;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::thread;
@@ -16,7 +15,6 @@ use super::inputs_private::position;
 use super::RuleType;
 use super::streams_private::buffered::{buffered, BufferedSender, SendableError, SendableToken};
 use super::streams_private::parser_stream;
-use super::tokens::Token;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum TokenDestination {

@@ -14,7 +14,6 @@ use std::sync::Arc;
 use pest::inputs::{Input, Position};
 use pest::{Parser, ParserState, state};
 use pest::streams::ParserStream;
-use pest::tokens::Token;
 
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
@@ -305,7 +304,7 @@ impl Parser<Rule> for JsonParser {
         fn bool<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
             -> Result<Position<I>, Position<I>> {
 
-            state.rule(Rule::bool, pos, must_match, |pos, state| {
+            state.rule(Rule::bool, pos, must_match, |pos, _| {
                 pos.match_string("true").or_else(|p| {
                     p.match_string("false")
                 })
@@ -315,7 +314,7 @@ impl Parser<Rule> for JsonParser {
         fn null<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
             -> Result<Position<I>, Position<I>> {
 
-            state.rule(Rule::null, pos, must_match, |pos, state| {
+            state.rule(Rule::null, pos, must_match, |pos, _| {
                 pos.match_string("null")
             })
         }

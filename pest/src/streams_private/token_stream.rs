@@ -6,7 +6,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::cell::RefCell;
-use std::fmt::Debug;
 use std::rc::Rc;
 
 use futures::stream::Stream;
