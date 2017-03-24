@@ -25,7 +25,7 @@ use pest::tokens::Token;
 
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum Rule {
     json,
     object,

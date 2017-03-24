@@ -8,10 +8,11 @@
 use std::fmt::Debug;
 
 use super::inputs::Input;
+use super::RuleType;
 use super::streams_private::parser_stream::ParserStream;
 
 /// A `trait` that defines a `Parser`.
-pub trait Parser<Rule: Debug + Eq + 'static> {
+pub trait Parser<R: RuleType + 'static> {
     /// Parses `input` starting from `rule` and returns a `ParserStream` of `Token`s.
-    fn parse<I: Input>(rule: Rule, input: I) -> ParserStream<Rule, I>;
+    fn parse<I: Input>(rule: R, input: I) -> ParserStream<R, I>;
 }

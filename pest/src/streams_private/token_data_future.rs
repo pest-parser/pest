@@ -16,26 +16,27 @@ use futures::stream::Stream;
 use super::expandable_stream::ExpandableStream;
 use super::super::error::Error;
 use super::super::inputs::Input;
+use super::super::RuleType;
 use super::super::tokens::{Token, TokenData};
 
 /// A `struct` which implements `Future` and is the `TokenData`-returning future which is fed to the
 /// closure in [`TokenStream::expanded`](trait.TokenStream#method.expand).
-pub struct TokenDataFuture<Rule, I: Input, S>
-    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
+pub struct TokenDataFuture<R, I: Input, S>
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
-    stream: Rc<RefCell<ExpandableStream<Rule, I, S>>>
+    stream: Rc<RefCell<ExpandableStream<R, I, S>>>
 }
 
-pub fn new<Rule, I: Input, S>(stream: Rc<RefCell<ExpandableStream<Rule, I, S>>>)
-    -> TokenDataFuture<Rule, I, S>
-    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
+pub fn new<R, I: Input, S>(stream: Rc<RefCell<ExpandableStream<R, I, S>>>)
+                           -> TokenDataFuture<R, I, S>
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
     TokenDataFuture {
         stream: stream
     }
 }
 
-impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> Future for TokenDataFuture<Rule, I, S>
+impl<Rule: RuleType, I: Input, S> Future for TokenDataFuture<Rule, I, S>
     where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
 
     type Item  = TokenData<Rule, I>;

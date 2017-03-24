@@ -13,25 +13,26 @@ use futures::stream::Stream;
 
 use super::super::error::Error;
 use super::super::inputs::{Input, Position};
+use super::super::RuleType;
 use super::super::tokens::{Token, TokenData};
 
-pub struct ExpandableStream<Rule, I: Input, S>
-    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
+pub struct ExpandableStream<R, I: Input, S>
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
     stream: S,
-    rule:   Rule,
+    rule:   R,
     depth:  u32,
-    queue:  VecDeque<Token<Rule, I>>,
+    queue:  VecDeque<Token<R, I>>,
     start:  Option<Position<I>>,
     end:    Option<Position<I>>,
-    error:  Option<Error<Rule, I>>
+    error:  Option<Error<R, I>>
 }
 
-impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> ExpandableStream<Rule, I, S>
-    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
+impl<R: RuleType, I: Input, S> ExpandableStream<R, I, S>
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
     #[inline]
-    pub fn new(stream: S, rule: Rule) -> ExpandableStream<Rule, I, S> {
+    pub fn new(stream: S, rule: R) -> ExpandableStream<R, I, S> {
         ExpandableStream {
             stream: stream,
             rule:   rule,
@@ -44,7 +45,7 @@ impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> ExpandableStream<Rule, I, S>
     }
 
     #[inline]
-    pub fn poll_token_data(&mut self) -> Poll<TokenData<Rule, I>, Error<Rule, I>> {
+    pub fn poll_token_data(&mut self) -> Poll<TokenData<R, I>, Error<R, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
         }
@@ -125,7 +126,7 @@ impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> ExpandableStream<Rule, I, S>
     }
 
     #[inline]
-    pub fn poll_expanded(&mut self) -> Poll<Option<Token<Rule, I>>, Error<Rule, I>> {
+    pub fn poll_expanded(&mut self) -> Poll<Option<Token<R, I>>, Error<R, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
         }
@@ -195,7 +196,7 @@ impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> ExpandableStream<Rule, I, S>
     }
 
     #[inline]
-    pub fn poll_tail(&mut self) -> Poll<Option<Token<Rule, I>>, Error<Rule, I>> {
+    pub fn poll_tail(&mut self) -> Poll<Option<Token<R, I>>, Error<R, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
         }

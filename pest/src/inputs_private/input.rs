@@ -9,7 +9,7 @@ use std::fmt::Debug;
 use std::ops::Range;
 
 /// A `trait` that defines an input for a `Parser`.
-pub trait Input: Debug {
+pub trait Input: Debug + Send + Sync {
     /// Returns length of the input.
     fn len(&self) -> usize;
 

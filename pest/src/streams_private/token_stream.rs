@@ -20,11 +20,12 @@ use super::sliceable_stream::SliceableStream;
 use super::tail_stream as ts;
 use super::token_data_future as tdf;
 use super::super::error::Error;
+use super::super::RuleType;
 use super::super::tokens::Token;
 
 /// A `trait` that defines common methods on `Token` `Stream`s.
-pub trait TokenStream<Rule: Copy + Debug + Eq, I: Input + Debug>:
-    Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> + Sized {
+pub trait TokenStream<R: RuleType, I: Input>:
+    Stream<Item=Token<R, I>, Error=Error<R, I>> + Sized {
 
     /// Peeks at the following `Token`'s `Rule` and returns a `PeekRuleFuture` containing the
     /// possible `Rule` and a `Peekable` stream.
@@ -72,7 +73,7 @@ pub trait TokenStream<Rule: Copy + Debug + Eq, I: Input + Debug>:
     /// }).wait().unwrap();
     /// # }
     /// ```
-    fn peek_rule(self) -> prf::PeekRuleFuture<Rule, I, Self> {
+    fn peek_rule(self) -> prf::PeekRuleFuture<R, I, Self> {
         prf::new(self)
     }
 
@@ -138,9 +139,9 @@ pub trait TokenStream<Rule: Copy + Debug + Eq, I: Input + Debug>:
     /// });
     /// # }
     /// ```
-    fn expand<F, T>(self, rule: Rule, f: F) -> (T, ts::TailStream<Rule, I, Self>)
-        where F: FnOnce(tdf::TokenDataFuture<Rule, I, Self>,
-                        es::ExpandedStream<Rule, I, Self>) -> T {
+    fn expand<F, T>(self, rule: R, f: F) -> (T, ts::TailStream<R, I, Self>)
+        where F: FnOnce(tdf::TokenDataFuture<R, I, Self>,
+                        es::ExpandedStream<R, I, Self>) -> T {
 
         let stream = Rc::new(RefCell::new(ExpandableStream::new(self, rule)));
 
@@ -212,15 +213,15 @@ pub trait TokenStream<Rule: Copy + Debug + Eq, I: Input + Debug>:
     /// ]);
     /// # }
     /// ```
-    fn sliced(self) -> ss::SlicedStream<Rule, I, Self> {
+    fn sliced(self) -> ss::SlicedStream<R, I, Self> {
         let stream = Rc::new(RefCell::new(SliceableStream::new(self)));
 
         ss::new(stream)
     }
 }
 
-impl<Rule: Copy + Debug + Eq, I: Input + Debug, S> TokenStream<Rule, I> for S
-    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {}
+impl<R: RuleType, I: Input, S> TokenStream<R, I> for S
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {}
 
 #[cfg(test)]
 mod tests {
@@ -242,7 +243,7 @@ mod tests {
 
 
     #[allow(non_camel_case_types)]
-    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     enum Rule {
         a,
         b,
