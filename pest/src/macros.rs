@@ -178,20 +178,17 @@ mod tests {
     impl Parser<Rule> for AbcParser {
         fn parse<I: Input>(_: Rule, input: I) -> ParserStream<Rule, I> {
             let (mut state, stream) = state(input);
+            let pos = state.start();
 
-            let pos0 = state.start();
-            let pos1 = pos0.clone().skip(1).unwrap();
-            let pos2 = pos1.clone().skip(1).unwrap();
-            let pos3 = pos2.clone().skip(1).unwrap();
-            let pos4 = pos3.clone().skip(1).unwrap();
-            let pos5 = pos4.clone().skip(1).unwrap();
-
-            state.send(Token::Start { rule: Rule::a, pos: pos0 });
-            state.send(Token::Start { rule: Rule::b, pos: pos1 });
-            state.send(Token::End   { rule: Rule::b, pos: pos2 });
-            state.send(Token::End   { rule: Rule::a, pos: pos3 });
-            state.send(Token::Start { rule: Rule::c, pos: pos4 });
-            state.send(Token::End   { rule: Rule::c, pos: pos5 });
+            state.rule(Rule::a, pos, true, |pos, state| {
+                state.rule(Rule::b, pos.skip(1).unwrap(), true, |pos, state| {
+                    pos.skip(1)
+                }).unwrap().skip(1)
+            }).and_then(|p| {
+                state.rule(Rule::c, p.skip(1).unwrap(), true, |pos, state| {
+                    pos.skip(1)
+                })
+            }).unwrap();
 
             stream
         }

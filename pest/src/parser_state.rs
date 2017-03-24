@@ -141,27 +141,8 @@ impl<'a, Rule: Copy, I: Input> ParserState<'a, Rule, I> {
         result
     }
 
-    /// Sends `token` according to the `ParserState`'s destination. The `Token` will get sent to the
-    /// `TokenStream`, queued up to be sent later, or ignored.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use pest::inputs::StringInput;
-    /// # use pest::state;
-    /// # use pest::tokens::Token;
-    /// # fn main() {
-    /// let input = StringInput::new("");
-    /// let (mut state, _) = state::<(), _>(input);
-    /// let pos = state.start();
-    ///
-    /// state.send(Token::Start { rule: (), pos: pos });
-    /// # }
-    /// ```
     #[inline]
-    pub fn send(&mut self, token: Token<Rule, I>) {
+    fn send(&mut self, token: Token<Rule, I>) {
         #[inline]
         fn to_sendable<Rule, I: Input>(token: Token<Rule, I>) -> SendableToken<Rule> {
             match token {
@@ -251,86 +232,7 @@ impl<'a, Rule: Copy, I: Input> ParserState<'a, Rule, I> {
         });
     }
 
-    /// Matches `f`, queues up all generated `Token`s, and reverts the state if the
-    /// `rule` fails. Otherwise, it sends all queues `Token`s.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use pest::inputs::StringInput;
-    /// # use pest::state;
-    /// # fn main() {
-    /// let input = StringInput::new("abacad");
-    /// let (mut state, _) = state::<(), _>(input);
-    ///
-    /// let first = state.queued(|state| {
-    ///     state.start().match_string("a").and_then(|p| p.match_string("b"))
-    /// });
-    /// assert!(first.is_ok());
-    ///
-    /// let second = state.queued(|_| {
-    ///     first.and_then(|p| p.match_string("a")).and_then(|p| p.match_string("c"))
-    /// });
-    /// assert!(second.is_ok());
-    ///
-    /// let third = state.queued(|_| {
-    ///     second.and_then(|p| p.match_string("a")).and_then(|p| p.match_string("d"))
-    /// });
-    /// assert!(third.is_ok());
-    /// # }
-    /// ```
-    #[inline]
-    pub fn queued<F>(&mut self, f: F) -> Result<Position<I>, Position<I>>
-        where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Result<Position<I>, Position<I>> {
 
-        let should_toggle = self.dest == TokenDestination::Stream;
-
-        if should_toggle {
-            self.dest = TokenDestination::Queue;
-        }
-
-        let result = f(self);
-
-        if should_toggle {
-            self.dest = TokenDestination::Stream;
-
-            if result.is_ok() {
-                for token in self.queue.drain(..) {
-                    self.sender.send(token);
-                }
-            } else {
-                self.queue.clear();
-            }
-        }
-
-        result
-    }
-
-    /// Matches `f` while ignoring all `Token` sending. However, it still keeps track of rule
-    /// matching according to `is_positive`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use pest::inputs::StringInput;
-    /// # use pest::state;
-    /// # use pest::tokens::Token;
-    /// # fn main() {
-    /// let input = StringInput::new("a");
-    /// let (mut state, _) = state::<(), _>(input);
-    ///
-    /// assert!(state.lookahead(true, |state| {
-    ///     let pos = state.start();
-    ///     state.send(Token::Start { rule: (), pos: pos }); // Won't actually be sent.
-    ///
-    ///     state.start().match_string("b")
-    /// }).is_err());
-    /// # }
-    /// ```
     #[inline]
     pub fn lookahead<F>(&mut self, is_positive: bool, f: F) -> Result<Position<I>, Position<I>>
         where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Result<Position<I>, Position<I>> {
@@ -352,27 +254,7 @@ impl<'a, Rule: Copy, I: Input> ParserState<'a, Rule, I> {
         result
     }
 
-    /// Matches `f` while toggling atomicity.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use pest::inputs::StringInput;
-    /// # use pest::state;
-    /// # fn main() {
-    /// let input = StringInput::new("");
-    /// let (mut state, _) = state::<(), _>(input);
-    ///
-    /// assert!(!state.is_atomic());
-    /// state.atomic(true, |state| {
-    ///     assert!(state.is_atomic());
-    ///     Ok(state.start())
-    /// }).unwrap();
-    /// assert!(!state.is_atomic());
-    /// # }
-    /// ```
+
     #[inline]
     pub fn atomic<F>(&mut self, is_atomic: bool, f: F) -> Result<Position<I>, Position<I>>
         where F: FnOnce(&mut ParserState<'a, Rule, I>) -> Result<Position<I>, Position<I>> {
