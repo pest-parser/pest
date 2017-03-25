@@ -6,7 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #[macro_export]
-macro_rules! expands_to {
+macro_rules! consumes_to {
     ( $_rules:ident, $tokens:expr, [] ) => {
         let rest: Vec<_> = $tokens.map(|r| r.unwrap()).collect();
 
@@ -72,7 +72,7 @@ macro_rules! expands_to {
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
 
-        expands_to!($rules, $tokens, [ $( $names $calls ),* ]);
+        consumes_to!($rules, $tokens, [ $( $names $calls ),* ]);
     };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr,
                                                   [ $( $names:ident $calls:tt ),* ] ) ] ) => {
@@ -90,7 +90,7 @@ macro_rules! expands_to {
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
 
-        expands_to!($rules, $tokens, [ $( $names $calls ),* ]);
+        consumes_to!($rules, $tokens, [ $( $names $calls ),* ]);
 
         let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $end);
@@ -124,7 +124,7 @@ macro_rules! expands_to {
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
 
-        expands_to!($rules, $tokens, [ $( $nested_names $nested_calls ),* ]);
+        consumes_to!($rules, $tokens, [ $( $nested_names $nested_calls ),* ]);
 
         let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $end);
@@ -140,7 +140,7 @@ macro_rules! expands_to {
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
 
-        expands_to!($rules, $tokens, [ $( $names $calls ),* ]);
+        consumes_to!($rules, $tokens, [ $( $names $calls ),* ]);
     };
 }
 
@@ -154,7 +154,7 @@ macro_rules! parses_to {
         let input = $crate::inputs::StringInput::new($string.to_owned());
         let mut tokens = $parser::parse($rules::$rule, ::std::sync::Arc::new(input)).wait();
 
-        expands_to!($rules, tokens, [ $( $names $calls ),* ]);
+        consumes_to!($rules, tokens, [ $( $names $calls ),* ]);
     };
 }
 

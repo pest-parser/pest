@@ -10,8 +10,8 @@ use std::rc::Rc;
 
 use futures::stream::Stream;
 
-use super::expandable_stream::ExpandableStream;
-use super::expanded_stream as es;
+use super::consumable_stream::ConsumableStream;
+use super::consumed_stream as cs;
 use super::super::inputs::Input;
 use super::peek_rule_future as prf;
 use super::sliced_stream as ss;
@@ -76,8 +76,8 @@ pub trait TokenStream<R: RuleType, I: Input>:
         prf::new(self)
     }
 
-    /// Expands a matching `Token` pair to a `TokenDataFuture`, containing the `TokenData` crated
-    /// from the pair, and an `ExpandedStream`, containing all the `Token`s between the matching
+    /// Consumes a matching `Token` pair to a `TokenDataFuture`, containing the `TokenData` crated
+    /// from the pair, and an `ConsumedStream`, containing all the `Token`s between the matching
     /// pair.
     ///
     /// A matching `Token` pair is formed by a `Token::Start` followed by a `Token::End` with the
@@ -122,7 +122,7 @@ pub trait TokenStream<R: RuleType, I: Input>:
     /// state.send(Token::End   { rule: Rule::b, pos: pos2.clone() });
     /// state.send(Token::End   { rule: Rule::a, pos: pos3 });
     ///
-    /// stream.expand(Rule::a, |data, stream| {
+    /// stream.consume(Rule::a, |data, stream| {
     ///     let data = data.wait().unwrap();
     ///
     ///     assert_eq!(data.rule, Rule::a);
@@ -138,17 +138,17 @@ pub trait TokenStream<R: RuleType, I: Input>:
     /// });
     /// # }
     /// ```
-    fn expand<F, T>(self, rule: R, f: F) -> (T, ts::TailStream<R, I, Self>)
+    fn consume<F, T>(self, rule: R, f: F) -> (T, ts::TailStream<R, I, Self>)
         where F: FnOnce(tdf::TokenDataFuture<R, I, Self>,
-                        es::ExpandedStream<R, I, Self>) -> T {
+                        cs::ConsumedStream<R, I, Self>) -> T {
 
-        let stream = Rc::new(RefCell::new(ExpandableStream::new(self, rule)));
+        let stream = Rc::new(RefCell::new(ConsumableStream::new(self, rule)));
 
         let token_data_future = tdf::new(stream.clone());
-        let expanded_stream = es::new(stream.clone());
+        let consumed_stream = cs::new(stream.clone());
         let tail_stream = ts::new(stream.clone());
 
-        (f(token_data_future, expanded_stream), tail_stream)
+        (f(token_data_future, consumed_stream), tail_stream)
     }
 
     /// Returns a `SlicedStream` of `PairStream`s, with each `PairStream` containing all the
@@ -342,7 +342,7 @@ mod tests {
     }
 
     #[test]
-    fn expand_sleep() {
+    fn consume_sleep() {
         let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
@@ -365,13 +365,13 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let (result, stream) = stream.expand(Rule::a, |data, stream| {
+        let (result, stream) = stream.consume(Rule::a, |data, stream| {
             assert_eq!(data.wait().unwrap(), TokenData {
                 rule: Rule::a,
                 span: span::new(input.clone(), 0, 3)
             });
 
-            let (result, _) = stream.expand(Rule::b, |data, _| {
+            let (result, _) = stream.consume(Rule::b, |data, _| {
                 assert_eq!(data.wait().unwrap(), TokenData {
                     rule: Rule::b,
                     span: span::new(input.clone(), 1, 2)
@@ -385,7 +385,7 @@ mod tests {
 
         assert_eq!(result, 5);
 
-        stream.expand(Rule::c, |data, _| {
+        stream.consume(Rule::c, |data, _| {
             assert_eq!(data.wait().unwrap(), TokenData {
                 rule: Rule::c,
                 span: span::new(input, 4, 5)
@@ -394,7 +394,7 @@ mod tests {
     }
 
     #[test]
-    fn expand_tail() {
+    fn consume_tail() {
         let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
@@ -413,7 +413,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let (_, stream) = stream.expand(Rule::a, |_, _| {});
+        let (_, stream) = stream.consume(Rule::a, |_, _| {});
 
         assert_eq!(stream.collect().wait().unwrap(), vec![
             Token::Start { rule: Rule::c, pos: position::new(input.clone(), 4) },
@@ -422,7 +422,7 @@ mod tests {
     }
 
     #[test]
-    fn expand_streams() {
+    fn consume_streams() {
         let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
@@ -441,14 +441,14 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let (_, stream) = stream.expand(Rule::a, |_, stream| {
+        let (_, stream) = stream.consume(Rule::a, |_, stream| {
             assert_eq!(stream.collect().wait().unwrap(), vec![
                 Token::Start { rule: Rule::a, pos: position::new(input.clone(), 1) },
                 Token::End   { rule: Rule::a, pos: position::new(input.clone(), 2) }
             ]);
         });
 
-        stream.expand(Rule::c, |_, stream| {
+        stream.consume(Rule::c, |_, stream| {
             assert_eq!(stream.collect().wait().unwrap(), vec![]);
         });
     }
@@ -456,7 +456,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected Start { rule: b, .. }, \
                                but found Start { rule: a, pos: Position { pos: 0 } } instead")]
-    fn expand_wrong_start_future() {
+    fn consume_wrong_start_future() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
@@ -470,7 +470,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.expand(Rule::b, |data, _| {
+        stream.consume(Rule::b, |data, _| {
             data.wait().unwrap();
         });
     }
@@ -478,7 +478,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected Start { rule: a, .. }, \
                                but found nothing")]
-    fn expand_no_start_future() {
+    fn consume_no_start_future() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
@@ -489,7 +489,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.expand(Rule::a, |data, _| {
+        stream.consume(Rule::a, |data, _| {
             data.wait().unwrap();
         });
     }
@@ -497,7 +497,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
-    fn expand_no_end_future() {
+    fn consume_no_end_future() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
@@ -510,7 +510,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.expand(Rule::a, |data, _| {
+        stream.consume(Rule::a, |data, _| {
             data.wait().unwrap();
         });
     }
@@ -518,7 +518,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected Start { rule: b, .. }, \
                                but found Start { rule: a, pos: Position { pos: 0 } } instead")]
-    fn expand_wrong_start_expanded_stream() {
+    fn consume_wrong_start_consumed_stream() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
@@ -532,7 +532,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.expand(Rule::b, |_, stream| {
+        stream.consume(Rule::b, |_, stream| {
             stream.collect().wait().unwrap();
         });
     }
@@ -540,7 +540,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected Start { rule: a, .. }, \
                                but found nothing")]
-    fn expand_no_start_expanded_stream() {
+    fn consume_no_start_consumed_stream() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
@@ -551,7 +551,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.expand(Rule::a, |_, stream| {
+        stream.consume(Rule::a, |_, stream| {
             stream.collect().wait().unwrap();
         });
     }
@@ -559,7 +559,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
-    fn expand_no_end_expanded_stream() {
+    fn consume_no_end_consumed_stream() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
@@ -572,7 +572,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.expand(Rule::a, |_, stream| {
+        stream.consume(Rule::a, |_, stream| {
             stream.collect().wait().unwrap();
         });
     }
@@ -580,7 +580,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected Start { rule: b, .. }, \
                                but found Start { rule: a, pos: Position { pos: 0 } } instead")]
-    fn expand_wrong_start_tail_stream() {
+    fn consume_wrong_start_tail_stream() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
@@ -594,7 +594,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let (_, stream) = stream.expand(Rule::b, |_, _| {});
+        let (_, stream) = stream.consume(Rule::b, |_, _| {});
 
         stream.collect().wait().unwrap();
     }
@@ -602,7 +602,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected Start { rule: a, .. }, \
                                but found nothing")]
-    fn expand_no_start_tail_stream() {
+    fn consume_no_start_tail_stream() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
@@ -613,7 +613,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let (_, stream) = stream.expand(Rule::a, |_, _| {});
+        let (_, stream) = stream.consume(Rule::a, |_, _| {});
 
         stream.collect().wait().unwrap();
     }
@@ -621,7 +621,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
-    fn expand_no_end_tail_stream() {
+    fn consume_no_end_tail_stream() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
@@ -634,13 +634,13 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let (_, stream) = stream.expand(Rule::a, |_, _| {});
+        let (_, stream) = stream.consume(Rule::a, |_, _| {});
 
         stream.collect().wait().unwrap();
     }
 
     #[test]
-    fn expand_incomplete_future() {
+    fn consume_incomplete_future() {
         let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
@@ -652,7 +652,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.expand(Rule::a, |_, stream| {
+        stream.consume(Rule::a, |_, stream| {
             assert_eq!(stream.take(2).collect().wait().unwrap(), vec![
                 Token::Start { rule: Rule::b, pos: position::new(input.clone(), 1) },
                 Token::End   { rule: Rule::b, pos: position::new(input.clone(), 2) }
@@ -661,7 +661,7 @@ mod tests {
     }
 
     #[test]
-    fn expand_future_first() {
+    fn consume_future_first() {
         let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
@@ -678,7 +678,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.expand(Rule::a, |data, stream| {
+        stream.consume(Rule::a, |data, stream| {
             assert_eq!(data.wait().unwrap(), TokenData {
                 rule: Rule::a,
                 span: span::new(input.clone(), 0, 3)
@@ -691,7 +691,7 @@ mod tests {
     }
 
     #[test]
-    fn expand_tail_first() {
+    fn consume_tail_first() {
         let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
@@ -708,7 +708,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let ((data, expanded_stream), stream) = stream.expand(Rule::a, |data, stream| {
+        let ((data, consumed_stream), stream) = stream.consume(Rule::a, |data, stream| {
             (data, stream)
         });
 
@@ -718,14 +718,14 @@ mod tests {
             rule: Rule::a,
             span: span::new(input.clone(), 0, 3)
         });
-        assert_eq!(expanded_stream.collect().wait().unwrap(), vec![
+        assert_eq!(consumed_stream.collect().wait().unwrap(), vec![
             Token::Start { rule: Rule::a, pos: position::new(input.clone(), 1) },
             Token::End   { rule: Rule::a, pos: position::new(input.clone(), 2) }
         ]);
     }
 
     #[test]
-    fn expand_error_future_first() {
+    fn consume_error_future_first() {
         let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
@@ -739,7 +739,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let (_, stream) = stream.expand(Rule::a, |data, stream| {
+        let (_, stream) = stream.consume(Rule::a, |data, stream| {
             assert_eq!(data.wait(), Err(Error::CustomErrorPos {
                 message: "e".to_owned(),
                 pos: position::new(input.clone(), 2)
@@ -758,7 +758,7 @@ mod tests {
     }
 
     #[test]
-    fn expand_error_expand_first() {
+    fn consume_error_consumed_first() {
         let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
@@ -772,7 +772,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let (_, stream) = stream.expand(Rule::a, |data, stream| {
+        let (_, stream) = stream.consume(Rule::a, |data, stream| {
             assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos {
                 message: "e".to_owned(),
                 pos: position::new(input.clone(), 2)
@@ -791,7 +791,7 @@ mod tests {
     }
 
     #[test]
-    fn expand_error_tail_first() {
+    fn consume_error_tail_first() {
         let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
@@ -805,7 +805,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let ((data, expanded), stream) = stream.expand(Rule::a, |data, stream| {
+        let ((data, consumed), stream) = stream.consume(Rule::a, |data, stream| {
             (data, stream)
         });
 
@@ -818,14 +818,14 @@ mod tests {
             message: "e".to_owned(),
             pos: position::new(input.clone(), 2)
         }));
-        assert_eq!(expanded.collect().wait(), Err(Error::CustomErrorPos {
+        assert_eq!(consumed.collect().wait(), Err(Error::CustomErrorPos {
             message: "e".to_owned(),
             pos: position::new(input.clone(), 2)
         }));
     }
 
     #[test]
-    fn expand_nested() {
+    fn consume_nested() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let (s, r) = buffered(16);
@@ -838,10 +838,10 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.expand(Rule::a, |_, stream| {
-            stream.expand(Rule::b, |_, stream| {
-                stream.expand(Rule::c, |_, stream| {
-                    stream.expand(Rule::d, |_, stream| {
+        stream.consume(Rule::a, |_, stream| {
+            stream.consume(Rule::b, |_, stream| {
+                stream.consume(Rule::c, |_, stream| {
+                    stream.consume(Rule::d, |_, stream| {
                         assert_eq!(stream.collect().wait().unwrap(), vec![]);
                     })
                 })

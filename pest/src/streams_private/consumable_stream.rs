@@ -15,7 +15,7 @@ use super::super::inputs::{Input, Position};
 use super::super::RuleType;
 use super::super::tokens::{Token, TokenData};
 
-pub struct ExpandableStream<R, I: Input, S>
+pub struct ConsumableStream<R, I: Input, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
     stream: S,
@@ -27,12 +27,12 @@ pub struct ExpandableStream<R, I: Input, S>
     error:  Option<Error<R, I>>
 }
 
-impl<R: RuleType, I: Input, S> ExpandableStream<R, I, S>
+impl<R: RuleType, I: Input, S> ConsumableStream<R, I, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
     #[inline]
-    pub fn new(stream: S, rule: R) -> ExpandableStream<R, I, S> {
-        ExpandableStream {
+    pub fn new(stream: S, rule: R) -> ConsumableStream<R, I, S> {
+        ConsumableStream {
             stream: stream,
             rule:   rule,
             depth:  0,
@@ -125,7 +125,7 @@ impl<R: RuleType, I: Input, S> ExpandableStream<R, I, S>
     }
 
     #[inline]
-    pub fn poll_expanded(&mut self) -> Poll<Option<Token<R, I>>, Error<R, I>> {
+    pub fn poll_consumed(&mut self) -> Poll<Option<Token<R, I>>, Error<R, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
         }
@@ -142,7 +142,7 @@ impl<R: RuleType, I: Input, S> ExpandableStream<R, I, S>
                             Token::Start { ref rule, ref pos } if *rule == self.rule => {
                                 self.start = Some(pos.clone());
 
-                                self.poll_expanded()
+                                self.poll_consumed()
                             },
                             token => panic!("expected Start {{ rule: {:?}, .. }}, \
                                              but found {:?} instead", self.rule, token)

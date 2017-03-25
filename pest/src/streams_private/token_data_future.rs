@@ -12,21 +12,21 @@ use futures::Poll;
 use futures::future::Future;
 use futures::stream::Stream;
 
-use super::expandable_stream::ExpandableStream;
+use super::consumable_stream::ConsumableStream;
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::RuleType;
 use super::super::tokens::{Token, TokenData};
 
 /// A `struct` which implements `Future` and is the `TokenData`-returning future which is fed to the
-/// closure in [`TokenStream::expanded`](trait.TokenStream#method.expand).
+/// closure in [`TokenStream::consume`](trait.TokenStream#method.consume).
 pub struct TokenDataFuture<R, I: Input, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
-    stream: Rc<RefCell<ExpandableStream<R, I, S>>>
+    stream: Rc<RefCell<ConsumableStream<R, I, S>>>
 }
 
-pub fn new<R, I: Input, S>(stream: Rc<RefCell<ExpandableStream<R, I, S>>>)
+pub fn new<R, I: Input, S>(stream: Rc<RefCell<ConsumableStream<R, I, S>>>)
                            -> TokenDataFuture<R, I, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 

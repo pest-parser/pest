@@ -6,8 +6,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 pub mod buffered;
-mod expandable_stream;
-mod expanded_stream;
+mod consumable_stream;
+mod consumed_stream;
 mod pair_stream;
 pub mod parser_stream;
 mod peek_rule_future;
@@ -17,7 +17,7 @@ mod tail_stream;
 mod token_data_future;
 mod token_stream;
 
-pub use self::expanded_stream::ExpandedStream;
+pub use self::consumed_stream::ConsumedStream;
 pub use self::pair_stream::PairStream;
 pub use self::parser_stream::ParserStream;
 pub use self::peek_rule_future::PeekRuleFuture;
