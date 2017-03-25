@@ -11,21 +11,21 @@ use std::rc::Rc;
 use futures::Poll;
 use futures::stream::Stream;
 
-use super::expandable_stream::ExpandableStream;
+use super::consumable_stream::ConsumableStream;
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::RuleType;
 use super::super::tokens::Token;
 
 /// A `struct` which implements `Stream` and `TokenStream`, and is the returned tail stream which is
-/// returned by [`TokenStream::expanded`](trait.TokenStream#method.expand).
+/// returned by [`TokenStream::consume`](trait.TokenStream#method.consume).
 pub struct TailStream<R, I: Input, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
-    stream: Rc<RefCell<ExpandableStream<R, I, S>>>
+    stream: Rc<RefCell<ConsumableStream<R, I, S>>>
 }
 
-pub fn new<R, I: Input, S>(stream: Rc<RefCell<ExpandableStream<R, I, S>>>)
+pub fn new<R, I: Input, S>(stream: Rc<RefCell<ConsumableStream<R, I, S>>>)
                            -> TailStream<R, I, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 

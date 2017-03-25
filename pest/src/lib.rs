@@ -25,7 +25,7 @@ pub mod inputs {
 
 /// A `mod` containing `Stream` implementations used in `Token` processing.
 pub mod streams {
-    pub use super::streams_private::{ExpandedStream, ParserStream, TokenDataFuture, TokenStream,
+    pub use super::streams_private::{ConsumedStream, ParserStream, TokenDataFuture, TokenStream,
                                      TailStream};
 }
 
