@@ -12,6 +12,8 @@ use futures::Poll;
 use futures::stream::Stream;
 
 use super::consumable_stream::ConsumableStream;
+use super::rule_future::{self, RuleFuture};
+use super::span_future::{self, SpanFuture};
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::RuleType;
@@ -33,6 +35,21 @@ pub fn new<R, I: Input, S>(stream: Rc<RefCell<ConsumableStream<R, I, S>>>)
         stream: stream
     }
 }
+
+impl<R, I: Input, S> ConsumedStream<R, I, S>
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
+
+    #[inline]
+    pub fn rule(&self) -> RuleFuture<R, I, S> {
+        rule_future::new(self.stream.clone())
+    }
+
+    #[inline]
+    pub fn span(&self) -> SpanFuture<R, I, S> {
+        span_future::new(self.stream.clone())
+    }
+}
+
 
 impl<R: RuleType, I: Input, S> Stream for ConsumedStream<R, I, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {

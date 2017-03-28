@@ -25,8 +25,13 @@ pub mod inputs {
 
 /// A `mod` containing `Stream` implementations used in `Token` processing.
 pub mod streams {
-    pub use super::streams_private::{ConsumedStream, ParserStream, TokenDataFuture, TokenStream,
-                                     TailStream};
+    pub use super::streams_private::{
+        ConsumedStream,
+        ParserStream,
+        RuleFuture,
+        SpanFuture,
+        TokenStream
+    };
 }
 
 pub trait RuleType: Copy + Debug + Eq + Hash + Ord + Send + Sync {}

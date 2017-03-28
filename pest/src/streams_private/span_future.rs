@@ -14,34 +14,32 @@ use futures::stream::Stream;
 
 use super::consumable_stream::ConsumableStream;
 use super::super::error::Error;
-use super::super::inputs::Input;
+use super::super::inputs::{Input, Span};
 use super::super::RuleType;
 use super::super::tokens::{Token, TokenData};
 
-/// A `struct` which implements `Future` and is the `TokenData`-returning future which is fed to the
-/// closure in [`TokenStream::consume`](trait.TokenStream#method.consume).
-pub struct TokenDataFuture<R, I: Input, S>
+pub struct SpanFuture<R, I: Input, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
     stream: Rc<RefCell<ConsumableStream<R, I, S>>>
 }
 
 pub fn new<R, I: Input, S>(stream: Rc<RefCell<ConsumableStream<R, I, S>>>)
-                           -> TokenDataFuture<R, I, S>
+    -> SpanFuture<R, I, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
-    TokenDataFuture {
+    SpanFuture {
         stream: stream
     }
 }
 
-impl<Rule: RuleType, I: Input, S> Future for TokenDataFuture<Rule, I, S>
-    where S: Stream<Item=Token<Rule, I>, Error=Error<Rule, I>> {
+impl<R: RuleType, I: Input, S> Future for SpanFuture<R, I, S>
+    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
-    type Item  = TokenData<Rule, I>;
-    type Error = Error<Rule, I>;
+    type Item  = Span<I>;
+    type Error = Error<R, I>;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        self.stream.borrow_mut().poll_token_data()
+        self.stream.borrow_mut().poll_span()
     }
 }
