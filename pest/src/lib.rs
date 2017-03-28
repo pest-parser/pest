@@ -16,7 +16,7 @@ mod macros;
 mod parser;
 mod parser_state;
 mod streams_private;
-pub mod tokens;
+mod token;
 
 /// A `mod` containing the `Input` `trait` and implementations.
 pub mod inputs {
@@ -40,3 +40,4 @@ impl<T: Copy + Debug + Eq + Hash + Ord + Send + Sync> RuleType for T {}
 pub use error::Error;
 pub use parser::Parser;
 pub use parser_state::{state, ParserState};
+pub use token::Token;

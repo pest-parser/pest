@@ -15,7 +15,7 @@ use super::buffered::{BufferedStream, SendableError, SendableToken};
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::inputs_private::{position, span};
-use super::super::tokens::Token;
+use super::super::Token;
 
 /// A `struct` which implements `Stream` and `TokenStream`, and is created by the
 /// [`state`](../fn.state) function.

@@ -18,7 +18,7 @@ use super::sliced_stream as ss;
 use super::sliceable_stream::SliceableStream;
 use super::super::error::Error;
 use super::super::RuleType;
-use super::super::tokens::Token;
+use super::super::Token;
 
 /// A `trait` that defines common methods on `Token` `Stream`s.
 pub trait TokenStream<R: RuleType, I: Input>:
@@ -44,7 +44,7 @@ pub trait TokenStream<R: RuleType, I: Input>:
     /// # use pest::inputs::StringInput;
     /// # use pest::state;
     /// # use pest::streams::TokenStream;
-    /// # use pest::tokens::Token;
+    /// # use pest::Token;
     /// # fn main() {
     /// # #[allow(non_camel_case_types)]
     /// #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -98,7 +98,7 @@ pub trait TokenStream<R: RuleType, I: Input>:
     /// # use pest::inputs::StringInput;
     /// # use pest::state;
     /// # use pest::streams::TokenStream;
-    /// # use pest::tokens::Token;
+    /// # use pest::Token;
     /// # fn main() {
     /// # #[allow(non_camel_case_types)]
     /// #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -165,7 +165,7 @@ pub trait TokenStream<R: RuleType, I: Input>:
     /// # use pest::inputs::StringInput;
     /// # use pest::state;
     /// # use pest::streams::TokenStream;
-    /// # use pest::tokens::Token;
+    /// # use pest::Token;
     /// # fn main() {
     /// # #[allow(non_camel_case_types)]
     /// #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -228,8 +228,8 @@ mod tests {
     use super::super::parser_stream;
     use super::super::super::error::Error;
     use super::super::super::inputs::StringInput;
-    use super::super::super::inputs_private::{position, span};
-    use super::super::super::tokens::{Token, TokenData};
+    use super::super::super::inputs_private::position;
+    use super::super::super::Token;
 
 
     #[allow(non_camel_case_types)]
@@ -335,7 +335,6 @@ mod tests {
     #[test]
     fn consume_sleep() {
         let arc = Arc::new(StringInput::new("".to_owned()));
-        let input = Rc::new(arc.clone());
 
         let r = {
             let (s, r) = buffered(16);
