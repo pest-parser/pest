@@ -10,14 +10,13 @@ use std::collections::VecDeque;
 use futures::{Async, Poll};
 use futures::stream::Stream;
 
+use super::token_stream::TokenStream;
 use super::super::error::Error;
 use super::super::inputs::{Input, Position, Span};
 use super::super::RuleType;
 use super::super::Token;
 
-pub struct ConsumableStream<R, I: Input, S>
-    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
-
+pub struct ConsumableStream<R: RuleType, I: Input, S: TokenStream<R, I>> {
     stream: S,
     rule:   Option<R>,
     depth:  u32,
@@ -27,9 +26,7 @@ pub struct ConsumableStream<R, I: Input, S>
     error:  Option<Error<R, I>>
 }
 
-impl<R: RuleType, I: Input, S> ConsumableStream<R, I, S>
-    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
-
+impl<R: RuleType, I: Input, S: TokenStream<R, I>> ConsumableStream<R, I, S> {
     #[inline]
     pub fn new(stream: S) -> ConsumableStream<R, I, S> {
         ConsumableStream {

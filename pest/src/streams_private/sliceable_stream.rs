@@ -10,14 +10,13 @@ use std::collections::VecDeque;
 use futures::{Async, Poll};
 use futures::stream::Stream;
 
+use super::token_stream::TokenStream;
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::RuleType;
 use super::super::Token;
 
-pub struct SliceableStream<R, I: Input, S>
-    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
-
+pub struct SliceableStream<R: RuleType, I: Input, S: TokenStream<R, I>> {
     stream: S,
     depth:  usize,
     queues: Vec<VecDeque<Token<R, I>>>,
@@ -25,9 +24,7 @@ pub struct SliceableStream<R, I: Input, S>
     error:  Option<Error<R, I>>
 }
 
-impl<R: RuleType, I: Input, S> SliceableStream<R, I, S>
-    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
-
+impl<R: RuleType, I: Input, S: TokenStream<R, I>> SliceableStream<R, I, S> {
     pub fn new(stream: S) -> SliceableStream<R, I, S> {
         SliceableStream {
             stream: stream,

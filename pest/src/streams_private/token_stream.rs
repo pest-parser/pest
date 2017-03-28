@@ -21,9 +21,7 @@ use super::super::RuleType;
 use super::super::Token;
 
 /// A `trait` that defines common methods on `Token` `Stream`s.
-pub trait TokenStream<R: RuleType, I: Input>:
-    Stream<Item=Token<R, I>, Error=Error<R, I>> + Sized {
-
+pub trait TokenStream<R: RuleType, I: Input>: Stream<Item=Token<R, I>, Error=Error<R, I>> + Sized {
     /// Peeks at the following `Token`'s `Rule` and returns a `PeekRuleFuture` containing the
     /// possible `Rule` and a `Peekable` stream.
     ///

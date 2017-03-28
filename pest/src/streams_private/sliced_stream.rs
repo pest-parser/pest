@@ -13,6 +13,7 @@ use futures::stream::Stream;
 
 use super::pair_stream as ps;
 use super::sliceable_stream::SliceableStream;
+use super::token_stream::TokenStream;
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::RuleType;
@@ -20,24 +21,19 @@ use super::super::Token;
 
 /// A `struct` which implements `Stream`, which contains `PairStream`s, and which is returned by
 /// [`TokenStream::sliced`](trait.TokenStream#method.sliced).
-pub struct SlicedStream<R, I: Input, S>
-    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
-
+pub struct SlicedStream<R: RuleType, I: Input, S: TokenStream<R, I>> {
     stream: Rc<RefCell<SliceableStream<R, I, S>>>
 }
 
-pub fn new<R, I: Input, S>(stream: Rc<RefCell<SliceableStream<R, I, S>>>)
-                           -> SlicedStream<R, I, S>
-    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
-
+pub fn new<R: RuleType, I: Input, S: TokenStream<R, I>>(
+    stream: Rc<RefCell<SliceableStream<R, I, S>>>
+) -> SlicedStream<R, I, S> {
     SlicedStream {
         stream: stream
     }
 }
 
-impl<R: RuleType, I: Input, S> Stream for SlicedStream<R, I, S>
-    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
-
+impl<R: RuleType, I: Input, S: TokenStream<R, I>> Stream for SlicedStream<R, I, S> {
     type Item  = ps::PairStream<R, I, S>;
     type Error = Error<R, I>;
 
