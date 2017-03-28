@@ -11,7 +11,7 @@ use futures::{Async, Poll};
 use futures::stream::Stream;
 
 use super::super::error::Error;
-use super::super::inputs::{Input, Position};
+use super::super::inputs::{Input, Position, Span};
 use super::super::RuleType;
 use super::super::tokens::{Token, TokenData};
 
@@ -19,7 +19,7 @@ pub struct ConsumableStream<R, I: Input, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
     stream: S,
-    rule:   R,
+    rule:   Option<R>,
     depth:  u32,
     queue:  VecDeque<Token<R, I>>,
     start:  Option<Position<I>>,
@@ -31,10 +31,10 @@ impl<R: RuleType, I: Input, S> ConsumableStream<R, I, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
 
     #[inline]
-    pub fn new(stream: S, rule: R) -> ConsumableStream<R, I, S> {
+    pub fn new(stream: S) -> ConsumableStream<R, I, S> {
         ConsumableStream {
             stream: stream,
-            rule:   rule,
+            rule:   None,
             depth:  0,
             queue:  VecDeque::new(),
             start:  None,
@@ -44,7 +44,40 @@ impl<R: RuleType, I: Input, S> ConsumableStream<R, I, S>
     }
 
     #[inline]
-    pub fn poll_token_data(&mut self) -> Poll<TokenData<R, I>, Error<R, I>> {
+    pub fn poll_rule(&mut self) -> Poll<R, Error<R, I>> {
+        if let Some(ref error) = self.error {
+            return Err(error.clone());
+        }
+
+        if let Some(ref rule) = self.rule {
+            Ok(Async::Ready(*rule))
+        } else {
+            match self.stream.poll() {
+                Ok(Async::Ready(Some(token))) => {
+                    match token {
+                        Token::Start { ref rule, ref pos } => {
+                            self.rule = Some(*rule);
+                            self.start = Some(pos.clone());
+
+                            Ok(Async::Ready(*rule))
+                        },
+                        token => panic!("expected Start {{ .. }}, \
+                                         but found {:?} instead", token)
+                    }
+                },
+                Ok(Async::Ready(None)) => panic!("expected Start { .. }, but found nothing"),
+                Ok(Async::NotReady) => Ok(Async::NotReady),
+                Err(e) => {
+                    self.error = Some(e.clone());
+
+                    Err(e)
+                }
+            }
+        }
+    }
+
+    #[inline]
+    pub fn poll_span(&mut self) -> Poll<Span<I>, Error<R, I>> {
         if let Some(ref error) = self.error {
             return Err(error.clone());
         }
@@ -54,10 +87,7 @@ impl<R: RuleType, I: Input, S> ConsumableStream<R, I, S>
             let end = self.end.as_ref().unwrap();
 
             Ok(Async::Ready(
-                TokenData {
-                    rule: self.rule,
-                    span: start.clone().span(end.clone())
-                }
+                start.clone().span(end.clone())
             ))
         } else {
             loop {
@@ -65,30 +95,28 @@ impl<R: RuleType, I: Input, S> ConsumableStream<R, I, S>
                     Ok(Async::Ready(Some(token))) => {
                         if self.start.is_none() {
                             match token {
-                                Token::Start { ref rule, ref pos } if *rule == self.rule => {
+                                Token::Start { ref rule, ref pos } => {
+                                    self.rule = Some(*rule);
                                     self.start = Some(pos.clone());
                                 },
-                                token => panic!("expected Start {{ rule: {:?}, .. }}, \
-                                                 but found {:?} instead", self.rule, token)
+                                token => panic!("expected Start {{ .. }}, \
+                                                 but found {:?} instead", token)
                             };
                         } else {
                             match token {
-                                Token::Start { ref rule, ref pos } if *rule == self.rule => {
+                                Token::Start { ref rule, ref pos } if Some(*rule) == self.rule => {
                                     self.queue.push_back(
                                         Token::Start { rule: *rule, pos: pos.clone() }
                                     );
                                     self.depth += 1;
                                 },
-                                Token::End { ref rule, ref pos } if *rule == self.rule => {
+                                Token::End { ref rule, ref pos } if Some(*rule) == self.rule => {
                                     if self.depth == 0 {
                                         self.end = Some(pos.clone());
 
                                         if let Some(ref start) = self.start {
                                             return Ok(Async::Ready(
-                                                TokenData {
-                                                    rule: self.rule,
-                                                    span: start.clone().span(pos.clone())
-                                                }
+                                                start.clone().span(pos.clone())
                                             ));
                                         } else {
                                             unreachable!();
@@ -106,11 +134,10 @@ impl<R: RuleType, I: Input, S> ConsumableStream<R, I, S>
                     },
                     Ok(Async::Ready(None)) => {
                         if self.start.is_none() {
-                            panic!("expected Start {{ rule: {:?}, .. }}, \
-                                    but found nothing", self.rule);
+                            panic!("expected Start { .. }, but found nothing");
                         } else {
                             panic!("expected End {{ rule: {:?}, .. }}, \
-                                    but found nothing", self.rule);
+                                    but found nothing", self.rule.as_ref().unwrap());
                         }
                     },
                     Ok(Async::NotReady) => return Ok(Async::NotReady),
@@ -139,24 +166,25 @@ impl<R: RuleType, I: Input, S> ConsumableStream<R, I, S>
                 Ok(Async::Ready(Some(token))) => {
                     if self.start.is_none() {
                         match token {
-                            Token::Start { ref rule, ref pos } if *rule == self.rule => {
+                            Token::Start { ref rule, ref pos } => {
+                                self.rule = Some(*rule);
                                 self.start = Some(pos.clone());
 
                                 self.poll_consumed()
                             },
-                            token => panic!("expected Start {{ rule: {:?}, .. }}, \
-                                             but found {:?} instead", self.rule, token)
+                            token => panic!("expected Start {{ .. }}, \
+                                             but found {:?} instead", token)
                         }
                     } else {
                         match token {
-                            Token::Start { ref rule, ref pos } if *rule == self.rule => {
+                            Token::Start { ref rule, ref pos } if Some(*rule) == self.rule => {
                                 self.depth += 1;
 
                                 Ok(Async::Ready(Some(
                                     Token::Start { rule: *rule, pos: pos.clone() }
                                 )))
                             },
-                            Token::End { ref rule, ref pos } if *rule == self.rule => {
+                            Token::End { ref rule, ref pos } if Some(*rule) == self.rule => {
                                 if self.depth == 0 {
                                     self.end = Some(pos.clone());
 
@@ -177,11 +205,10 @@ impl<R: RuleType, I: Input, S> ConsumableStream<R, I, S>
                 },
                 Ok(Async::Ready(None)) => {
                     if self.start.is_none() {
-                        panic!("expected Start {{ rule: {:?}, .. }}, \
-                                but found nothing", self.rule);
+                        panic!("expected Start { .. }, but found nothing");
                     } else {
                         panic!("expected End {{ rule: {:?}, .. }}, \
-                                but found nothing", self.rule);
+                                but found nothing", self.rule.as_ref().unwrap());
                     }
                 }
                 Ok(Async::NotReady) => Ok(Async::NotReady),
@@ -191,68 +218,6 @@ impl<R: RuleType, I: Input, S> ConsumableStream<R, I, S>
                     Err(e)
                 }
             }
-        }
-    }
-
-    #[inline]
-    pub fn poll_tail(&mut self) -> Poll<Option<Token<R, I>>, Error<R, I>> {
-        if let Some(ref error) = self.error {
-            return Err(error.clone());
-        }
-
-        if self.end.is_none() {
-            match self.stream.poll() {
-                Ok(Async::Ready(Some(token))) => {
-                    if self.start.is_none() {
-                        match token {
-                            Token::Start { ref rule, ref pos } if *rule == self.rule => {
-                                self.start = Some(pos.clone());
-                            },
-                            token => panic!("expected Start {{ rule: {:?}, .. }}, \
-                                             but found {:?} instead", self.rule, token)
-                        };
-                    } else {
-                        match token {
-                            Token::Start { ref rule, ref pos } if *rule == self.rule => {
-                                self.queue.push_back(
-                                    Token::Start { rule: *rule, pos: pos.clone() }
-                                );
-                                self.depth += 1;
-                            },
-                            Token::End { ref rule, ref pos } if *rule == self.rule => {
-                                if self.depth == 0 {
-                                    self.end = Some(pos.clone());
-                                } else {
-                                    self.queue.push_back(
-                                        Token::End { rule: *rule, pos: pos.clone() }
-                                    );
-                                    self.depth -= 1;
-                                }
-                            },
-                            token => self.queue.push_back(token)
-                        };
-                    }
-                },
-                Ok(Async::Ready(None)) => {
-                    if self.start.is_none() {
-                        panic!("expected Start {{ rule: {:?}, .. }}, \
-                                but found nothing", self.rule);
-                    } else {
-                        panic!("expected End {{ rule: {:?}, .. }}, \
-                                but found nothing", self.rule);
-                    }
-                },
-                Ok(Async::NotReady) => return Ok(Async::NotReady),
-                Err(e) => {
-                    self.error = Some(e.clone());
-
-                    return Err(e);
-                }
-            };
-
-            self.poll_tail()
-        } else {
-            self.stream.poll()
         }
     }
 }

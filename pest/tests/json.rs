@@ -9,11 +9,12 @@ extern crate futures;
 #[macro_use]
 extern crate pest;
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use pest::inputs::{Input, Position};
 use pest::{Parser, ParserState, state};
-use pest::streams::ParserStream;
+use pest::streams::{ParserStream, TokenStream};
 
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
@@ -354,6 +355,23 @@ impl Parser<Rule> for JsonParser {
             }
         })
     }
+}
+
+enum Json<'a> {
+    Null,
+    Bool(bool),
+    Number(f64),
+    String(&'a str),
+    Array(Vec<Json<'a>>),
+    Object(HashMap<&'a str, Json<'a>>)
+}
+
+fn consume<'a, I: Input, S: TokenStream<Rule, I>>(stream: S) -> Json<'a> {
+//    fn null<'a, I: Input, S: TokenStream<Rule, I>>(stream: S) -> Json<'a> {
+//        stream.consume
+//    }
+
+    unimplemented!()
 }
 
 #[test]

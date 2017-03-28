@@ -16,8 +16,6 @@ use super::super::inputs::Input;
 use super::peek_rule_future as prf;
 use super::sliced_stream as ss;
 use super::sliceable_stream::SliceableStream;
-use super::tail_stream as ts;
-use super::token_data_future as tdf;
 use super::super::error::Error;
 use super::super::RuleType;
 use super::super::tokens::Token;
@@ -138,17 +136,10 @@ pub trait TokenStream<R: RuleType, I: Input>:
     /// });
     /// # }
     /// ```
-    fn consume<F, T>(self, rule: R, f: F) -> (T, ts::TailStream<R, I, Self>)
-        where F: FnOnce(tdf::TokenDataFuture<R, I, Self>,
-                        cs::ConsumedStream<R, I, Self>) -> T {
+    fn consume(self) -> cs::ConsumedStream<R, I, Self> {
+        let stream = Rc::new(RefCell::new(ConsumableStream::new(self)));
 
-        let stream = Rc::new(RefCell::new(ConsumableStream::new(self, rule)));
-
-        let token_data_future = tdf::new(stream.clone());
-        let consumed_stream = cs::new(stream.clone());
-        let tail_stream = ts::new(stream.clone());
-
-        (f(token_data_future, consumed_stream), tail_stream)
+        cs::new(stream)
     }
 
     /// Returns a `SlicedStream` of `PairStream`s, with each `PairStream` containing all the
@@ -356,8 +347,6 @@ mod tests {
                 s.send(SendableToken::Start { rule: Rule::b, pos: 1 });
                 s.send(SendableToken::End   { rule: Rule::b, pos: 2 });
                 s.send(SendableToken::End   { rule: Rule::a, pos: 3 });
-                s.send(SendableToken::Start { rule: Rule::c, pos: 4 });
-                s.send(SendableToken::End   { rule: Rule::c, pos: 5 });
             });
 
             r
@@ -365,60 +354,21 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let (result, stream) = stream.consume(Rule::a, |data, stream| {
-            assert_eq!(data.wait().unwrap(), TokenData {
-                rule: Rule::a,
-                span: span::new(input.clone(), 0, 3)
-            });
+        let consumed = stream.consume();
 
-            let (result, _) = stream.consume(Rule::b, |data, _| {
-                assert_eq!(data.wait().unwrap(), TokenData {
-                    rule: Rule::b,
-                    span: span::new(input.clone(), 1, 2)
-                });
+        assert_eq!(consumed.rule().wait().unwrap(), Rule::a);
 
-                2
-            });
+        let span = consumed.span().wait().unwrap();
+        assert_eq!(span.start(), 0);
+        assert_eq!(span.end(), 3);
 
-            3 + result
-        });
+        let consumed = consumed.consume();
 
-        assert_eq!(result, 5);
+        assert_eq!(consumed.rule().wait().unwrap(), Rule::b);
 
-        stream.consume(Rule::c, |data, _| {
-            assert_eq!(data.wait().unwrap(), TokenData {
-                rule: Rule::c,
-                span: span::new(input, 4, 5)
-            });
-        });
-    }
-
-    #[test]
-    fn consume_tail() {
-        let arc = Arc::new(StringInput::new("".to_owned()));
-        let input = Rc::new(arc.clone());
-
-        let r = {
-            let (s, r) = buffered(16);
-
-            s.send(SendableToken::Start { rule: Rule::a, pos: 0 });
-            s.send(SendableToken::Start { rule: Rule::b, pos: 1 });
-            s.send(SendableToken::End   { rule: Rule::b, pos: 2 });
-            s.send(SendableToken::End   { rule: Rule::a, pos: 3 });
-            s.send(SendableToken::Start { rule: Rule::c, pos: 4 });
-            s.send(SendableToken::End   { rule: Rule::c, pos: 5 });
-
-            r
-        };
-
-        let stream = parser_stream::new(r, arc);
-
-        let (_, stream) = stream.consume(Rule::a, |_, _| {});
-
-        assert_eq!(stream.collect().wait().unwrap(), vec![
-            Token::Start { rule: Rule::c, pos: position::new(input.clone(), 4) },
-            Token::End   { rule: Rule::c, pos: position::new(input.clone(), 5) }
-        ]);
+        let span = consumed.span().wait().unwrap();
+        assert_eq!(span.start(), 1);
+        assert_eq!(span.end(), 2);
     }
 
     #[test]
@@ -433,71 +383,71 @@ mod tests {
             s.send(SendableToken::Start { rule: Rule::a, pos: 1 });
             s.send(SendableToken::End   { rule: Rule::a, pos: 2 });
             s.send(SendableToken::End   { rule: Rule::a, pos: 3 });
-            s.send(SendableToken::Start { rule: Rule::c, pos: 4 });
-            s.send(SendableToken::End   { rule: Rule::c, pos: 5 });
 
             r
         };
 
         let stream = parser_stream::new(r, arc);
 
-        let (_, stream) = stream.consume(Rule::a, |_, stream| {
-            assert_eq!(stream.collect().wait().unwrap(), vec![
-                Token::Start { rule: Rule::a, pos: position::new(input.clone(), 1) },
-                Token::End   { rule: Rule::a, pos: position::new(input.clone(), 2) }
-            ]);
-        });
-
-        stream.consume(Rule::c, |_, stream| {
-            assert_eq!(stream.collect().wait().unwrap(), vec![]);
-        });
+        assert_eq!(stream.consume().collect().wait().unwrap(), vec![
+            Token::Start { rule: Rule::a, pos: position::new(input.clone(), 1) },
+            Token::End   { rule: Rule::a, pos: position::new(input.clone(), 2) }
+        ]);
     }
 
     #[test]
-    #[should_panic(expected = "expected Start { rule: b, .. }, \
-                               but found Start { rule: a, pos: Position { pos: 0 } } instead")]
-    fn consume_wrong_start_future() {
+    #[should_panic(expected = "expected Start { .. }, but found nothing")]
+    fn consume_no_start_rule_future() {
+        let arc = Arc::new(StringInput::new("".to_owned()));
+
+        let r = {
+            let (_, r) = buffered::<SendableToken<()>, _>(16);
+
+            r
+        };
+
+        let stream = parser_stream::new(r, arc);
+
+        stream.consume().rule().wait().unwrap();
+    }
+
+    #[test]
+    fn consume_no_end_rule_future() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
             let (s, r) = buffered(16);
 
             s.send(SendableToken::Start { rule: Rule::a, pos: 0 });
-            s.send(SendableToken::End   { rule: Rule::a, pos: 1 });
 
             r
         };
 
         let stream = parser_stream::new(r, arc);
 
-        stream.consume(Rule::b, |data, _| {
-            data.wait().unwrap();
-        });
+        stream.consume().rule().wait().unwrap();
     }
 
     #[test]
-    #[should_panic(expected = "expected Start { rule: a, .. }, \
-                               but found nothing")]
-    fn consume_no_start_future() {
+    #[should_panic(expected = "expected Start { .. }, but found nothing")]
+    fn consume_no_start_span_future() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
-            let (_, r) = buffered(16);
+            let (_, r) = buffered::<SendableToken<()>, _>(16);
 
             r
         };
 
         let stream = parser_stream::new(r, arc);
 
-        stream.consume(Rule::a, |data, _| {
-            data.wait().unwrap();
-        });
+        stream.consume().span().wait().unwrap();
     }
 
     #[test]
     #[should_panic(expected = "expected End { rule: a, .. }, \
                                but found nothing")]
-    fn consume_no_end_future() {
+    fn consume_no_end_span_future() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
@@ -510,50 +460,24 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.consume(Rule::a, |data, _| {
-            data.wait().unwrap();
-        });
+        stream.consume().span().wait().unwrap();
     }
 
     #[test]
-    #[should_panic(expected = "expected Start { rule: b, .. }, \
-                               but found Start { rule: a, pos: Position { pos: 0 } } instead")]
-    fn consume_wrong_start_consumed_stream() {
-        let arc = Arc::new(StringInput::new("".to_owned()));
-
-        let r = {
-            let (s, r) = buffered(16);
-
-            s.send(SendableToken::Start { rule: Rule::a, pos: 0 });
-            s.send(SendableToken::End   { rule: Rule::a, pos: 1 });
-
-            r
-        };
-
-        let stream = parser_stream::new(r, arc);
-
-        stream.consume(Rule::b, |_, stream| {
-            stream.collect().wait().unwrap();
-        });
-    }
-
-    #[test]
-    #[should_panic(expected = "expected Start { rule: a, .. }, \
+    #[should_panic(expected = "expected Start { .. }, \
                                but found nothing")]
     fn consume_no_start_consumed_stream() {
         let arc = Arc::new(StringInput::new("".to_owned()));
 
         let r = {
-            let (_, r) = buffered(16);
+            let (_, r) = buffered::<SendableToken<()>, _>(16);
 
             r
         };
 
         let stream = parser_stream::new(r, arc);
 
-        stream.consume(Rule::a, |_, stream| {
-            stream.collect().wait().unwrap();
-        });
+        stream.consume().collect().wait().unwrap();
     }
 
     #[test]
@@ -572,71 +496,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.consume(Rule::a, |_, stream| {
-            stream.collect().wait().unwrap();
-        });
-    }
-
-    #[test]
-    #[should_panic(expected = "expected Start { rule: b, .. }, \
-                               but found Start { rule: a, pos: Position { pos: 0 } } instead")]
-    fn consume_wrong_start_tail_stream() {
-        let arc = Arc::new(StringInput::new("".to_owned()));
-
-        let r = {
-            let (s, r) = buffered(16);
-
-            s.send(SendableToken::Start { rule: Rule::a, pos: 0 });
-            s.send(SendableToken::End   { rule: Rule::a, pos: 1 });
-
-            r
-        };
-
-        let stream = parser_stream::new(r, arc);
-
-        let (_, stream) = stream.consume(Rule::b, |_, _| {});
-
-        stream.collect().wait().unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "expected Start { rule: a, .. }, \
-                               but found nothing")]
-    fn consume_no_start_tail_stream() {
-        let arc = Arc::new(StringInput::new("".to_owned()));
-
-        let r = {
-            let (_, r) = buffered(16);
-
-            r
-        };
-
-        let stream = parser_stream::new(r, arc);
-
-        let (_, stream) = stream.consume(Rule::a, |_, _| {});
-
-        stream.collect().wait().unwrap();
-    }
-
-    #[test]
-    #[should_panic(expected = "expected End { rule: a, .. }, \
-                               but found nothing")]
-    fn consume_no_end_tail_stream() {
-        let arc = Arc::new(StringInput::new("".to_owned()));
-
-        let r = {
-            let (s, r) = buffered(16);
-
-            s.send(SendableToken::Start { rule: Rule::a, pos: 0 });
-
-            r
-        };
-
-        let stream = parser_stream::new(r, arc);
-
-        let (_, stream) = stream.consume(Rule::a, |_, _| {});
-
-        stream.collect().wait().unwrap();
+        stream.consume().collect().wait().unwrap();
     }
 
     #[test]
@@ -652,16 +512,14 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.consume(Rule::a, |_, stream| {
-            assert_eq!(stream.take(2).collect().wait().unwrap(), vec![
-                Token::Start { rule: Rule::b, pos: position::new(input.clone(), 1) },
-                Token::End   { rule: Rule::b, pos: position::new(input.clone(), 2) }
-            ]);
-        });
+        assert_eq!(stream.consume().take(2).collect().wait().unwrap(), vec![
+            Token::Start { rule: Rule::b, pos: position::new(input.clone(), 1) },
+            Token::End   { rule: Rule::b, pos: position::new(input.clone(), 2) }
+        ]);
     }
 
     #[test]
-    fn consume_future_first() {
+    fn consume_nested_rule() {
         let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
@@ -678,59 +536,27 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.consume(Rule::a, |data, stream| {
-            assert_eq!(data.wait().unwrap(), TokenData {
-                rule: Rule::a,
-                span: span::new(input.clone(), 0, 3)
-            });
-            assert_eq!(stream.collect().wait().unwrap(), vec![
-                Token::Start { rule: Rule::a, pos: position::new(input.clone(), 1) },
-                Token::End   { rule: Rule::a, pos: position::new(input.clone(), 2) }
-            ]);
-        });
-    }
+        let consumed = stream.consume();
 
-    #[test]
-    fn consume_tail_first() {
-        let arc = Arc::new(StringInput::new("".to_owned()));
-        let input = Rc::new(arc.clone());
+        assert_eq!(consumed.rule().wait().unwrap(), Rule::a);
 
-        let r = {
-            let (s, r) = buffered(16);
+        let span = consumed.span().wait().unwrap();
+        assert_eq!(span.start(), 0);
+        assert_eq!(span.end(), 3);
 
-            s.send(SendableToken::Start { rule: Rule::a, pos: 0 });
-            s.send(SendableToken::Start { rule: Rule::a, pos: 1 });
-            s.send(SendableToken::End   { rule: Rule::a, pos: 2 });
-            s.send(SendableToken::End   { rule: Rule::a, pos: 3 });
-
-            r
-        };
-
-        let stream = parser_stream::new(r, arc);
-
-        let ((data, consumed_stream), stream) = stream.consume(Rule::a, |data, stream| {
-            (data, stream)
-        });
-
-        assert_eq!(stream.collect().wait().unwrap(), vec![]);
-
-        assert_eq!(data.wait().unwrap(), TokenData {
-            rule: Rule::a,
-            span: span::new(input.clone(), 0, 3)
-        });
-        assert_eq!(consumed_stream.collect().wait().unwrap(), vec![
+        assert_eq!(consumed.collect().wait().unwrap(), vec![
             Token::Start { rule: Rule::a, pos: position::new(input.clone(), 1) },
             Token::End   { rule: Rule::a, pos: position::new(input.clone(), 2) }
         ]);
     }
 
     #[test]
-    fn consume_error_future_first() {
+    fn consume_error_rule_future_first() {
         let arc = Arc::new(StringInput::new("".to_owned()));
         let input = Rc::new(arc.clone());
 
         let r = {
-            let (s, r) = buffered(16);
+            let (s, r) = buffered::<SendableToken<()>, _>(16);
 
             s.fail(SendableError::CustomErrorPos { message: "e".to_owned(), pos: 2 });
 
@@ -739,19 +565,32 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let (_, stream) = stream.consume(Rule::a, |data, stream| {
-            assert_eq!(data.wait(), Err(Error::CustomErrorPos {
-                message: "e".to_owned(),
-                pos: position::new(input.clone(), 2)
-            }));
-            assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos {
-                message: "e".to_owned(),
-                pos: position::new(input.clone(), 2)
-            }));
-        });
+        let consumed = stream.consume();
 
+        assert_eq!(consumed.rule().wait(), Err(Error::CustomErrorPos {
+            message: "e".to_owned(),
+            pos: position::new(input.clone(), 2)
+        }));
+    }
 
-        assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos {
+    #[test]
+    fn consume_error_span_future_first() {
+        let arc = Arc::new(StringInput::new("".to_owned()));
+        let input = Rc::new(arc.clone());
+
+        let r = {
+            let (s, r) = buffered::<SendableToken<()>, _>(16);
+
+            s.fail(SendableError::CustomErrorPos { message: "e".to_owned(), pos: 2 });
+
+            r
+        };
+
+        let stream = parser_stream::new(r, arc);
+
+        let consumed = stream.consume();
+
+        assert_eq!(consumed.span().wait(), Err(Error::CustomErrorPos {
             message: "e".to_owned(),
             pos: position::new(input.clone(), 2)
         }));
@@ -763,7 +602,7 @@ mod tests {
         let input = Rc::new(arc.clone());
 
         let r = {
-            let (s, r) = buffered(16);
+            let (s, r) = buffered::<SendableToken<()>, _>(16);
 
             s.fail(SendableError::CustomErrorPos { message: "e".to_owned(), pos: 2 });
 
@@ -772,53 +611,7 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        let (_, stream) = stream.consume(Rule::a, |data, stream| {
-            assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos {
-                message: "e".to_owned(),
-                pos: position::new(input.clone(), 2)
-            }));
-            assert_eq!(data.wait(), Err(Error::CustomErrorPos {
-                message: "e".to_owned(),
-                pos: position::new(input.clone(), 2)
-            }));
-        });
-
-
-        assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos {
-            message: "e".to_owned(),
-            pos: position::new(input.clone(), 2)
-        }));
-    }
-
-    #[test]
-    fn consume_error_tail_first() {
-        let arc = Arc::new(StringInput::new("".to_owned()));
-        let input = Rc::new(arc.clone());
-
-        let r = {
-            let (s, r) = buffered(16);
-
-            s.fail(SendableError::CustomErrorPos { message: "e".to_owned(), pos: 2 });
-
-            r
-        };
-
-        let stream = parser_stream::new(r, arc);
-
-        let ((data, consumed), stream) = stream.consume(Rule::a, |data, stream| {
-            (data, stream)
-        });
-
-
-        assert_eq!(stream.collect().wait(), Err(Error::CustomErrorPos {
-            message: "e".to_owned(),
-            pos: position::new(input.clone(), 2)
-        }));
-        assert_eq!(data.wait(), Err(Error::CustomErrorPos {
-            message: "e".to_owned(),
-            pos: position::new(input.clone(), 2)
-        }));
-        assert_eq!(consumed.collect().wait(), Err(Error::CustomErrorPos {
+        assert_eq!(stream.consume().collect().wait(), Err(Error::CustomErrorPos {
             message: "e".to_owned(),
             pos: position::new(input.clone(), 2)
         }));
@@ -838,15 +631,12 @@ mod tests {
 
         let stream = parser_stream::new(r, arc);
 
-        stream.consume(Rule::a, |_, stream| {
-            stream.consume(Rule::b, |_, stream| {
-                stream.consume(Rule::c, |_, stream| {
-                    stream.consume(Rule::d, |_, stream| {
-                        assert_eq!(stream.collect().wait().unwrap(), vec![]);
-                    })
-                })
-            })
-        });
+        let consumed = stream.consume()
+                             .consume()
+                             .consume()
+                             .consume();
+
+        assert_eq!(consumed.collect().wait().unwrap(), vec![]);
     }
 
     #[test]
