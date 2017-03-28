@@ -13,29 +13,25 @@ use futures::future::Future;
 use futures::stream::Stream;
 
 use super::consumable_stream::ConsumableStream;
+use super::token_stream::TokenStream;
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::RuleType;
 use super::super::Token;
 
-pub struct RuleFuture<R, I: Input, S>
-    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
-
+pub struct RuleFuture<R: RuleType, I: Input, S: TokenStream<R, I>> {
     stream: Rc<RefCell<ConsumableStream<R, I, S>>>
 }
 
-pub fn new<R, I: Input, S>(stream: Rc<RefCell<ConsumableStream<R, I, S>>>)
-   -> RuleFuture<R, I, S>
-    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
-
+pub fn new<R: RuleType, I: Input, S: TokenStream<R, I>>(
+    stream: Rc<RefCell<ConsumableStream<R, I, S>>>
+) -> RuleFuture<R, I, S> {
     RuleFuture {
         stream: stream
     }
 }
 
-impl<R: RuleType, I: Input, S> Future for RuleFuture<R, I, S>
-    where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {
-
+impl<R: RuleType, I: Input, S: TokenStream<R, I>> Future for RuleFuture<R, I, S> {
     type Item  = R;
     type Error = Error<R, I>;
 

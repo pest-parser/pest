@@ -12,30 +12,31 @@ use futures::{Async, Poll};
 use futures::stream::Stream;
 
 use super::buffered::{BufferedStream, SendableError, SendableToken};
+use super::token_stream::TokenStream;
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::inputs_private::{position, span};
+use super::super::RuleType;
 use super::super::Token;
 
 /// A `struct` which implements `Stream` and `TokenStream`, and is created by the
 /// [`state`](../fn.state) function.
-pub struct ParserStream<R, I: Input> {
+pub struct ParserStream<R: RuleType, I: Input> {
     stream: BufferedStream<SendableToken<R>, SendableError<R>>,
     input:  Rc<Arc<I>>
 }
 
-pub fn new<R, I: Input>(
+pub fn new<R: RuleType, I: Input>(
     stream: BufferedStream<SendableToken<R>, SendableError<R>>,
     input:  Arc<I>
 ) -> ParserStream<R, I> {
-
     ParserStream {
         stream: stream,
         input:  Rc::new(input)
     }
 }
 
-impl<R, I: Input> Stream for ParserStream<R, I> {
+impl<R: RuleType, I: Input> Stream for ParserStream<R, I> {
     type Item  = Token<R, I>;
     type Error = Error<R, I>;
 
