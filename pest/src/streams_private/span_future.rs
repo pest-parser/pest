@@ -16,7 +16,7 @@ use super::consumable_stream::ConsumableStream;
 use super::super::error::Error;
 use super::super::inputs::{Input, Span};
 use super::super::RuleType;
-use super::super::tokens::{Token, TokenData};
+use super::super::Token;
 
 pub struct SpanFuture<R, I: Input, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {

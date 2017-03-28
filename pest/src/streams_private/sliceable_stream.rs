@@ -13,7 +13,7 @@ use futures::stream::Stream;
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::RuleType;
-use super::super::tokens::Token;
+use super::super::Token;
 
 pub struct SliceableStream<R, I: Input, S>
     where S: Stream<Item=Token<R, I>, Error=Error<R, I>> {

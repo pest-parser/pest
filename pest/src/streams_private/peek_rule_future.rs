@@ -12,7 +12,7 @@ use futures::stream::{Peekable, Stream};
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::RuleType;
-use super::super::tokens::Token;
+use super::super::Token;
 
 /// A `struct` which implements `Future`. It contains a peeked `Rule` and stream, and is returned by
 /// [`TokenStream::peek_rule`](trait.TokenStream#method.peek_rule).

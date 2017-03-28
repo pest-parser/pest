@@ -16,7 +16,7 @@ macro_rules! consumes_to {
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
-            $crate::tokens::Token::Start { rule, pos } => {
+            $crate::Token::Start { rule, pos } => {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
@@ -30,7 +30,7 @@ macro_rules! consumes_to {
         let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
-            $crate::tokens::Token::End { rule, pos } => {
+            $crate::Token::End { rule, pos } => {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
@@ -47,7 +47,7 @@ macro_rules! consumes_to {
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
-            $crate::tokens::Token::Start { rule, pos } => {
+            $crate::Token::Start { rule, pos } => {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
@@ -61,7 +61,7 @@ macro_rules! consumes_to {
         let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
-            $crate::tokens::Token::End { rule, pos } => {
+            $crate::Token::End { rule, pos } => {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
@@ -79,7 +79,7 @@ macro_rules! consumes_to {
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
-            $crate::tokens::Token::Start { rule, pos } => {
+            $crate::Token::Start { rule, pos } => {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
@@ -95,7 +95,7 @@ macro_rules! consumes_to {
         let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
-            $crate::tokens::Token::End { rule, pos } => {
+            $crate::Token::End { rule, pos } => {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
@@ -113,7 +113,7 @@ macro_rules! consumes_to {
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
-            $crate::tokens::Token::Start { rule, pos } => {
+            $crate::Token::Start { rule, pos } => {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
@@ -129,7 +129,7 @@ macro_rules! consumes_to {
         let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
-            $crate::tokens::Token::End { rule, pos } => {
+            $crate::Token::End { rule, pos } => {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 

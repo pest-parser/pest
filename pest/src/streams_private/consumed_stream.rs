@@ -17,7 +17,7 @@ use super::span_future::{self, SpanFuture};
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::RuleType;
-use super::super::tokens::Token;
+use super::super::Token;
 
 /// A `struct` which implements `Stream` and `TokenStream`, and is the consumed stream which is fed
 /// to the closure in [`TokenStream::consume`](trait.TokenStream#method.consume).
