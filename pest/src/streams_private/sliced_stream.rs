@@ -17,7 +17,6 @@ use super::token_stream::TokenStream;
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::RuleType;
-use super::super::Token;
 
 /// A `struct` which implements `Stream`, which contains `PairStream`s, and which is returned by
 /// [`TokenStream::sliced`](trait.TokenStream#method.sliced).

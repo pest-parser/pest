@@ -55,7 +55,7 @@ pub struct ParserState<'a, R, I: Input> {
 /// let (_, _) = state::<(), _>(input);
 /// # }
 /// ```
-pub fn state<'a, R: RuleType + 'static, I: Input + 'static, F>(input: Arc<I>, f: F)
+pub fn state<'a, R: RuleType, I: Input, F>(input: Arc<I>, f: F)
     -> parser_stream::ParserStream<R, I>
     where F: FnOnce(ParserState<'a, R, I>) + Send + 'static {
 

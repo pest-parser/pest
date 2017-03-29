@@ -34,8 +34,8 @@ pub mod streams {
     };
 }
 
-pub trait RuleType: Copy + Debug + Eq + Hash + Ord + Send + Sync {}
-impl<T: Copy + Debug + Eq + Hash + Ord + Send + Sync> RuleType for T {}
+pub trait RuleType: Copy + Debug + Eq + Hash + Ord + Send + Sync + 'static {}
+impl<T: Copy + Debug + Eq + Hash + Ord + Send + Sync + 'static> RuleType for T {}
 
 pub use error::Error;
 pub use parser::Parser;

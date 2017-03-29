@@ -12,8 +12,11 @@ extern crate pest;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use pest::inputs::{Input, Position};
-use pest::{Parser, ParserState, state};
+use futures::future::Future;
+use futures::stream::Stream;
+
+use pest::inputs::{Input, Position, Span};
+use pest::{Error, Parser, ParserState, state};
 use pest::streams::{ParserStream, TokenStream};
 
 #[allow(non_camel_case_types)]
@@ -43,9 +46,7 @@ impl Parser<Rule> for JsonParser {
         fn json<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
             -> Result<Position<I>, Position<I>> {
 
-            state.rule(Rule::json, pos, must_match, |pos, state| {
-                value(pos, state, must_match)
-            })
+            value(pos, state, must_match)
         }
 
         fn object<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
@@ -357,21 +358,62 @@ impl Parser<Rule> for JsonParser {
     }
 }
 
-enum Json<'a> {
+enum Json<I: Input> {
     Null,
     Bool(bool),
     Number(f64),
-    String(&'a str),
-    Array(Vec<Json<'a>>),
-    Object(HashMap<&'a str, Json<'a>>)
+    String(Span<I>),
+    Array(Vec<Json<I>>),
+    Object(HashMap<Span<I>, Json<I>>)
 }
 
-fn consume<'a, I: Input, S: TokenStream<Rule, I>>(stream: S) -> Json<'a> {
-//    fn null<'a, I: Input, S: TokenStream<Rule, I>>(stream: S) -> Json<'a> {
-//        stream.consume
-//    }
+fn consume<I: Input, S: TokenStream<Rule, I>>(stream: S) -> Result<Json<I>, Error<Rule, I>> {
+    fn value<I: Input, S: TokenStream<Rule, I>>(stream: S) -> Result<Json<I>, Error<Rule, I>> {
+        let consumed = stream.consume();
 
-    unimplemented!()
+        match consumed.rule().wait()? {
+            Rule::null => Ok(Json::Null),
+            Rule::bool => {
+                let span = consumed.span().wait().unwrap();
+
+                match span.capture() {
+                    "false" => Ok(Json::Bool(false)),
+                    "true"  => Ok(Json::Bool(true)),
+                    _       => unreachable!()
+                }
+            },
+            Rule::number => {
+                let span = consumed.span().wait()?;
+
+                Ok(Json::Number(span.capture().parse().unwrap()))
+            },
+            Rule::string => {
+                let span = consumed.span().wait()?;
+
+                Ok(Json::String(span))
+            },
+            Rule::array => {
+                let array = consumed.sliced().and_then(|s| value(s)).collect().wait()?;
+
+                Ok(Json::Array(array))
+            },
+            Rule::object => {
+                let pairs = consumed.sliced().and_then(|s| {
+                    let mut s = s.sliced().wait();
+
+                    let key = s.next().unwrap()?.consume().span().wait()?;
+                    let value = value(s.next().unwrap()?)?;
+
+                    Ok((key, value))
+                });
+
+                Ok(Json::Object(pairs.collect().wait()?.into_iter().collect()))
+            },
+            _ => unreachable!()
+        }
+    }
+
+    value(stream)
 }
 
 #[test]
