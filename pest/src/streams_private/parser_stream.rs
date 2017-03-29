@@ -12,7 +12,6 @@ use futures::{Async, Poll};
 use futures::stream::Stream;
 
 use super::buffered::{BufferedStream, SendableError, SendableToken};
-use super::token_stream::TokenStream;
 use super::super::error::Error;
 use super::super::inputs::Input;
 use super::super::inputs_private::{position, span};

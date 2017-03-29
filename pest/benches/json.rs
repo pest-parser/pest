@@ -11,17 +11,19 @@ extern crate test;
 extern crate futures;
 extern crate pest;
 
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::sync::Arc;
 
 use test::Bencher;
 
+use futures::future::Future;
 use futures::stream::Stream;
 
-use pest::inputs::{Input, Position, StringInput};
-use pest::{Parser, ParserState, state};
-use pest::streams::ParserStream;
+use pest::inputs::{Input, Position, Span, StringInput};
+use pest::{Error, Parser, ParserState, state, Token};
+use pest::streams::{ParserStream, TokenStream};
 
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
@@ -50,9 +52,7 @@ impl Parser<Rule> for JsonParser {
         fn json<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
                           -> Result<Position<I>, Position<I>> {
 
-            state.rule(Rule::json, pos, must_match, |pos, state| {
-                value(pos, state, must_match)
-            })
+            value(pos, state, must_match)
         }
 
         fn object<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
@@ -364,6 +364,64 @@ impl Parser<Rule> for JsonParser {
     }
 }
 
+enum Json<I: Input> {
+    Null,
+    Bool(bool),
+    Number(f64),
+    String(Span<I>),
+    Array(Vec<Json<I>>),
+    Object(HashMap<Span<I>, Json<I>>)
+}
+
+fn consume<I: Input, S: TokenStream<Rule, I> + 'static>(stream: S) -> Result<Json<I>, Error<Rule, I>> {
+    fn value<I: Input>(stream: Box<Stream<Item=Token<Rule, I>, Error=Error<Rule, I>>>) -> Result<Json<I>, Error<Rule, I>> {
+        let consumed = stream.consume().consume();
+
+        match consumed.rule().wait()? {
+            Rule::null => Ok(Json::Null),
+            Rule::bool => {
+                let span = consumed.span().wait().unwrap();
+
+                match span.capture() {
+                    "false" => Ok(Json::Bool(false)),
+                    "true"  => Ok(Json::Bool(true)),
+                    _       => unreachable!()
+                }
+            },
+            Rule::number => {
+                let span = consumed.span().wait()?;
+
+                Ok(Json::Number(span.capture().parse().unwrap()))
+            },
+            Rule::string => {
+                let span = consumed.span().wait()?;
+
+                Ok(Json::String(span))
+            },
+            Rule::array => {
+                let array = consumed.sliced().and_then(|s| value(Box::new(s))).collect().wait()?;
+
+                Ok(Json::Array(array))
+            },
+            Rule::object => {
+                let pairs = consumed.sliced().and_then(|s| {
+                    let mut s = s.consume().sliced().wait();
+
+                    let key = s.next().unwrap()?.consume().span().wait()?;
+                    let value = value(Box::new(s.next().unwrap()?))?;
+
+                    Ok((key, value))
+                });
+
+                Ok(Json::Object(pairs.collect().wait()?.into_iter().collect()))
+            },
+            _ => unreachable!()
+        }
+    }
+
+    value(Box::new(stream))
+}
+
 #[bench]
 fn data(b: &mut Bencher) {
     let mut file = File::open("benches/data.json").unwrap();
@@ -374,6 +432,6 @@ fn data(b: &mut Bencher) {
     let input = Arc::new(StringInput::new(data.to_owned()));
 
     b.iter(|| {
-        JsonParser::parse(Rule::json, input.clone()).wait().count()
+        consume(JsonParser::parse(Rule::json, input.clone()))
     });
 }

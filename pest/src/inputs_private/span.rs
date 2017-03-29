@@ -13,7 +13,6 @@ use std::sync::Arc;
 use super::input::Input;
 use super::position;
 
-#[derive(Eq)]
 pub struct Span<I: Input> {
     input: Rc<Arc<I>>,
     start: usize,
@@ -73,6 +72,8 @@ impl<I: Input> PartialEq for Span<I> {
         self.end == other.end
     }
 }
+
+impl<I: Input> Eq for Span<I> {}
 
 impl<'a, I: Input> Hash for Span<I> {
     fn hash<H: Hasher>(&self, state: &mut H) {

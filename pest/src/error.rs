@@ -11,7 +11,7 @@ use std::hash::{Hash, Hasher};
 use super::inputs::{Input, Position, Span};
 
 /// An `enum` which defines possible errors.
-#[derive(Debug, Eq)]
+#[derive(Debug)]
 pub enum Error<R, I: Input> {
     /// Generated parsing error with expected and unexpected `Rule`s and a position
     ParsingError {
@@ -161,6 +161,8 @@ impl<R: PartialEq, I: Input> PartialEq for Error<R, I> {
         }
     }
 }
+
+impl<R: Eq, I: Input> Eq for Error<R, I> {}
 
 impl<R: Hash, I: Input> Hash for Error<R, I> {
     fn hash<H: Hasher>(&self, state: &mut H) {

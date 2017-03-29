@@ -15,7 +15,6 @@ use std::sync::Arc;
 use super::input::Input;
 use super::span;
 
-#[derive(Eq, Ord)]
 pub struct Position<I: Input> {
     input: Rc<Arc<I>>,
     pos:   usize
@@ -194,6 +193,8 @@ impl<I: Input> PartialEq for Position<I> {
     }
 }
 
+impl<I: Input> Eq for Position<I> {}
+
 impl<I: Input> PartialOrd for Position<I> {
     fn partial_cmp(&self, other: &Position<I>) -> Option<Ordering> {
         if &**self.input as *const I == &**other.input as *const I {
@@ -201,6 +202,12 @@ impl<I: Input> PartialOrd for Position<I> {
         } else {
             None
         }
+    }
+}
+
+impl<I: Input> Ord for Position<I> {
+    fn cmp(&self, other: &Position<I>) -> Ordering {
+        self.partial_cmp(other).expect("cannot compare positions from different inputs")
     }
 }
 

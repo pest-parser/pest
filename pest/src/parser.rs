@@ -12,7 +12,7 @@ use super::RuleType;
 use super::streams_private::parser_stream::ParserStream;
 
 /// A `trait` that defines a `Parser`.
-pub trait Parser<R: RuleType + 'static> {
+pub trait Parser<R: RuleType> {
     /// Parses `input` starting from `rule` and returns a `ParserStream` of `Token`s.
-    fn parse<I: Input + 'static>(rule: R, input: Arc<I>) -> ParserStream<R, I>;
+    fn parse<I: Input>(rule: R, input: Arc<I>) -> ParserStream<R, I>;
 }
