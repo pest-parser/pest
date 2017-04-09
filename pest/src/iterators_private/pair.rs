@@ -10,7 +10,7 @@ use std::rc::Rc;
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::token_iterator::{self, TokenIterator};
-use super::super::inputs_private::{Input, position, Span};
+use super::super::inputs_private::{Input, span, Span};
 use super::super::RuleType;
 
 #[derive(Clone)]
@@ -44,9 +44,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
         let start = self.pos(self.start);
         let end = self.pos(self.pair());
 
-        position::new(self.input.clone(), start).span(
-            position::new(self.input, end)
-        )
+        span::new(self.input, start, end)
     }
 
     pub fn consume(self) -> Pairs<R, I> {
