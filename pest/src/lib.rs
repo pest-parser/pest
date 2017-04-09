@@ -5,17 +5,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-extern crate futures;
-
 use std::fmt::Debug;
 use std::hash::Hash;
 
 mod error;
 mod inputs_private;
+mod iterators_private;
 mod macros;
 mod parser;
 mod parser_state;
-mod streams_private;
 mod token;
 
 /// A `mod` containing the `Input` `trait` and implementations.
@@ -23,19 +21,12 @@ pub mod inputs {
     pub use super::inputs_private::{Input, Position, Span, StringInput};
 }
 
-/// A `mod` containing `Stream` implementations used in `Token` processing.
-pub mod streams {
-    pub use super::streams_private::{
-        ConsumedStream,
-        ParserStream,
-        RuleFuture,
-        SpanFuture,
-        TokenStream
-    };
+pub mod iterators {
+    pub use super::iterators_private::{Pair, Pairs, TokenIterator};
 }
 
-pub trait RuleType: Copy + Debug + Eq + Hash + Ord + Send + Sync + 'static {}
-impl<T: Copy + Debug + Eq + Hash + Ord + Send + Sync + 'static> RuleType for T {}
+pub trait RuleType: Copy + Debug + Eq + Hash + Ord {}
+impl<T: Copy + Debug + Eq + Hash + Ord> RuleType for T {}
 
 pub use error::Error;
 pub use parser::Parser;
