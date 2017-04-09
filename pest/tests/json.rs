@@ -5,19 +5,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-extern crate futures;
 #[macro_use]
 extern crate pest;
 
 use std::collections::HashMap;
-use std::sync::Arc;
-
-use futures::future::Future;
-use futures::stream::Stream;
+use std::rc::Rc;
 
 use pest::inputs::{Input, Position, Span};
+use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
-use pest::streams::{ParserStream, TokenStream};
 
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
@@ -42,131 +38,147 @@ enum Rule {
 struct JsonParser;
 
 impl Parser<Rule> for JsonParser {
-    fn parse<I: Input + 'static>(rule: Rule, input: Arc<I>) -> ParserStream<Rule, I> {
-        fn json<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
-            -> Result<Position<I>, Position<I>> {
-
-            value(pos, state, must_match)
-        }
-
-        fn object<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
+    fn parse<I: Input>(rule: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+        fn json<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
                           -> Result<Position<I>, Position<I>> {
 
-            state.rule(Rule::object, pos, must_match, |pos, state| {
-                pos.sequence(|p| {
-                    p.match_string("{").and_then(|p| {
-                        skip(p, state, false)
-                    }).and_then(|p| {
-                        pair(p, state, false)
-                    }).and_then(|p| {
-                        skip(p, state, false)
-                    }).and_then(|p| {
-                        p.repeat(|p| {
-                            p.sequence(|p| {
-                                p.match_string(",").and_then(|p| {
-                                    skip(p, state, false)
-                                }).and_then(|p| {
-                                    pair(p, state, false)
-                                }).and_then(|p| {
-                                    skip(p, state, false)
+            value(pos, state)
+        }
+
+        fn object<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
+                            -> Result<Position<I>, Position<I>> {
+
+            state.rule(Rule::object, pos, |pos, state| {
+                state.sequence(move |state| {
+                    pos.sequence(|p| {
+                        p.match_string("{").and_then(|p| {
+                            skip(p, state)
+                        }).and_then(|p| {
+                            pair(p, state)
+                        }).and_then(|p| {
+                            skip(p, state)
+                        }).and_then(|p| {
+                            p.repeat(|p| {
+                                state.sequence(move |state| {
+                                    p.sequence(|p| {
+                                        p.match_string(",").and_then(|p| {
+                                            skip(p, state)
+                                        }).and_then(|p| {
+                                            pair(p, state)
+                                        }).and_then(|p| {
+                                            skip(p, state)
+                                        })
+                                    })
                                 })
                             })
-                        })
-                    }).and_then(|p| {
-                        p.match_string("}")
-                    })
-                }).or_else(|p| {
-                    p.sequence(|p| {
-                        p.match_string("{").and_then(|p| {
-                            skip(p, state, must_match)
                         }).and_then(|p| {
                             p.match_string("}")
                         })
                     })
-                })
-            })
-        }
-
-        fn pair<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
-                          -> Result<Position<I>, Position<I>> {
-
-            state.rule(Rule::pair, pos, must_match, |pos, state| {
-                string(pos, state, must_match).and_then(|p| {
-                    skip(p, state, must_match)
-                }).and_then(|p| {
-                    p.match_string(":")
-                }).and_then(|p| {
-                    skip(p, state, must_match)
-                }).and_then(|p| {
-                    value(p, state, must_match)
-                })
-            })
-        }
-
-        fn array<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
-            -> Result<Position<I>, Position<I>> {
-
-            state.rule(Rule::array, pos, must_match, |pos, state| {
-                pos.sequence(|p| {
-                    p.match_string("[").and_then(|p| {
-                        skip(p, state, false)
-                    }).and_then(|p| {
-                        value(p, state, false)
-                    }).and_then(|p| {
-                        skip(p, state, false)
-                    }).and_then(|p| {
-                        p.repeat(|p| {
-                            p.sequence(|p| {
-                                p.match_string(",").and_then(|p| {
-                                    skip(p, state, false)
-                                }).and_then(|p| {
-                                    value(p, state, false)
-                                }).and_then(|p| {
-                                    skip(p, state, false)
-                                })
+                }).or_else(|p| {
+                    state.sequence(move |state| {
+                        p.sequence(|p| {
+                            p.match_string("{").and_then(|p| {
+                                skip(p, state)
+                            }).and_then(|p| {
+                                p.match_string("}")
                             })
                         })
-                    }).and_then(|p| {
-                        p.match_string("]")
                     })
-                }).or_else(|p| {
-                    p.sequence(|p| {
+                })
+            })
+        }
+
+        fn pair<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
+                          -> Result<Position<I>, Position<I>> {
+
+            state.rule(Rule::pair, pos, |pos, state| {
+                state.sequence(move |state| {
+                    pos.sequence(|p| {
+                        string(p, state).and_then(|p| {
+                            skip(p, state)
+                        }).and_then(|p| {
+                            p.match_string(":")
+                        }).and_then(|p| {
+                            skip(p, state)
+                        }).and_then(|p| {
+                            value(p, state)
+                        })
+                    })
+                })
+            })
+        }
+
+        fn array<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
+                           -> Result<Position<I>, Position<I>> {
+
+            state.rule(Rule::array, pos, |pos, state| {
+                state.sequence(move |state| {
+                    pos.sequence(|p| {
                         p.match_string("[").and_then(|p| {
-                            skip(p, state, must_match)
+                            skip(p, state)
+                        }).and_then(|p| {
+                            value(p, state)
+                        }).and_then(|p| {
+                            skip(p, state)
+                        }).and_then(|p| {
+                            p.repeat(|p| {
+                                state.sequence(move |state| {
+                                    p.sequence(|p| {
+                                        p.match_string(",").and_then(|p| {
+                                            skip(p, state)
+                                        }).and_then(|p| {
+                                            value(p, state)
+                                        }).and_then(|p| {
+                                            skip(p, state)
+                                        })
+                                    })
+                                })
+                            })
                         }).and_then(|p| {
                             p.match_string("]")
                         })
                     })
+                }).or_else(|p| {
+                    state.sequence(move |state| {
+                        p.sequence(|p| {
+                            p.match_string("[").and_then(|p| {
+                                skip(p, state)
+                            }).and_then(|p| {
+                                p.match_string("]")
+                            })
+                        })
+                    })
                 })
             })
         }
 
-        fn value<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
-            -> Result<Position<I>, Position<I>> {
+        fn value<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
+                           -> Result<Position<I>, Position<I>> {
 
-            state.rule(Rule::value, pos, must_match, |pos, state| {
-                string(pos, state, false).or_else(|p| {
-                    number(p, state, false)
+            state.rule(Rule::value, pos, |pos, state| {
+                string(pos, state).or_else(|p| {
+                    number(p, state)
                 }).or_else(|p| {
-                    object(p, state, false)
+                    object(p, state)
                 }).or_else(|p| {
-                    array(p, state, false)
+                    array(p, state)
                 }).or_else(|p| {
-                    bool(p, state, false)
+                    bool(p, state)
                 }).or_else(|p| {
-                    null(p, state, must_match)
+                    null(p, state)
                 })
             })
         }
 
-        fn string<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
-            -> Result<Position<I>, Position<I>> {
+        fn string<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
+                            -> Result<Position<I>, Position<I>> {
 
-            state.rule(Rule::string, pos, must_match, |pos, state| {
+            state.rule(Rule::string, pos, |pos, state| {
                 pos.sequence(|p| {
                     p.match_string("\"").and_then(|p| {
                         p.repeat(|p| {
-                            escape(p, state, false).or_else(|p| {
+                            escape(p, state).or_else(|p| {
                                 p.sequence(|p| {
                                     p.negate(|p| {
                                         state.lookahead(false, move |_| {
@@ -189,8 +201,8 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn escape<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
-            -> Result<Position<I>, Position<I>> {
+        fn escape<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
+                            -> Result<Position<I>, Position<I>> {
 
             pos.sequence(|p| {
                 p.match_string("\\").and_then(|p| {
@@ -209,28 +221,28 @@ impl Parser<Rule> for JsonParser {
                     }).or_else(|p| {
                         p.match_string("t")
                     }).or_else(|p| {
-                        unicode(p, state, must_match)
+                        unicode(p, state)
                     })
                 })
             })
         }
 
-        fn unicode<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
-            -> Result<Position<I>, Position<I>> {
+        fn unicode<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
+                             -> Result<Position<I>, Position<I>> {
 
             pos.sequence(|p| {
                 p.match_string("u").and_then(|p| {
-                    hex(p, state, must_match)
+                    hex(p, state)
                 }).and_then(|p| {
-                    hex(p, state, must_match)
+                    hex(p, state)
                 }).and_then(|p| {
-                    hex(p, state, must_match)
+                    hex(p, state)
                 })
             })
         }
 
-        fn hex<I: Input>(pos: Position<I>, _: &mut ParserState<Rule, I>, _: bool)
-            -> Result<Position<I>, Position<I>> {
+        fn hex<I: Input>(pos: Position<I>, _: &mut ParserState<Rule, I>)
+                         -> Result<Position<I>, Position<I>> {
 
             pos.match_range('0'..'9').or_else(|p| {
                 p.match_range('a'..'f')
@@ -239,15 +251,15 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn number<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
-            -> Result<Position<I>, Position<I>> {
+        fn number<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
+                            -> Result<Position<I>, Position<I>> {
 
-            state.rule(Rule::number, pos, must_match, |pos, state| {
+            state.rule(Rule::number, pos, |pos, state| {
                 pos.sequence(|p| {
                     p.optional(|p| {
                         p.match_string("-")
                     }).and_then(|p| {
-                        int(p, state, must_match)
+                        int(p, state)
                     }).and_then(|p| {
                         p.optional(|p| {
                             p.sequence(|p| {
@@ -259,10 +271,10 @@ impl Parser<Rule> for JsonParser {
                                     })
                                 }).and_then(|p| {
                                     p.optional(|p| {
-                                        exp(p, state, false)
+                                        exp(p, state)
                                     })
                                 }).or_else(|p| {
-                                    exp(p, state, false)
+                                    exp(p, state)
                                 })
                             })
                         })
@@ -271,8 +283,8 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn int<I: Input>(pos: Position<I>, _: &mut ParserState<Rule, I>, _: bool)
-            -> Result<Position<I>, Position<I>> {
+        fn int<I: Input>(pos: Position<I>, _: &mut ParserState<Rule, I>)
+                         -> Result<Position<I>, Position<I>> {
 
             pos.match_string("0").or_else(|p| {
                 p.sequence(|p| {
@@ -285,8 +297,8 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn exp<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
-            -> Result<Position<I>, Position<I>> {
+        fn exp<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
+                         -> Result<Position<I>, Position<I>> {
 
             pos.sequence(|p| {
                 p.match_string("E").or_else(|p| {
@@ -298,31 +310,31 @@ impl Parser<Rule> for JsonParser {
                         })
                     })
                 }).and_then(|p| {
-                    int(p, state,  must_match)
+                    int(p, state)
                 })
             })
         }
 
-        fn bool<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
-            -> Result<Position<I>, Position<I>> {
+        fn bool<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
+                          -> Result<Position<I>, Position<I>> {
 
-            state.rule(Rule::bool, pos, must_match, |pos, _| {
+            state.rule(Rule::bool, pos, |pos, _| {
                 pos.match_string("true").or_else(|p| {
                     p.match_string("false")
                 })
             })
         }
 
-        fn null<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>, must_match: bool)
-            -> Result<Position<I>, Position<I>> {
+        fn null<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
+                          -> Result<Position<I>, Position<I>> {
 
-            state.rule(Rule::null, pos, must_match, |pos, _| {
+            state.rule(Rule::null, pos, |pos, _| {
                 pos.match_string("null")
             })
         }
 
-        fn skip<I: Input>(pos: Position<I>, _: &mut ParserState<Rule, I>, _: bool)
-            -> Result<Position<I>, Position<I>> {
+        fn skip<I: Input>(pos: Position<I>, _: &mut ParserState<Rule, I>)
+                          -> Result<Position<I>, Position<I>> {
 
             pos.repeat(|p| {
                 p.match_string(" ").or_else(|p| {
@@ -336,23 +348,21 @@ impl Parser<Rule> for JsonParser {
         }
 
         state(input, move |mut state| {
-            if match rule {
-                Rule::json    =>    json(state.start(), &mut state, true),
-                Rule::object  =>  object(state.start(), &mut state, true),
-                Rule::pair    =>    pair(state.start(), &mut state, true),
-                Rule::array   =>   array(state.start(), &mut state, true),
-                Rule::value   =>   value(state.start(), &mut state, true),
-                Rule::string  =>  string(state.start(), &mut state, true),
-                Rule::escape  =>  escape(state.start(), &mut state, true),
-                Rule::unicode => unicode(state.start(), &mut state, true),
-                Rule::hex     =>     hex(state.start(), &mut state, true),
-                Rule::number  =>  number(state.start(), &mut state, true),
-                Rule::int     =>     int(state.start(), &mut state, true),
-                Rule::exp     =>     exp(state.start(), &mut state, true),
-                Rule::bool    =>    bool(state.start(), &mut state, true),
-                Rule::null    =>    null(state.start(), &mut state, true)
-            }.is_err() {
-                state.fail_with_attempts();
+            match rule {
+                Rule::json    =>    json(state.start(), &mut state),
+                Rule::object  =>  object(state.start(), &mut state),
+                Rule::pair    =>    pair(state.start(), &mut state),
+                Rule::array   =>   array(state.start(), &mut state),
+                Rule::value   =>   value(state.start(), &mut state),
+                Rule::string  =>  string(state.start(), &mut state),
+                Rule::escape  =>  escape(state.start(), &mut state),
+                Rule::unicode => unicode(state.start(), &mut state),
+                Rule::hex     =>     hex(state.start(), &mut state),
+                Rule::number  =>  number(state.start(), &mut state),
+                Rule::int     =>     int(state.start(), &mut state),
+                Rule::exp     =>     exp(state.start(), &mut state),
+                Rule::bool    =>    bool(state.start(), &mut state),
+                Rule::null    =>    null(state.start(), &mut state)
             }
         })
     }
@@ -367,53 +377,43 @@ enum Json<I: Input> {
     Object(HashMap<Span<I>, Json<I>>)
 }
 
-fn consume<I: Input, S: TokenStream<Rule, I>>(stream: S) -> Result<Json<I>, Error<Rule, I>> {
-    fn value<I: Input, S: TokenStream<Rule, I>>(stream: S) -> Result<Json<I>, Error<Rule, I>> {
-        let consumed = stream.consume();
-
-        match consumed.rule().wait()? {
-            Rule::null => Ok(Json::Null),
+fn consume<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
+    fn value<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
+        match pair.rule() {
+            Rule::null => Json::Null,
             Rule::bool => {
-                let span = consumed.span().wait().unwrap();
-
-                match span.capture() {
-                    "false" => Ok(Json::Bool(false)),
-                    "true"  => Ok(Json::Bool(true)),
+                match pair.span().capture() {
+                    "false" => Json::Bool(false),
+                    "true"  => Json::Bool(true),
                     _       => unreachable!()
                 }
             },
             Rule::number => {
-                let span = consumed.span().wait()?;
-
-                Ok(Json::Number(span.capture().parse().unwrap()))
+                Json::Number(pair.span().capture().parse().unwrap())
             },
             Rule::string => {
-                let span = consumed.span().wait()?;
-
-                Ok(Json::String(span))
+                Json::String(pair.span())
             },
             Rule::array => {
-                let array = consumed.sliced().and_then(|s| value(s)).collect().wait()?;
-
-                Ok(Json::Array(array))
+                Json::Array(pair.consume().map(|p| value(p)).collect())
             },
             Rule::object => {
-                let pairs = consumed.sliced().and_then(|s| {
-                    let mut s = s.sliced().wait();
+                let pairs = pair.consume().map(|p| {
+                    let mut pair = p.consume();
 
-                    let key = s.next().unwrap()?.consume().span().wait()?;
-                    let value = value(s.next().unwrap()?)?;
+                    let key = pair.next().unwrap().span();
+                    let value = value(pair.next().unwrap());
 
-                    Ok((key, value))
+                    (key, value)
                 });
 
-                Ok(Json::Object(pairs.collect().wait()?.into_iter().collect()))
+                Json::Object(pairs.collect())
             },
             _ => unreachable!()
         }
     }
 
-    value(stream)
+    value(pair)
 }
 
 #[test]

@@ -15,7 +15,7 @@ macro_rules! consumes_to {
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr ) ] ) => {
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
-        match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
+        match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
@@ -29,7 +29,7 @@ macro_rules! consumes_to {
 
         let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $end);
-        match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
+        match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
@@ -46,7 +46,7 @@ macro_rules! consumes_to {
 
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
-        match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
+        match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
@@ -60,7 +60,7 @@ macro_rules! consumes_to {
 
         let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $end);
-        match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
+        match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
@@ -78,7 +78,7 @@ macro_rules! consumes_to {
                                                   [ $( $names:ident $calls:tt ),* ] ) ] ) => {
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
-        match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
+        match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
@@ -94,7 +94,7 @@ macro_rules! consumes_to {
 
         let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $end);
-        match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
+        match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
@@ -112,7 +112,7 @@ macro_rules! consumes_to {
 
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
-        match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
+        match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
@@ -128,7 +128,7 @@ macro_rules! consumes_to {
 
         let expected = format!("expected End {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $end);
-        match $tokens.next().expect(&format!("{} but found nothing", expected)).unwrap() {
+        match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
@@ -149,10 +149,9 @@ macro_rules! parses_to {
     ( parser: $parser:ident, input: $string:expr, rule: $rules:tt :: $rule:tt,
       tokens: [ $( $names:ident $calls:tt ),* ] ) => {
 
-        use ::futures::stream::Stream;
-
         let input = $crate::inputs::StringInput::new($string.to_owned());
-        let mut tokens = $parser::parse($rules::$rule, ::std::sync::Arc::new(input)).wait();
+        let mut tokens = $parser::parse($rules::$rule,
+                                        ::std::rc::Rc::new(input)).unwrap().into_iter();
 
         consumes_to!($rules, tokens, [ $( $names $calls ),* ]);
     };
@@ -160,11 +159,12 @@ macro_rules! parses_to {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::rc::Rc;
 
+    use super::super::error::Error;
     use super::super::inputs::Input;
     use super::super::{Parser, state};
-    use super::super::streams::ParserStream;
+    use super::super::iterators::Pairs;
 
     #[allow(non_camel_case_types)]
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -177,19 +177,19 @@ mod tests {
     struct AbcParser;
 
     impl Parser<Rule> for AbcParser {
-        fn parse<I: Input + 'static>(_: Rule, input: Arc<I>) -> ParserStream<Rule, I> {
+        fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
             state(input, |mut state| {
                 let pos = state.start();
 
-                state.rule(Rule::a, pos, true, |pos, state| {
-                    state.rule(Rule::b, pos.skip(1).unwrap(), true, |pos, _| {
+                state.rule(Rule::a, pos, |pos, state| {
+                    state.rule(Rule::b, pos.skip(1).unwrap(), |pos, _| {
                         pos.skip(1)
                     }).unwrap().skip(1)
                 }).and_then(|p| {
-                    state.rule(Rule::c, p.skip(1).unwrap(), true, |pos, _| {
+                    state.rule(Rule::c, p.skip(1).unwrap(), |pos, _| {
                         pos.skip(1)
                     })
-                }).unwrap();
+                })
             })
         }
     }

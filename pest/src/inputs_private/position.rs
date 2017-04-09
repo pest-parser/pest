@@ -10,18 +10,17 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::rc::Rc;
-use std::sync::Arc;
 
 use super::input::Input;
 use super::span;
 
 pub struct Position<I: Input> {
-    input: Rc<Arc<I>>,
+    input: Rc<I>,
     pos:   usize
 }
 
 #[inline]
-pub fn new<I: Input>(input: Rc<Arc<I>>, pos: usize) -> Position<I> {
+pub fn new<I: Input>(input: Rc<I>, pos: usize) -> Position<I> {
     Position {
         input: input,
         pos:   pos
@@ -36,7 +35,7 @@ impl<I: Input> Position<I> {
 
     #[inline]
     pub fn span(self, other: Position<I>) -> span::Span<I> {
-        if &**self.input as *const I == &**other.input as *const I {
+        if &*self.input as *const I == &*other.input as *const I {
             span::new(self.input, self.pos, other.pos)
         } else {
             panic!("Span created from positions coming from different inputs")
@@ -188,7 +187,7 @@ impl<I: Input> Clone for Position<I> {
 
 impl<I: Input> PartialEq for Position<I> {
     fn eq(&self, other: &Position<I>) -> bool {
-        &**self.input as *const I == &**other.input as *const I &&
+        &*self.input as *const I == &*other.input as *const I &&
         self.pos == other.pos
     }
 }
@@ -197,7 +196,7 @@ impl<I: Input> Eq for Position<I> {}
 
 impl<I: Input> PartialOrd for Position<I> {
     fn partial_cmp(&self, other: &Position<I>) -> Option<Ordering> {
-        if &**self.input as *const I == &**other.input as *const I {
+        if &*self.input as *const I == &*other.input as *const I {
             self.pos.partial_cmp(&other.pos)
         } else {
             None
@@ -213,7 +212,7 @@ impl<I: Input> Ord for Position<I> {
 
 impl<I: Input> Hash for Position<I> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (&**self.input as *const I).hash(state);
+        (&*self.input as *const I).hash(state);
         self.pos.hash(state);
     }
 }

@@ -8,19 +8,18 @@
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
-use std::sync::Arc;
 
 use super::input::Input;
 use super::position;
 
 pub struct Span<I: Input> {
-    input: Rc<Arc<I>>,
+    input: Rc<I>,
     start: usize,
     end:   usize
 }
 
 #[inline]
-pub fn new<I: Input>(input: Rc<Arc<I>>, start: usize, end: usize) -> Span<I> {
+pub fn new<I: Input>(input: Rc<I>, start: usize, end: usize) -> Span<I> {
     Span {
         input: input,
         start: start,
@@ -67,7 +66,7 @@ impl<I: Input> Clone for Span<I> {
 
 impl<I: Input> PartialEq for Span<I> {
     fn eq(&self, other: &Span<I>) -> bool {
-        &**self.input as *const I == &**other.input as *const I &&
+        &*self.input as *const I == &*other.input as *const I &&
         self.start == other.start &&
         self.end == other.end
     }
@@ -77,7 +76,7 @@ impl<I: Input> Eq for Span<I> {}
 
 impl<'a, I: Input> Hash for Span<I> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (&**self.input as *const I).hash(state);
+        (&*self.input as *const I).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }

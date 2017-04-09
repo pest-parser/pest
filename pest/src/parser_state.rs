@@ -6,30 +6,25 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::rc::Rc;
-use std::sync::Arc;
-use std::thread;
 
 use super::error::Error;
 use super::inputs::{Input, Position};
 use super::inputs_private::position;
+use super::iterators_private::{pairs, QueueableToken};
 use super::RuleType;
-use super::streams_private::buffered::{buffered, BufferedSender, SendableError, SendableToken};
-use super::streams_private::parser_stream;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum TokenDestination {
-    Stream,
-    Queue,
-    Lookahead
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum Lookahead {
+    Positive,
+    Negative,
+    None
 }
 
 /// A `struct` which contains the complete state of a `Parser`.
-pub struct ParserState<'a, R, I: Input> {
-    input:           Rc<Arc<I>>,
-    sender:          BufferedSender<SendableToken<R>, SendableError<R>>,
-    queue:           Vec<SendableToken<R>>,
-    dest:            TokenDestination,
-    pos_lookahead:   bool,
+pub struct ParserState<'a, R: RuleType, I: Input> {
+    input:           Rc<I>,
+    queue:           Vec<QueueableToken<R>>,
+    lookahead:       Lookahead,
     is_atomic:       bool,
     pos_attempts:    Vec<R>,
     neg_attempts:    Vec<R>,
@@ -40,105 +35,73 @@ pub struct ParserState<'a, R, I: Input> {
     pub eoi_matched: bool
 }
 
-/// Creates a new `(ParserStream, ParserState)` tuple from an `Input`.
-///
-/// # Examples
-///
-/// ```
-/// # extern crate futures;
-/// # extern crate pest;
-/// # use pest::inputs::StringInput;
-/// # use pest::state;
-/// # fn main() {
-/// let input = StringInput::new("a".to_owned());
-///
-/// let (_, _) = state::<(), _>(input);
-/// # }
-/// ```
-pub fn state<'a, R: RuleType, I: Input, F>(input: Arc<I>, f: F)
-    -> parser_stream::ParserStream<R, I>
-    where F: FnOnce(ParserState<'a, R, I>) + Send + 'static {
 
-    let (sender, stream) = buffered(1024);
-    let clone = input.clone();
+pub fn state<'a, R: RuleType, I: Input, F>(
+    input: Rc<I>,
+    f: F
+) -> Result<pairs::Pairs<R, I>, Error<R, I>>
+where
+    F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
+{
+    let mut state = ParserState {
+        input:         input.clone(),
+        queue:         vec![],
+        lookahead:     Lookahead::None,
+        is_atomic:     false,
+        pos_attempts:  vec![],
+        neg_attempts:  vec![],
+        attempt_pos:   0,
+        stack:         vec![],
+        eoi_matched:   false
+    };
 
-    thread::spawn(move || {
-        let state = ParserState {
-            input:         Rc::new(clone),
-            sender:        sender,
-            queue:         vec![],
-            dest:          TokenDestination::Stream,
-            pos_lookahead: false,
-            is_atomic:     false,
-            pos_attempts:  vec![],
-            neg_attempts:  vec![],
-            attempt_pos:   0,
-            stack:         vec![],
-            eoi_matched:   false
-        };
+    if f(&mut state).is_ok() {
+        let len = state.queue.len();
+        Ok(pairs::new(Rc::new(state.queue), input, 0, len))
+    } else {
+        Err(Error::ParsingError {
+            positives: state.pos_attempts,
+            negatives: state.neg_attempts,
+            pos:       position::new(state.input.clone(), state.attempt_pos)
+        })
+    }
 
-        f(state);
-    });
 
-    parser_stream::new(stream, input)
 }
 
 impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
-    /// Creates the initial `Position` of the state's `Input` with the value `0`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use pest::inputs::StringInput;
-    /// # use pest::state;
-    /// # fn main() {
-    /// let input = StringInput::new("a".to_owned());
-    ///
-    /// let (state, _) = state::<(), _>(input);
-    ///
-    /// assert_eq!(state.start().pos(), 0);
-    /// # }
-    /// ```
     #[inline]
     pub fn start(&self) -> Position<I> {
         position::new(self.input.clone(), 0)
     }
 
     #[inline]
-    pub fn rule<F>(&mut self, rule: R, pos: Position<I>, must_match: bool, f: F)
-                   -> Result<Position<I>, Position<I>>
-        where F: FnOnce(Position<I>,
-                        &mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>> {
-
-        let should_toggle = !must_match && self.dest == TokenDestination::Stream;
+    pub fn rule<F>(&mut self, rule: R, pos: Position<I>, f: F) -> Result<Position<I>, Position<I>>
+    where
+        F: FnOnce(Position<I>, &mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
+    {
         let actual_pos = pos.pos();
         let index = self.queue.len();
 
-        if should_toggle {
-            self.dest = TokenDestination::Queue;
-        }
+        self.track(rule, actual_pos);
 
-        self.send(SendableToken::Start { rule: rule, pos: actual_pos });
+        if self.lookahead == Lookahead::None && !self.is_atomic {
+            self.queue.push(QueueableToken::Start { pair: 0, pos: actual_pos });
+        }
 
         let result = f(pos, self);
 
-        if let Ok(ref pos) = result {
-            self.send(SendableToken::End { rule: rule, pos: pos.pos() });
-        }
+        if self.lookahead == Lookahead::None && !self.is_atomic {
+            if let Ok(ref pos) = result {
+                let new_index = self.queue.len();
+                match self.queue[index] {
+                    QueueableToken::Start { ref mut pair, .. } => *pair = new_index,
+                    _ => unreachable!()
+                };
 
-        if self.dest == TokenDestination::Queue && result.is_err() {
-            self.queue.truncate(index);
-        }
-
-        if should_toggle {
-            self.dest = TokenDestination::Stream;
-
-            if result.is_ok() {
-                for token in self.queue.drain(..) {
-                    self.sender.send(token);
-                }
+                self.queue.push(QueueableToken::End { rule: rule, pos: pos.pos() });
+            } else {
+                self.queue.truncate(index);
             }
         }
 
@@ -146,96 +109,38 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
     }
 
     #[inline]
-    fn send(&mut self, token: SendableToken<R>) {
-        match token {
-            SendableToken::Start { rule, pos } => {
-                let is_positive = !(self.dest == TokenDestination::Lookahead) || self.pos_lookahead;
-                self.track(is_positive, rule, pos);
-            },
-            _ => ()
-        };
+    pub fn sequence<F>(&mut self, f: F) -> Result<Position<I>, Position<I>>
+    where
+        F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
+    {
+        let index = self.queue.len();
 
-        match self.dest {
-            TokenDestination::Stream    => self.sender.send(token),
-            TokenDestination::Queue     => self.queue.push(token),
-            TokenDestination::Lookahead => ()
-        };
-    }
+        let result = f(self);
 
-    /// Consumes the `ParserState` and causes the matching `ParserStream` to fail.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use pest::inputs::StringInput;
-    /// # use pest::state;
-    /// # use pest::Error;
-    /// # fn main() {
-    /// let input = StringInput::new("".to_owned());
-    /// let (state, _) = state::<(), _>(input);
-    /// let pos = state.start();
-    ///
-    /// state.fail(Error::CustomErrorPos { message: "error".to_owned(), pos: pos });
-    /// # }
-    /// ```
-    #[inline]
-    pub fn fail(&self, error: Error<R, I>) {
-        self.sender.fail(match error {
-            Error::ParsingError { positives, negatives, pos } => {
-                SendableError::ParsingError {
-                    positives: positives,
-                    negatives: negatives,
-                    pos:       pos.pos()
-                }
-            },
-            Error::CustomErrorPos { message, pos } => {
-                SendableError::CustomErrorPos {
-                    message: message,
-                    pos:     pos.pos()
-                }
-            },
-            Error::CustomErrorSpan { message, span } => {
-                SendableError::CustomErrorSpan {
-                    message: message,
-                    start:   span.start(),
-                    end:     span.end()
-                }
-            }
-        });
-    }
+        if result.is_err() {
+            self.queue.truncate(index);
+        }
 
-    #[inline]
-    pub fn fail_with_attempts(&mut self) {
-        let positives = self.pos_attempts.drain(..).collect();
-        let negatives = self.neg_attempts.drain(..).collect();
-
-        self.fail(Error::ParsingError {
-            positives: positives,
-            negatives: negatives,
-            pos:       position::new(self.input.clone(), self.attempt_pos)
-        });
+        result
     }
 
 
     #[inline]
     pub fn lookahead<F>(&mut self, is_positive: bool, f: F) -> Result<Position<I>, Position<I>>
-        where F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>> {
+    where
+        F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
+    {
+        let initial_lookahead = self.lookahead;
 
-        let should_toggle = self.dest != TokenDestination::Lookahead;
-        let initial_dest = self.dest;
-
-        if should_toggle {
-            self.dest = TokenDestination::Lookahead;
-            self.pos_lookahead = is_positive;
-        }
+        self.lookahead = if is_positive {
+            Lookahead::Positive
+        } else {
+            Lookahead::Negative
+        };
 
         let result = f(self);
 
-        if should_toggle {
-            self.dest = initial_dest;
-        }
+        self.lookahead = initial_lookahead;
 
         result
     }
@@ -260,34 +165,17 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
         result
     }
 
-    /// Returns the state's current atomicity.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # extern crate futures;
-    /// # extern crate pest;
-    /// # use pest::inputs::StringInput;
-    /// # use pest::state;
-    /// # fn main() {
-    /// let input = StringInput::new("".to_owned());
-    /// let (state, _) = state::<(), _>(input);
-    ///
-    /// assert!(!state.is_atomic());
-    /// # }
-    /// ```
     #[inline]
     pub fn is_atomic(&self) -> bool {
         self.is_atomic
     }
 
-    #[inline]
-    fn track(&mut self, is_positive: bool, rule: R, pos: usize) {
-        if self.is_atomic || self.dest == TokenDestination::Lookahead {
+    fn track(&mut self, rule: R, pos: usize) {
+        if self.is_atomic {
             return;
         }
 
-        let mut attempts = if is_positive {
+        let mut attempts = if self.lookahead != Lookahead::Negative {
             &mut self.pos_attempts
         } else {
             &mut self.neg_attempts
