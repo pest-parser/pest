@@ -112,11 +112,15 @@ impl<I: Input> Position<I> {
     pub fn sequence<F>(self, f: F) -> Result<Position<I>, Position<I>>
         where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
 
-        let result = f(self.clone());
+        let initial_pos = self.pos;
+        let result = f(self);
 
         match result {
             Ok(pos) => Ok(pos),
-            Err(_)  => Err(self)
+            Err(mut pos) => {
+                pos.pos = initial_pos;
+                Err(pos)
+            }
         }
     }
 
@@ -124,11 +128,18 @@ impl<I: Input> Position<I> {
     pub fn lookahead<F>(self, f: F) -> Result<Position<I>, Position<I>>
         where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
 
-        let result = f(self.clone());
+        let initial_pos = self.pos;
+        let result = f(self);
 
         match result {
-            Ok(_)  => Ok(self),
-            Err(_) => Err(self)
+            Ok(mut pos) => {
+                pos.pos = initial_pos;
+                Ok(pos)
+            },
+            Err(mut pos) => {
+                pos.pos = initial_pos;
+                Err(pos)
+            }
         }
     }
 
@@ -162,8 +173,8 @@ impl<I: Input> Position<I> {
 
         let mut result = f(self);
 
-        while result.is_ok() {
-            result = f(result.unwrap());
+        while let Ok(pos) = result {
+            result = f(pos);
         }
 
         match result {
