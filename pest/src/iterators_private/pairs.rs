@@ -13,8 +13,7 @@ use super::token_iterator::{self, TokenIterator};
 use super::super::inputs_private::Input;
 use super::super::RuleType;
 
-#[derive(Clone)]
-pub struct Pairs<R: RuleType, I: Input> {
+pub struct Pairs<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
     start: usize,
@@ -57,7 +56,7 @@ impl<R: RuleType, I: Input> Iterator for Pairs<R, I> {
     type Item = Pair<R, I>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.start > self.end {
+        if self.start >= self.end {
             None
         } else {
             let pair = pair::new(
@@ -69,6 +68,17 @@ impl<R: RuleType, I: Input> Iterator for Pairs<R, I> {
             self.start = self.pair() + 1;
 
             Some(pair)
+        }
+    }
+}
+
+impl<R: Clone, I: Input> Clone for Pairs<R, I> {
+    fn clone(&self) -> Pairs<R, I> {
+        Pairs {
+            queue: self.queue.clone(),
+            input: self.input.clone(),
+            start: self.start,
+            end: self.end
         }
     }
 }

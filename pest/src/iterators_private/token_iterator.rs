@@ -12,8 +12,7 @@ use super::super::inputs_private::{Input, position};
 use super::super::RuleType;
 use super::super::token::Token;
 
-#[derive(Clone)]
-pub struct TokenIterator<R: RuleType, I: Input> {
+pub struct TokenIterator<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
     index: usize,
@@ -66,6 +65,18 @@ impl<R: RuleType, I: Input> Iterator for TokenIterator<R, I> {
             self.index += 1;
 
             Some(token)
+        }
+    }
+}
+
+impl<R: Clone, I: Input> Clone for TokenIterator<R, I> {
+    fn clone(&self) -> TokenIterator<R, I> {
+        TokenIterator {
+            queue: self.queue.clone(),
+            input: self.input.clone(),
+            index: self.index,
+            start: self.start,
+            end: self.end
         }
     }
 }

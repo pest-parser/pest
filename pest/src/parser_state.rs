@@ -30,9 +30,7 @@ pub struct ParserState<'a, R: RuleType, I: Input> {
     neg_attempts:    Vec<R>,
     attempt_pos:     usize,
     /// Stack of captured strings
-    pub stack:       Vec<&'a str>,
-    /// End-of-input matched flag
-    pub eoi_matched: bool
+    pub stack:       Vec<&'a str>
 }
 
 
@@ -51,8 +49,7 @@ where
         pos_attempts:  vec![],
         neg_attempts:  vec![],
         attempt_pos:   0,
-        stack:         vec![],
-        eoi_matched:   false
+        stack:         vec![]
     };
 
     if f(&mut state).is_ok() {

@@ -31,7 +31,7 @@ pub enum Error<R, I: Input> {
     }
 }
 
-fn message<R: fmt::Display, I: Input>(error: &Error<R, I>) -> String {
+fn message<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
     match error {
         &Error::ParsingError { ref positives, ref negatives, .. } => {
             match (negatives.is_empty(), positives.is_empty()) {
@@ -52,22 +52,22 @@ fn message<R: fmt::Display, I: Input>(error: &Error<R, I>) -> String {
     }
 }
 
-fn enumerate<R: fmt::Display>(rules: &Vec<R>) -> String {
+fn enumerate<R: fmt::Debug>(rules: &Vec<R>) -> String {
     match rules.len() {
-        1 => format!("{}", rules[0]),
-        2 => format!("{} or {}", rules[0], rules[1]),
+        1 => format!("{:?}", rules[0]),
+        2 => format!("{:?} or {:?}", rules[0], rules[1]),
         l => {
             let separated = rules.iter()
                                  .take(l - 1)
-                                 .map(|r| format!("{}", r))
+                                 .map(|r| format!("{:?}", r))
                                  .collect::<Vec<_>>()
                                  .join(", ");
-            format!("{}, or {}", separated, rules[l - 1])
+            format!("{}, or {:?}", separated, rules[l - 1])
         }
     }
 }
 
-fn underline<R: fmt::Display, I: Input>(error: &Error<R, I>, offset: usize) -> String {
+fn underline<R: fmt::Debug, I: Input>(error: &Error<R, I>, offset: usize) -> String {
     let mut underline = String::new();
 
     for _ in 0..offset { underline.push(' '); }
@@ -85,7 +85,7 @@ fn underline<R: fmt::Display, I: Input>(error: &Error<R, I>, offset: usize) -> S
 }
 
 // TODO: Replace None with filename.
-fn format<R: fmt::Display, I: Input>(error: &Error<R, I>) -> String {
+fn format<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
     let pos = match *error {
         Error::ParsingError { ref pos, .. }     => pos.clone(),
         Error::CustomErrorPos { ref pos, .. }   => pos.clone(),
@@ -116,7 +116,7 @@ fn format<R: fmt::Display, I: Input>(error: &Error<R, I>) -> String {
     result
 }
 
-impl<R: fmt::Display, I: Input> fmt::Display for Error<R, I> {
+impl<R: fmt::Debug, I: Input> fmt::Display for Error<R, I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format(self))
     }
