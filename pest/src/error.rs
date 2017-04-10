@@ -122,6 +122,8 @@ impl<R: fmt::Debug, I: Input> fmt::Display for Error<R, I> {
     }
 }
 
+// We don't want to enforce derivable traits on the Input which forces to implement them manually.
+
 impl<R: Clone, I: Input> Clone for Error<R, I> {
     fn clone(&self) -> Error<R, I> {
         match *self {
