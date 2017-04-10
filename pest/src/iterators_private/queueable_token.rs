@@ -5,10 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use super::super::RuleType;
-
-#[derive(Debug)]
-pub enum QueueableToken<R: RuleType> {
+pub enum QueueableToken<R> {
     Start {
         pair: usize,
         pos: usize
