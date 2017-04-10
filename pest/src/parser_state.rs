@@ -22,15 +22,15 @@ enum Lookahead {
 
 /// A `struct` which contains the complete state of a `Parser`.
 pub struct ParserState<'a, R: RuleType, I: Input> {
-    input:           Rc<I>,
-    queue:           Vec<QueueableToken<R>>,
-    lookahead:       Lookahead,
-    is_atomic:       bool,
-    pos_attempts:    Vec<R>,
-    neg_attempts:    Vec<R>,
-    attempt_pos:     usize,
+    input: Rc<I>,
+    queue: Vec<QueueableToken<R>>,
+    lookahead: Lookahead,
+    is_atomic: bool,
+    pos_attempts: Vec<R>,
+    neg_attempts: Vec<R>,
+    attempt_pos: usize,
     /// Stack of captured strings
-    pub stack:       Vec<&'a str>
+    pub stack: Vec<&'a str>
 }
 
 
@@ -38,18 +38,18 @@ pub fn state<'a, R: RuleType, I: Input, F>(
     input: Rc<I>,
     f: F
 ) -> Result<pairs::Pairs<R, I>, Error<R, I>>
-where
-    F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
+    where
+        F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
 {
     let mut state = ParserState {
-        input:         input.clone(),
-        queue:         vec![],
-        lookahead:     Lookahead::None,
-        is_atomic:     false,
-        pos_attempts:  vec![],
-        neg_attempts:  vec![],
-        attempt_pos:   0,
-        stack:         vec![]
+        input: input.clone(),
+        queue: vec![],
+        lookahead: Lookahead::None,
+        is_atomic: false,
+        pos_attempts: vec![],
+        neg_attempts: vec![],
+        attempt_pos: 0,
+        stack: vec![]
     };
 
     if f(&mut state).is_ok() {
@@ -59,11 +59,9 @@ where
         Err(Error::ParsingError {
             positives: state.pos_attempts,
             negatives: state.neg_attempts,
-            pos:       position::new(state.input.clone(), state.attempt_pos)
+            pos: position::new(state.input.clone(), state.attempt_pos)
         })
     }
-
-
 }
 
 impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
@@ -145,8 +143,9 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
 
     #[inline]
     pub fn atomic<F>(&mut self, is_atomic: bool, f: F) -> Result<Position<I>, Position<I>>
-        where F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>> {
-
+    where
+        F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
+    {
         let should_toggle = self.is_atomic != is_atomic;
 
         if should_toggle {

@@ -84,11 +84,11 @@ impl Input for StringInput {
                 Some('\n') => {
                     pos -= 1;
                     line_col = (line_col.0 + 1, 1);
-                },
+                }
                 Some(c) => {
                     pos -= c.len_utf8();
                     line_col = (line_col.0, line_col.1 + 1);
-                },
+                }
                 None => unreachable!(),
             }
         }
@@ -112,7 +112,7 @@ impl Input for StringInput {
                                .find(|&(_, c)| c == '\n');
         let start = match start {
             Some((i, _)) => i + 1,
-            None         => 0
+            None => 0
         };
 
         let end = self.string.char_indices()
@@ -120,7 +120,7 @@ impl Input for StringInput {
                              .find(|&(_, c)| c == '\n');
         let mut end = match end {
             Some((i, _)) => i,
-            None         => self.string.len()
+            None => self.string.len()
         };
         if end > 0 && self.string.slice_unchecked(end - 1, end) == "\r" {
             end -= 1;
