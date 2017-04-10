@@ -31,15 +31,43 @@ pub enum Error<R, I: Input> {
     }
 }
 
-fn message<R, I: Input>(error: &Error<R, I>) -> &str {
+fn message<R: fmt::Display, I: Input>(error: &Error<R, I>) -> String {
     match error {
-        &Error::ParsingError { .. }                 => unimplemented!(),
-        &Error::CustomErrorPos { ref message, .. }  => message,
-        &Error::CustomErrorSpan { ref message, .. } => message
+        &Error::ParsingError { ref positives, ref negatives, .. } => {
+            match (negatives.is_empty(), positives.is_empty()) {
+                (false, false) => {
+                    format!(
+                        "unexpected {}; expected {}",
+                        enumerate(negatives),
+                        enumerate(positives)
+                    )
+                },
+                (false, true) => format!("unexpected {}", enumerate(negatives)),
+                (true, false) => format!("expected {}", enumerate(positives)),
+                (true, true) => "inexplicit parsing error".to_owned()
+            }
+        },
+        &Error::CustomErrorPos { ref message, .. }  => message.to_owned(),
+        &Error::CustomErrorSpan { ref message, .. } => message.to_owned()
     }
 }
 
-fn underline<R, I: Input>(error: &Error<R, I>, offset: usize) -> String {
+fn enumerate<R: fmt::Display>(rules: &Vec<R>) -> String {
+    match rules.len() {
+        1 => format!("{}", rules[0]),
+        2 => format!("{} or {}", rules[0], rules[1]),
+        l => {
+            let separated = rules.iter()
+                                 .take(l - 1)
+                                 .map(|r| format!("{}", r))
+                                 .collect::<Vec<_>>()
+                                 .join(", ");
+            format!("{}, or {}", separated, rules[l - 1])
+        }
+    }
+}
+
+fn underline<R: fmt::Display, I: Input>(error: &Error<R, I>, offset: usize) -> String {
     let mut underline = String::new();
 
     for _ in 0..offset { underline.push(' '); }
@@ -57,7 +85,7 @@ fn underline<R, I: Input>(error: &Error<R, I>, offset: usize) -> String {
 }
 
 // TODO: Replace None with filename.
-fn format<R, I: Input>(error: &Error<R, I>) -> String {
+fn format<R: fmt::Display, I: Input>(error: &Error<R, I>) -> String {
     let pos = match *error {
         Error::ParsingError { ref pos, .. }     => pos.clone(),
         Error::CustomErrorPos { ref pos, .. }   => pos.clone(),
@@ -88,7 +116,7 @@ fn format<R, I: Input>(error: &Error<R, I>) -> String {
     result
 }
 
-impl<R, I: Input> fmt::Display for Error<R, I> {
+impl<R: fmt::Display, I: Input> fmt::Display for Error<R, I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format(self))
     }
@@ -193,10 +221,30 @@ mod tests {
     use super::super::inputs_private::position;
 
     #[test]
-    fn display() {
+    fn display_parsing_error() {
         let input = StringInput::new("ab\ncd\nef".to_owned());
         let pos = position::new(Rc::new(input), 4);
-        let error: Error<(), _> = Error::CustomErrorPos {
+        let error: Error<&str, _> = Error::ParsingError {
+            positives: vec!["a", "b", "c"],
+            negatives: vec!["d", "e", "f"],
+            pos:     pos
+        };
+
+        assert_eq!(format!("{}", error), vec![
+            " --> 2:2",
+            "  |",
+            "2 | cd",
+            "  |  ^---",
+            "  |",
+            "  = unexpected d, e, or f; expected a, b, or c"
+        ].join("\n"));
+    }
+
+    #[test]
+    fn display_custom() {
+        let input = StringInput::new("ab\ncd\nef".to_owned());
+        let pos = position::new(Rc::new(input), 4);
+        let error: Error<&str, _> = Error::CustomErrorPos {
             message: "error: big one".to_owned(),
             pos:     pos
         };
