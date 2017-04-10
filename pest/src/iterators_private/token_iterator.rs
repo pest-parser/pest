@@ -53,7 +53,7 @@ impl<R: RuleType, I: Input> Iterator for TokenIterator<R, I> {
                         rule: rule,
                         pos: position::new(self.input.clone(), pos)
                     }
-                },
+                }
                 QueueableToken::End { rule, pos } => {
                     Token::End {
                         rule: rule,

@@ -45,15 +45,17 @@ struct JsonParser;
 
 impl Parser<Rule> for JsonParser {
     fn parse<I: Input>(rule: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
-        fn json<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                          -> Result<Position<I>, Position<I>> {
-
+        fn json<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             value(pos, state)
         }
 
-        fn object<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                            -> Result<Position<I>, Position<I>> {
-
+        fn object<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             state.rule(Rule::object, pos, |pos, state| {
                 state.sequence(move |state| {
                     pos.sequence(|p| {
@@ -95,9 +97,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn pair<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                          -> Result<Position<I>, Position<I>> {
-
+        fn pair<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             state.rule(Rule::pair, pos, |pos, state| {
                 state.sequence(move |state| {
                     pos.sequence(|p| {
@@ -115,9 +118,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn array<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                           -> Result<Position<I>, Position<I>> {
-
+        fn array<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             state.rule(Rule::array, pos, |pos, state| {
                 state.sequence(move |state| {
                     pos.sequence(|p| {
@@ -159,9 +163,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn value<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                           -> Result<Position<I>, Position<I>> {
-
+        fn value<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             state.rule(Rule::value, pos, |pos, state| {
                 string(pos, state).or_else(|p| {
                     number(p, state)
@@ -177,9 +182,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn string<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                            -> Result<Position<I>, Position<I>> {
-
+        fn string<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             state.rule(Rule::string, pos, |pos, state| {
                 pos.sequence(|p| {
                     p.match_string("\"").and_then(|p| {
@@ -207,9 +213,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn escape<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                            -> Result<Position<I>, Position<I>> {
-
+        fn escape<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             pos.sequence(|p| {
                 p.match_string("\\").and_then(|p| {
                     p.match_string("\"").or_else(|p| {
@@ -233,9 +240,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn unicode<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                             -> Result<Position<I>, Position<I>> {
-
+        fn unicode<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             pos.sequence(|p| {
                 p.match_string("u").and_then(|p| {
                     hex(p, state)
@@ -247,9 +255,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn hex<I: Input>(pos: Position<I>, _: &mut ParserState<Rule, I>)
-                         -> Result<Position<I>, Position<I>> {
-
+        fn hex<I: Input>(
+            pos: Position<I>,
+            _: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             pos.match_range('0'..'9').or_else(|p| {
                 p.match_range('a'..'f')
             }).or_else(|p| {
@@ -257,9 +266,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn number<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                            -> Result<Position<I>, Position<I>> {
-
+        fn number<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             state.rule(Rule::number, pos, |pos, state| {
                 pos.sequence(|p| {
                     p.optional(|p| {
@@ -289,9 +299,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn int<I: Input>(pos: Position<I>, _: &mut ParserState<Rule, I>)
-                         -> Result<Position<I>, Position<I>> {
-
+        fn int<I: Input>(
+            pos: Position<I>,
+            _: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             pos.match_string("0").or_else(|p| {
                 p.sequence(|p| {
                     p.match_range('1'..'9').and_then(|p| {
@@ -303,9 +314,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn exp<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                         -> Result<Position<I>, Position<I>> {
-
+        fn exp<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             pos.sequence(|p| {
                 p.match_string("E").or_else(|p| {
                     p.match_string("e")
@@ -321,9 +333,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn bool<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                          -> Result<Position<I>, Position<I>> {
-
+        fn bool<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             state.rule(Rule::bool, pos, |pos, _| {
                 pos.match_string("true").or_else(|p| {
                     p.match_string("false")
@@ -331,17 +344,19 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn null<I: Input>(pos: Position<I>, state: &mut ParserState<Rule, I>)
-                          -> Result<Position<I>, Position<I>> {
-
+        fn null<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             state.rule(Rule::null, pos, |pos, _| {
                 pos.match_string("null")
             })
         }
 
-        fn skip<I: Input>(pos: Position<I>, _: &mut ParserState<Rule, I>)
-                          -> Result<Position<I>, Position<I>> {
-
+        fn skip<I: Input>(
+            pos: Position<I>,
+            _: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
             pos.repeat(|p| {
                 p.match_string(" ").or_else(|p| {
                     p.match_string("\t")
@@ -355,20 +370,20 @@ impl Parser<Rule> for JsonParser {
 
         state(input, move |mut state| {
             match rule {
-                Rule::json    =>    json(state.start(), &mut state),
-                Rule::object  =>  object(state.start(), &mut state),
-                Rule::pair    =>    pair(state.start(), &mut state),
-                Rule::array   =>   array(state.start(), &mut state),
-                Rule::value   =>   value(state.start(), &mut state),
-                Rule::string  =>  string(state.start(), &mut state),
-                Rule::escape  =>  escape(state.start(), &mut state),
+                Rule::json => json(state.start(), &mut state),
+                Rule::object => object(state.start(), &mut state),
+                Rule::pair => pair(state.start(), &mut state),
+                Rule::array => array(state.start(), &mut state),
+                Rule::value => value(state.start(), &mut state),
+                Rule::string => string(state.start(), &mut state),
+                Rule::escape => escape(state.start(), &mut state),
                 Rule::unicode => unicode(state.start(), &mut state),
-                Rule::hex     =>     hex(state.start(), &mut state),
-                Rule::number  =>  number(state.start(), &mut state),
-                Rule::int     =>     int(state.start(), &mut state),
-                Rule::exp     =>     exp(state.start(), &mut state),
-                Rule::bool    =>    bool(state.start(), &mut state),
-                Rule::null    =>    null(state.start(), &mut state)
+                Rule::hex => hex(state.start(), &mut state),
+                Rule::number => number(state.start(), &mut state),
+                Rule::int => int(state.start(), &mut state),
+                Rule::exp => exp(state.start(), &mut state),
+                Rule::bool => bool(state.start(), &mut state),
+                Rule::null => null(state.start(), &mut state)
             }
         })
     }
@@ -392,19 +407,19 @@ fn consume<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
             Rule::bool => {
                 match pair.span().capture() {
                     "false" => Json::Bool(false),
-                    "true"  => Json::Bool(true),
-                    _       => unreachable!()
+                    "true" => Json::Bool(true),
+                    _ => unreachable!()
                 }
-            },
+            }
             Rule::number => {
                 Json::Number(pair.span().capture().parse().unwrap())
-            },
+            }
             Rule::string => {
                 Json::String(pair.span())
-            },
+            }
             Rule::array => {
                 Json::Array(pair.consume().map(|p| value(p)).collect())
-            },
+            }
             Rule::object => {
                 let pairs = pair.consume().map(|p| {
                     let mut pair = p.consume();
@@ -416,7 +431,7 @@ fn consume<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
                 });
 
                 Json::Object(pairs.collect())
-            },
+            }
             _ => unreachable!()
         }
     }

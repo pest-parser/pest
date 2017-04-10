@@ -16,14 +16,14 @@ use super::span;
 
 pub struct Position<I: Input> {
     input: Rc<I>,
-    pos:   usize
+    pos: usize
 }
 
 #[inline]
 pub fn new<I: Input>(input: Rc<I>, pos: usize) -> Position<I> {
     Position {
         input: input,
-        pos:   pos
+        pos: pos
     }
 }
 
@@ -38,7 +38,7 @@ impl<I: Input> Position<I> {
         if &*self.input as *const I == &*other.input as *const I {
             span::new(self.input, self.pos, other.pos)
         } else {
-            panic!("Span created from positions coming from different inputs")
+            panic!("Span created from positions from different inputs")
         }
     }
 
@@ -76,7 +76,7 @@ impl<I: Input> Position<I> {
 
         match skipped {
             Some(len) => Ok(new(self.input, self.pos + len)),
-            None      => Err(self)
+            None => Err(self)
         }
     }
 
@@ -104,14 +104,13 @@ impl<I: Input> Position<I> {
 
         match len {
             Some(len) => Ok(new(self.input, self.pos + len)),
-            None      => Err(self)
+            None => Err(self)
         }
     }
 
     #[inline]
     pub fn sequence<F>(self, f: F) -> Result<Position<I>, Position<I>>
         where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
-
         let initial_pos = self.pos;
         let result = f(self);
 
@@ -127,7 +126,6 @@ impl<I: Input> Position<I> {
     #[inline]
     pub fn lookahead<F>(self, f: F) -> Result<Position<I>, Position<I>>
         where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
-
         let initial_pos = self.pos;
         let result = f(self);
 
@@ -135,7 +133,7 @@ impl<I: Input> Position<I> {
             Ok(mut pos) => {
                 pos.pos = initial_pos;
                 Ok(pos)
-            },
+            }
             Err(mut pos) => {
                 pos.pos = initial_pos;
                 Err(pos)
@@ -146,11 +144,10 @@ impl<I: Input> Position<I> {
     #[inline]
     pub fn negate<F>(self, f: F) -> Result<Position<I>, Position<I>>
         where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
-
         let result = f(self);
 
         match result {
-            Ok(pos)  => Err(pos),
+            Ok(pos) => Err(pos),
             Err(pos) => Ok(pos)
         }
     }
@@ -158,11 +155,10 @@ impl<I: Input> Position<I> {
     #[inline]
     pub fn optional<F>(self, f: F) -> Result<Position<I>, Position<I>>
         where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
-
         let result = f(self);
 
         match result {
-            Ok(pos)  => Ok(pos),
+            Ok(pos) => Ok(pos),
             Err(pos) => Ok(pos)
         }
     }
@@ -170,7 +166,6 @@ impl<I: Input> Position<I> {
     #[inline]
     pub fn repeat<F>(self, mut f: F) -> Result<Position<I>, Position<I>>
         where F: FnMut(Position<I>) -> Result<Position<I>, Position<I>> {
-
         let mut result = f(self);
 
         while let Ok(pos) = result {
@@ -178,7 +173,7 @@ impl<I: Input> Position<I> {
         }
 
         match result {
-            Ok(pos)  => Ok(pos),
+            Ok(pos) => Ok(pos),
             Err(pos) => Ok(pos)
         }
     }

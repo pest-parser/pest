@@ -15,12 +15,12 @@ pub enum Token<R, I: Input> {
     /// The starting bit of the `Token`
     Start {
         rule: R,
-        pos:  Position<I>
+        pos: Position<I>
     },
     /// The ending bit of the `Token`
     End {
         rule: R,
-        pos:  Position<I>
+        pos: Position<I>
     }
 }
 
@@ -30,13 +30,13 @@ impl<R: Clone, I: Input> Clone for Token<R, I> {
             Token::Start { ref rule, ref pos } => {
                 Token::Start {
                     rule: rule.clone(),
-                    pos:  pos.clone()
+                    pos: pos.clone()
                 }
-            },
+            }
             Token::End { ref rule, ref pos } => {
                 Token::End {
                     rule: rule.clone(),
-                    pos:  pos.clone()
+                    pos: pos.clone()
                 }
             }
         }
@@ -50,15 +50,15 @@ impl<R: PartialEq, I: Input> PartialEq for Token<R, I> {
                 match *other {
                     Token::Start { rule: ref other_rule, pos: ref other_pos } => {
                         rule == other_rule && pos == other_pos
-                    },
+                    }
                     _ => false
                 }
-            },
+            }
             Token::End { ref rule, ref pos } => {
                 match *other {
                     Token::End { rule: ref other_rule, pos: ref other_pos } => {
                         rule == other_rule && pos == other_pos
-                    },
+                    }
                     _ => false
                 }
             }
@@ -72,7 +72,7 @@ impl<R: Hash, I: Input> Hash for Token<R, I> {
             Token::Start { ref rule, ref pos } => {
                 rule.hash(state);
                 pos.hash(state);
-            },
+            }
             Token::End { ref rule, ref pos } => {
                 rule.hash(state);
                 pos.hash(state);

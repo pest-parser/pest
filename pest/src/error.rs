@@ -17,23 +17,23 @@ pub enum Error<R, I: Input> {
     ParsingError {
         positives: Vec<R>,
         negatives: Vec<R>,
-        pos:       Position<I>
+        pos: Position<I>
     },
     /// Custom error with a message and a position
     CustomErrorPos {
         message: String,
-        pos:     Position<I>
+        pos: Position<I>
     },
     /// Custom error with a message and a span defined by a start and end position
     CustomErrorSpan {
         message: String,
-        span:    Span<I>
+        span: Span<I>
     }
 }
 
 fn message<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
-    match error {
-        &Error::ParsingError { ref positives, ref negatives, .. } => {
+    match *error {
+        Error::ParsingError { ref positives, ref negatives, .. } => {
             match (negatives.is_empty(), positives.is_empty()) {
                 (false, false) => {
                     format!(
@@ -41,14 +41,14 @@ fn message<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
                         enumerate(negatives),
                         enumerate(positives)
                     )
-                },
+                }
                 (false, true) => format!("unexpected {}", enumerate(negatives)),
                 (true, false) => format!("expected {}", enumerate(positives)),
                 (true, true) => "inexplicit parsing error".to_owned()
             }
-        },
-        &Error::CustomErrorPos { ref message, .. }  => message.to_owned(),
-        &Error::CustomErrorSpan { ref message, .. } => message.to_owned()
+        }
+        Error::CustomErrorPos { ref message, .. } => message.to_owned(),
+        Error::CustomErrorSpan { ref message, .. } => message.to_owned()
     }
 }
 
@@ -72,12 +72,12 @@ fn underline<R: fmt::Debug, I: Input>(error: &Error<R, I>, offset: usize) -> Str
 
     for _ in 0..offset { underline.push(' '); }
 
-    match error {
-        &Error::CustomErrorSpan { ref span, .. } => {
+    match *error {
+        Error::CustomErrorSpan { ref span, .. } => {
             underline.push('^');
             for _ in 2..(span.end() - span.start()) { underline.push('-'); }
             underline.push('^');
-        },
+        }
         _ => underline.push_str("^---")
     };
 
@@ -87,8 +87,8 @@ fn underline<R: fmt::Debug, I: Input>(error: &Error<R, I>, offset: usize) -> Str
 // TODO: Replace None with filename.
 fn format<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
     let pos = match *error {
-        Error::ParsingError { ref pos, .. }     => pos.clone(),
-        Error::CustomErrorPos { ref pos, .. }   => pos.clone(),
+        Error::ParsingError { ref pos, .. } => pos.clone(),
+        Error::CustomErrorPos { ref pos, .. } => pos.clone(),
         Error::CustomErrorSpan { ref span, .. } => span.clone().split().0.clone()
     };
     let (line, col) = pos.line_col();
@@ -101,7 +101,7 @@ fn format<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
 
     let mut result = match filename {
         Some(filename) => format!("{}--> {}:{}:{}\n", spacing, filename, line, col),
-        None           => format!("{}--> {}:{}\n", spacing, line, col)
+        None => format!("{}--> {}:{}\n", spacing, line, col)
     };
 
     result.push_str(&format!("{} |\n", spacing));
@@ -129,19 +129,19 @@ impl<R: Clone, I: Input> Clone for Error<R, I> {
                 Error::ParsingError {
                     positives: positives.clone(),
                     negatives: negatives.clone(),
-                    pos:       pos.clone()
+                    pos: pos.clone()
                 }
-            },
+            }
             Error::CustomErrorPos { ref message, ref pos } => {
                 Error::CustomErrorPos {
                     message: message.clone(),
-                    pos:     pos.clone()
+                    pos: pos.clone()
                 }
-            },
+            }
             Error::CustomErrorSpan { ref message, ref span } => {
                 Error::CustomErrorSpan {
                     message: message.clone(),
-                    span:    span.clone()
+                    span: span.clone()
                 }
             }
         }
@@ -156,33 +156,33 @@ impl<R: PartialEq, I: Input> PartialEq for Error<R, I> {
                     Error::ParsingError {
                         positives: ref other_positives,
                         negatives: ref other_negatives,
-                        pos:       ref other_pos
+                        pos: ref other_pos
                     } => {
                         positives == other_positives && negatives == other_negatives &&
-                        pos == other_pos
-                    },
+                            pos == other_pos
+                    }
                     _ => false
                 }
-            },
+            }
             Error::CustomErrorPos { ref message, ref pos } => {
                 match *other {
                     Error::CustomErrorPos {
                         message: ref other_message,
-                        pos:     ref other_pos
+                        pos: ref other_pos
                     } => {
                         message == other_message && pos == other_pos
-                    },
+                    }
                     _ => false
                 }
-            },
+            }
             Error::CustomErrorSpan { ref message, ref span } => {
                 match *other {
                     Error::CustomErrorSpan {
                         message: ref other_message,
-                        span:    ref other_span
+                        span: ref other_span
                     } => {
                         message == other_message && span == other_span
-                    },
+                    }
                     _ => false
                 }
             }
@@ -199,11 +199,11 @@ impl<R: Hash, I: Input> Hash for Error<R, I> {
                 positives.hash(state);
                 negatives.hash(state);
                 pos.hash(state);
-            },
+            }
             Error::CustomErrorPos { ref message, ref pos } => {
                 message.hash(state);
                 pos.hash(state);
-            },
+            }
             Error::CustomErrorSpan { ref message, ref span } => {
                 message.hash(state);
                 span.hash(state);
@@ -227,7 +227,7 @@ mod tests {
         let error: Error<&str, _> = Error::ParsingError {
             positives: vec!["a", "b", "c"],
             negatives: vec!["d", "e", "f"],
-            pos:     pos
+            pos: pos
         };
 
         assert_eq!(format!("{}", error), vec![
@@ -246,7 +246,7 @@ mod tests {
         let pos = position::new(Rc::new(input), 4);
         let error: Error<&str, _> = Error::CustomErrorPos {
             message: "error: big one".to_owned(),
-            pos:     pos
+            pos: pos
         };
 
         assert_eq!(format!("{}", error), vec![
