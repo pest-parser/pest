@@ -110,7 +110,9 @@ impl<I: Input> Position<I> {
 
     #[inline]
     pub fn sequence<F>(self, f: F) -> Result<Position<I>, Position<I>>
-        where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
+    where
+        F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>>
+    {
         let initial_pos = self.pos;
         let result = f(self);
 
@@ -125,7 +127,9 @@ impl<I: Input> Position<I> {
 
     #[inline]
     pub fn lookahead<F>(self, f: F) -> Result<Position<I>, Position<I>>
-        where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
+    where
+        F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>>
+    {
         let initial_pos = self.pos;
         let result = f(self);
 
@@ -143,7 +147,9 @@ impl<I: Input> Position<I> {
 
     #[inline]
     pub fn negate<F>(self, f: F) -> Result<Position<I>, Position<I>>
-        where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
+    where
+        F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>>
+    {
         let result = f(self);
 
         match result {
@@ -154,7 +160,9 @@ impl<I: Input> Position<I> {
 
     #[inline]
     pub fn optional<F>(self, f: F) -> Result<Position<I>, Position<I>>
-        where F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>> {
+    where
+        F: FnOnce(Position<I>) -> Result<Position<I>, Position<I>>
+    {
         let result = f(self);
 
         match result {
@@ -165,7 +173,9 @@ impl<I: Input> Position<I> {
 
     #[inline]
     pub fn repeat<F>(self, mut f: F) -> Result<Position<I>, Position<I>>
-        where F: FnMut(Position<I>) -> Result<Position<I>, Position<I>> {
+    where
+        F: FnMut(Position<I>) -> Result<Position<I>, Position<I>>
+    {
         let mut result = f(self);
 
         while let Ok(pos) = result {
@@ -178,6 +188,8 @@ impl<I: Input> Position<I> {
         }
     }
 }
+
+// We don't want to enforce derivable traits on the Input which forces to implement them manually.
 
 impl<I: Input> fmt::Debug for Position<I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

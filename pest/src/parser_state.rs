@@ -81,6 +81,7 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
         self.track(rule, actual_pos);
 
         if self.lookahead == Lookahead::None && !self.is_atomic {
+            // Pair's position will only be known after running the closure.
             self.queue.push(QueueableToken::Start { pair: 0, pos: actual_pos });
         }
 
@@ -88,6 +89,8 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
 
         if self.lookahead == Lookahead::None && !self.is_atomic {
             if let Ok(ref pos) = result {
+                // Storing the pair's index in the first token that was added before the closure was
+                // run.
                 let new_index = self.queue.len();
                 match self.queue[index] {
                     QueueableToken::Start { ref mut pair, .. } => *pair = new_index,
@@ -177,18 +180,11 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
             &mut self.neg_attempts
         };
 
-        if attempts.is_empty() {
-            attempts.push(rule);
-
-            self.attempt_pos = pos;
-        } else if pos == self.attempt_pos {
-            attempts.push(rule);
-        } else if pos > self.attempt_pos {
+        if pos > self.attempt_pos {
             attempts.clear();
-            attempts.clear();
-            attempts.push(rule);
-
             self.attempt_pos = pos;
         }
+
+        attempts.push(rule);
     }
 }

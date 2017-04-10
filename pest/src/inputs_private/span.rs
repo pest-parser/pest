@@ -52,6 +52,8 @@ impl<I: Input> Span<I> {
     }
 }
 
+// We don't want to enforce derivable traits on the Input which forces to implement them manually.
+
 impl<I: Input> fmt::Debug for Span<I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Span {{ start: {}, end: {} }}", self.start, self.end)
