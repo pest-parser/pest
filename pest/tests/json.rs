@@ -11,7 +11,7 @@ extern crate pest;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use pest::inputs::{Input, Position, Span};
+use pest::inputs::{Input, Position, Span, StringInput};
 use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
 
@@ -381,17 +381,20 @@ impl Parser<Rule> for JsonParser {
     }
 }
 
-enum Json<I: Input> {
+#[derive(Debug, PartialEq)]
+enum Json {
     Null,
     Bool(bool),
     Number(f64),
-    String(Span<I>),
-    Array(Vec<Json<I>>),
-    Object(HashMap<Span<I>, Json<I>>)
+    String(Span<StringInput>),
+    Array(Vec<Json>),
+    Object(HashMap<Span<StringInput>, Json>)
 }
 
-fn consume<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
-    fn value<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
+fn consume(pair: Pair<Rule, StringInput>) -> Json {
+    fn value(pair: Pair<Rule, StringInput>) -> Json {
+        let pair = pair.consume().next().unwrap();
+
         match pair.rule() {
             Rule::null => Json::Null,
             Rule::bool => {
@@ -557,7 +560,7 @@ fn object() {
             object(0, 24, [
                 pair(1, 8, [
                     string(1, 4),
-                    value(7, 8, [number(7, 8)])
+                    value( 7, 8, [number(7, 8)])
                 ]),
                 pair(10, 29, [
                     string(10, 13),
@@ -571,4 +574,23 @@ fn object() {
             ])
         ]
     };
+}
+
+#[test]
+fn ast() {
+    let input = Rc::new(StringInput::new("{\"a\": [null, true, 3.4]}".to_owned()));
+    let start = Position::from_start(input.clone()).skip(1).unwrap();
+    let end = start.clone().skip(3).unwrap();
+    let span = start.span(end);
+
+    let mut pairs = HashMap::new();
+    pairs.insert(span, Json::Array(vec![
+        Json::Null,
+        Json::Bool(true),
+        Json::Number(3.4)
+    ]));
+
+    let ast = consume(JsonParser::parse(Rule::json, input.clone()).unwrap().next().unwrap());
+
+    assert_eq!(ast, Json::Object(pairs));
 }
