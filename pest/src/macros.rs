@@ -178,9 +178,7 @@ mod tests {
 
     impl Parser<Rule> for AbcParser {
         fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
-            state(input, |mut state| {
-                let pos = state.start();
-
+            state(input, |mut state, pos| {
                 state.rule(Rule::a, pos, |pos, state| {
                     state.rule(Rule::b, pos.skip(1).unwrap(), |pos, _| {
                         pos.skip(1)

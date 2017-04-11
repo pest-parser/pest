@@ -8,7 +8,7 @@
 use std::rc::Rc;
 
 use super::error::Error;
-use super::inputs::{Input, Position};
+use super::inputs::{Input, Position, Span};
 use super::inputs_private::position;
 use super::iterators_private::{pairs, QueueableToken};
 use super::RuleType;
@@ -21,28 +21,26 @@ enum Lookahead {
 }
 
 /// A `struct` which contains the complete state of a `Parser`.
-pub struct ParserState<'a, R: RuleType, I: Input> {
-    input: Rc<I>,
+pub struct ParserState<R: RuleType, I: Input> {
     queue: Vec<QueueableToken<R>>,
     lookahead: Lookahead,
     is_atomic: bool,
     pos_attempts: Vec<R>,
     neg_attempts: Vec<R>,
     attempt_pos: usize,
-    /// Stack of captured strings
-    pub stack: Vec<&'a str>
+    /// Stack of `Span`s
+    pub stack: Vec<Span<I>>
 }
 
 
-pub fn state<'a, R: RuleType, I: Input, F>(
+pub fn state<R: RuleType, I: Input, F>(
     input: Rc<I>,
     f: F
 ) -> Result<pairs::Pairs<R, I>, Error<R, I>>
     where
-        F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
+        F: FnOnce(&mut ParserState<R, I>, Position<I>) -> Result<Position<I>, Position<I>>
 {
     let mut state = ParserState {
-        input: input.clone(),
         queue: vec![],
         lookahead: Lookahead::None,
         is_atomic: false,
@@ -52,28 +50,23 @@ pub fn state<'a, R: RuleType, I: Input, F>(
         stack: vec![]
     };
 
-    if f(&mut state).is_ok() {
+    if f(&mut state, Position::from_start(input.clone())).is_ok() {
         let len = state.queue.len();
         Ok(pairs::new(Rc::new(state.queue), input, 0, len))
     } else {
         Err(Error::ParsingError {
             positives: state.pos_attempts,
             negatives: state.neg_attempts,
-            pos: position::new(state.input.clone(), state.attempt_pos)
+            pos: position::new(input, state.attempt_pos)
         })
     }
 }
 
-impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
-    #[inline]
-    pub fn start(&self) -> Position<I> {
-        position::new(self.input.clone(), 0)
-    }
-
+impl<R: RuleType, I: Input> ParserState<R, I> {
     #[inline]
     pub fn rule<F>(&mut self, rule: R, pos: Position<I>, f: F) -> Result<Position<I>, Position<I>>
     where
-        F: FnOnce(Position<I>, &mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
+        F: FnOnce(Position<I>, &mut ParserState<R, I>) -> Result<Position<I>, Position<I>>
     {
         let actual_pos = pos.pos();
         let index = self.queue.len();
@@ -109,7 +102,7 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
     #[inline]
     pub fn sequence<F>(&mut self, f: F) -> Result<Position<I>, Position<I>>
     where
-        F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
+        F: FnOnce(&mut ParserState<R, I>) -> Result<Position<I>, Position<I>>
     {
         let index = self.queue.len();
 
@@ -126,7 +119,7 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
     #[inline]
     pub fn lookahead<F>(&mut self, is_positive: bool, f: F) -> Result<Position<I>, Position<I>>
     where
-        F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
+        F: FnOnce(&mut ParserState<R, I>) -> Result<Position<I>, Position<I>>
     {
         let initial_lookahead = self.lookahead;
 
@@ -147,7 +140,7 @@ impl<'a, R: RuleType, I: Input> ParserState<'a, R, I> {
     #[inline]
     pub fn atomic<F>(&mut self, is_atomic: bool, f: F) -> Result<Position<I>, Position<I>>
     where
-        F: FnOnce(&mut ParserState<'a, R, I>) -> Result<Position<I>, Position<I>>
+        F: FnOnce(&mut ParserState<R, I>) -> Result<Position<I>, Position<I>>
     {
         let should_toggle = self.is_atomic != is_atomic;
 

@@ -226,9 +226,9 @@ mod tests {
     fn display_parsing_error() {
         let input = StringInput::new("ab\ncd\nef".to_owned());
         let pos = position::new(Rc::new(input), 4);
-        let error: Error<&str, _> = Error::ParsingError {
-            positives: vec!["a", "b", "c"],
-            negatives: vec!["d", "e", "f"],
+        let error: Error<u32, _> = Error::ParsingError {
+            positives: vec![1, 2, 3],
+            negatives: vec![4, 5, 6],
             pos: pos
         };
 
@@ -238,7 +238,7 @@ mod tests {
             "2 | cd",
             "  |  ^---",
             "  |",
-            "  = unexpected d, e, or f; expected a, b, or c"
+            "  = unexpected 4, 5, or 6; expected 1, 2, or 3"
         ].join("\n"));
     }
 
