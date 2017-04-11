@@ -15,18 +15,25 @@ use super::inputs::{Input, Position, Span};
 pub enum Error<R, I: Input> {
     /// Generated parsing error with expected and unexpected `Rule`s and a position
     ParsingError {
+        /// Positive attempts
         positives: Vec<R>,
+        /// Negative attempts
         negatives: Vec<R>,
+        /// Deepest position of attempts
         pos: Position<I>
     },
     /// Custom error with a message and a position
     CustomErrorPos {
+        /// Short explanation
         message: String,
+        /// Error `Position` for formatting
         pos: Position<I>
     },
     /// Custom error with a message and a span defined by a start and end position
     CustomErrorSpan {
+        /// Short explanation
         message: String,
+        /// Error `Span` for formatting
         span: Span<I>
     }
 }
