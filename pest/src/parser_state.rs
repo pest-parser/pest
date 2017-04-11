@@ -66,7 +66,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     #[inline]
     pub fn rule<F>(&mut self, rule: R, pos: Position<I>, f: F) -> Result<Position<I>, Position<I>>
     where
-        F: FnOnce(Position<I>, &mut ParserState<R, I>) -> Result<Position<I>, Position<I>>
+        F: FnOnce(&mut ParserState<R, I>, Position<I>) -> Result<Position<I>, Position<I>>
     {
         let actual_pos = pos.pos();
         let index = self.queue.len();
@@ -78,7 +78,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
             self.queue.push(QueueableToken::Start { pair: 0, pos: actual_pos });
         }
 
-        let result = f(pos, self);
+        let result = f(self, pos);
 
         if self.lookahead == Lookahead::None && !self.is_atomic {
             if let Ok(ref pos) = result {

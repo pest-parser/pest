@@ -16,15 +16,17 @@ mod parser;
 mod parser_state;
 mod token;
 
-/// A `mod` containing the `Input` `trait` and implementations.
+/// A `mod` containing the `Input`-related constructs.
 pub mod inputs {
     pub use super::inputs_private::{Input, Position, Span, StringInput};
 }
 
+/// A `mod` containing iterators and constructs to aid in parser output manipulation.
 pub mod iterators {
     pub use super::iterators_private::{Pair, Pairs, TokenIterator};
 }
 
+/// A `trait` which parser rules must implement.
 pub trait RuleType: Copy + Debug + Eq + Hash + Ord {}
 impl<T: Copy + Debug + Eq + Hash + Ord> RuleType for T {}
 
