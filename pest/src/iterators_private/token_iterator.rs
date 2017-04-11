@@ -12,6 +12,9 @@ use super::super::inputs_private::{Input, position};
 use super::super::RuleType;
 use super::super::token::Token;
 
+/// A `struct` containing `Token`s. It is returned by either
+/// [`Pair::into_iter`](struct.Pair.html#method.into_iter) or
+/// [`Pairs::into_iter`](struct.Pairs.html#method.into_iter)
 pub struct TokenIterator<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,

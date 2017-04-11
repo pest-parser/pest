@@ -56,7 +56,7 @@ impl Parser<Rule> for JsonParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::object, pos, |pos, state| {
+            state.rule(Rule::object, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|p| {
                         p.match_string("{").and_then(|p| {
@@ -101,7 +101,7 @@ impl Parser<Rule> for JsonParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::pair, pos, |pos, state| {
+            state.rule(Rule::pair, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|p| {
                         string(p, state).and_then(|p| {
@@ -122,7 +122,7 @@ impl Parser<Rule> for JsonParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::array, pos, |pos, state| {
+            state.rule(Rule::array, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|p| {
                         p.match_string("[").and_then(|p| {
@@ -167,7 +167,7 @@ impl Parser<Rule> for JsonParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::value, pos, |pos, state| {
+            state.rule(Rule::value, pos, |state, pos| {
                 string(pos, state).or_else(|p| {
                     number(p, state)
                 }).or_else(|p| {
@@ -186,7 +186,7 @@ impl Parser<Rule> for JsonParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::string, pos, |pos, state| {
+            state.rule(Rule::string, pos, |state, pos| {
                 pos.sequence(|p| {
                     p.match_string("\"").and_then(|p| {
                         p.repeat(|p| {
@@ -268,7 +268,7 @@ impl Parser<Rule> for JsonParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::number, pos, |pos, state| {
+            state.rule(Rule::number, pos, |state, pos| {
                 pos.sequence(|p| {
                     p.optional(|p| {
                         p.match_string("-")
@@ -335,7 +335,7 @@ impl Parser<Rule> for JsonParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::bool, pos, |pos, _| {
+            state.rule(Rule::bool, pos, |_, pos| {
                 pos.match_string("true").or_else(|p| {
                     p.match_string("false")
                 })
@@ -346,7 +346,7 @@ impl Parser<Rule> for JsonParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::null, pos, |pos, _| {
+            state.rule(Rule::null, pos, |_, pos| {
                 pos.match_string("null")
             })
         }

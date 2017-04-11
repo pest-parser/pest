@@ -13,6 +13,7 @@ use super::token_iterator::{self, TokenIterator};
 use super::super::inputs_private::Input;
 use super::super::RuleType;
 
+/// A `struct` containing `Pairs`. It is created in [`pest::state`](../fn.state.html).
 pub struct Pairs<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
@@ -35,6 +36,30 @@ pub fn new<R: RuleType, I: Input>(
 }
 
 impl<R: RuleType, I: Input> Pairs<R, I> {
+    /// Converts the `Pairs` into a `TokenIterator`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # use pest::inputs::StringInput;
+    /// # use pest::iterators::Pairs;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     a
+    /// }
+    ///
+    /// let input = Rc::new(StringInput::new("".to_owned()));
+    /// let pairs = pest::state(input, |state, pos| {
+    ///     // generating Token pair with Rule::a ...
+    /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
+    /// }).unwrap();
+    /// let tokens: Vec<_> = pairs.into_iter().collect();
+    ///
+    /// assert_eq!(tokens.len(), 2);
+    /// ```
     pub fn into_iter(self) -> TokenIterator<R, I> {
         token_iterator::new(
             self.queue,

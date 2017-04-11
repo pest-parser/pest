@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! consumes_to {
     ( $_rules:ident, $tokens:expr, [] ) => {
@@ -179,12 +180,12 @@ mod tests {
     impl Parser<Rule> for AbcParser {
         fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
             state(input, |mut state, pos| {
-                state.rule(Rule::a, pos, |pos, state| {
-                    state.rule(Rule::b, pos.skip(1).unwrap(), |pos, _| {
+                state.rule(Rule::a, pos, |state, pos| {
+                    state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
                         pos.skip(1)
                     }).unwrap().skip(1)
                 }).and_then(|p| {
-                    state.rule(Rule::c, p.skip(1).unwrap(), |pos, _| {
+                    state.rule(Rule::c, p.skip(1).unwrap(), |_, pos| {
                         pos.skip(1)
                     })
                 })

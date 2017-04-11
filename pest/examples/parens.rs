@@ -38,7 +38,7 @@ impl Parser<Rule> for ParenParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::paren, pos, |pos, state| {
+            state.rule(Rule::paren, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|p| {
                         p.match_string("(").and_then(|p| {
