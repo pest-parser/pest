@@ -145,6 +145,56 @@ macro_rules! consumes_to {
     };
 }
 
+/// A `macro` which facilitates grammar testing and debugging.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use]
+/// # extern crate pest;
+/// # use std::rc::Rc;
+/// # use pest::{Error, Parser};
+/// # use pest::inputs::Input;
+/// # use pest::iterators::Pairs;
+/// # fn main() {
+/// # #[allow(non_camel_case_types)]
+/// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+/// # enum Rule {
+/// #     a,
+/// #     b,
+/// #     c
+/// # }
+/// #
+/// # struct AbcParser;
+/// #
+/// # impl Parser<Rule> for AbcParser {
+/// #     fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+/// #         pest::state(input, |mut state, pos| {
+/// #             state.rule(Rule::a, pos, |state, pos| {
+/// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
+/// #                     pos.skip(1)
+/// #                 }).unwrap().skip(1)
+/// #             }).and_then(|p| {
+/// #                 state.rule(Rule::c, p.skip(1).unwrap(), |_, pos| {
+/// #                     pos.skip(1)
+/// #                 })
+/// #             })
+/// #         })
+/// #     }
+/// # }
+/// parses_to! {
+///     parser: AbcParser,
+///     input:  "abcde",
+///     rule:   Rule::a,
+///     tokens: [
+///         a(0, 3, [
+///             b(1, 2)
+///         ]),
+///         c(4, 5)
+///     ]
+/// };
+/// # }
+/// ```
 #[macro_export]
 macro_rules! parses_to {
     ( parser: $parser:ident, input: $string:expr, rule: $rules:tt :: $rule:tt,

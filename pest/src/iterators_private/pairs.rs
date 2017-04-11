@@ -44,7 +44,6 @@ impl<R: RuleType, I: Input> Pairs<R, I> {
     /// # use std::rc::Rc;
     /// # use pest;
     /// # use pest::inputs::StringInput;
-    /// # use pest::iterators::Pairs;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {

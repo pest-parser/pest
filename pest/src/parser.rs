@@ -14,6 +14,6 @@ use super::RuleType;
 
 /// A `trait` that defines a `Parser`.
 pub trait Parser<R: RuleType> {
-    /// Parses `input` starting from `rule` and returns a `TokenIterator`.
+    /// Parses `input` starting from `rule`.
     fn parse<I: Input>(rule: R, input: Rc<I>) -> Result<Pairs<R, I>, Error<R, I>>;
 }

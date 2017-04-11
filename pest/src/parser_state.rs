@@ -32,7 +32,20 @@ pub struct ParserState<R: RuleType, I: Input> {
     pub stack: Vec<Span<I>>
 }
 
-
+/// Creates a `ParserState` from an `Input`, supplying it to a closure `f`.
+///
+/// # Examples
+///
+/// ```
+/// # use std::rc::Rc;
+/// # use pest;
+/// # use pest::inputs::StringInput;
+///
+/// let input = Rc::new(StringInput::new("".to_owned()));
+/// pest::state::<(), _, _>(input, |_, pos| {
+///     Ok(pos)
+/// }).unwrap();
+/// ```
 pub fn state<R: RuleType, I: Input, F>(
     input: Rc<I>,
     f: F
@@ -63,6 +76,27 @@ pub fn state<R: RuleType, I: Input, F>(
 }
 
 impl<R: RuleType, I: Input> ParserState<R, I> {
+    /// Wrapper needed to generate tokens.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # use pest::inputs::StringInput;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     a
+    /// }
+    ///
+    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let pairs: Vec<_> = pest::state(input, |state, pos| {
+    ///     state.rule(Rule::a, pos, |_, p| Ok(p))
+    /// }).unwrap().collect();
+    ///
+    /// assert_eq!(pairs.len(), 1);
+    /// ```
     #[inline]
     pub fn rule<F>(&mut self, rule: R, pos: Position<I>, f: F) -> Result<Position<I>, Position<I>>
     where
@@ -99,6 +133,38 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         result
     }
 
+    /// Wrapper which removes `Tokens` in case of a sequence's failure.
+    ///
+    /// Usually used in conjunction with
+    /// [`Position::sequence`](../inputs/struct.Position#method.sequence).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # use pest::inputs::StringInput;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     a
+    /// }
+    ///
+    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let pairs: Vec<_> = pest::state(input, |state, pos| {
+    ///     state.sequence(move |state| {
+    ///         pos.sequence(|p| {
+    ///             state.rule(Rule::a, p, |_, p| Ok(p)).and_then(|p| {
+    ///                 p.match_string("b")
+    ///             })
+    ///         })
+    ///     }).or_else(|p| {
+    ///         Ok(p)
+    ///     })
+    /// }).unwrap().collect();
+    ///
+    /// assert_eq!(pairs.len(), 0);
+    /// ```
     #[inline]
     pub fn sequence<F>(&mut self, f: F) -> Result<Position<I>, Position<I>>
     where
@@ -116,6 +182,32 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     }
 
 
+    /// Wrapper which stops `Token`s from being generated.
+    ///
+    /// Usually used in conjunction with
+    /// [`Position::lookahead`](../inputs/struct.Position#method.lookahead).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # use pest::inputs::StringInput;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     a
+    /// }
+    ///
+    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let pairs: Vec<_> = pest::state(input, |state, pos| {
+    ///     state.lookahead(true, move |state| {
+    ///         state.rule(Rule::a, pos, |_, p| Ok(p))
+    ///     })
+    /// }).unwrap().collect();
+    ///
+    /// assert_eq!(pairs.len(), 0);
+    /// ```
     #[inline]
     pub fn lookahead<F>(&mut self, is_positive: bool, f: F) -> Result<Position<I>, Position<I>>
     where
@@ -136,7 +228,29 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         result
     }
 
-
+    /// Wrapper which stops `Token`s from being generated according to `is_atomic`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # use pest::inputs::StringInput;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     a
+    /// }
+    ///
+    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let pairs: Vec<_> = pest::state(input, |state, pos| {
+    ///     state.atomic(true, move |state| {
+    ///         state.rule(Rule::a, pos, |_, p| Ok(p))
+    ///     })
+    /// }).unwrap().collect();
+    ///
+    /// assert_eq!(pairs.len(), 0);
+    /// ```
     #[inline]
     pub fn atomic<F>(&mut self, is_atomic: bool, f: F) -> Result<Position<I>, Position<I>>
     where
@@ -157,6 +271,33 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         result
     }
 
+    /// Returns whether the `ParserState` is in an atomic state.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # use pest::inputs::StringInput;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     a
+    /// }
+    ///
+    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let pairs: Vec<_> = pest::state::<(), _, _>(input, |state, pos| {
+    ///     assert!(!state.is_atomic());
+    ///
+    ///     state.atomic(true, move |state| {
+    ///         assert!(state.is_atomic());
+    ///
+    ///         Ok(pos)
+    ///     })
+    /// }).unwrap().collect();
+    ///
+    /// assert_eq!(pairs.len(), 0);
+    /// ```
     #[inline]
     pub fn is_atomic(&self) -> bool {
         self.is_atomic

@@ -46,7 +46,6 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     /// # use std::rc::Rc;
     /// # use pest;
     /// # use pest::inputs::StringInput;
-    /// # use pest::iterators::Pairs;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
@@ -76,7 +75,6 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     /// # use std::rc::Rc;
     /// # use pest;
     /// # use pest::inputs::StringInput;
-    /// # use pest::iterators::Pairs;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
@@ -106,7 +104,6 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     /// # use std::rc::Rc;
     /// # use pest;
     /// # use pest::inputs::StringInput;
-    /// # use pest::iterators::Pairs;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
@@ -114,7 +111,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     /// }
     ///
     /// let input = Rc::new(StringInput::new("".to_owned()));
-    /// let mut pair = pest::state(input, |state, pos| {
+    /// let pair = pest::state(input, |state, pos| {
     ///     // generating Token pair with Rule::a ...
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
     /// }).unwrap().next().unwrap();
@@ -140,7 +137,6 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     /// # use std::rc::Rc;
     /// # use pest;
     /// # use pest::inputs::StringInput;
-    /// # use pest::iterators::Pairs;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {

@@ -37,7 +37,8 @@ impl<I: Input> Position<I> {
     /// # use std::rc::Rc;
     /// # use pest::inputs::{Position, StringInput};
     /// let input = Rc::new(StringInput::new("".to_owned()));
-    /// let start = Position::from_start(input);
+    ///
+    /// Position::from_start(input);
     /// ```
     #[inline]
     pub fn from_start(input: Rc<I>) -> Position<I> {
