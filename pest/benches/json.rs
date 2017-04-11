@@ -192,12 +192,10 @@ impl Parser<Rule> for JsonParser {
                         p.repeat(|p| {
                             escape(p, state).or_else(|p| {
                                 p.sequence(|p| {
-                                    p.negate(|p| {
-                                        state.lookahead(false, move |_| {
-                                            p.lookahead(|p| {
-                                                p.match_string("\"").or_else(|p| {
-                                                    p.match_string("\\")
-                                                })
+                                    state.lookahead(false, move |_| {
+                                        p.lookahead(false, |p| {
+                                            p.match_string("\"").or_else(|p| {
+                                                p.match_string("\\")
                                             })
                                         })
                                     }).and_then(|p| {
@@ -368,22 +366,22 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        state(input, move |mut state| {
+        state(input, move |mut state, pos| {
             match rule {
-                Rule::json => json(state.start(), &mut state),
-                Rule::object => object(state.start(), &mut state),
-                Rule::pair => pair(state.start(), &mut state),
-                Rule::array => array(state.start(), &mut state),
-                Rule::value => value(state.start(), &mut state),
-                Rule::string => string(state.start(), &mut state),
-                Rule::escape => escape(state.start(), &mut state),
-                Rule::unicode => unicode(state.start(), &mut state),
-                Rule::hex => hex(state.start(), &mut state),
-                Rule::number => number(state.start(), &mut state),
-                Rule::int => int(state.start(), &mut state),
-                Rule::exp => exp(state.start(), &mut state),
-                Rule::bool => bool(state.start(), &mut state),
-                Rule::null => null(state.start(), &mut state)
+                Rule::json => json(pos, &mut state),
+                Rule::object => object(pos, &mut state),
+                Rule::pair => pair(pos, &mut state),
+                Rule::array => array(pos, &mut state),
+                Rule::value => value(pos, &mut state),
+                Rule::string => string(pos, &mut state),
+                Rule::escape => escape(pos, &mut state),
+                Rule::unicode => unicode(pos, &mut state),
+                Rule::hex => hex(pos, &mut state),
+                Rule::number => number(pos, &mut state),
+                Rule::int => int(pos, &mut state),
+                Rule::exp => exp(pos, &mut state),
+                Rule::bool => bool(pos, &mut state),
+                Rule::null => null(pos, &mut state)
             }
         })
     }

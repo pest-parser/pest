@@ -11,14 +11,14 @@ use std::str;
 
 use super::Input;
 
-/// A `struct` useful for matching in-memory `String`s.
+/// A `struct` useful for matching heap-allocated `String`s.
 #[derive(Debug)]
 pub struct StringInput {
     string: String
 }
 
 impl StringInput {
-    /// Creates a new `StringInput` from a `&str`.
+    /// Creates a new `StringInput` from a `String`.
     ///
     /// # Examples
     ///

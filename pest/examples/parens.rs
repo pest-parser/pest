@@ -3,8 +3,8 @@ extern crate pest;
 use std::io::{self, Write};
 use std::rc::Rc;
 
-use pest::inputs::{Input, Position, Span, StringInput};
-use pest::iterators::{Pair, Pairs};
+use pest::inputs::{Input, Position, StringInput};
+use pest::iterators::Pairs;
 use pest::{Error, Parser, ParserState, state};
 
 #[allow(non_camel_case_types)]
@@ -45,8 +45,8 @@ impl Parser<Rule> for ParenParser {
                             p.optional(|p| {
                                 state.sequence(move |state| {
                                     p.sequence(|p| {
-                                        state.lookahead(true, move |state| {
-                                            p.lookahead(|p| {
+                                        state.lookahead(true, move |_| {
+                                            p.lookahead(true, |p| {
                                                 p.match_string("(")
                                             })
                                         }).and_then(|p| {
@@ -65,10 +65,10 @@ impl Parser<Rule> for ParenParser {
             })
         }
 
-        state(input, move |mut state| {
+        state(input, move |mut state, pos| {
             match rule {
-                Rule::expr => expr(state.start(), &mut state),
-                Rule::paren => paren(state.start(), &mut state)
+                Rule::expr => expr(pos, &mut state),
+                Rule::paren => paren(pos, &mut state)
             }
         })
     }
@@ -77,7 +77,7 @@ impl Parser<Rule> for ParenParser {
 #[derive(Debug)]
 struct Paren(Vec<Paren>);
 
-fn expr<I: Input>(mut pairs: Pairs<Rule, I>) -> Vec<Paren> {
+fn expr<I: Input>(pairs: Pairs<Rule, I>) -> Vec<Paren> {
     pairs.filter(|p| p.rule() == Rule::paren).map(|p| Paren(expr(p.consume()))).collect()
 }
 
@@ -86,9 +86,9 @@ fn main() {
         let mut line = String::new();
 
         print!("> ");
-        io::stdout().flush();
+        io::stdout().flush().unwrap();
 
-        io::stdin().read_line(&mut line);
+        io::stdin().read_line(&mut line).unwrap();
         line.pop();
 
         let input = Rc::new(StringInput::new(line));

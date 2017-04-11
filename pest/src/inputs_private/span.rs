@@ -12,6 +12,9 @@ use std::rc::Rc;
 use super::input::Input;
 use super::position;
 
+/// A `struct` of a span over an `Input`. It is created from either
+/// [two `Position`s](struct.Position.html#method.span) or from a
+/// [`Pair`](../iterators/struct.Pair.html#method.span).
 pub struct Span<I: Input> {
     input: Rc<I>,
     start: usize,
@@ -28,16 +31,58 @@ pub fn new<I: Input>(input: Rc<I>, start: usize, end: usize) -> Span<I> {
 }
 
 impl<I: Input> Span<I> {
+    /// Returns the `Span`'s start position.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest::inputs::{Position, StringInput};
+    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// let start = Position::from_start(input);
+    /// let end = start.clone().match_string("ab").unwrap();
+    /// let span = start.span(end);
+    ///
+    /// assert_eq!(span.start(), 0);
+    /// ```
     #[inline]
     pub fn start(&self) -> usize {
         self.start
     }
 
+    /// Returns the `Span`'s end position.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest::inputs::{Position, StringInput};
+    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// let start = Position::from_start(input);
+    /// let end = start.clone().match_string("ab").unwrap();
+    /// let span = start.span(end);
+    ///
+    /// assert_eq!(span.end(), 2);
+    /// ```
     #[inline]
     pub fn end(&self) -> usize {
         self.end
     }
 
+    /// Splits the `Span` into a pair of `Position`s.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest::inputs::{Position, StringInput};
+    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// let start = Position::from_start(input);
+    /// let end = start.clone().match_string("ab").unwrap();
+    /// let span = start.clone().span(end.clone());
+    ///
+    /// assert_eq!(span.split(), (start, end));
+    /// ```
     #[inline]
     pub fn split(self) -> (position::Position<I>, position::Position<I>) {
         let pos1 = position::new(self.input.clone(), self.start);
@@ -46,6 +91,20 @@ impl<I: Input> Span<I> {
         (pos1, pos2)
     }
 
+    /// Captures a `&str` slice from the `Input` defined by the `Span`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest::inputs::{Position, StringInput};
+    /// let input = Rc::new(StringInput::new("abc".to_owned()));
+    /// let start = Position::from_start(input).skip(1).unwrap();
+    /// let end = start.clone().match_string("b").unwrap();
+    /// let span = start.span(end);
+    ///
+    /// assert_eq!(span.capture(), "b");
+    /// ```
     #[inline]
     pub fn capture(&self) -> &str {
         unsafe { self.input.slice(self.start, self.end) }
