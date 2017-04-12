@@ -12,7 +12,8 @@ use pest::{Error, Parser, ParserState, state};
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum Rule {
     expr,
-    paren
+    paren,
+    paren_end
 }
 
 struct ParenParser;
@@ -58,7 +59,9 @@ impl Parser<Rule> for ParenParser {
                                 })
                             })
                         }).and_then(|p| {
-                            p.match_string(")")
+                            state.rule(Rule::paren_end, p, |state, pos| {
+                                pos.match_string(")")
+                            })
                         })
                     })
                 })
@@ -68,7 +71,8 @@ impl Parser<Rule> for ParenParser {
         state(input, move |mut state, pos| {
             match rule {
                 Rule::expr => expr(pos, &mut state),
-                Rule::paren => paren(pos, &mut state)
+                Rule::paren => paren(pos, &mut state),
+                _ => unreachable!()
             }
         })
     }
