@@ -1,3 +1,6 @@
+# Largely based off of the example from travis-cargo.
+# https://github.com/huonw/travis-cargo
+
 sudo: false
 language: rust
 cache: cargo
@@ -28,19 +31,12 @@ before_script:
       cargo install --force cargo-travis &&
       export PATH=$HOME/.cargo/bin:$PATH
 script:
+  # Need a custom script because we are using cargo workspaces.
   - |
-      cd pest_derive &&
-      cargo build &&
-      cargo test &&
-      cd ../pest &&
-      cargo build &&
-      cargo test &&
-      cargo doc &&
-      cd ..
+      cargo build --all --verbose &&
+      cargo test --all --verbose &&
+      cargo doc --all --verbose
 after_success:
   - |
-      cd pest_derive &&
-      cargo coverage -m ../kcov &&
-      cd ../pest &&
-      cargo coverage -m ../kcov &&
+      cargo coverage -m ../kcov --all
       bash <(curl -s https://codecov.io/bash)
