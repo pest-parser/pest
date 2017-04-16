@@ -51,7 +51,6 @@ impl Input for StringInput {
         self.string.slice_unchecked(start, end)
     }
 
-    #[inline]
     unsafe fn line_col(&self, pos: usize) -> (usize, usize) {
         if pos > self.string.len() {
             panic!("position out of bounds");
@@ -96,7 +95,6 @@ impl Input for StringInput {
         line_col
     }
 
-    #[inline]
     unsafe fn line_of(&self, mut pos: usize) -> &str {
         if pos > self.string.len() {
             panic!("position out of bounds");
