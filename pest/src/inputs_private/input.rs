@@ -8,6 +8,14 @@
 use std::fmt::Debug;
 use std::ops::Range;
 
+// The use of unsafe in this trait is motivated by two reasons:
+//
+//   * manually checking UTF-8 borders for every position passed would make parsing orders of
+//     magnitude slower, so implementors are free to assume that positions passed here safe and call
+//     unsafe code
+//   * making methods unsafe will dissuade manual use here in favor of the Position API and also
+//     inform the user of potential undefined behavior
+
 /// A `trait` that defines an input for a `Parser`. It should be implemented by custom input sources
 /// as minimally and as efficiently possible. `unsafe` methods should not be called directly; in
 /// order to parse the `Input` manually use [`Position`](struct.Position.html) and

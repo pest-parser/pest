@@ -214,6 +214,8 @@ impl<I: Input> Position<I> {
     /// ```
     #[inline]
     pub fn match_string(self, string: &str) -> Result<Position<I>, Position<I>> {
+        // Matching is safe since, even if the string does not fall on UTF-8 borders, that
+        // particular slice is only used for comparison which will be handled correctly.
         if unsafe { self.input.match_string(string, self.pos) } {
             Ok(new(self.input, self.pos + string.len()))
         } else {
@@ -237,6 +239,8 @@ impl<I: Input> Position<I> {
     /// ```
     #[inline]
     pub fn match_insensitive(self, string: &str) -> Result<Position<I>, Position<I>> {
+        // Matching is safe since, even if the string does not fall on UTF-8 borders, that
+        // particular slice is only used for comparison which will be handled correctly.
         if unsafe { self.input.match_insensitive(string, self.pos) } {
             Ok(new(self.input, self.pos + string.len()))
         } else {
