@@ -59,7 +59,7 @@ impl Parser<Rule> for ParenParser {
                                 })
                             })
                         }).and_then(|p| {
-                            state.rule(Rule::paren_end, p, |state, pos| {
+                            state.rule(Rule::paren_end, p, |_, pos| {
                                 pos.match_string(")")
                             })
                         })
