@@ -489,8 +489,7 @@ impl<I: Input> Clone for Position<I> {
 
 impl<I: Input> PartialEq for Position<I> {
     fn eq(&self, other: &Position<I>) -> bool {
-        &*self.input as *const I == &*other.input as *const I &&
-        self.pos == other.pos
+        self.input.ptr_eq(other.input) && self.pos == other.pos
     }
 }
 
@@ -498,7 +497,7 @@ impl<I: Input> Eq for Position<I> {}
 
 impl<I: Input> PartialOrd for Position<I> {
     fn partial_cmp(&self, other: &Position<I>) -> Option<Ordering> {
-        if &*self.input as *const I == &*other.input as *const I {
+        if self.input.ptr_eq(other.input) {
             self.pos.partial_cmp(&other.pos)
         } else {
             None
