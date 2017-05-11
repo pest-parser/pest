@@ -10,7 +10,7 @@ use std::rc::Rc;
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::token_iterator::{self, TokenIterator};
-use super::super::inputs_private::Input;
+use super::super::inputs::Input;
 use super::super::RuleType;
 
 /// A `struct` containing `Pairs`. It is created in [`pest::state`](../fn.state.html).

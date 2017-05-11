@@ -9,8 +9,8 @@ use std::rc::Rc;
 
 use super::error::Error;
 use super::inputs::{Input, Position, Span};
-use super::inputs_private::position;
-use super::iterators_private::{pairs, QueueableToken};
+use super::inputs::position;
+use super::iterators::{pairs, QueueableToken};
 use super::RuleType;
 
 /// An `enum` specifying the current lookahead status of a `ParserState`.

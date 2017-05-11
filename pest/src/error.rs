@@ -226,8 +226,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use super::super::inputs::StringInput;
-    use super::super::inputs_private::position;
+    use super::super::inputs::{position, StringInput};
 
     #[test]
     fn display_parsing_error() {
