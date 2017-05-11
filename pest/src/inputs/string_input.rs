@@ -30,7 +30,7 @@ impl StringInput {
     /// ```
     pub fn new(string: String) -> StringInput {
         StringInput {
-            string: string
+            string
         }
     }
 }
@@ -70,11 +70,11 @@ impl Input for StringInput {
 
                         if pos == 1 {
                             pos -= 1;
-                            line_col = (line_col.0 + 1, 1);
                         } else {
                             pos -= 2;
-                            line_col = (line_col.0 + 1, 1);
                         }
+
+                        line_col = (line_col.0 + 1, 1);
                     } else {
                         pos -= 1;
                         line_col = (line_col.0, line_col.1 + 1);

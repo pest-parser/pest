@@ -23,8 +23,8 @@ pub struct Position<I: Input> {
 
 pub fn new<I: Input>(input: Rc<I>, pos: usize) -> Position<I> {
     Position {
-        input: input,
-        pos: pos
+        input,
+        pos
     }
 }
 

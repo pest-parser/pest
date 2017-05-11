@@ -44,32 +44,32 @@ impl<R: RuleType, I: Input> Iterator for TokenIterator<R, I> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index == self.end {
-            None
-        } else {
-            let token = match self.queue[self.index] {
-                QueueableToken::Start { pair, pos } => {
-                    let rule = match self.queue[pair] {
-                        QueueableToken::End { rule, .. } => rule,
-                        _ => unreachable!()
-                    };
-
-                    Token::Start {
-                        rule: rule,
-                        pos: position::new(self.input.clone(), pos)
-                    }
-                }
-                QueueableToken::End { rule, pos } => {
-                    Token::End {
-                        rule: rule,
-                        pos: position::new(self.input.clone(), pos)
-                    }
-                }
-            };
-
-            self.index += 1;
-
-            Some(token)
+            return None;
         }
+
+        let token = match self.queue[self.index] {
+            QueueableToken::Start { pair, pos } => {
+                let rule = match self.queue[pair] {
+                    QueueableToken::End { rule, .. } => rule,
+                    _ => unreachable!()
+                };
+
+                Token::Start {
+                    rule: rule,
+                    pos: position::new(self.input.clone(), pos)
+                }
+            }
+            QueueableToken::End { rule, pos } => {
+                Token::End {
+                    rule: rule,
+                    pos: position::new(self.input.clone(), pos)
+                }
+            }
+        };
+
+        self.index += 1;
+
+        Some(token)
     }
 }
 
