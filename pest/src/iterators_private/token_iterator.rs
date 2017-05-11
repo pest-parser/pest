@@ -15,6 +15,7 @@ use super::super::token::Token;
 /// A `struct` containing `Token`s. It is returned by either
 /// [`Pair::into_iter`](struct.Pair.html#method.into_iter) or
 /// [`Pairs::into_iter`](struct.Pairs.html#method.into_iter)
+#[derive(Debug)]
 pub struct TokenIterator<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,

@@ -19,6 +19,7 @@ use super::super::RuleType;
 /// same `Rule`, with the condition that all `Token`s between them can form such pairs as well.
 /// This is similar to the [brace matching problem](https://en.wikipedia.org/wiki/Brace_matching) in
 /// editors.
+#[derive(Debug)]
 pub struct Pair<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
