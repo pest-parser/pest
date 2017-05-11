@@ -436,8 +436,8 @@ fn consume(pair: Pair<Rule, StringInput>) -> Json {
 fn null() {
     parses_to! {
         parser: JsonParser,
-        input:  "null",
-        rule:   Rule::null,
+        input: "null",
+        rule: Rule::null,
         tokens: [
             null(0, 4)
         ]
@@ -448,8 +448,8 @@ fn null() {
 fn bool() {
     parses_to! {
         parser: JsonParser,
-        input:  "false",
-        rule:   Rule::bool,
+        input: "false",
+        rule: Rule::bool,
         tokens: [
             bool(0, 5)
         ]
@@ -460,8 +460,8 @@ fn bool() {
 fn number_zero() {
     parses_to! {
         parser: JsonParser,
-        input:  "0",
-        rule:   Rule::number,
+        input: "0",
+        rule: Rule::number,
         tokens: [
             number(0, 1)
         ]
@@ -472,8 +472,8 @@ fn number_zero() {
 fn float() {
     parses_to! {
         parser: JsonParser,
-        input:  "100.001",
-        rule:   Rule::number,
+        input: "100.001",
+        rule: Rule::number,
         tokens: [
             number(0, 7)
         ]
@@ -484,8 +484,8 @@ fn float() {
 fn float_with_exp() {
     parses_to! {
         parser: JsonParser,
-        input:  "100.001E+100",
-        rule:   Rule::number,
+        input: "100.001E+100",
+        rule: Rule::number,
         tokens: [
             number(0, 12)
         ]
@@ -496,8 +496,8 @@ fn float_with_exp() {
 fn number_minus_zero() {
     parses_to! {
         parser: JsonParser,
-        input:  "-0",
-        rule:   Rule::number,
+        input: "-0",
+        rule: Rule::number,
         tokens: [
             number(0, 2)
         ]
@@ -508,8 +508,8 @@ fn number_minus_zero() {
 fn string_with_escapes() {
     parses_to! {
         parser: JsonParser,
-        input:  "\"asd\\u0000\\\"\"",
-        rule:   Rule::string,
+        input: "\"asd\\u0000\\\"\"",
+        rule: Rule::string,
         tokens: [
             string(0, 13)
         ]
@@ -520,8 +520,8 @@ fn string_with_escapes() {
 fn array_empty() {
     parses_to! {
         parser: JsonParser,
-        input:  "[ ]",
-        rule:   Rule::array,
+        input: "[ ]",
+        rule: Rule::array,
         tokens: [
             array(0, 3)
         ]
@@ -532,13 +532,13 @@ fn array_empty() {
 fn array() {
     parses_to! {
         parser: JsonParser,
-        input:  "[0.0e1, false, null, \"a\", [0]]",
-        rule:   Rule::array,
+        input: "[0.0e1, false, null, \"a\", [0]]",
+        rule: Rule::array,
         tokens: [
             array(0, 30, [
-                value( 1,  6, [ number(1,  6)]),
-                value( 8, 13, [   bool(8, 13)]),
-                value(15, 19, [  null(15, 19)]),
+                value(1,  6, [number(1, 6)]),
+                value(8, 13, [bool(8, 13)]),
+                value(15, 19, [null(15, 19)]),
                 value(21, 24, [string(21, 24)]),
                 value(26, 29, [
                     array(26, 29, [
@@ -554,13 +554,13 @@ fn array() {
 fn object() {
     parses_to! {
         parser: JsonParser,
-        input:  "{\"a\" : 3, \"b\" : [{}, 3]}",
-        rule:   Rule::object,
+        input: "{\"a\" : 3, \"b\" : [{}, 3]}",
+        rule: Rule::object,
         tokens: [
             object(0, 24, [
                 pair(1, 8, [
                     string(1, 4),
-                    value( 7, 8, [number(7, 8)])
+                    value(7, 8, [number(7, 8)])
                 ]),
                 pair(10, 29, [
                     string(10, 13),
