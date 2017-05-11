@@ -13,14 +13,16 @@ use super::inputs_private::position;
 use super::iterators_private::{pairs, QueueableToken};
 use super::RuleType;
 
-#[derive(Clone, Copy, Eq, PartialEq)]
-enum Lookahead {
+/// An `enum` specifying the current lookahead status of a `ParserState`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Lookahead {
     Positive,
     Negative,
     None
 }
 
 /// A `struct` which contains the complete state of a `Parser`.
+#[derive(Debug)]
 pub struct ParserState<R: RuleType, I: Input> {
     queue: Vec<QueueableToken<R>>,
     lookahead: Lookahead,

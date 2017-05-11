@@ -127,7 +127,7 @@ impl<I: Input> Clone for Span<I> {
 
 impl<I: Input> PartialEq for Span<I> {
     fn eq(&self, other: &Span<I>) -> bool {
-        self.input.ptr_eq(other.input) &&
+        Rc::ptr_eq(&self.input, &other.input) &&
         self.start == other.start &&
         self.end == other.end
     }

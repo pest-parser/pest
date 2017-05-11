@@ -14,6 +14,7 @@ use super::super::inputs_private::Input;
 use super::super::RuleType;
 
 /// A `struct` containing `Pairs`. It is created in [`pest::state`](../fn.state.html).
+#[derive(Debug)]
 pub struct Pairs<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
