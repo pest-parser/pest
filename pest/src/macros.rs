@@ -247,8 +247,8 @@ mod tests {
     fn parses_to() {
         parses_to! {
             parser: AbcParser,
-            input:  "abcde",
-            rule:   Rule::a,
+            input: "abcde",
+            rule: Rule::a,
             tokens: [
                 a(0, 3, [
                     b(1, 2)
