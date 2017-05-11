@@ -8,6 +8,7 @@ documentation = "https://docs.rs/pest"
 keywords = ["pest", "parser", "peg", "grammar"]
 categories = ["parsing"]
 license = "MPL-2.0"
+readme = "../README.md"
 
 [badges]
 travis-ci = { repository = "pest-parser/pest" }
