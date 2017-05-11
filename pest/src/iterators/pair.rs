@@ -10,7 +10,7 @@ use std::rc::Rc;
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::token_iterator::{self, TokenIterator};
-use super::super::inputs_private::{Input, span, Span};
+use super::super::inputs::{Input, span, Span};
 use super::super::RuleType;
 
 /// A `struct` containing a matching pair of `Token`s and everything between them.
