@@ -29,10 +29,10 @@ pub fn new<R: RuleType, I: Input>(
     end: usize
 ) -> Pairs<R, I> {
     Pairs {
-        queue: queue,
-        input: input,
-        start: start,
-        end: end
+        queue,
+        input,
+        start,
+        end
     }
 }
 
@@ -82,18 +82,18 @@ impl<R: RuleType, I: Input> Iterator for Pairs<R, I> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.start >= self.end {
-            None
-        } else {
-            let pair = pair::new(
-                self.queue.clone(),
-                self.input.clone(),
-                self.start
-            );
-
-            self.start = self.pair() + 1;
-
-            Some(pair)
+            return None;
         }
+
+        let pair = pair::new(
+            self.queue.clone(),
+            self.input.clone(),
+            self.start
+        );
+
+        self.start = self.pair() + 1;
+
+        Some(pair)
     }
 }
 

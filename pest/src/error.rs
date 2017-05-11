@@ -51,7 +51,7 @@ fn message<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
                 }
                 (false, true) => format!("unexpected {}", enumerate(negatives)),
                 (true, false) => format!("expected {}", enumerate(positives)),
-                (true, true) => "inexplicit parsing error".to_owned()
+                (true, true) => "unknown parsing error".to_owned()
             }
         }
         Error::CustomErrorPos { ref message, .. } => message.to_owned(),

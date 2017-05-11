@@ -24,9 +24,9 @@ pub struct Span<I: Input> {
 #[inline]
 pub fn new<I: Input>(input: Rc<I>, start: usize, end: usize) -> Span<I> {
     Span {
-        input: input,
-        start: start,
-        end: end
+        input,
+        start,
+        end
     }
 }
 

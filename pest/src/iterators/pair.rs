@@ -32,9 +32,9 @@ pub fn new<R: RuleType, I: Input>(
     start: usize
 ) -> Pair<R, I> {
     Pair {
-        queue: queue,
-        input: input,
-        start: start
+        queue,
+        input,
+        start
     }
 }
 
