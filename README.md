@@ -14,7 +14,7 @@ pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
 generator with *simplicity* and *speed* in mind.
 
 ## Usage
-You will need Cargo and Rust, follow the [installation instructions](https://www.rust-lang.org/en-US/downloads.html) 
+You will need Cargo and Rust, follow the [installation instructions](https://www.rust-lang.org/en-US/downloads.html)
 to get them.
 
 Add the following to `Cargo.toml`:
@@ -105,8 +105,8 @@ pest is the youngest among them, but is continuously improving.
 
 ## Roadmap
 
-* [Packrat parsing](issues/7)
-* [parsing parallelization](issues/25)
+* [Packrat parsing](https://github.com/pest-parser/pest/issues/7)
+* [parsing parallelization](https://github.com/pest-parser/pest/issues/25)
 
 ## FAQ
 
