@@ -21,7 +21,7 @@ macro_rules! consumes_to {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
-                if rule != $rules::$name && pos.pos() != $start {
+                if rule != $rules::$name || pos.pos() != $start {
                     panic!("{}", message);
                 }
             },
@@ -35,7 +35,7 @@ macro_rules! consumes_to {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
-                if rule != $rules::$name && pos.pos() != $end {
+                if rule != $rules::$name || pos.pos() != $end {
                     panic!("{}", message);
                 }
             },
@@ -52,7 +52,7 @@ macro_rules! consumes_to {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
-                if rule != $rules::$name && pos.pos() != $start {
+                if rule != $rules::$name || pos.pos() != $start {
                     panic!("{}", message);
                 }
             },
@@ -66,7 +66,7 @@ macro_rules! consumes_to {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
-                if rule != $rules::$name && pos.pos() != $end {
+                if rule != $rules::$name || pos.pos() != $end {
                     panic!("{}", message);
                 }
             },
@@ -84,7 +84,7 @@ macro_rules! consumes_to {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
-                if rule != $rules::$name && pos.pos() != $start {
+                if rule != $rules::$name || pos.pos() != $start {
                     panic!("{}", message);
                 }
             },
@@ -100,7 +100,7 @@ macro_rules! consumes_to {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
-                if rule != $rules::$name && pos.pos() != $end {
+                if rule != $rules::$name || pos.pos() != $end {
                     panic!("{}", message);
                 }
             },
@@ -118,7 +118,7 @@ macro_rules! consumes_to {
                 let message = format!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
-                if rule != $rules::$name && pos.pos() != $start {
+                if rule != $rules::$name || pos.pos() != $start {
                     panic!("{}", message);
                 }
             },
@@ -134,7 +134,7 @@ macro_rules! consumes_to {
                 let message = format!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                                       expected, rule, pos.pos());
 
-                if rule != $rules::$name && pos.pos() != $end {
+                if rule != $rules::$name || pos.pos() != $end {
                     panic!("{}", message);
                 }
             },
