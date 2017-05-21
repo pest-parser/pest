@@ -8,12 +8,12 @@
 #[macro_use]
 extern crate pest;
 
-use std::collections::HashMap;
 use std::rc::Rc;
 
-use pest::inputs::{Input, Position, Span, StringInput};
+use pest::inputs::{Input, Position, StringInput};
 use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
+use pest::prec_climber::{Assoc, Operator, PrecClimber};
 
 #[allow(non_camel_case_types)]
 #[allow(dead_code)]
@@ -68,18 +68,16 @@ impl Parser<Rule> for CalculatorParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::primary, pos, |state, pos| {
-                state.sequence(move |state| {
-                    pos.sequence(|p| {
-                        p.match_string("(").and_then(|p| {
-                            expression(p, state)
-                        }).and_then(|p| {
-                            p.match_string(")")
-                        })
+            state.sequence(move |state| {
+                pos.sequence(|p| {
+                    p.match_string("(").and_then(|p| {
+                        expression(p, state)
+                    }).and_then(|p| {
+                        p.match_string(")")
                     })
-                }).or_else(|p| {
-                    number(p, state)
                 })
+            }).or_else(|p| {
+                number(p, state)
             })
         }
 
@@ -88,7 +86,7 @@ impl Parser<Rule> for CalculatorParser {
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
             state.rule(Rule::number, pos, |state, pos| {
-                state.sequence(move |state| {
+                state.sequence(move |_| {
                     pos.sequence(|p| {
                         p.optional(|p| {
                             p.match_string("-")
@@ -112,7 +110,7 @@ impl Parser<Rule> for CalculatorParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::plus, pos, |state, pos| {
+            state.rule(Rule::plus, pos, |_, pos| {
                 pos.match_string("+")
             })
         }
@@ -121,7 +119,7 @@ impl Parser<Rule> for CalculatorParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::minus, pos, |state, pos| {
+            state.rule(Rule::minus, pos, |_, pos| {
                 pos.match_string("-")
             })
         }
@@ -130,7 +128,7 @@ impl Parser<Rule> for CalculatorParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::times, pos, |state, pos| {
+            state.rule(Rule::times, pos, |_, pos| {
                 pos.match_string("*")
             })
         }
@@ -139,7 +137,7 @@ impl Parser<Rule> for CalculatorParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::divide, pos, |state, pos| {
+            state.rule(Rule::divide, pos, |_, pos| {
                 pos.match_string("/")
             })
         }
@@ -148,7 +146,7 @@ impl Parser<Rule> for CalculatorParser {
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(Rule::power, pos, |state, pos| {
+            state.rule(Rule::power, pos, |_, pos| {
                 pos.match_string("^")
             })
         }
@@ -168,46 +166,27 @@ impl Parser<Rule> for CalculatorParser {
     }
 }
 
-//fn consume(pair: Pair<Rule, StringInput>) -> Json {
-//    fn value(pair: Pair<Rule, StringInput>) -> Json {
-//        let pair = pair.consume().next().unwrap();
-//
-//        match pair.rule() {
-//            Rule::null => Json::Null,
-//            Rule::bool => {
-//                match pair.span().capture() {
-//                    "false" => Json::Bool(false),
-//                    "true" => Json::Bool(true),
-//                    _ => unreachable!()
-//                }
-//            }
-//            Rule::number => {
-//                Json::Number(pair.span().capture().parse().unwrap())
-//            }
-//            Rule::string => {
-//                Json::String(pair.span())
-//            }
-//            Rule::array => {
-//                Json::Array(pair.consume().map(|p| value(p)).collect())
-//            }
-//            Rule::object => {
-//                let pairs = pair.consume().map(|p| {
-//                    let mut pair = p.consume();
-//
-//                    let key = pair.next().unwrap().span();
-//                    let value = value(pair.next().unwrap());
-//
-//                    (key, value)
-//                });
-//
-//                Json::Object(pairs.collect())
-//            }
-//            _ => unreachable!()
-//        }
-//    }
-//
-//    value(pair)
-//}
+fn consume(pair: Pair<Rule, StringInput>, climber: &PrecClimber<Rule>) -> i32 {
+    let primary = |pair| {
+        consume(pair, climber)
+    };
+    let infix = |lhs: i32, op: Pair<Rule, StringInput>, rhs: i32| {
+        match op.rule() {
+            Rule::plus => lhs + rhs,
+            Rule::minus => lhs - rhs,
+            Rule::times => lhs * rhs,
+            Rule::divide => lhs / rhs,
+            Rule::power => lhs.pow(rhs as u32),
+            _ => unreachable!()
+        }
+    };
+
+    match pair.rule() {
+        Rule::expression => climber.climb(pair.consume(), primary, infix),
+        Rule::number => pair.span().capture().parse().unwrap(),
+        _ => unreachable!()
+    }
+}
 
 #[test]
 fn number() {
@@ -217,9 +196,7 @@ fn number() {
         rule: Rule::expression,
         tokens: [
             expression(0, 3, [
-                primary(0, 3, [
-                    number(0, 3)
-                ])
+                number(0, 3)
             ])
         ]
     };
@@ -233,18 +210,51 @@ fn parens() {
         rule: Rule::expression,
         tokens: [
             expression(0, 7, [
-                primary(0, 7, [
-                    expression(1, 6, [
-                        primary(1, 6, [
-                            expression(2, 5, [
-                                primary(2, 5, [
-                                    number(2, 5)
-                                ])
-                            ])
-                        ])
+                expression(1, 6, [
+                    expression(2, 5, [
+                        number(2, 5)
                     ])
                 ])
             ])
         ]
     };
+}
+
+#[test]
+fn expression() {
+    parses_to! {
+        parser: CalculatorParser,
+        input: "-12+3*(4-9)^7^2",
+        rule: Rule::expression,
+        tokens: [
+            expression(0, 15, [
+                number(0, 3),
+                plus(3, 4),
+                number(4, 5),
+                times(5, 6),
+                expression(7, 10, [
+                    number(7, 8),
+                    minus(8, 9),
+                    number(9, 10)
+                ]),
+                power(11, 12),
+                number(12, 13),
+                power(13, 14),
+                number(14, 15)
+            ])
+        ]
+    };
+}
+
+#[test]
+fn prec_climb() {
+    let input = Rc::new(StringInput::new("-12+3*(4-9)^3^2".to_owned()));
+    let climber = PrecClimber::new(vec![
+        Operator::new(Rule::plus, Assoc::Left) | Operator::new(Rule::minus, Assoc::Left),
+        Operator::new(Rule::times, Assoc::Left) | Operator::new(Rule::divide, Assoc::Left),
+        Operator::new(Rule::power, Assoc::Right)
+    ]);
+
+    let pair = CalculatorParser::parse(Rule::expression, input.clone()).unwrap().next().unwrap();
+    assert_eq!(-5859387, consume(pair, &climber));
 }

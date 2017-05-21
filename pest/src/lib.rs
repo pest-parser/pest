@@ -16,6 +16,7 @@ pub mod iterators;
 mod macros;
 mod parser;
 mod parser_state;
+pub mod prec_climber;
 mod token;
 
 /// A `trait` which parser rules must implement.

@@ -135,6 +135,25 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         result
     }
 
+    fn track(&mut self, rule: R, pos: usize) {
+        if self.is_atomic {
+            return;
+        }
+
+        let mut attempts = if self.lookahead != Lookahead::Negative {
+            &mut self.pos_attempts
+        } else {
+            &mut self.neg_attempts
+        };
+
+        if pos > self.attempt_pos {
+            attempts.clear();
+            self.attempt_pos = pos;
+        }
+
+        attempts.push(rule);
+    }
+
     /// Wrapper which removes `Tokens` in case of a sequence's failure.
     ///
     /// Usually used in conjunction with
@@ -303,24 +322,5 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     #[inline]
     pub fn is_atomic(&self) -> bool {
         self.is_atomic
-    }
-
-    fn track(&mut self, rule: R, pos: usize) {
-        if self.is_atomic {
-            return;
-        }
-
-        let mut attempts = if self.lookahead != Lookahead::Negative {
-            &mut self.pos_attempts
-        } else {
-            &mut self.neg_attempts
-        };
-
-        if pos > self.attempt_pos {
-            attempts.clear();
-            self.attempt_pos = pos;
-        }
-
-        attempts.push(rule);
     }
 }

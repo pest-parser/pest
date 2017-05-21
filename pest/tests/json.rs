@@ -562,7 +562,7 @@ fn object() {
                     string(1, 4),
                     value(7, 8, [number(7, 8)])
                 ]),
-                pair(10, 29, [
+                pair(10, 23, [
                     string(10, 13),
                     value(16, 23, [
                         array(16, 23, [
