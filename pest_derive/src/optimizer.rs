@@ -26,91 +26,115 @@ fn push_string(option: Option<String>, string: String) -> Option<String> {
 }
 
 fn concat_string_sequences(rules: Vec<Rule>) -> Vec<Rule> {
-    map_all_exprs(rules, |expr| {
-        match expr {
-            Expr::Seq(exprs) => {
-                let mut last_string = None;
-                let mut concatenated = vec![];
-
-                for expr in exprs {
+    rules.into_iter().map(|rule| {
+        match rule {
+            Rule { name, ty, expr } => Rule {
+                name,
+                ty,
+                expr: expr.map(|expr| {
                     match expr {
-                        Expr::Str(string) => last_string = push_string(last_string, string),
-                        expr => {
-                            if let Some(string) = last_string {
-                                concatenated.push(Expr::Str(string));
-                                last_string = None;
+                        Expr::Seq(exprs) => {
+                            let mut last_string = None;
+                            let mut concatenated = vec![];
+
+                            for expr in exprs {
+                                match expr {
+                                    Expr::Str(string) => last_string = push_string(last_string, string),
+                                    expr => {
+                                        if let Some(string) = last_string {
+                                            concatenated.push(Expr::Str(string));
+                                            last_string = None;
+                                        }
+
+                                        concatenated.push(expr);
+                                    }
+                                };
                             }
 
-                            concatenated.push(expr);
+                            if let Some(string) = last_string {
+                                concatenated.push(Expr::Str(string));
+                            }
+
+                            Expr::Seq(concatenated)
                         }
-                    };
-                }
-
-                if let Some(string) = last_string {
-                    concatenated.push(Expr::Str(string));
-                }
-
-                Expr::Seq(concatenated)
+                        expr => expr
+                    }
+                })
             }
-            expr => expr
         }
-    })
+    }).collect()
 }
 
 fn concat_insensitive_sequences(rules: Vec<Rule>) -> Vec<Rule> {
-    map_all_exprs(rules, |expr| {
-        match expr {
-            Expr::Seq(exprs) => {
-                let mut last_string = None;
-                let mut concatenated = vec![];
-
-                for expr in exprs {
+    rules.into_iter().map(|rule| {
+        match rule {
+            Rule { name, ty, expr } => Rule {
+                name,
+                ty,
+                expr: expr.map(|expr| {
                     match expr {
-                        Expr::Insens(string) => last_string = push_string(last_string, string),
-                        expr => {
-                            if let Some(string) = last_string {
-                                concatenated.push(Expr::Insens(string));
-                                last_string = None;
+                        Expr::Seq(exprs) => {
+                            let mut last_string = None;
+                            let mut concatenated = vec![];
+
+                            for expr in exprs {
+                                match expr {
+                                    Expr::Insens(string) => last_string = push_string(last_string, string),
+                                    expr => {
+                                        if let Some(string) = last_string {
+                                            concatenated.push(Expr::Insens(string));
+                                            last_string = None;
+                                        }
+
+                                        concatenated.push(expr);
+                                    }
+                                };
                             }
 
-                            concatenated.push(expr);
+                            if let Some(string) = last_string {
+                                concatenated.push(Expr::Insens(string));
+                            }
+
+                            Expr::Seq(concatenated)
                         }
-                    };
-                }
-
-                if let Some(string) = last_string {
-                    concatenated.push(Expr::Insens(string));
-                }
-
-                Expr::Seq(concatenated)
+                        expr => expr
+                    }
+                })
             }
-            expr => expr
         }
-    })
+    }).collect()
 }
 
 fn extract_common_choice_sequences(rules: Vec<Rule>) -> Vec<Rule> {
-    map_all_exprs(rules, |expr| {
-        match expr {
-            Expr::Choice(exprs) => {
-                let choice = Expr::Choice(extract_common_sequences(exprs));
-
-                map_expr(choice, &mut |expr| {
+    rules.into_iter().map(|rule| {
+        match rule {
+            Rule { name, ty, expr } => Rule {
+                name,
+                ty,
+                expr: expr.map(|expr| {
                     match expr {
                         Expr::Choice(exprs) => {
-                            if exprs.len() == 1 {
-                                exprs[0].clone()
-                            } else {
-                                Expr::Choice(exprs)
-                            }
+                            let choice = Expr::Choice(extract_common_sequences(exprs));
+
+                            choice.map(|expr| {
+                                match expr {
+                                    Expr::Choice(exprs) => {
+                                        if exprs.len() == 1 {
+                                            exprs[0].clone()
+                                        } else {
+                                            Expr::Choice(exprs)
+                                        }
+                                    },
+                                    expr => expr
+                                }
+                            })
                         },
                         expr => expr
                     }
                 })
-            },
-            expr => expr
+            }
         }
-    })
+    }).collect()
 }
 
 fn extract_common_sequences(choices: Vec<Expr>) -> Vec<Expr> {
@@ -162,7 +186,8 @@ fn extract_common_sequences(choices: Vec<Expr>) -> Vec<Expr> {
 
             let common = extract_common_sequences(common);
 
-            let mut skipped = skip(exprs[0].clone(), extract_common_sequences(choices.clone().split_off(i)));
+            let mut skipped = skip(exprs[0].clone(),
+                                   extract_common_sequences(choices.clone().split_off(i)));
 
             let mut extracted = if common.len() == 1 {
                 match common[0].clone() {
@@ -204,35 +229,31 @@ mod tests {
         let rules = vec![
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Silent,
-                body: Body::Normal(
-                    Expr::Choice(vec![
-                        Expr::Str("a".to_owned()),
-                        Expr::Seq(vec![
-                            Expr::Str("b".to_owned()),
-                            Expr::Str("c".to_owned()),
-                            Expr::Insens("d".to_owned()),
-                            Expr::Str("e".to_owned()),
-                            Expr::Str("f".to_owned())
-                        ])
+                ty: RuleType::Silent,
+                expr: Expr::Choice(vec![
+                    Expr::Str("a".to_owned()),
+                    Expr::Seq(vec![
+                        Expr::Str("b".to_owned()),
+                        Expr::Str("c".to_owned()),
+                        Expr::Insens("d".to_owned()),
+                        Expr::Str("e".to_owned()),
+                        Expr::Str("f".to_owned())
                     ])
-                )
+                ])
             }
         ];
         let concatenated = vec![
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Silent,
-                body: Body::Normal(
-                    Expr::Choice(vec![
-                        Expr::Str("a".to_owned()),
-                        Expr::Seq(vec![
-                            Expr::Str("bc".to_owned()),
-                            Expr::Insens("d".to_owned()),
-                            Expr::Str("ef".to_owned())
-                        ])
+                ty: RuleType::Silent,
+                expr: Expr::Choice(vec![
+                    Expr::Str("a".to_owned()),
+                    Expr::Seq(vec![
+                        Expr::Str("bc".to_owned()),
+                        Expr::Insens("d".to_owned()),
+                        Expr::Str("ef".to_owned())
                     ])
-                )
+                ])
             }
         ];
 
@@ -244,35 +265,31 @@ mod tests {
         let rules = vec![
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Silent,
-                body: Body::Normal(
-                    Expr::Choice(vec![
-                        Expr::Str("a".to_owned()),
-                        Expr::Seq(vec![
-                            Expr::Insens("b".to_owned()),
-                            Expr::Insens("c".to_owned()),
-                            Expr::Str("d".to_owned()),
-                            Expr::Insens("e".to_owned()),
-                            Expr::Insens("f".to_owned())
-                        ])
+                ty: RuleType::Silent,
+                expr: Expr::Choice(vec![
+                    Expr::Str("a".to_owned()),
+                    Expr::Seq(vec![
+                        Expr::Insens("b".to_owned()),
+                        Expr::Insens("c".to_owned()),
+                        Expr::Str("d".to_owned()),
+                        Expr::Insens("e".to_owned()),
+                        Expr::Insens("f".to_owned())
                     ])
-                )
+                ])
             }
         ];
         let concatenated = vec![
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Silent,
-                body: Body::Normal(
-                    Expr::Choice(vec![
-                        Expr::Str("a".to_owned()),
-                        Expr::Seq(vec![
-                            Expr::Insens("bc".to_owned()),
-                            Expr::Str("d".to_owned()),
-                            Expr::Insens("ef".to_owned())
-                        ])
+                ty: RuleType::Silent,
+                expr: Expr::Choice(vec![
+                    Expr::Str("a".to_owned()),
+                    Expr::Seq(vec![
+                        Expr::Insens("bc".to_owned()),
+                        Expr::Str("d".to_owned()),
+                        Expr::Insens("ef".to_owned())
                     ])
-                )
+                ])
             }
         ];
 
@@ -475,34 +492,30 @@ mod tests {
         let rules = vec![
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Silent,
-                body: Body::Normal(
-                    Expr::Choice(vec![
-                        Expr::Seq(vec![
-                            Expr::Str("a".to_owned()),
-                            Expr::Str("b".to_owned())
-                        ]),
-                        Expr::Seq(vec![
-                            Expr::Str("a".to_owned()),
-                            Expr::Str("c".to_owned())
-                        ])
+                ty: RuleType::Silent,
+                expr: Expr::Choice(vec![
+                    Expr::Seq(vec![
+                        Expr::Str("a".to_owned()),
+                        Expr::Str("b".to_owned())
+                    ]),
+                    Expr::Seq(vec![
+                        Expr::Str("a".to_owned()),
+                        Expr::Str("c".to_owned())
                     ])
-                )
+                ])
             }
         ];
         let optimized = vec![
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Silent,
-                body: Body::Normal(
-                    Expr::Seq(vec![
-                        Expr::Str("a".to_owned()),
-                        Expr::Choice(vec![
-                            Expr::Str("b".to_owned()),
-                            Expr::Str("c".to_owned())
-                        ])
+                ty: RuleType::Silent,
+                expr: Expr::Seq(vec![
+                    Expr::Str("a".to_owned()),
+                    Expr::Choice(vec![
+                        Expr::Str("b".to_owned()),
+                        Expr::Str("c".to_owned())
                     ])
-                )
+                ])
             }
         ];
     }

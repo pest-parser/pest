@@ -15,59 +15,50 @@ pub fn validate(rules: Vec<Rule>) {
     left_recursion(to_hash_map(rules));
 }
 
-fn to_hash_map(rules: Vec<Rule>) -> HashMap<Ident, Body> {
+fn to_hash_map(rules: Vec<Rule>) -> HashMap<Ident, Expr> {
     let mut hash_map = HashMap::new();
 
-    map_rules(rules, |rule| {
+    for rule in rules {
         if hash_map.contains_key(&rule.name) {
             panic!("Rule {} is defined multiple times", rule.name);
         } else {
-            hash_map.insert(rule.name.clone(), rule.body.clone());
+            hash_map.insert(rule.name.clone(), rule.expr.clone());
         }
-
-        rule
-    });
+    }
 
     hash_map
 }
 
-fn left_recursion(rules: HashMap<Ident, Body>) {
-    fn check_expr(mut names: HashSet<Ident>, expr: &Expr, rules: &HashMap<Ident, Body>) {
-        match expr {
-            &Expr::Ident(ref other)  => {
+fn left_recursion(rules: HashMap<Ident, Expr>) {
+    fn check_expr(mut names: HashSet<Ident>, expr: &Expr, rules: &HashMap<Ident, Expr>) {
+        match *expr {
+            Expr::Ident(ref other)  => {
                 if names.contains(other) {
                     panic!("Rule {} is left-recursive", other);
                 }
 
                 names.insert(other.clone());
 
-                check_body(names, rules.get(other).unwrap(), rules);
+                check_expr(names, rules.get(other).unwrap(), rules);
             },
-            &Expr::Seq(ref exprs)    => check_expr(names, &exprs[0], rules),
-            &Expr::Choice(ref exprs) => check_expr(names, &exprs[0], rules),
-            &Expr::RepZero(ref expr) => check_expr(names, &expr, rules),
-            &Expr::RepOne(ref expr)  => check_expr(names, &expr, rules),
-            &Expr::Opt(ref expr)     => check_expr(names, &expr, rules),
-            &Expr::PosLhd(ref expr)  => check_expr(names, &expr, rules),
-            &Expr::NegLhd(ref expr)  => check_expr(names, &expr, rules),
-            &Expr::Push(ref expr)    => check_expr(names, &expr, rules),
-            _                        => ()
+            Expr::Seq(ref exprs) => check_expr(names, &exprs[0], rules),
+            Expr::Choice(ref exprs) => check_expr(names, &exprs[0], rules),
+            Expr::RepZero(ref expr) => check_expr(names, &expr, rules),
+            Expr::RepOne(ref expr) => check_expr(names, &expr, rules),
+            Expr::Opt(ref expr) => check_expr(names, &expr, rules),
+            Expr::PosLhd(ref expr) => check_expr(names, &expr, rules),
+            Expr::NegLhd(ref expr) => check_expr(names, &expr, rules),
+            Expr::Push(ref expr) => check_expr(names, &expr, rules),
+            _ => ()
         }
     }
 
-    fn check_body(names: HashSet<Ident>, body: &Body, rules: &HashMap<Ident, Body>) {
-        match body {
-            &Body::Normal(ref expr)   => check_expr(names, expr, rules),
-            &Body::Infix(ref expr, _) => check_expr(names, expr, rules)
-        }
-    }
-
-    for (name, body) in &rules {
+    for (name, expr) in &rules {
         let mut names = HashSet::new();
 
         names.insert((*name).clone());
 
-        check_body(names, body, &rules);
+        check_expr(names, expr, &rules);
     }
 }
 
@@ -81,17 +72,13 @@ mod tests {
         let rules = vec![
             Rule {
                 name: Ident::new("a"),
-                ty:   RuleType::Normal,
-                body: Body::Normal(
-                    Expr::Str("b".to_owned())
-                )
+                ty: RuleType::Normal,
+                expr: Expr::Str("b".to_owned())
             },
             Rule {
                 name: Ident::new("a"),
-                ty:   RuleType::Normal,
-                body: Body::Normal(
-                    Expr::Str("b".to_owned())
-                )
+                ty: RuleType::Normal,
+                expr: Expr::Str("b".to_owned())
             },
         ];
 
@@ -103,17 +90,13 @@ mod tests {
         let rules = vec![
             Rule {
                 name: Ident::new("a"),
-                ty:   RuleType::Normal,
-                body: Body::Normal(
-                    Expr::Str("b".to_owned())
-                )
+                ty: RuleType::Normal,
+                expr: Expr::Str("b".to_owned())
             },
             Rule {
                 name: Ident::new("c"),
-                ty:   RuleType::Normal,
-                body: Body::Normal(
-                    Expr::Str("b".to_owned())
-                )
+                ty: RuleType::Normal,
+                expr: Expr::Str("b".to_owned())
             },
         ];
 
@@ -126,21 +109,17 @@ mod tests {
         let rules = vec![
             Rule {
                 name: Ident::new("a"),
-                ty:   RuleType::Normal,
-                body: Body::Normal(
-                    Expr::Opt(Box::new(
-                        Expr::RepZero(Box::new(
-                            Expr::Ident(Ident::new("b"))
-                        ))
+                ty: RuleType::Normal,
+                expr: Expr::Opt(Box::new(
+                    Expr::RepZero(Box::new(
+                        Expr::Ident(Ident::new("b"))
                     ))
-                )
+                ))
             },
             Rule {
                 name: Ident::new("b"),
-                ty:   RuleType::Normal,
-                body: Body::Normal(
-                    Expr::Ident(Ident::new("a"))
-                )
+                ty: RuleType::Normal,
+                expr: Expr::Ident(Ident::new("a"))
             },
         ];
 
@@ -153,21 +132,17 @@ mod tests {
         let rules = vec![
             Rule {
                 name: Ident::new("a"),
-                ty:   RuleType::Normal,
-                body: Body::Normal(
-                    Expr::Opt(Box::new(
-                        Expr::RepZero(Box::new(
-                            Expr::Ident(Ident::new("b"))
-                        ))
+                ty: RuleType::Normal,
+                expr: Expr::Opt(Box::new(
+                    Expr::RepZero(Box::new(
+                        Expr::Ident(Ident::new("b"))
                     ))
-                )
+                ))
             },
             Rule {
                 name: Ident::new("b"),
-                ty:   RuleType::Normal,
-                body: Body::Normal(
-                    Expr::Ident(Ident::new("b"))
-                )
+                ty: RuleType::Normal,
+                expr: Expr::Ident(Ident::new("b"))
             },
         ];
 
@@ -179,49 +154,20 @@ mod tests {
         let rules = vec![
             Rule {
                 name: Ident::new("a"),
-                ty:   RuleType::Normal,
-                body: Body::Normal(
-                    Expr::Opt(Box::new(
-                        Expr::RepZero(Box::new(
-                            Expr::Ident(Ident::new("b"))
-                        ))
+                ty: RuleType::Normal,
+                expr: Expr::Opt(Box::new(
+                    Expr::RepZero(Box::new(
+                        Expr::Ident(Ident::new("b"))
                     ))
-                )
+                ))
             },
             Rule {
                 name: Ident::new("b"),
-                ty:   RuleType::Normal,
-                body: Body::Normal(
-                    Expr::Str("c".to_owned())
-                )
+                ty: RuleType::Normal,
+                expr: Expr::Str("c".to_owned())
             },
         ];
 
         left_recursion(to_hash_map(rules));
-    }
-
-    #[test]
-    #[should_panic(expected = "Rule a is defined multiple times")]
-    fn duplicate_definition_nested() {
-        let rules = vec![
-            Rule {
-                name: Ident::new("a"),
-                ty:   RuleType::Normal,
-                body: Body::Infix(
-                    Expr::Str("b".to_owned()),
-                    vec![
-                        (Rule {
-                            name: Ident::new("a"),
-                            ty:   RuleType::Normal,
-                            body: Body::Normal(
-                                Expr::Str("b".to_owned())
-                            )
-                        }, false)
-                    ]
-                )
-            },
-        ];
-
-        to_hash_map(rules);
     }
 }

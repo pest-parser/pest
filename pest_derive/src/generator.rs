@@ -15,7 +15,13 @@ pub fn generate(name: &str, rules: Vec<Rule>) -> Tokens {
 }
 
 fn rule_enum(rules: Vec<&Rule>) -> Tokens {
-    let rules = rule_names(rules);
+    let rules: Vec<_> = rules.into_iter()
+                             .filter(|rule| rule.ty != RuleType::Silent)
+                             .map(|rule| {
+                                 let name = Ident::new(rule.name.clone());
+                                 quote! { #name }
+                             })
+                             .collect();
 
     quote! {
         #[allow(dead_code, non_camel_case_types)]
@@ -29,24 +35,6 @@ fn rule_enum(rules: Vec<&Rule>) -> Tokens {
     }
 }
 
-fn rule_names(rules: Vec<&Rule>) -> Vec<Tokens> {
-    rules.iter().flat_map(|rule| {
-        match rule.body {
-            Body::Normal(_) => {
-                if rule.ty != RuleType::Silent {
-                    let name = Ident::new(rule.name.clone());
-                    vec![quote! { #name }]
-                } else {
-                    vec![]
-                }
-            },
-            Body::Infix(_, ref rules) => {
-                rule_names(rules.iter().map(|&(ref rule, _)| rule).collect())
-            }
-        }
-    }).collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -57,26 +45,12 @@ mod tests {
             Rule {
                 name: Ident::new("rule"),
                 ty:   RuleType::Silent,
-                body: Body::Infix(
-                    Expr::Ident(Ident::new("a")),
-                    vec![
-                        (Rule {
-                            name: Ident::new("b"),
-                            ty:   RuleType::Atomic,
-                            body: Body::Normal(Expr::Ident(Ident::new("c")))
-                        }, false),
-                        (Rule {
-                            name: Ident::new("d"),
-                            ty:   RuleType::Normal,
-                            body: Body::Normal(Expr::Ident(Ident::new("e")))
-                        }, true)
-                    ]
-                )
+                expr: Expr::Ident(Ident::new("a"))
             },
             Rule {
                 name: Ident::new("f"),
                 ty: RuleType::Normal,
-                body: Body::Normal(Expr::Ident(Ident::new("g")))
+                expr: Expr::Ident(Ident::new("g"))
             }
         ];
 
@@ -87,8 +61,6 @@ mod tests {
                 any,
                 soi,
                 eoi,
-                b,
-                d,
                 f
             }
         });

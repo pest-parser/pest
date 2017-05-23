@@ -312,7 +312,7 @@ impl<'a> PestParser<'a> {
             if self.next()? == '=' {
                 self.whitespace();
 
-                let (ty, body) = match self.peek() {
+                let (ty, expr) = match self.peek() {
                     Some(c) => match c {
                         '{' => (RuleType::Normal, self.body()?),
                         '_' => {
@@ -345,8 +345,8 @@ impl<'a> PestParser<'a> {
 
                 Ok(Rule {
                     name: name,
-                    ty:   ty,
-                    body: body
+                    ty: ty,
+                    expr: expr
                 })
             } else {
                 return err!(self, "Expected '=' after rule name at");
@@ -356,128 +356,15 @@ impl<'a> PestParser<'a> {
         }
     }
 
-    fn body(&mut self) -> Result<Body, String> {
+    fn body(&mut self) -> Result<Expr, String> {
         if let Ok('{') = self.next() {
             self.whitespace();
 
-            if let Some('{') = self.peek() {
-                self.next()?;
-                self.whitespace();
 
-                let term = self.expr()?;
-
-                if self.next() != Ok('}') {
-                    return err!(self, "Expected '}' at");
-                }
-
-                self.whitespace();
-
-                let mut rules = vec![];
-
-                while let Some(c) = self.peek() {
-                    if c.is_alphabetic() || c == '_' {
-                        rules.push(self.rule_infix()?);
-
-                        self.whitespace();
-                    } else {
-                        break;
-                    }
-                }
-
-                if let Ok('}') = self.next() {
-                    Ok(Body::Infix(term, rules))
-                } else {
-                    err!(self, "Expected '}' at")
-                }
-            } else {
-                let expr = self.expr()?;
-
-                if let Ok('}') = self.next() {
-                    Ok(Body::Normal(expr))
-                } else {
-                    err!(self, "Expected '}' at")
-                }
-            }
-        } else {
-            err!(self, "Rule definitions start with '{' at")
-        }
-    }
-
-    fn rule_infix(&mut self) -> Result<(Rule, bool), String> {
-        if let Expr::Ident(name) = self.ident()? {
-            self.whitespace();
-
-            if self.next()? == '=' {
-                self.whitespace();
-
-                let (ty, (body, right_assoc)) = match self.peek() {
-                    Some(c) => match c {
-                        '{' => (RuleType::Normal, self.body_infix()?),
-                        '_' => {
-                            self.next()?;
-                            self.whitespace();
-
-                            (RuleType::Silent, self.body_infix()?)
-                        },
-                        '@' => {
-                            self.next()?;
-                            self.whitespace();
-
-                            (RuleType::Atomic, self.body_infix()?)
-                        },
-                        '!' => {
-                            self.next()?;
-
-                            if self.next()? != '@' {
-                                return err!(self, "Expecting '@' at");
-                            }
-
-                            self.whitespace();
-
-                            (RuleType::NonAtomic, self.body_infix()?)
-                        },
-                        _ => return err!(self, "Expected modifier ('_', '@', or '!@') or '{' at")
-                    },
-                    None => return err!(self, "Unexpected end of input at")
-                };
-
-                let rule = Rule {
-                    name: name,
-                    ty:   ty,
-                    body: body
-                };
-
-                Ok((rule, right_assoc))
-            } else {
-                return err!(self, "Expected '=' after rule name at");
-            }
-        } else {
-            unreachable!()
-        }
-    }
-
-    fn body_infix(&mut self) -> Result<(Body, bool), String> {
-        if let Ok('{') = self.next() {
-            self.whitespace();
-
-            let right_assoc = if let Some(c) = self.peek() {
-                let right_assoc = c == '<';
-
-                if right_assoc {
-                    self.next()?;
-                }
-
-                right_assoc
-            } else {
-                return err!(self, "Unexpected end of input at");
-            };
-
-            self.whitespace();
-
-            let expr = self.expr();
+            let expr = self.expr()?;
 
             if let Ok('}') = self.next() {
-                Ok((Body::Normal(expr?), right_assoc))
+                Ok(expr)
             } else {
                 err!(self, "Expected '}' at")
             }
@@ -708,8 +595,8 @@ mod tests {
         assert_eq!(parser.rule(), Ok(
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Normal,
-                body: Body::Normal(Expr::Ident(Ident::new("a")))
+                ty: RuleType::Normal,
+                expr: Expr::Ident(Ident::new("a"))
             }
         ));
     }
@@ -721,8 +608,8 @@ mod tests {
         assert_eq!(parser.rule(), Ok(
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Silent,
-                body: Body::Normal(Expr::Ident(Ident::new("a")))
+                ty: RuleType::Silent,
+                expr: Expr::Ident(Ident::new("a"))
             }
         ));
     }
@@ -734,8 +621,8 @@ mod tests {
         assert_eq!(parser.rule(), Ok(
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Atomic,
-                body: Body::Normal(Expr::Ident(Ident::new("a")))
+                ty: RuleType::Atomic,
+                expr: Expr::Ident(Ident::new("a"))
             }
         ));
     }
@@ -747,35 +634,8 @@ mod tests {
         assert_eq!(parser.rule(), Ok(
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::NonAtomic,
-                body: Body::Normal(Expr::Ident(Ident::new("a")))
-            }
-        ));
-    }
-
-    #[test]
-    fn rule_infix() {
-        let mut parser = PestParser::new("rule = _{ { a } b = @{ c } d = {< e } }".chars().peekable());
-
-        assert_eq!(parser.rule(), Ok(
-            Rule {
-                name: Ident::new("rule"),
-                ty:   RuleType::Silent,
-                body: Body::Infix(
-                    Expr::Ident(Ident::new("a")),
-                    vec![
-                        (Rule {
-                            name: Ident::new("b"),
-                            ty:   RuleType::Atomic,
-                            body: Body::Normal(Expr::Ident(Ident::new("c")))
-                        }, false),
-                        (Rule {
-                            name: Ident::new("d"),
-                            ty:   RuleType::Normal,
-                            body: Body::Normal(Expr::Ident(Ident::new("e")))
-                        }, true)
-                    ]
-                )
+                ty: RuleType::NonAtomic,
+                expr: Expr::Ident(Ident::new("a"))
             }
         ));
     }
