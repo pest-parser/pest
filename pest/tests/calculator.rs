@@ -39,21 +39,21 @@ impl Parser<Rule> for CalculatorParser {
         ) -> Result<Position<I>, Position<I>> {
             state.rule(Rule::expression, pos, |state, pos| {
                 state.sequence(move |state| {
-                    pos.sequence(|p| {
-                        primary(p, state).and_then(|p| {
-                            p.repeat(|p| {
+                    pos.sequence(|pos| {
+                        primary(pos, state).and_then(|pos| {
+                            pos.repeat(|pos| {
                                 state.sequence(move |state| {
-                                    p.sequence(|p| {
-                                        plus(p, state).or_else(|p| {
-                                            minus(p, state)
-                                        }).or_else(|p| {
-                                            times(p, state)
-                                        }).or_else(|p| {
-                                            divide(p, state)
-                                        }).or_else(|p| {
-                                            power(p, state)
-                                        }).and_then(|p| {
-                                            primary(p, state)
+                                    pos.sequence(|pos| {
+                                        plus(pos, state).or_else(|pos| {
+                                            minus(pos, state)
+                                        }).or_else(|pos| {
+                                            times(pos, state)
+                                        }).or_else(|pos| {
+                                            divide(pos, state)
+                                        }).or_else(|pos| {
+                                            power(pos, state)
+                                        }).and_then(|pos| {
+                                            primary(pos, state)
                                         })
                                     })
                                 })
@@ -69,15 +69,15 @@ impl Parser<Rule> for CalculatorParser {
             state: &mut ParserState<Rule, I>
         ) -> Result<Position<I>, Position<I>> {
             state.sequence(move |state| {
-                pos.sequence(|p| {
-                    p.match_string("(").and_then(|p| {
-                        expression(p, state)
-                    }).and_then(|p| {
-                        p.match_string(")")
+                pos.sequence(|pos| {
+                    pos.match_string("(").and_then(|pos| {
+                        expression(pos, state)
+                    }).and_then(|pos| {
+                        pos.match_string(")")
                     })
                 })
-            }).or_else(|p| {
-                number(p, state)
+            }).or_else(|pos| {
+                number(pos, state)
             })
         }
 
@@ -87,15 +87,15 @@ impl Parser<Rule> for CalculatorParser {
         ) -> Result<Position<I>, Position<I>> {
             state.rule(Rule::number, pos, |state, pos| {
                 state.sequence(move |_| {
-                    pos.sequence(|p| {
-                        p.optional(|p| {
-                            p.match_string("-")
-                        }).and_then(|p| {
-                            p.match_string("0").or_else(|p| {
-                                p.sequence(|p| {
-                                    p.match_range('1'..'9').and_then(|p| {
-                                        p.repeat(|p| {
-                                            p.match_range('0'..'9')
+                    pos.sequence(|pos| {
+                        pos.optional(|pos| {
+                            pos.match_string("-")
+                        }).and_then(|pos| {
+                            pos.match_string("0").or_else(|pos| {
+                                pos.sequence(|pos| {
+                                    pos.match_range('1'..'9').and_then(|pos| {
+                                        pos.repeat(|pos| {
+                                            pos.match_range('0'..'9')
                                         })
                                     })
                                 })
