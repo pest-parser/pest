@@ -13,7 +13,7 @@ use std::iter::Peekable;
 use std::ops::BitOr;
 
 use super::inputs::Input;
-use super::iterators::{Pair, Pairs};
+use super::iterators::Pair;
 use super::RuleType;
 
 /// An `enum` describing an `Operator`'s associativity.
@@ -152,13 +152,14 @@ impl<R: RuleType> PrecClimber<R> {
     ///
     /// let result = climber.climb(pairs, primary, infix);
     /// ```
-    pub fn climb<I: Input, F, G, T>(
+    pub fn climb<I: Input, P, F, G, T>(
         &self,
-        mut pairs: Pairs<R, I>,
+        mut pairs: P,
         mut primary: F,
         mut infix: G
     ) -> T
     where
+        P: Iterator<Item=Pair<R, I>>,
         F: FnMut(Pair<R, I>) -> T,
         G: FnMut(T, Pair<R, I>, T) -> T
     {
@@ -166,15 +167,16 @@ impl<R: RuleType> PrecClimber<R> {
         self.climb_rec(lhs, 0, &mut pairs.peekable(), &mut primary, &mut infix)
     }
 
-    fn climb_rec<I: Input, F, G, T>(
+    fn climb_rec<I: Input, P, F, G, T>(
         &self,
         mut lhs: T,
         min_prec: u32,
-        pairs: &mut Peekable<Pairs<R, I>>,
+        pairs: &mut Peekable<P>,
         primary: &mut F,
         infix: &mut G
     ) -> T
     where
+        P: Iterator<Item=Pair<R, I>>,
         F: FnMut(Pair<R, I>) -> T,
         G: FnMut(T, Pair<R, I>, T) -> T
     {
@@ -191,12 +193,18 @@ impl<R: RuleType> PrecClimber<R> {
                         if let Some(&(new_prec, assoc)) = self.ops.get(&rule) {
                             if new_prec > prec || assoc == Assoc::Right && new_prec == prec {
                                 rhs = self.climb_rec(rhs, new_prec, pairs, primary, infix);
+                            } else {
+                                break;
                             }
+                        } else {
+                            break;
                         }
                     }
 
                     lhs = infix(lhs, op, rhs);
                 }
+            } else {
+                break;
             }
         }
 
