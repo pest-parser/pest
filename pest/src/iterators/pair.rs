@@ -59,16 +59,16 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
     /// }).unwrap().next().unwrap();
     ///
-    /// assert_eq!(pair.rule(), Rule::a);
+    /// assert_eq!(pair.as_rule(), Rule::a);
     /// ```
-    pub fn rule(&self) -> R {
+    pub fn as_rule(&self) -> R {
         match self.queue[self.pair()] {
             QueueableToken::End { rule, .. } => rule,
             _ => unreachable!()
         }
     }
 
-    /// Returns the `Span` defined by the `Pair`.
+    /// Returns the `Span` defined by the `Pair`, consuming it.
     ///
     /// # Example
     ///
@@ -88,16 +88,16 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     /// #     state.rule(Rule::ab, pos, |_, p| p.match_string("ab"))
     /// }).unwrap().next().unwrap();
     ///
-    /// assert_eq!(pair.span().capture(), "ab");
+    /// assert_eq!(pair.into_span().capture(), "ab");
     /// ```
-    pub fn span(self) -> Span<I> {
+    pub fn into_span(self) -> Span<I> {
         let start = self.pos(self.start);
         let end = self.pos(self.pair());
 
         span::new(self.input, start, end)
     }
 
-    /// Consumes the outer `Pair` and returns the inner `Pairs`.
+    /// Returns the inner `Pairs` between the `Pair`, consuming it.
     ///
     /// # Example
     ///
@@ -117,9 +117,9 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
     /// }).unwrap().next().unwrap();
     ///
-    /// assert!(pair.consume().next().is_none());
+    /// assert!(pair.into_inner().next().is_none());
     /// ```
-    pub fn consume(self) -> Pairs<R, I> {
+    pub fn into_inner(self) -> Pairs<R, I> {
         let pair = self.pair();
 
         pairs::new(
@@ -182,7 +182,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
 impl<R: RuleType, I: Input> fmt::Debug for Pair<R, I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Pair {{ rule: {:?}, span: {:?}, inner: {:?} }}",
-               self.rule(), self.clone().span(), self.clone().consume())
+               self.as_rule(), self.clone().into_span(), self.clone().into_inner())
     }
 }
 

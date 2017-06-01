@@ -171,7 +171,7 @@ fn consume(pair: Pair<Rule, StringInput>, climber: &PrecClimber<Rule>) -> i32 {
         consume(pair, climber)
     };
     let infix = |lhs: i32, op: Pair<Rule, StringInput>, rhs: i32| {
-        match op.rule() {
+        match op.as_rule() {
             Rule::plus => lhs + rhs,
             Rule::minus => lhs - rhs,
             Rule::times => lhs * rhs,
@@ -181,9 +181,9 @@ fn consume(pair: Pair<Rule, StringInput>, climber: &PrecClimber<Rule>) -> i32 {
         }
     };
 
-    match pair.rule() {
-        Rule::expression => climber.climb(pair.consume(), primary, infix),
-        Rule::number => pair.span().capture().parse().unwrap(),
+    match pair.as_rule() {
+        Rule::expression => climber.climb(pair.into_inner(), primary, infix),
+        Rule::number => pair.into_span().capture().parse().unwrap(),
         _ => unreachable!()
     }
 }

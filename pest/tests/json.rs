@@ -393,31 +393,31 @@ enum Json {
 
 fn consume(pair: Pair<Rule, StringInput>) -> Json {
     fn value(pair: Pair<Rule, StringInput>) -> Json {
-        let pair = pair.consume().next().unwrap();
+        let pair = pair.into_inner().next().unwrap();
 
-        match pair.rule() {
+        match pair.as_rule() {
             Rule::null => Json::Null,
             Rule::bool => {
-                match pair.span().capture() {
+                match pair.into_span().capture() {
                     "false" => Json::Bool(false),
                     "true" => Json::Bool(true),
                     _ => unreachable!()
                 }
             }
             Rule::number => {
-                Json::Number(pair.span().capture().parse().unwrap())
+                Json::Number(pair.into_span().capture().parse().unwrap())
             }
             Rule::string => {
-                Json::String(pair.span())
+                Json::String(pair.into_span())
             }
             Rule::array => {
-                Json::Array(pair.consume().map(|pos| value(pos)).collect())
+                Json::Array(pair.into_inner().map(|pos| value(pos)).collect())
             }
             Rule::object => {
-                let pairs = pair.consume().map(|pos| {
-                    let mut pair = pos.consume();
+                let pairs = pair.into_inner().map(|pos| {
+                    let mut pair = pos.into_inner();
 
-                    let key = pair.next().unwrap().span();
+                    let key = pair.next().unwrap().into_span();
                     let value = value(pair.next().unwrap());
 
                     (key, value)

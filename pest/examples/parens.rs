@@ -82,7 +82,7 @@ impl Parser<Rule> for ParenParser {
 struct Paren(Vec<Paren>);
 
 fn expr<I: Input>(pairs: Pairs<Rule, I>) -> Vec<Paren> {
-    pairs.filter(|p| p.rule() == Rule::paren).map(|p| Paren(expr(p.consume()))).collect()
+    pairs.filter(|p| p.as_rule() == Rule::paren).map(|p| Paren(expr(p.into_inner()))).collect()
 }
 
 fn main() {

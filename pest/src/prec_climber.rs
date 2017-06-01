@@ -181,7 +181,7 @@ impl<R: RuleType> PrecClimber<R> {
         G: FnMut(T, Pair<R, I>, T) -> T
     {
         while pairs.peek().is_some() {
-            let rule = pairs.peek().unwrap().rule();
+            let rule = pairs.peek().unwrap().as_rule();
             if let Some(&(prec, _)) = self.ops.get(&rule) {
                 if prec >= min_prec {
                     let op = pairs.next().unwrap();
@@ -189,7 +189,7 @@ impl<R: RuleType> PrecClimber<R> {
                                                                a primary expression"));
 
                     while pairs.peek().is_some() {
-                        let rule = pairs.peek().unwrap().rule();
+                        let rule = pairs.peek().unwrap().as_rule();
                         if let Some(&(new_prec, assoc)) = self.ops.get(&rule) {
                             if new_prec > prec || assoc == Assoc::Right && new_prec == prec {
                                 rhs = self.climb_rec(rhs, new_prec, pairs, primary, infix);
