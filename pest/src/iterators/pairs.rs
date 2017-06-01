@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::fmt;
 use std::rc::Rc;
 
 use super::pair::{self, Pair};
@@ -14,7 +15,6 @@ use super::super::inputs::Input;
 use super::super::RuleType;
 
 /// A `struct` containing `Pairs`. It is created in [`pest::state`](../fn.state.html).
-#[derive(Debug)]
 pub struct Pairs<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
@@ -94,6 +94,12 @@ impl<R: RuleType, I: Input> Iterator for Pairs<R, I> {
         self.start = self.pair() + 1;
 
         Some(pair)
+    }
+}
+
+impl<R: RuleType, I: Input> fmt::Debug for Pairs<R, I> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Pairs {{ pairs: {:?} }}", self.clone().collect::<Vec<_>>())
     }
 }
 

@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::fmt;
 use std::rc::Rc;
 
 use super::pairs::{self, Pairs};
@@ -19,7 +20,6 @@ use super::super::RuleType;
 /// same `Rule`, with the condition that all `Token`s between them can form such pairs as well.
 /// This is similar to the [brace matching problem](https://en.wikipedia.org/wiki/Brace_matching) in
 /// editors.
-#[derive(Debug)]
 pub struct Pair<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
@@ -176,6 +176,13 @@ impl<R: RuleType, I: Input> Pair<R, I> {
             QueueableToken::Start { pos, .. } => pos,
             QueueableToken::End { pos, .. } => pos
         }
+    }
+}
+
+impl<R: RuleType, I: Input> fmt::Debug for Pair<R, I> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Pair {{ rule: {:?}, span: {:?}, inner: {:?} }}",
+               self.rule(), self.clone().span(), self.clone().consume())
     }
 }
 
