@@ -41,13 +41,13 @@ fn left_recursion(rules: HashMap<Ident, Expr>) {
 
                 check_expr(names, rules.get(other).unwrap(), rules);
             },
-            Expr::Seq(ref exprs) => check_expr(names, &exprs[0], rules),
-            Expr::Choice(ref exprs) => check_expr(names, &exprs[0], rules),
-            Expr::RepZero(ref expr) => check_expr(names, &expr, rules),
-            Expr::RepOne(ref expr) => check_expr(names, &expr, rules),
+            Expr::Seq(ref lhs, _) => check_expr(names, &lhs, rules),
+            Expr::Choice(ref lhs, _) => check_expr(names, &lhs, rules),
+            Expr::Rep(ref expr) => check_expr(names, &expr, rules),
+            Expr::RepOnce(ref expr) => check_expr(names, &expr, rules),
             Expr::Opt(ref expr) => check_expr(names, &expr, rules),
-            Expr::PosLhd(ref expr) => check_expr(names, &expr, rules),
-            Expr::NegLhd(ref expr) => check_expr(names, &expr, rules),
+            Expr::PosPred(ref expr) => check_expr(names, &expr, rules),
+            Expr::NegPred(ref expr) => check_expr(names, &expr, rules),
             Expr::Push(ref expr) => check_expr(names, &expr, rules),
             _ => ()
         }
@@ -111,7 +111,7 @@ mod tests {
                 name: Ident::new("a"),
                 ty: RuleType::Normal,
                 expr: Expr::Opt(Box::new(
-                    Expr::RepZero(Box::new(
+                    Expr::Rep(Box::new(
                         Expr::Ident(Ident::new("b"))
                     ))
                 ))
@@ -134,7 +134,7 @@ mod tests {
                 name: Ident::new("a"),
                 ty: RuleType::Normal,
                 expr: Expr::Opt(Box::new(
-                    Expr::RepZero(Box::new(
+                    Expr::Rep(Box::new(
                         Expr::Ident(Ident::new("b"))
                     ))
                 ))
@@ -156,7 +156,7 @@ mod tests {
                 name: Ident::new("a"),
                 ty: RuleType::Normal,
                 expr: Expr::Opt(Box::new(
-                    Expr::RepZero(Box::new(
+                    Expr::Rep(Box::new(
                         Expr::Ident(Ident::new("b"))
                     ))
                 ))

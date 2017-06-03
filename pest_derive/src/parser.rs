@@ -6,637 +6,1050 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::iter::Peekable;
-use std::str::Chars;
+use std::rc::Rc;
+
+use pest::inputs::{Input, Position};
+use pest::iterators::{Pair, Pairs};
+use pest::prec_climber::{Assoc, Operator, PrecClimber};
+use pest::{self, Error, Parser, ParserState};
 
 use quote::Ident;
 
-use super::ast::*;
+use super::ast::{Expr, Rule, RuleType};
 
-macro_rules! err {
-    ($slf:ident, $message:expr) => {
-        Err(format!("{} {}", $message, $slf.pos()))
+#[allow(non_camel_case_types)]
+#[allow(dead_code)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+enum GrammarRule {
+    rules,
+    rule,
+    assignment_operator,
+    silent_modifier,
+    atomic_modifier,
+    non_atomic_modifier,
+    opening_brace,
+    closing_brace,
+    opening_paren,
+    closing_paren,
+    expression,
+    primary,
+    positive_predicate_operator,
+    negative_predicate_operator,
+    sequence_operator,
+    choice_operator,
+    optional_operator,
+    repeat_operator,
+    repeat_once_operator,
+    push,
+    identifier,
+    string,
+    insensitive_string,
+    range,
+    character
+}
+
+struct GrammarParser;
+
+impl Parser<GrammarRule> for GrammarParser {
+    fn parse<I: Input>(
+        rule: GrammarRule,
+        input: Rc<I>
+    ) -> Result<Pairs<GrammarRule, I>, Error<GrammarRule, I>> {
+        fn rules<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::rules, pos, |state, pos| {
+                state.sequence(move |state| {
+                    pos.sequence(|pos| {
+                        grammar_rule(pos, state).and_then(|pos| {
+                            pos.repeat(|pos| {
+                                state.sequence(move |state| {
+                                    pos.sequence(|pos| {
+                                        skip(pos, state).and_then(|pos| {
+                                            grammar_rule(pos, state)
+                                        })
+                                    })
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+        }
+
+        fn grammar_rule<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::rule, pos, |state, pos| {
+                state.sequence(move |state| {
+                    pos.sequence(|pos| {
+                        identifier(pos, state).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            assignment_operator(pos, state)
+                        }).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            pos.optional(|pos| {
+                                modifier(pos, state)
+                            })
+                        }).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            opening_brace(pos, state)
+                        }).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            expression(pos, state)
+                        }).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            closing_brace(pos, state)
+                        })
+                    })
+                })
+            })
+        }
+
+        fn assignment_operator<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::assignment_operator, pos, |_, pos| {
+                pos.match_string("=")
+            })
+        }
+
+        fn modifier<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            silent_modifier(pos, state).or_else(|pos| {
+                atomic_modifier(pos, state)
+            }).or_else(|pos| {
+                non_atomic_modifier(pos, state)
+            })
+        }
+
+        fn silent_modifier<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::silent_modifier, pos, |_, pos| {
+                pos.match_string("_")
+            })
+        }
+
+        fn atomic_modifier<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::atomic_modifier, pos, |_, pos| {
+                pos.match_string("@")
+            })
+        }
+
+        fn non_atomic_modifier<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::non_atomic_modifier, pos, |_, pos| {
+                pos.match_string("!@")
+            })
+        }
+
+        fn opening_brace<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::opening_brace, pos, |_, pos| {
+                pos.match_string("{")
+            })
+        }
+
+        fn closing_brace<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::closing_brace, pos, |_, pos| {
+                pos.match_string("}")
+            })
+        }
+
+        fn opening_paren<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::opening_paren, pos, |_, pos| {
+                pos.match_string("(")
+            })
+        }
+
+        fn closing_paren<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::closing_paren, pos, |_, pos| {
+                pos.match_string(")")
+            })
+        }
+
+        fn expression<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::expression, pos, |state, pos| {
+                state.sequence(move |state| {
+                    pos.sequence(|pos| {
+                        primary(pos, state).and_then(|pos| {
+                            pos.repeat(|pos| {
+                                state.sequence(move |state| {
+                                    pos.sequence(|pos| {
+                                        skip(pos, state).and_then(|pos| {
+                                            infix_operator(pos, state)
+                                        }).and_then(|pos| {
+                                            skip(pos, state)
+                                        }).and_then(|pos| {
+                                            primary(pos, state)
+                                        })
+                                    })
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+        }
+
+        fn primary<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::primary, pos, |state, pos| {
+                state.sequence(move |state| {
+                    pos.sequence(|pos| {
+                        pos.repeat(|pos| {
+                            pos.sequence(|pos| {
+                                prefix_operator(pos, state).and_then(|pos| {
+                                    skip(pos, state)
+                                })
+                            })
+                        }).and_then(|pos| {
+                            state.sequence(move |state| {
+                                pos.sequence(|pos| {
+                                    pos.match_string("(").and_then(|pos| {
+                                        skip(pos, state)
+                                    }).and_then(|pos| {
+                                        expression(pos, state)
+                                    }).and_then(|pos| {
+                                        skip(pos, state)
+                                    }).and_then(|pos| {
+                                        pos.match_string(")")
+                                    })
+                                })
+                            }).or_else(|pos| {
+                                term(pos, state)
+                            })
+                        }).and_then(|pos| {
+                            pos.repeat(|pos| {
+                                pos.sequence(|pos| {
+                                    skip(pos, state).and_then(|pos| {
+                                        postfix_operator(pos, state)
+                                    })
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+        }
+
+        fn term<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            push(pos, state).or_else(|pos| {
+                identifier(pos, state)
+            }).or_else(|pos| {
+                string(pos, state)
+            }).or_else(|pos| {
+                insensitive_string(pos, state)
+            }).or_else(|pos| {
+                range(pos, state)
+            })
+        }
+
+        fn prefix_operator<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            positive_predicate_operator(pos, state).or_else(|pos| {
+                negative_predicate_operator(pos, state)
+            })
+        }
+
+        fn infix_operator<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            sequence_operator(pos, state).or_else(|pos| {
+                choice_operator(pos, state)
+            })
+        }
+
+        fn postfix_operator<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            optional_operator(pos, state).or_else(|pos| {
+                repeat_operator(pos, state)
+            }).or_else(|pos| {
+                repeat_once_operator(pos, state)
+            })
+        }
+
+        fn positive_predicate_operator<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::positive_predicate_operator, pos, |_, pos| {
+                pos.match_string("&")
+            })
+        }
+
+        fn negative_predicate_operator<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::negative_predicate_operator, pos, |_, pos| {
+                pos.match_string("!")
+            })
+        }
+
+        fn sequence_operator<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::sequence_operator, pos, |_, pos| {
+                pos.match_string("~")
+            })
+        }
+
+        fn choice_operator<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::choice_operator, pos, |_, pos| {
+                pos.match_string("|")
+            })
+        }
+
+        fn optional_operator<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::optional_operator, pos, |_, pos| {
+                pos.match_string("?")
+            })
+        }
+
+        fn repeat_operator<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::repeat_operator, pos, |_, pos| {
+                pos.match_string("*")
+            })
+        }
+
+        fn repeat_once_operator<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::repeat_once_operator, pos, |_, pos| {
+                pos.match_string("+")
+            })
+        }
+
+        fn push<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::push, pos, |state, pos| {
+                pos.sequence(|pos| {
+                    pos.match_string("push").and_then(|pos| {
+                        skip(pos, state)
+                    }).and_then(|pos| {
+                        opening_paren(pos, state)
+                    }).and_then(|pos| {
+                        skip(pos, state)
+                    }).and_then(|pos| {
+                        expression(pos, state)
+                    }).and_then(|pos| {
+                        skip(pos, state)
+                    }).and_then(|pos| {
+                        closing_paren(pos, state)
+                    })
+                })
+            })
+        }
+
+        fn identifier<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::identifier, pos, |state, pos| {
+                pos.sequence(|pos| {
+                    pos.match_string("_").or_else(|pos| {
+                        alpha(pos, state)
+                    }).and_then(|pos| {
+                        pos.repeat(|pos| {
+                            pos.match_string("_").or_else(|pos| {
+                                alpha_num(pos, state)
+                            })
+                        })
+                    })
+                })
+            })
+        }
+
+        fn alpha<I: Input>(
+            pos: Position<I>,
+            _: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            pos.match_range('a'..'z').or_else(|pos| {
+                pos.match_range('A'..'Z')
+            })
+        }
+
+        fn alpha_num<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            alpha(pos, state).or_else(|pos| {
+                pos.match_range('0'..'9')
+            })
+        }
+
+        fn string<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::string, pos, |state, pos| {
+                pos.sequence(|pos| {
+                    pos.match_string("\"").and_then(|pos| {
+                        pos.repeat(|pos| {
+                            pos.sequence(|pos| {
+                                pos.lookahead(false, |pos| {
+                                    pos.match_string("\"").or_else(|pos| {
+                                        pos.match_string("\\")
+                                    })
+                                }).and_then(|pos| {
+                                    pos.skip(1)
+                                })
+                            }).or_else(|pos| {
+                                escape(pos, state)
+                            })
+                        })
+                    }).and_then(|pos| {
+                        pos.match_string("\"")
+                    })
+                })
+            })
+        }
+
+        fn insensitive_string<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::insensitive_string, pos, |state, pos| {
+                pos.sequence(|pos| {
+                    pos.match_string("^").and_then(|pos| {
+                        skip(pos, state)
+                    }).and_then(|pos| {
+                        string(pos, state)
+                    })
+                })
+            })
+        }
+
+        fn range<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::range, pos, |state, pos| {
+                state.sequence(move |state| {
+                    pos.sequence(|pos| {
+                        character(pos, state).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            pos.match_string("..")
+                        }).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            character(pos, state)
+                        })
+                    })
+                })
+            })
+        }
+
+        fn character<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::character, pos, |state, pos| {
+                pos.sequence(|pos| {
+                    pos.match_string("'").and_then(|pos| {
+                        pos.sequence(|pos| {
+                            pos.lookahead(false, |pos| {
+                                pos.match_string("'").or_else(|pos| {
+                                    pos.match_string("\\")
+                                })
+                            }).and_then(|pos| {
+                                pos.skip(1)
+                            })
+                        }).or_else(|pos| {
+                            escape(pos, state)
+                        })
+                    }).and_then(|pos| {
+                        pos.match_string("'")
+                    })
+                })
+            })
+        }
+
+        fn escape<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            pos.sequence(|pos| {
+                pos.match_string("\\").and_then(|pos| {
+                    pos.match_string("n").or_else(|pos| {
+                        pos.match_string("r")
+                    }).or_else(|pos| {
+                        pos.match_string("t")
+                    }).or_else(|pos| {
+                        pos.match_string("\\")
+                    }).or_else(|pos| {
+                        pos.match_string("0")
+                    }).or_else(|pos| {
+                        pos.match_string("'")
+                    }).or_else(|pos| {
+                        pos.match_string("\"")
+                    }).or_else(|pos| {
+                        unicode(pos, state)
+                    }).or_else(|pos| {
+                        code(pos, state)
+                    })
+                })
+            })
+        }
+
+        fn unicode<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            pos.sequence(|pos| {
+                pos.match_string("u").and_then(|pos| {
+                    pos.match_string("{")
+                }).and_then(|pos| {
+                    hex_digit(pos, state)
+                }).and_then(|pos| {
+                    hex_digit(pos, state)
+                }).and_then(|pos| {
+                    pos.optional(|pos| {
+                        hex_digit(pos, state)
+                    })
+                }).and_then(|pos| {
+                    pos.optional(|pos| {
+                        hex_digit(pos, state)
+                    })
+                }).and_then(|pos| {
+                    pos.optional(|pos| {
+                        hex_digit(pos, state)
+                    })
+                }).and_then(|pos| {
+                    pos.optional(|pos| {
+                        hex_digit(pos, state)
+                    })
+                }).and_then(|pos| {
+                    pos.match_string("}")
+                })
+            })
+        }
+
+        fn code<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            pos.sequence(|pos| {
+                pos.match_string("x").and_then(|pos| {
+                    hex_digit(pos, state)
+                }).and_then(|pos| {
+                    hex_digit(pos, state)
+                })
+            })
+        }
+
+        fn hex_digit<I: Input>(
+            pos: Position<I>,
+            _: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            pos.match_range('0'..'9').or_else(|pos| {
+                pos.match_range('a'..'f')
+            }).or_else(|pos| {
+                pos.match_range('A'..'F')
+            })
+        }
+
+        fn skip<I: Input>(
+            pos: Position<I>,
+            _: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            pos.sequence(|pos| {
+                pos.repeat(|pos| {
+                    pos.match_string(" ").or_else(|pos| {
+                        pos.match_string("\t")
+                    }).or_else(|pos| {
+                        pos.match_string("\r")
+                    }).or_else(|pos| {
+                        pos.match_string("\n")
+                    })
+                }).and_then(|pos| {
+                    pos.optional(|pos| {
+                        pos.sequence(|pos| {
+                            pos.match_string("//").and_then(|pos| {
+                                pos.repeat(|pos| {
+                                    pos.sequence(|pos| {
+                                        pos.lookahead(false, |pos| {
+                                            pos.match_string("\n")
+                                        }).and_then(|pos| {
+                                            pos.skip(1)
+                                        })
+                                    })
+                                })
+                            })
+                        })
+                    })
+                }).and_then(|pos| {
+                    pos.repeat(|pos| {
+                        pos.match_string(" ").or_else(|pos| {
+                            pos.match_string("\t")
+                        }).or_else(|pos| {
+                            pos.match_string("\r")
+                        }).or_else(|pos| {
+                            pos.match_string("\n")
+                        })
+                    })
+                })
+            })
+        }
+
+        pest::state(input, move |mut state, pos| {
+            match rule {
+                GrammarRule::rules => rules(pos, &mut state),
+                GrammarRule::rule => grammar_rule(pos, &mut state),
+                GrammarRule::assignment_operator => assignment_operator(pos, &mut state),
+                GrammarRule::silent_modifier => silent_modifier(pos, &mut state),
+                GrammarRule::atomic_modifier => atomic_modifier(pos, &mut state),
+                GrammarRule::non_atomic_modifier => non_atomic_modifier(pos, &mut state),
+                GrammarRule::opening_brace => opening_brace(pos, &mut state),
+                GrammarRule::closing_brace => closing_brace(pos, &mut state),
+                GrammarRule::opening_paren => opening_paren(pos, &mut state),
+                GrammarRule::closing_paren => closing_paren(pos, &mut state),
+                GrammarRule::expression => expression(pos, &mut state),
+                GrammarRule::primary => primary(pos, &mut state),
+                GrammarRule::positive_predicate_operator => {
+                    positive_predicate_operator(pos, &mut state)
+                },
+                GrammarRule::negative_predicate_operator => {
+                    negative_predicate_operator(pos, &mut state)
+                },
+                GrammarRule::sequence_operator => sequence_operator(pos, &mut state),
+                GrammarRule::choice_operator => choice_operator(pos, &mut state),
+                GrammarRule::optional_operator => optional_operator(pos, &mut state),
+                GrammarRule::repeat_operator => repeat_operator(pos, &mut state),
+                GrammarRule::repeat_once_operator => repeat_once_operator(pos, &mut state),
+                GrammarRule::push => push(pos, &mut state),
+                GrammarRule::identifier => identifier(pos, &mut state),
+                GrammarRule::string => string(pos, &mut state),
+                GrammarRule::insensitive_string => insensitive_string(pos, &mut state),
+                GrammarRule::range => range(pos, &mut state),
+                GrammarRule::character => character(pos, &mut state)
+            }
+        })
     }
 }
 
-struct PestParser<'a> {
-    chars: Peekable<Chars<'a>>,
-    prev:  Option<char>,
-    line:  usize,
-    col:   usize
-}
+fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Rule> {
+    let climber = PrecClimber::new(vec![
+        Operator::new(GrammarRule::choice_operator, Assoc::Left),
+        Operator::new(GrammarRule::sequence_operator, Assoc::Left)
+    ]);
 
-impl<'a> PestParser<'a> {
-    pub fn new(chars: Peekable<Chars>) -> PestParser {
-        PestParser {
-            chars: chars,
-            prev:  None,
-            line:  1,
-            col:   1
-        }
-    }
+    pairs.map(|pair| {
+        let mut pairs = pair.into_inner().peekable();
 
-    fn pos(&self) -> String {
-        format!("line {}, column {}", self.line, self.col)
-    }
+        let name = Ident::new(pairs.next().unwrap().into_span().capture());
 
-    fn adv(&mut self, c: Option<char>) {
-        if let Some(prev) = self.prev {
-            if prev == '\n' {
-                self.line += 1;
-                self.col = 1;
-            } else {
-                self.col += 1;
-            }
-        }
+        pairs.next().unwrap(); // assignment_operator
 
-        self.prev = c;
-    }
-
-    fn next(&mut self) -> Result<char, String> {
-        match self.chars.next() {
-            Some(c) => {
-                self.adv(Some(c));
-                Ok(c)
-            },
-            None => {
-                self.adv(None);
-                err!(self, "Unexpected end of input at")
-            }
-        }
-    }
-
-    fn whitespace(&mut self) {
-        loop {
-            if let Some(c) = self.peek() {
-                if !c.is_whitespace() {
-                    break;
-                }
-
-                self.next().unwrap();
-            } else {
-                break;
-            }
-        }
-    }
-
-    pub fn peek(&mut self) -> Option<char> {
-        self.chars.peek().map(|c| *c)
-    }
-
-    pub fn ident(&mut self) -> Result<Expr, String> {
-        let mut ident = vec![];
-
-        let c = self.next()?;
-
-        if c.is_alphabetic() || c == '_' {
-            ident.push(c);
-
-            loop {
-                let c = match self.chars.peek() {
-                    Some(c) => *c,
-                    None    => break
-                };
-
-                if c.is_alphabetic() || c.is_digit(10) || c == '_' {
-                    ident.push(self.next()?)
-                } else {
-                    break;
-                }
+        let ty = if pairs.peek().unwrap().as_rule() != GrammarRule::opening_brace {
+            match pairs.next().unwrap().as_rule() {
+                GrammarRule::silent_modifier => RuleType::Silent,
+                GrammarRule::atomic_modifier => RuleType::Atomic,
+                GrammarRule::non_atomic_modifier => RuleType::NonAtomic,
+                _ => unreachable!()
             }
         } else {
-            if c.is_digit(10) {
-                return err!(self, "Rules can only start with alphabetic characters or '_' at");
-            } else {
-                return err!(self, "Expected rule at");
-            }
-        }
-
-        Ok(Expr::Ident(Ident::new(ident.into_iter().collect::<String>())))
-    }
-
-    pub fn char(&mut self) -> Result<Expr, String> {
-        let mut char = vec![];
-
-        let c = self.next()?;
-
-        if c == '\'' {
-            char.push(c);
-            let mut prev = c;
-            let mut c = self.next()?;
-
-            while c != '\'' || prev == '\\' {
-                char.push(c);
-                prev = c;
-                c = self.next()?;
-            }
-
-            char.push(c);
-        } else {
-            return err!(self, "Expected char at");
-        }
-
-        Ok(Expr::Char(char.into_iter().collect()))
-    }
-
-    pub fn string(&mut self) -> Result<Expr, String> {
-        let mut string = vec![];
-
-        let c = self.next()?;
-
-        if c == '"' {
-            string.push(c);
-            let mut prev = c;
-            let mut c = self.next()?;
-
-            while c != '"' || prev == '\\' {
-                string.push(c);
-                prev = c;
-                c = self.next()?;
-            }
-
-            string.push(c);
-        } else {
-            return err!(self, "Expected string at");
-        }
-
-        Ok(Expr::Str(string.into_iter().collect()))
-    }
-
-    pub fn insens(&mut self) -> Result<Expr, String> {
-        let c = self.next()?;
-
-        if c == '^' || self.peek() != Some('"') {
-            let expr = self.string()?;
-
-            if let Expr::Str(string) = expr {
-                Ok(Expr::Insens(string))
-            } else {
-                unreachable!()
-            }
-        } else {
-            err!(self, "Expected case-insensitive string at")
-        }
-    }
-
-    pub fn range(&mut self) -> Result<Expr, String> {
-        let start = self.char()?;
-
-        for _ in 0..2 {
-            self.whitespace();
-
-            let c = self.next()?;
-            if c != '.' {
-                return err!(self, "Expected '.' at");
-            }
-        }
-
-        self.whitespace();
-
-        let end = self.char()?;
-
-        if let (Expr::Char(start), Expr::Char(end)) = (start, end) {
-            Ok(Expr::Range(start, end))
-        } else {
-            unreachable!()
-        }
-    }
-
-    pub fn term(&mut self) -> Result<Expr, String> {
-        let mut term = match self.peek() {
-            Some(c) => match c {
-                '"'  => self.string(),
-                '^'  => self.insens(),
-                '\'' => self.range(),
-                c if c.is_alphabetic() || c == '_' => self.ident(),
-                '&'  => {
-                    self.next()?;
-                    self.whitespace();
-
-                    Ok(Expr::PosLhd(Box::new(self.term()?)))
-                },
-                '!'  => {
-                    self.next()?;
-                    self.whitespace();
-
-                    Ok(Expr::NegLhd(Box::new(self.term()?)))
-                },
-                '('  => self.paren(),
-                _    => return err!(self, "Expecting grammar expression term at")
-            },
-            None => return err!(self, "Unexpected end of input at")
+            RuleType::Normal
         };
 
-        self.whitespace();
+        pairs.next().unwrap(); // opening_brace
 
-        while let Some(c) = self.peek() {
-            match c {
-                '?' => {
-                    self.next()?;
-                    self.whitespace();
+        let expr = consume_expr(pairs.next().unwrap().into_inner().peekable(), &climber);
 
-                    term = Ok(Expr::Opt(Box::new(term?)));
-                },
-                '*' => {
-                    self.next()?;
-                    self.whitespace();
+        Rule {
+            name,
+            ty,
+            expr
+        }
+    }).collect()
+}
 
-                    term = Ok(Expr::RepZero(Box::new(term?)));
-                },
-                '+' => {
-                    self.next()?;
-                    self.whitespace();
+fn consume_expr<I: Input>(
+    pairs: Peekable<Pairs<GrammarRule, I>>,
+    climber: &PrecClimber<GrammarRule>
+) -> Expr {
+    fn unaries<I: Input>(
+        mut pairs: Peekable<Pairs<GrammarRule, I>>,
+        climber: &PrecClimber<GrammarRule>
+    ) -> Expr {
+        let pair = pairs.next().unwrap();
 
-                    term = Ok(Expr::RepOne(Box::new(term?)));
-                },
-                _   => break
+        match pair.as_rule() {
+            GrammarRule::positive_predicate_operator => {
+                Expr::PosPred(Box::new(unaries(pairs, climber)))
             }
-        }
-
-        term
-    }
-
-    pub fn paren(&mut self) -> Result<Expr, String> {
-        if let Ok('(') = self.next() {
-            self.whitespace();
-
-            let expr = self.expr();
-
-            if let Ok(')') = self.next() {
-                expr
-            } else {
-                err!(self, "Expected ')' at")
+            GrammarRule::negative_predicate_operator => {
+                Expr::NegPred(Box::new(unaries(pairs, climber)))
             }
-        } else {
-            err!(self, "Expected '(' at")
-        }
-    }
+            rule => {
+                let expr = match rule {
+                    GrammarRule::expression => consume_expr(pair.into_inner().peekable(), climber),
+                    GrammarRule::push => {
+                        let mut pairs = pair.into_inner();
+                        pairs.next().unwrap(); // opening_paren
+                        let pair = pairs.next().unwrap();
 
-    pub fn expr(&mut self) -> Result<Expr, String> {
-        let mut sequences = vec![self.seq()?];
+                        let expr = consume_expr(pair.into_inner().peekable(), climber);
+                        Expr::Push(Box::new(expr))
 
-        while let Some('|') = self.peek() {
-            self.next()?;
-            self.whitespace();
+                    }
+                    GrammarRule::identifier => Expr::Ident(Ident::new(pair.into_span().capture())),
+                    GrammarRule::string => {
+                        let span = pair.into_span();
+                        let string = span.capture();
+                        Expr::Str(string[1..string.len() - 1].to_owned())
+                    }
+                    GrammarRule::insensitive_string => {
+                        let span = pair.into_span();
+                        let string = span.capture();
+                        Expr::Insens(string[1..string.len() - 1].to_owned())
+                    }
+                    GrammarRule::range => {
+                        let span = pairs.next().unwrap().into_span();
+                        let start = span.capture();
+                        let span = pairs.next().unwrap().into_span();
+                        let end = span.capture();
 
-            sequences.push(self.seq()?);
-        }
-
-        if sequences.len() == 1 {
-            Ok(sequences.pop().unwrap())
-        } else {
-            Ok(Expr::Choice(sequences))
-        }
-    }
-
-    fn seq(&mut self) -> Result<Expr, String> {
-        let mut terms = vec![self.term()?];
-
-        while let Some('~') = self.peek() {
-            self.next()?;
-            self.whitespace();
-
-            terms.push(self.term()?);
-        }
-
-        if terms.len() == 1 {
-            Ok(terms.pop().unwrap())
-        } else {
-            Ok(Expr::Seq(terms))
-        }
-    }
-
-    pub fn rule(&mut self) -> Result<Rule, String> {
-        if let Expr::Ident(name) = self.ident()? {
-            self.whitespace();
-
-            if self.next()? == '=' {
-                self.whitespace();
-
-                let (ty, expr) = match self.peek() {
-                    Some(c) => match c {
-                        '{' => (RuleType::Normal, self.body()?),
-                        '_' => {
-                            self.next()?;
-                            self.whitespace();
-
-                            (RuleType::Silent, self.body()?)
-                        },
-                        '@' => {
-                            self.next()?;
-                            self.whitespace();
-
-                            (RuleType::Atomic, self.body()?)
-                        },
-                        '!' => {
-                            self.next()?;
-
-                            if self.next()? != '@' {
-                                return err!(self, "Expecting '@' at");
-                            }
-
-                            self.whitespace();
-
-                            (RuleType::NonAtomic, self.body()?)
-                        },
-                        _ => return err!(self, "Expected modifier ('_', '@', or '!@') or '{' at")
-                    },
-                    None => return err!(self, "Unexpected end of input at")
+                        Expr::Range(
+                            start[1..start.len() - 1].to_owned(),
+                            end[1..end.len() - 1].to_owned()
+                        )
+                    }
+                    _ => unreachable!()
                 };
 
-                Ok(Rule {
-                    name: name,
-                    ty: ty,
-                    expr: expr
+                pairs.fold(expr, |expr, pair| {
+                    match pair.as_rule() {
+                        GrammarRule::optional_operator => Expr::Opt(Box::new(expr)),
+                        GrammarRule::repeat_operator => Expr::Rep(Box::new(expr)),
+                        GrammarRule::repeat_once_operator => Expr::RepOnce(Box::new(expr)),
+                        _ => unreachable!()
+                    }
                 })
-            } else {
-                return err!(self, "Expected '=' after rule name at");
             }
-        } else {
-            unreachable!()
+
         }
     }
 
-    fn body(&mut self) -> Result<Expr, String> {
-        if let Ok('{') = self.next() {
-            self.whitespace();
-
-
-            let expr = self.expr()?;
-
-            if let Ok('}') = self.next() {
-                Ok(expr)
-            } else {
-                err!(self, "Expected '}' at")
-            }
-        } else {
-            err!(self, "Rule definitions start with '{' at")
+    let primary = |pair: Pair<GrammarRule, I>| {
+        unaries(pair.into_inner().peekable(), climber)
+    };
+    let infix = |lhs: Expr, op: Pair<GrammarRule, I>, rhs: Expr| {
+        match op.as_rule() {
+            GrammarRule::sequence_operator => Expr::Seq(Box::new(lhs), Box::new(rhs)),
+            GrammarRule::choice_operator => Expr::Choice(Box::new(lhs), Box::new(rhs)),
+            _ => unreachable!()
         }
-    }
+    };
+
+    climber.climb(pairs, primary, infix)
 }
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
+
+    use pest::inputs::StringInput;
+
     use super::*;
 
     #[test]
-    fn peek() {
-        let mut parser = PestParser::new("abc".chars().peekable());
-
-        assert_eq!(parser.peek(), Some('a'));
-        parser.ident().unwrap();
-        assert_eq!(parser.peek(), None);
-    }
-
-    #[test]
-    fn ident() {
-        let mut parser = PestParser::new("abc".chars().peekable());
-
-        assert_eq!(parser.ident(), Ok(Expr::Ident(Ident::new("abc"))));
-        assert_eq!(parser.ident(), Err("Unexpected end of input at line 1, column 4".to_owned()));
-    }
-
-    #[test]
-    fn ident_digit() {
-        let mut parser = PestParser::new("1".chars().peekable());
-
-        assert_eq!(parser.ident(), Err("Rules can only start with alphabetic characters or '_' at \
-                                        line 1, column 1".to_owned()));
-    }
-
-    #[test]
-    fn ident_symbol() {
-        let mut parser = PestParser::new("=".chars().peekable());
-
-        assert_eq!(parser.ident(), Err("Expected rule at line 1, column 1".to_owned()));
-    }
-
-    #[test]
-    fn string() {
-        let mut parser = PestParser::new("\"a\\\"\"".chars().peekable());
-
-        assert_eq!(parser.string(), Ok(Expr::Str("\"a\\\"\"".to_owned())));
-    }
-
-    #[test]
-    fn string_no_end() {
-        let mut parser = PestParser::new("\"a\\\"".chars().peekable());
-
-        assert_eq!(parser.string(), Err("Unexpected end of input at line 1, column 5".to_owned()));
-    }
-
-    #[test]
-    fn char() {
-        let mut parser = PestParser::new("'\\''".chars().peekable());
-
-        assert_eq!(parser.char(), Ok(Expr::Char("'\\''".to_owned())));
-    }
-
-    #[test]
-    fn char_no_end() {
-        let mut parser = PestParser::new("'\\'".chars().peekable());
-
-        assert_eq!(parser.char(), Err("Unexpected end of input at line 1, column 4".to_owned()));
-    }
-
-    #[test]
-    fn insens() {
-        let mut parser = PestParser::new("^\"a\\\"\"".chars().peekable());
-
-        assert_eq!(parser.insens(), Ok(Expr::Insens("\"a\\\"\"".to_owned())));
-    }
-
-    #[test]
-    fn range() {
-        let mut parser = PestParser::new("'a' .\n. 'z'".chars().peekable());
-
-        assert_eq!(parser.range(), Ok(Expr::Range("'a'".to_owned(), "'z'".to_owned())));
-    }
-
-    #[test]
-    fn range_missing_dot() {
-        let mut parser = PestParser::new("'a'.'z'".chars().peekable());
-
-        assert_eq!(parser.range(), Err("Expected \'.\' at line 1, column 5".to_owned()));
-    }
-
-    #[test]
-    fn term_string() {
-        let mut parser = PestParser::new("\"hi\"".chars().peekable());
-
-        assert_eq!(parser.term(), Ok(Expr::Str("\"hi\"".to_owned())));
-    }
-
-    #[test]
-    fn term_insens() {
-        let mut parser = PestParser::new("^\"hi\"".chars().peekable());
-
-        assert_eq!(parser.term(), Ok(Expr::Insens("\"hi\"".to_owned())));
-    }
-
-    #[test]
-    fn term_range() {
-        let mut parser = PestParser::new("'a'..'z'".chars().peekable());
-
-        assert_eq!(parser.term(), Ok(Expr::Range("'a'".to_owned(), "'z'".to_owned())));
-    }
-
-    #[test]
-    fn term_underscore_ident() {
-        let mut parser = PestParser::new("_hi".chars().peekable());
-
-        assert_eq!(parser.term(), Ok(Expr::Ident(Ident::new("_hi"))));
-    }
-
-    #[test]
-    fn term_ident() {
-        let mut parser = PestParser::new("hi".chars().peekable());
-
-        assert_eq!(parser.term(), Ok(Expr::Ident(Ident::new("hi"))));
-    }
-
-    #[test]
-    fn term_prefix_postfix() {
-        let mut parser = PestParser::new("& ! hi ? * +".chars().peekable());
-
-        assert_eq!(parser.term(), Ok(
-            Expr::PosLhd(Box::new(
-                Expr::NegLhd(Box::new(
-                    Expr::RepOne(Box::new(
-                        Expr::RepZero(Box::new(
-                            Expr::Opt(Box::new(
-                                Expr::Ident(Ident::new("hi"))
-                            ))
-                        ))
-                    ))
-                ))
-            ))
-        ));
-    }
-
-    #[test]
-    fn term_paren() {
-        let mut parser = PestParser::new("( ( ( \"hi\" ) ) )".chars().peekable());
-
-        assert_eq!(parser.term(), Ok(Expr::Str("\"hi\"".to_owned())));
-    }
-
-    #[test]
-    fn term_not_closed() {
-        let mut parser = PestParser::new("(((\"hi\"))".chars().peekable());
-
-        assert_eq!(parser.term(), Err("Expected ')' at line 1, column 10".to_owned()));
-    }
-
-    #[test]
-    fn precedence1() {
-        let mut parser = PestParser::new("a ~ b | c ~ d".chars().peekable());
-
-        assert_eq!(parser.expr(), Ok(
-            Expr::Choice(vec![
-                Expr::Seq(vec![
-                    Expr::Ident(Ident::new("a")),
-                    Expr::Ident(Ident::new("b"))
-                ]),
-                Expr::Seq(vec![
-                    Expr::Ident(Ident::new("c")),
-                    Expr::Ident(Ident::new("d"))
-                ])
-            ])
-        ));
-    }
-
-    #[test]
-    fn precedence2() {
-        let mut parser = PestParser::new("a | b ~ c ~ d | e | f".chars().peekable());
-
-        assert_eq!(parser.expr(), Ok(
-            Expr::Choice(vec![
-                Expr::Ident(Ident::new("a")),
-                Expr::Seq(vec![
-                    Expr::Ident(Ident::new("b")),
-                    Expr::Ident(Ident::new("c")),
-                    Expr::Ident(Ident::new("d"))
-                ]),
-                Expr::Ident(Ident::new("e")),
-                Expr::Ident(Ident::new("f"))
-            ])
-        ));
-    }
-
-    #[test]
-    fn complex() {
-        let mut parser = PestParser::new("_a | 'a'..'b' ~ !^\"abc\" ~ (d | e)*?".chars().peekable());
-
-        assert_eq!(parser.expr(), Ok(
-            Expr::Choice(vec![
-                Expr::Ident(Ident::new("_a")),
-                Expr::Seq(vec![
-                    Expr::Range("'a'".to_owned(), "'b'".to_owned()),
-                    Expr::NegLhd(Box::new(
-                        Expr::Insens("\"abc\"".to_owned())
-                    )),
-                    Expr::Opt(Box::new(
-                        Expr::RepZero(Box::new(
-                            Expr::Choice(vec![
-                                Expr::Ident(Ident::new("d")),
-                                Expr::Ident(Ident::new("e"))
+    fn rules() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "a = { b } c = { d }",
+            rule: GrammarRule::rules,
+            tokens: [
+                rules(0, 19, [
+                    rule(0, 9, [
+                        identifier(0, 1),
+                        assignment_operator(2, 3),
+                        opening_brace(4, 5),
+                        expression(6, 7, [
+                            primary(6, 7, [
+                                identifier(6, 7)
                             ])
-                        ))
-                    ))
+                        ]),
+                        closing_brace(8, 9)
+                    ]),
+                    rule(10, 19, [
+                        identifier(10, 11),
+                        assignment_operator(12, 13),
+                        opening_brace(14, 15),
+                        expression(16, 17, [
+                            primary(16, 17, [
+                                identifier(16, 17)
+                            ])
+                        ]),
+                        closing_brace(18, 19)
+                    ])
                 ])
-            ])
-        ));
+            ]
+        };
     }
 
     #[test]
     fn rule() {
-        let mut parser = PestParser::new("rule = { a }".chars().peekable());
-
-        assert_eq!(parser.rule(), Ok(
-            Rule {
-                name: Ident::new("rule"),
-                ty: RuleType::Normal,
-                expr: Expr::Ident(Ident::new("a"))
-            }
-        ));
+        parses_to! {
+            parser: GrammarParser,
+            input: "a = !@ { b ~ c }",
+            rule: GrammarRule::rule,
+            tokens: [
+                rule(0, 16, [
+                    identifier(0, 1),
+                    assignment_operator(2, 3),
+                    non_atomic_modifier(4, 6),
+                    opening_brace(7, 8),
+                    expression(9, 14, [
+                        primary(9, 10, [
+                            identifier(9, 10)
+                        ]),
+                        sequence_operator(11, 12),
+                        primary(13, 14, [
+                            identifier(13, 14)
+                        ])
+                    ]),
+                    closing_brace(15, 16)
+                ])
+            ]
+        };
     }
 
     #[test]
-    fn rule_silent() {
-        let mut parser = PestParser::new("rule = _{ a }".chars().peekable());
+    fn expression() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "_a | 'a'..'b' ~ !^\"abc\" ~ (d | e)*?",
+            rule: GrammarRule::expression,
+            tokens: [
+                expression(0, 35, [
+                    primary(0, 2, [
+                        identifier(0, 2)
+                    ]),
+                    choice_operator(3, 4),
+                    primary(5, 13, [
+                        range(5, 13, [
+                            character(5, 8),
+                            character(10, 13)
+                        ])
+                    ]),
+                    sequence_operator(14, 15),
+                    primary(16, 23, [
+                        negative_predicate_operator(16, 17),
+                        insensitive_string(17, 23, [
+                            string(18, 23)
+                        ])
+                    ]),
+                    sequence_operator(24, 25),
+                    primary(26, 35, [
+                        expression(27, 32, [
+                            primary(27, 28, [
+                                identifier(27, 28)
+                            ]),
+                            choice_operator(29, 30),
+                            primary(31, 32, [
+                                identifier(31, 32)
+                            ])
+                        ]),
+                        repeat_operator(33, 34),
+                        optional_operator(34, 35)
+                    ])
+                ])
+            ]
+        };
+    }
 
-        assert_eq!(parser.rule(), Ok(
+    #[test]
+    fn push() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "push ( a )",
+            rule: GrammarRule::push,
+            tokens: [
+                push(0, 10, [
+                    opening_paren(5, 6),
+                    expression(7, 8, [
+                        primary(7, 8, [
+                            identifier(7, 8)
+                        ])
+                    ]),
+                    closing_paren(9, 10)
+                ])
+            ]
+        };
+    }
+
+    #[test]
+    fn identifier() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "_a8943",
+            rule: GrammarRule::identifier,
+            tokens: [
+                identifier(0, 6)
+            ]
+        };
+    }
+
+    #[test]
+    fn string() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "\"aaaaa\\n\\r\\t\\\\\\0\\'\\\"\\x0F\\u{123abC}\\u{12}aaaaa\"",
+            rule: GrammarRule::string,
+            tokens: [
+                string(0, 46)
+            ]
+        };
+    }
+
+    #[test]
+    fn insensitive_string() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "^  \"\\\"hi\"",
+            rule: GrammarRule::insensitive_string,
+            tokens: [
+                insensitive_string(0, 9, [
+                    string(3, 9)
+                ])
+            ]
+        };
+    }
+
+    #[test]
+    fn range() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "'\\n' .. '\\x1a'",
+            rule: GrammarRule::range,
+            tokens: [
+                range(0, 14, [
+                    character(0, 4),
+                    character(8, 14)
+                ])
+            ]
+        };
+    }
+
+    #[test]
+    fn character() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "'\\u{123abC}'",
+            rule: GrammarRule::character,
+            tokens: [
+                character(0, 12)
+            ]
+        };
+    }
+
+    #[test]
+    fn comment() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "a ~    // asda\n b",
+            rule: GrammarRule::expression,
+            tokens: [
+                expression(0, 17, [
+                    primary(0, 1, [
+                        identifier(0, 1)
+                    ]),
+                    sequence_operator(2, 3),
+                    primary(16, 17, [
+                        identifier(16, 17)
+                    ])
+                ])
+            ]
+        };
+    }
+
+    #[test]
+    fn ast() {
+        let input = Rc::new(StringInput::new("rule = _{ a ~ b | !(c | push(d))?* }".to_owned()));
+
+        let mut pairs = GrammarParser::parse(GrammarRule::rules, input.clone()).unwrap();
+        let ast = consume_rules(pairs.next().unwrap().into_inner());
+
+        assert_eq!(ast, vec![
             Rule {
                 name: Ident::new("rule"),
                 ty: RuleType::Silent,
-                expr: Expr::Ident(Ident::new("a"))
+                expr: Expr::Choice(
+                    Box::new(Expr::Seq(
+                        Box::new(Expr::Ident(Ident::new("a"))),
+                        Box::new(Expr::Ident(Ident::new("b")))
+                    )),
+                    Box::new(Expr::NegPred(
+                        Box::new(Expr::Rep(
+                            Box::new(Expr::Opt(
+                                Box::new(Expr::Choice(
+                                    Box::new(Expr::Ident(Ident::new("c"))),
+                                    Box::new(Expr::Push(
+                                        Box::new(Expr::Ident(Ident::new("d")))
+                                    )
+                                ))
+                            ))
+                        ))
+                    ))
+                ))
             }
-        ));
-    }
-
-    #[test]
-    fn rule_atomic() {
-        let mut parser = PestParser::new("rule = @{ a }".chars().peekable());
-
-        assert_eq!(parser.rule(), Ok(
-            Rule {
-                name: Ident::new("rule"),
-                ty: RuleType::Atomic,
-                expr: Expr::Ident(Ident::new("a"))
-            }
-        ));
-    }
-
-    #[test]
-    fn rule_non_atomic() {
-        let mut parser = PestParser::new("rule = !@{ a }".chars().peekable());
-
-        assert_eq!(parser.rule(), Ok(
-            Rule {
-                name: Ident::new("rule"),
-                ty: RuleType::NonAtomic,
-                expr: Expr::Ident(Ident::new("a"))
-            }
-        ));
+        ]);
     }
 }

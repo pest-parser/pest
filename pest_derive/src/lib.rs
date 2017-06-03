@@ -7,6 +7,8 @@
 
 #![doc(html_root_url = "https://docs.rs/pest_derive/1.0.0")]
 
+#[macro_use]
+extern crate pest;
 extern crate proc_macro;
 #[macro_use]
 extern crate quote;
