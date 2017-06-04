@@ -22,6 +22,8 @@ use super::ast::{Expr, Rule, RuleType};
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum GrammarRule {
     rules,
+    soi,
+    eoi,
     rule,
     assignment_operator,
     silent_modifier,
@@ -62,7 +64,11 @@ impl Parser<GrammarRule> for GrammarParser {
             state.rule(GrammarRule::rules, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
-                        grammar_rule(pos, state).and_then(|pos| {
+                        soi(pos, state).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            grammar_rule(pos, state)
+                        }).and_then(|pos| {
                             pos.repeat(|pos| {
                                 state.sequence(move |state| {
                                     pos.sequence(|pos| {
@@ -72,9 +78,31 @@ impl Parser<GrammarRule> for GrammarParser {
                                     })
                                 })
                             })
+                        }).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            eoi(pos, state)
                         })
                     })
                 })
+            })
+        }
+
+        fn soi<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::soi, pos, |state, pos| {
+                pos.at_start()
+            })
+        }
+
+        fn eoi<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::eoi, pos, |state, pos| {
+                pos.at_end()
             })
         }
 
@@ -651,6 +679,8 @@ impl Parser<GrammarRule> for GrammarParser {
         pest::state(input, move |mut state, pos| {
             match rule {
                 GrammarRule::rules => rules(pos, &mut state),
+                GrammarRule::soi => soi(pos, &mut state),
+                GrammarRule::eoi => eoi(pos, &mut state),
                 GrammarRule::rule => grammar_rule(pos, &mut state),
                 GrammarRule::assignment_operator => assignment_operator(pos, &mut state),
                 GrammarRule::silent_modifier => silent_modifier(pos, &mut state),
@@ -684,13 +714,13 @@ impl Parser<GrammarRule> for GrammarParser {
     }
 }
 
-fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Rule> {
+fn consume_rules<I: Input>(mut pairs: Pairs<GrammarRule, I>) -> Vec<Rule> {
     let climber = PrecClimber::new(vec![
         Operator::new(GrammarRule::choice_operator, Assoc::Left),
         Operator::new(GrammarRule::sequence_operator, Assoc::Left)
     ]);
 
-    pairs.map(|pair| {
+    pairs.filter(|pair| pair.as_rule() == GrammarRule::rule).map(|pair| {
         let mut pairs = pair.into_inner().peekable();
 
         let name = Ident::new(pairs.next().unwrap().into_span().capture());
@@ -817,6 +847,7 @@ mod tests {
             rule: GrammarRule::rules,
             tokens: [
                 rules(0, 19, [
+                    soi(0, 0),
                     rule(0, 9, [
                         identifier(0, 1),
                         assignment_operator(2, 3),
@@ -838,7 +869,8 @@ mod tests {
                             ])
                         ]),
                         closing_brace(18, 19)
-                    ])
+                    ]),
+                    eoi(19, 19)
                 ])
             ]
         };
