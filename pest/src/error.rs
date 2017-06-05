@@ -9,6 +9,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 
 use super::inputs::{Input, position, Position, Span};
+use super::RuleType;
 
 /// An `enum` which defines possible errors.
 #[derive(Debug)]
@@ -38,38 +39,101 @@ pub enum Error<R, I: Input> {
     }
 }
 
+impl <R: RuleType, I: Input> Error<R, I> {
+    /// Renames all `Rule`s from a `ParsingError` variant returning a `CustomErrorPos`. It does
+    /// nothing when called on `CustomErrorPos` and `CustomErrorSpan` variants.
+    ///
+    /// Useful in order to rename verbose rules or have detailed per-`Rule` formatting.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest::Error;
+    /// # use pest::inputs::{Position, StringInput};
+    /// # #[allow(non_camel_case_types)]
+    /// # #[allow(dead_code)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// # enum Rule {
+    /// #     open_paren,
+    /// #     closed_paren
+    /// # }
+    /// # let input = Rc::new(StringInput::new("".to_owned()));
+    /// # let pos = Position::from_start(input);
+    /// Error::ParsingError {
+    ///     positives: vec![Rule::open_paren],
+    ///     negatives: vec![Rule::closed_paren],
+    ///     pos: pos
+    /// }.renamed_rules(|rule| {
+    ///     match *rule {
+    ///         Rule::open_paren => "(".to_owned(),
+    ///         Rule::closed_paren => "closed paren".to_owned()
+    ///     }
+    /// });
+    /// ```
+    pub fn renamed_rules<F>(self, f: F) -> Error<R, I>
+    where
+        F: FnMut(&R) -> String
+    {
+        match self {
+            Error::ParsingError { positives, negatives, pos } => {
+                let message = parsing_error_message(&positives, &negatives, f);
+                Error::CustomErrorPos {
+                    message,
+                    pos
+                }
+            }
+            error => error
+        }
+    }
+}
+
 fn message<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
     match *error {
         Error::ParsingError { ref positives, ref negatives, .. } => {
-            match (negatives.is_empty(), positives.is_empty()) {
-                (false, false) => {
-                    format!(
-                        "unexpected {}; expected {}",
-                        enumerate(negatives),
-                        enumerate(positives)
-                    )
-                }
-                (false, true) => format!("unexpected {}", enumerate(negatives)),
-                (true, false) => format!("expected {}", enumerate(positives)),
-                (true, true) => "unknown parsing error".to_owned()
-            }
+            parsing_error_message(positives, negatives, |r| format!("{:?}", r))
         }
         Error::CustomErrorPos { ref message, .. } => message.to_owned(),
         Error::CustomErrorSpan { ref message, .. } => message.to_owned()
     }
 }
 
-fn enumerate<R: fmt::Debug>(rules: &Vec<R>) -> String {
+fn parsing_error_message<R: fmt::Debug, F>(
+    positives: &Vec<R>,
+    negatives: &Vec<R>,
+    mut f: F
+) -> String
+where
+    F: FnMut(&R) -> String
+{
+    match (negatives.is_empty(), positives.is_empty()) {
+        (false, false) => {
+            format!(
+                "unexpected {}; expected {}",
+                enumerate(negatives, &mut f),
+                enumerate(positives, &mut f)
+            )
+        }
+        (false, true) => format!("unexpected {}", enumerate(negatives, &mut f)),
+        (true, false) => format!("expected {}", enumerate(positives, &mut f)),
+        (true, true) => "unknown parsing error".to_owned()
+    }
+}
+
+fn enumerate<R: fmt::Debug, F>(rules: &Vec<R>, f: &mut F) -> String
+where
+    F: FnMut(&R) -> String
+{
     match rules.len() {
-        1 => format!("{:?}", rules[0]),
-        2 => format!("{:?} or {:?}", rules[0], rules[1]),
+        1 => f(&rules[0]),
+        2 => format!("{} or {}", f(&rules[0]), f(&rules[1])),
         l => {
             let separated = rules.iter()
                                  .take(l - 1)
-                                 .map(|r| format!("{:?}", r))
+                                 .map(|r| f(r))
                                  .collect::<Vec<_>>()
                                  .join(", ");
-            format!("{}, or {:?}", separated, rules[l - 1])
+            format!("{}, or {}", separated, f(&rules[l - 1]))
         }
     }
 }
@@ -264,6 +328,26 @@ mod tests {
             "  |  ^---",
             "  |",
             "  = error: big one"
+        ].join("\n"));
+    }
+
+    #[test]
+    fn mapped_parsing_error() {
+        let input = StringInput::new("ab\ncd\nef".to_owned());
+        let pos = position::new(Rc::new(input), 4);
+        let error: Error<u32, _> = Error::ParsingError {
+            positives: vec![1, 2, 3],
+            negatives: vec![4, 5, 6],
+            pos: pos
+        }.renamed_rules(|n| format!("{}", n + 1));
+
+        assert_eq!(format!("{}", error), vec![
+            " --> 2:2",
+            "  |",
+            "2 | cd",
+            "  |  ^---",
+            "  |",
+            "  = unexpected 5, 6, or 7; expected 2, 3, or 4"
         ].join("\n"));
     }
 }
