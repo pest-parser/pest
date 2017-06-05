@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::ffi::OsString;
 use std::fmt::Debug;
 use std::ops::Range;
 
@@ -30,6 +31,9 @@ pub trait Input: Debug {
 
     /// Returns whether the input is empty.
     fn is_empty(&self) -> bool;
+
+    /// Returns the file name of the input or `None` in the case where it doesn't have one.
+    fn file_name(&self) -> Option<OsString>;
 
     /// Slices the input.
     ///

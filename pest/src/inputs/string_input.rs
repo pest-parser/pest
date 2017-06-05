@@ -6,6 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::ascii::AsciiExt;
+use std::ffi::OsString;
 use std::ops::Range;
 use std::str;
 
@@ -44,6 +45,11 @@ impl Input for StringInput {
     #[inline]
     fn is_empty(&self) -> bool {
         self.string.is_empty()
+    }
+
+    #[inline]
+    fn file_name(&self) -> Option<OsString> {
+        None
     }
 
     #[inline]

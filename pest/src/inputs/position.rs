@@ -28,6 +28,10 @@ pub fn new<I: Input>(input: Rc<I>, pos: usize) -> Position<I> {
     }
 }
 
+pub fn into_input<I: Input>(pos: &Position<I>) -> Rc<I> {
+    pos.input.clone()
+}
+
 impl<I: Input> Position<I> {
     /// Creates starting `Position` from an `Rc<Input>`.
     ///

@@ -7,11 +7,13 @@
 
 //! A `mod` containing the `Input`-related constructs.
 
+mod file_input;
 mod input;
 pub(super) mod position;
 pub(super) mod span;
 mod string_input;
 
+pub use self::file_input::FileInput;
 pub use self::input::Input;
 pub use self::position::Position;
 pub use self::string_input::StringInput;

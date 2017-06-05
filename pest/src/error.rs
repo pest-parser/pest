@@ -8,7 +8,7 @@
 use std::fmt;
 use std::hash::{Hash, Hasher};
 
-use super::inputs::{Input, Position, Span};
+use super::inputs::{Input, position, Position, Span};
 
 /// An `enum` which defines possible errors.
 #[derive(Debug)]
@@ -91,7 +91,6 @@ fn underline<R: fmt::Debug, I: Input>(error: &Error<R, I>, offset: usize) -> Str
     underline
 }
 
-// TODO: Replace None with filename.
 fn format<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
     let pos = match *error {
         Error::ParsingError { ref pos, .. } => pos.clone(),
@@ -104,10 +103,11 @@ fn format<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
     let mut spacing = String::new();
     for _ in 0..line_str_len { spacing.push(' '); }
 
-    let filename: Option<String> = None; // Will be replaced.
+    let filename = position::into_input(&pos).file_name();
 
     let mut result = match filename {
-        Some(filename) => format!("{}--> {}:{}:{}\n", spacing, filename, line, col),
+        Some(filename) => format!("{}--> {}:{}:{}\n", spacing, filename.to_string_lossy(), line,
+                                  col),
         None => format!("{}--> {}:{}\n", spacing, line, col)
     };
 
