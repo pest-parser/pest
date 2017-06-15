@@ -145,9 +145,13 @@ fn underline<R: fmt::Debug, I: Input>(error: &Error<R, I>, offset: usize) -> Str
 
     match *error {
         Error::CustomErrorSpan { ref span, .. } => {
-            underline.push('^');
-            for _ in 2..(span.end() - span.start()) { underline.push('-'); }
-            underline.push('^');
+            if span.end() - span.start() > 1 {
+                underline.push('^');
+                for _ in 2..(span.end() - span.start()) { underline.push('-'); }
+                underline.push('^');
+            } else {
+                underline.push('^');
+            }
         }
         _ => underline.push_str("^---")
     };
