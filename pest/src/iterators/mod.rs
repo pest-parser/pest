@@ -7,11 +7,13 @@
 
 //! A `mod` containing iterators and constructs to aid in parser output manipulation.
 
+mod flat_pairs;
 mod pair;
 pub(super) mod pairs;
 mod queueable_token;
 mod token_iterator;
 
+pub use self::flat_pairs::FlatPairs;
 pub use self::pair::Pair;
 pub use self::pairs::Pairs;
 pub(super) use self::queueable_token::QueueableToken;
