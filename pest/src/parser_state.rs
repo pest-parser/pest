@@ -52,8 +52,8 @@ pub fn state<R: RuleType, I: Input, F>(
     input: Rc<I>,
     f: F
 ) -> Result<pairs::Pairs<R, I>, Error<R, I>>
-    where
-        F: FnOnce(&mut ParserState<R, I>, Position<I>) -> Result<Position<I>, Position<I>>
+where
+    F: FnOnce(&mut ParserState<R, I>, Position<I>) -> Result<Position<I>, Position<I>>
 {
     let mut state = ParserState {
         queue: vec![],
@@ -69,6 +69,11 @@ pub fn state<R: RuleType, I: Input, F>(
         let len = state.queue.len();
         Ok(pairs::new(Rc::new(state.queue), input, 0, len))
     } else {
+        state.pos_attempts.sort();
+        state.pos_attempts.dedup();
+        state.neg_attempts.sort();
+        state.neg_attempts.dedup();
+
         Err(Error::ParsingError {
             positives: state.pos_attempts,
             negatives: state.neg_attempts,
@@ -107,7 +112,11 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         let actual_pos = pos.pos();
         let index = self.queue.len();
 
-        self.track(rule, actual_pos);
+        let (pos_attempts_index, neg_attempts_index) = if actual_pos == self.attempt_pos {
+            (self.pos_attempts.len(), self.neg_attempts.len())
+        } else { // Attempts have not been cleared yet since the attempt_pos is older.
+            (0, 0)
+        };
 
         if self.lookahead == Lookahead::None && !self.is_atomic {
             // Pair's position will only be known after running the closure.
@@ -115,6 +124,10 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         }
 
         let result = f(self, pos);
+
+        if result.is_err() {
+            self.track(rule, actual_pos, pos_attempts_index, neg_attempts_index);
+        }
 
         if self.lookahead == Lookahead::None && !self.is_atomic {
             if let Ok(ref pos) = result {
@@ -135,10 +148,17 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         result
     }
 
-    fn track(&mut self, rule: R, pos: usize) {
+    fn track(&mut self, rule: R, pos: usize, pos_attempts_index: usize, neg_attempts_index: usize) {
         if self.is_atomic {
             return;
         }
+
+        // If nested rules made no progress, there is no use to report them; it's only useful to
+        // track the current rule.
+        if pos == self.attempt_pos {
+            self.pos_attempts.truncate(pos_attempts_index);
+            self.neg_attempts.truncate(neg_attempts_index);
+        }println!("{} {} {:?} {:?} {}", pos, self.attempt_pos, rule, self.pos_attempts, pos_attempts_index);
 
         let mut attempts = if self.lookahead != Lookahead::Negative {
             &mut self.pos_attempts
@@ -151,7 +171,9 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
             self.attempt_pos = pos;
         }
 
-        attempts.push(rule);
+        if pos == self.attempt_pos {
+            attempts.push(rule);
+        }
     }
 
     /// Wrapper which removes `Tokens` in case of a sequence's failure.
