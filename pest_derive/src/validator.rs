@@ -208,6 +208,13 @@ pub fn validate_ast<I: Input>(rules: &Vec<(Rule, Span<I>)>) {
 
     errors.extend(validate_left_recursion(rules));
 
+    errors.sort_by_key(|error| {
+        match *error {
+            Error::CustomErrorSpan { ref span, .. } => span.clone(),
+            _ => unreachable!()
+        }
+    });
+
     let errors = errors.into_iter().map(|error| {
         format!("{}", error)
     }).collect::<Vec<_>>().join("\n\n");

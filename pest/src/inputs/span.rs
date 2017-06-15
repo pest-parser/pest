@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
@@ -134,6 +135,25 @@ impl<I: Input> PartialEq for Span<I> {
 }
 
 impl<I: Input> Eq for Span<I> {}
+
+impl<I: Input> PartialOrd for Span<I> {
+    fn partial_cmp(&self, other: &Span<I>) -> Option<Ordering> {
+        if Rc::ptr_eq(&self.input, &other.input) {
+            match self.start.partial_cmp(&other.start) {
+                Some(Ordering::Equal) => self.end.partial_cmp(&other.end),
+                ordering => ordering
+            }
+        } else {
+            None
+        }
+    }
+}
+
+impl<I: Input> Ord for Span<I> {
+    fn cmp(&self, other: &Span<I>) -> Ordering {
+        self.partial_cmp(other).expect("cannot compare spans from different inputs")
+    }
+}
 
 impl<'a, I: Input> Hash for Span<I> {
     fn hash<H: Hasher>(&self, state: &mut H) {

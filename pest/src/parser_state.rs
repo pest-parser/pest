@@ -158,7 +158,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         if pos == self.attempt_pos {
             self.pos_attempts.truncate(pos_attempts_index);
             self.neg_attempts.truncate(neg_attempts_index);
-        }println!("{} {} {:?} {:?} {}", pos, self.attempt_pos, rule, self.pos_attempts, pos_attempts_index);
+        }
 
         let mut attempts = if self.lookahead != Lookahead::Negative {
             &mut self.pos_attempts
