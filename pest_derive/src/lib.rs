@@ -14,6 +14,10 @@ extern crate proc_macro;
 extern crate quote;
 extern crate syn;
 
+use std::rc::Rc;
+
+use pest::inputs::FileInput;
+use pest::Parser;
 use proc_macro::TokenStream;
 use quote::{Tokens, ToTokens};
 use syn::{Attribute, Lit, MetaItem, NestedMetaItem};
@@ -24,13 +28,49 @@ mod optimizer;
 mod parser;
 mod validator;
 
-#[proc_macro_derive(Parser)]
+use parser::{GrammarParser, GrammarRule};
+
+#[proc_macro_derive(Parser, attributes(grammar))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
     let source = input.to_string();
 
     let (tokens, filename) = parse_derive(source);
 
-    tokens.parse().unwrap()
+    let input = match FileInput::new(&filename) {
+        Ok(input) => Rc::new(input),
+        Err(error) => panic!("error opening {:?}: {}", filename, error)
+    };
+    let pairs = match GrammarParser::parse(GrammarRule::rules, input) {
+        Ok(pairs) => pairs,
+        Err(error) => panic!("error parsing {:?}\n\n{}", filename, error.renamed_rules(|rule| {
+            match *rule {
+                GrammarRule::eoi => "end-of-input".to_owned(),
+                GrammarRule::assignment_operator => "`=`".to_owned(),
+                GrammarRule::silent_modifier => "`_`".to_owned(),
+                GrammarRule::atomic_modifier => "`@`".to_owned(),
+                GrammarRule::non_atomic_modifier => "`!@`".to_owned(),
+                GrammarRule::opening_brace => "`{`".to_owned(),
+                GrammarRule::closing_brace => "`}`".to_owned(),
+                GrammarRule::opening_paren => "`(`".to_owned(),
+                GrammarRule::positive_predicate_operator => "`&`".to_owned(),
+                GrammarRule::negative_predicate_operator => "`!`".to_owned(),
+                GrammarRule::sequence_operator => "`&`".to_owned(),
+                GrammarRule::choice_operator => "`|`".to_owned(),
+                GrammarRule::optional_operator => "`?`".to_owned(),
+                GrammarRule::repeat_operator => "`*`".to_owned(),
+                GrammarRule::repeat_once_operator => "`+`".to_owned(),
+                GrammarRule::closing_paren => "`)`".to_owned(),
+                GrammarRule::quote => "`\"`".to_owned(),
+                GrammarRule::insensitive_string => "`^`".to_owned(),
+                GrammarRule::range_operator => "`..`".to_owned(),
+                GrammarRule::single_quote => "`'`".to_owned(),
+                rule => format!("{:?}", rule)
+            }
+        }))
+    };
+    let ast = parser::consume_rules(pairs);
+
+    "".parse().unwrap()
 }
 
 fn parse_derive(source: String) -> (Tokens, String) {
@@ -38,15 +78,15 @@ fn parse_derive(source: String) -> (Tokens, String) {
 
     let (grammar, attrs): (Vec<_>, Vec<_>) = ast.attrs.iter().partition(|attr| {
         match attr.value {
-            MetaItem::List(ref ident, _) => format!("{}", ident) == "grammar",
+            MetaItem::NameValue(ref ident, _) => format!("{}", ident) == "grammar",
             _ => false
         }
     });
 
-    let filename = if grammar.len() == 1 {
-        get_filename(grammar[0])
-    } else {
-        panic!("You can only supply 1 grammar file");
+    let filename = match grammar.len() {
+        0 => panic!("a grammar file needs to be provided with the #[grammar(\"...\")] attribute"),
+        1 => get_filename(grammar[0]),
+        _ => panic!("only 1 grammar file can be provided")
     };
 
     let mut tokens = Tokens::new();
@@ -59,21 +99,11 @@ fn parse_derive(source: String) -> (Tokens, String) {
 }
 
 fn get_filename(attr: &Attribute) -> String {
-    if let MetaItem::List(_, ref items) = attr.value {
-        if items.len() == 1 {
-            let item = &items[0];
-
-            if let &NestedMetaItem::Literal(ref lit) = item {
-                if let &Lit::Str(ref str, _) = lit {
-                    str.to_owned()
-                } else {
-                    panic!("grammar attribute takes as argument a string");
-                }
-            } else {
-                panic!("grammar attribute takes as argument a string");
-            }
+    if let MetaItem::NameValue(_, ref lit) = attr.value {
+        if let &Lit::Str(ref string, _) = lit {
+            string.clone()
         } else {
-            panic!("grammar attribute takes only 1 argument");
+            panic!("grammar attribute must be a string")
         }
     } else {
         unreachable!();
@@ -88,7 +118,7 @@ mod tests {
     fn derive_ok() {
         let (tokens, filename) = parse_derive("
             #[other_attr]
-            #[grammar(\"myfile.pest\")]
+            #[grammar = \"myfile.pest\"]
             pub struct MyParser<'a, T>;
         ".to_owned());
 
@@ -97,32 +127,22 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "You can only supply 1 grammar file")]
+    #[should_panic(expected = "only 1 grammar file can be provided")]
     fn derive_multiple_grammars() {
         let (tokens, filename) = parse_derive("
             #[other_attr]
-            #[grammar(\"myfile1.pest\")]
-            #[grammar(\"myfile2.pest\")]
+            #[grammar = \"myfile1.pest\"]
+            #[grammar = \"myfile2.pest\"]
             pub struct MyParser<'a, T>;
         ".to_owned());
     }
 
     #[test]
-    #[should_panic(expected = "grammar attribute takes only 1 argument")]
-    fn derive_multiple_args() {
-        let (tokens, filename) = parse_derive("
-            #[other_attr]
-            #[grammar(\"myfile1.pest\", \"myfile2.pest\")]
-            pub struct MyParser<'a, T>;
-        ".to_owned());
-    }
-
-    #[test]
-    #[should_panic(expected = "grammar attribute takes as argument a string")]
+    #[should_panic(expected = "grammar attribute must be a string")]
     fn derive_wrong_arg() {
         let (tokens, filename) = parse_derive("
             #[other_attr]
-            #[grammar(1)]
+            #[grammar = 1]
             pub struct MyParser<'a, T>;
         ".to_owned());
     }
