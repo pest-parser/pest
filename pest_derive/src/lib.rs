@@ -14,6 +14,7 @@ extern crate proc_macro;
 extern crate quote;
 extern crate syn;
 
+use std::path::Path;
 use std::rc::Rc;
 
 use pest::inputs::FileInput;
@@ -34,15 +35,22 @@ use parser::{GrammarParser, GrammarRule};
 pub fn derive_parser(input: TokenStream) -> TokenStream {
     let source = input.to_string();
 
-    let (tokens, filename) = parse_derive(source);
+    let (tokens, path) = parse_derive(source);
 
-    let input = match FileInput::new(&filename) {
+    let root = std::env::var("CARGO_MANIFEST_DIR").unwrap_or(".".into());
+    let path = Path::new(&root).join("src/").join(&path);
+    let file_name = match path.file_name() {
+        Some(file_name) => file_name,
+        None => panic!("grammar attribute should point to a file")
+    };
+
+    let input = match FileInput::new(&path) {
         Ok(input) => Rc::new(input),
-        Err(error) => panic!("error opening {:?}: {}", filename, error)
+        Err(error) => panic!("error opening {:?}: {}", file_name, error)
     };
     let pairs = match GrammarParser::parse(GrammarRule::rules, input) {
         Ok(pairs) => pairs,
-        Err(error) => panic!("error parsing {:?}\n\n{}", filename, error.renamed_rules(|rule| {
+        Err(error) => panic!("error parsing {:?}\n\n{}", file_name, error.renamed_rules(|rule| {
             match *rule {
                 GrammarRule::eoi => "end-of-input".to_owned(),
                 GrammarRule::assignment_operator => "`=`".to_owned(),
