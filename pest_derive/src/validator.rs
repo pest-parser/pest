@@ -72,6 +72,7 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) {
     rust_keywords.insert("yield");
 
     let mut pest_keywords = HashSet::new();
+    pest_keywords.insert("any");
     pest_keywords.insert("eoi");
     pest_keywords.insert("peek");
     pest_keywords.insert("pop");
