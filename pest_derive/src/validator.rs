@@ -16,7 +16,7 @@ use quote::Ident;
 use super::ast::*;
 use super::parser::GrammarRule;
 
-pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) {
+pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
     let mut rust_keywords = HashSet::new();
     rust_keywords.insert("abstract");
     rust_keywords.insert("alignof");
@@ -118,6 +118,13 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) {
     if errors.len() > 0 {
         panic!("{}", errors);
     }
+
+    let definitions: HashSet<_> = definitions.iter().map(|span| span.capture()).collect();
+    let called_rules: HashSet<_> = called_rules.iter().map(|span| span.capture()).collect();
+
+    let defaults = called_rules.difference(&definitions);
+
+    defaults.into_iter().map(|string| Ident::new(*string)).collect()
 }
 
 pub fn validate_rust_keywords<I: Input>(

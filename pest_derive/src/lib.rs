@@ -76,7 +76,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
             }
         }))
     };
-    let ast = parser::consume_rules(pairs);
+    let (ast, defaults) = parser::consume_rules(pairs);
 
     "".parse().unwrap()
 }

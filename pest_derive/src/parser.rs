@@ -746,8 +746,8 @@ impl Parser<GrammarRule> for GrammarParser {
     }
 }
 
-pub fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Rule> {
-    validator::validate_pairs(pairs.clone());
+pub fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> (Vec<Rule>, Vec<Ident>) {
+    let defaults = validator::validate_pairs(pairs.clone());
 
     let climber = PrecClimber::new(vec![
         Operator::new(GrammarRule::choice_operator, Assoc::Left),
@@ -758,7 +758,7 @@ pub fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Rule> {
 
     validator::validate_ast(&rules);
 
-    rules.into_iter().map(|(rule, _)| rule).collect()
+    (rules.into_iter().map(|(rule, _)| rule).collect(), defaults)
 }
 
 fn consume_rules_with_spans<I: Input>(mut pairs: Pairs<GrammarRule, I>) -> Vec<(Rule, Span<I>)> {

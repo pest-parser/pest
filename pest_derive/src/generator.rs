@@ -10,26 +10,17 @@ use quote::{Ident, Tokens};
 
 use super::ast::*;
 
-pub fn generate(name: &str, rules: Vec<Rule>) -> Tokens {
-    rule_enum(rules.iter().collect())
+pub fn generate(name: &str, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
+    rule_enum(&rules, &defaults)
 }
 
-fn rule_enum(rules: Vec<&Rule>) -> Tokens {
-    let rules: Vec<_> = rules.into_iter()
-                             .filter(|rule| rule.ty != RuleType::Silent)
-                             .map(|rule| {
-                                 let name = Ident::new(rule.name.clone());
-                                 quote! { #name }
-                             })
-                             .collect();
+fn rule_enum(rules: &Vec<Rule>, defaults: &Vec<Ident>) -> Tokens {
+    let rules = rules.iter().map(|rule| &rule.name).chain(defaults.iter());
 
     quote! {
         #[allow(dead_code, non_camel_case_types)]
         #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
         pub enum Rule {
-            any,
-            soi,
-            eoi,
             #( #rules ),*
         }
     }
@@ -40,13 +31,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rule_enum_complex() {
+    fn rule_enum_simple() {
         let rules = vec![
-            Rule {
-                name: Ident::new("rule"),
-                ty:   RuleType::Silent,
-                expr: Expr::Ident(Ident::new("a"))
-            },
             Rule {
                 name: Ident::new("f"),
                 ty: RuleType::Normal,
@@ -54,14 +40,12 @@ mod tests {
             }
         ];
 
-        assert_eq!(rule_enum(rules.iter().collect()), quote! {
+        assert_eq!(rule_enum(&rules, &vec![Ident::new("any")]), quote! {
             #[allow(dead_code, non_camel_case_types)]
             #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
             pub enum Rule {
-                any,
-                soi,
-                eoi,
-                f
+                f,
+                any
             }
         });
     }
