@@ -19,7 +19,7 @@ fn rule_enum(rules: &Vec<Rule>, defaults: &Vec<Ident>) -> Tokens {
 
     quote! {
         #[allow(dead_code, non_camel_case_types)]
-        #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
         pub enum Rule {
             #( #rules ),*
         }
@@ -42,7 +42,7 @@ mod tests {
 
         assert_eq!(rule_enum(&rules, &vec![Ident::new("any")]), quote! {
             #[allow(dead_code, non_camel_case_types)]
-            #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
             pub enum Rule {
                 f,
                 any

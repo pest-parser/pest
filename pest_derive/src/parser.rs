@@ -18,8 +18,7 @@ use quote::Ident;
 use super::ast::{Expr, Rule, RuleType};
 use super::validator;
 
-#[allow(non_camel_case_types)]
-#[allow(dead_code)]
+#[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum GrammarRule {
     rules,

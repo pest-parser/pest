@@ -15,8 +15,7 @@ use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 
-#[allow(non_camel_case_types)]
-#[allow(dead_code)]
+#[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum Rule {
     expression,

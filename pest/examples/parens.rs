@@ -7,8 +7,7 @@ use pest::inputs::{Input, Position, StringInput};
 use pest::iterators::Pairs;
 use pest::{Error, Parser, ParserState, state};
 
-#[allow(non_camel_case_types)]
-#[allow(dead_code)]
+#[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum Rule {
     expr,
