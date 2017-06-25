@@ -6,6 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #![doc(html_root_url = "https://docs.rs/pest_derive/1.0.0")]
+#![recursion_limit="256"]
 
 #[macro_use]
 extern crate pest;
@@ -20,7 +21,7 @@ use std::rc::Rc;
 use pest::inputs::FileInput;
 use pest::Parser;
 use proc_macro::TokenStream;
-use quote::{Tokens, ToTokens};
+use quote::{Ident, Tokens, ToTokens};
 use syn::{Attribute, Lit, MetaItem, NestedMetaItem};
 
 mod ast;
@@ -35,7 +36,7 @@ use parser::{GrammarParser, GrammarRule};
 pub fn derive_parser(input: TokenStream) -> TokenStream {
     let source = input.to_string();
 
-    let (tokens, path) = parse_derive(source);
+    let (tokens, name, path) = parse_derive(source);
 
     let root = std::env::var("CARGO_MANIFEST_DIR").unwrap_or(".".into());
     let path = Path::new(&root).join("src/").join(&path);
@@ -76,13 +77,17 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
             }
         }))
     };
-    let (ast, defaults) = parser::consume_rules(pairs);
 
-    "".parse().unwrap()
+    let (ast, defaults) = parser::consume_rules(pairs);
+    let optimized = optimizer::optimize(ast);
+    let generated = generator::generate(name, optimized, defaults);
+
+    generated.as_ref().parse().unwrap()
 }
 
-fn parse_derive(source: String) -> (Tokens, String) {
+fn parse_derive(source: String) -> (Tokens, Ident, String) {
     let ast = syn::parse_macro_input(&source).unwrap();
+    let name = Ident::new(ast.ident.as_ref());
 
     let (grammar, attrs): (Vec<_>, Vec<_>) = ast.attrs.iter().partition(|attr| {
         match attr.value {
@@ -103,7 +108,7 @@ fn parse_derive(source: String) -> (Tokens, String) {
     ast.attrs = attrs.into_iter().cloned().collect::<Vec<_>>();
     ast.to_tokens(&mut tokens);
 
-    (tokens, filename)
+    (tokens, name, filename)
 }
 
 fn get_filename(attr: &Attribute) -> String {
@@ -124,7 +129,7 @@ mod tests {
 
     #[test]
     fn derive_ok() {
-        let (tokens, filename) = parse_derive("
+        let (tokens, name, filename) = parse_derive("
             #[other_attr]
             #[grammar = \"myfile.pest\"]
             pub struct MyParser<'a, T>;
@@ -137,7 +142,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "only 1 grammar file can be provided")]
     fn derive_multiple_grammars() {
-        let (tokens, filename) = parse_derive("
+        let (tokens, name, filename) = parse_derive("
             #[other_attr]
             #[grammar = \"myfile1.pest\"]
             #[grammar = \"myfile2.pest\"]
@@ -148,7 +153,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "grammar attribute must be a string")]
     fn derive_wrong_arg() {
-        let (tokens, filename) = parse_derive("
+        let (tokens, name, filename) = parse_derive("
             #[other_attr]
             #[grammar = 1]
             pub struct MyParser<'a, T>;

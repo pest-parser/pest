@@ -663,41 +663,57 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn skip<I: Input>(
             pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.sequence(|pos| {
                 pos.repeat(|pos| {
-                    pos.match_string(" ").or_else(|pos| {
-                        pos.match_string("\t")
-                    }).or_else(|pos| {
-                        pos.match_string("\r")
-                    }).or_else(|pos| {
-                        pos.match_string("\n")
-                    })
+                    whitespace(pos, state)
                 }).and_then(|pos| {
-                    pos.optional(|pos| {
+                    pos.repeat(|pos| {
                         pos.sequence(|pos| {
-                            pos.match_string("//").and_then(|pos| {
-                                pos.repeat(|pos| {
-                                    pos.sequence(|pos| {
-                                        pos.lookahead(false, |pos| {
-                                            pos.match_string("\n")
-                                        }).and_then(|pos| {
-                                            pos.skip(1)
+                            pos.optional(|pos| {
+                                comment(pos, state)
+                            }).and_then(|pos| {
+                                pos.sequence(|pos| {
+                                    whitespace(pos, state).and_then(|pos| {
+                                        pos.repeat(|pos| {
+                                            whitespace(pos, state)
                                         })
                                     })
                                 })
                             })
                         })
                     })
-                }).and_then(|pos| {
+                })
+            })
+        }
+
+        fn whitespace<I: Input>(
+            pos: Position<I>,
+            _: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            pos.match_string(" ").or_else(|pos| {
+                pos.match_string("\t")
+            }).or_else(|pos| {
+                pos.match_string("\r")
+            }).or_else(|pos| {
+                pos.match_string("\n")
+            })
+        }
+
+        fn comment<I: Input>(
+            pos: Position<I>,
+            _: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            pos.sequence(|pos| {
+                pos.match_string("//").and_then(|pos| {
                     pos.repeat(|pos| {
-                        pos.match_string(" ").or_else(|pos| {
-                            pos.match_string("\t")
-                        }).or_else(|pos| {
-                            pos.match_string("\r")
-                        }).or_else(|pos| {
-                            pos.match_string("\n")
+                        pos.sequence(|pos| {
+                            pos.lookahead(false, |pos| {
+                                pos.match_string("\n")
+                            }).and_then(|pos| {
+                                pos.skip(1)
+                            })
                         })
                     })
                 })
