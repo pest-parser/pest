@@ -9,7 +9,7 @@ use super::ast::*;
 
 pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
     rules.into_iter().map(|rule| {
-        let mut rotate_right = |expr| {
+        let rotate_right = |expr| {
             match expr {
                 Expr::Seq(lhs, rhs) => {
                     let lhs = *lhs;

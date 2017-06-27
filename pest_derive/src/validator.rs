@@ -80,7 +80,7 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
     pest_keywords.insert("soi");
 
     let definitions: Vec<_> = pairs.clone()
-                                   .filter(|pair| pair.as_rule() == GrammarRule::rule)
+                                   .filter(|pair| pair.as_rule() == GrammarRule::grammar_rule)
                                    .map(|pair| {
                                        pair.into_inner()
                                            .next()
@@ -88,7 +88,7 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
                                            .into_span()
                                    }).collect();
     let called_rules: Vec<_> = pairs.clone()
-                                    .filter(|pair| pair.as_rule() == GrammarRule::rule)
+                                    .filter(|pair| pair.as_rule() == GrammarRule::grammar_rule)
                                     .flat_map(|pair| {
                                         let expr = pair.into_inner()
                                                        .skip(4)

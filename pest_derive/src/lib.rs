@@ -21,8 +21,8 @@ use std::rc::Rc;
 use pest::inputs::FileInput;
 use pest::Parser;
 use proc_macro::TokenStream;
-use quote::{Ident, Tokens, ToTokens};
-use syn::{Attribute, Lit, MetaItem, NestedMetaItem};
+use quote::Ident;
+use syn::{Attribute, Lit, MetaItem};
 
 mod ast;
 mod generator;
@@ -36,7 +36,7 @@ use parser::{GrammarParser, GrammarRule};
 pub fn derive_parser(input: TokenStream) -> TokenStream {
     let source = input.to_string();
 
-    let (tokens, name, path) = parse_derive(source);
+    let (name, path) = parse_derive(source);
 
     let root = std::env::var("CARGO_MANIFEST_DIR").unwrap_or(".".into());
     let path = Path::new(&root).join("src/").join(&path);
@@ -49,7 +49,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         Ok(input) => Rc::new(input),
         Err(error) => panic!("error opening {:?}: {}", file_name, error)
     };
-    let pairs = match GrammarParser::parse(GrammarRule::rules, input) {
+    let pairs = match GrammarParser::parse(GrammarRule::grammar_rules, input) {
         Ok(pairs) => pairs,
         Err(error) => panic!("error parsing {:?}\n\n{}", file_name, error.renamed_rules(|rule| {
             match *rule {
@@ -73,7 +73,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
                 GrammarRule::insensitive_string => "`^`".to_owned(),
                 GrammarRule::range_operator => "`..`".to_owned(),
                 GrammarRule::single_quote => "`'`".to_owned(),
-                rule => format!("{:?}", rule)
+                other_rule => format!("{:?}", other_rule)
             }
         }))
     };
@@ -85,16 +85,16 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
     generated.as_ref().parse().unwrap()
 }
 
-fn parse_derive(source: String) -> (Tokens, Ident, String) {
+fn parse_derive(source: String) -> (Ident, String) {
     let ast = syn::parse_macro_input(&source).unwrap();
     let name = Ident::new(ast.ident.as_ref());
 
-    let (grammar, attrs): (Vec<_>, Vec<_>) = ast.attrs.iter().partition(|attr| {
+    let grammar: Vec<_> = ast.attrs.iter().filter(|attr| {
         match attr.value {
             MetaItem::NameValue(ref ident, _) => format!("{}", ident) == "grammar",
             _ => false
         }
-    });
+    }).collect();
 
     let filename = match grammar.len() {
         0 => panic!("a grammar file needs to be provided with the #[grammar(\"...\")] attribute"),
@@ -102,13 +102,7 @@ fn parse_derive(source: String) -> (Tokens, Ident, String) {
         _ => panic!("only 1 grammar file can be provided")
     };
 
-    let mut tokens = Tokens::new();
-
-    let mut ast = ast.clone();
-    ast.attrs = attrs.into_iter().cloned().collect::<Vec<_>>();
-    ast.to_tokens(&mut tokens);
-
-    (tokens, name, filename)
+    (name, filename)
 }
 
 fn get_filename(attr: &Attribute) -> String {
@@ -129,20 +123,19 @@ mod tests {
 
     #[test]
     fn derive_ok() {
-        let (tokens, name, filename) = parse_derive("
+        let (_, filename) = parse_derive("
             #[other_attr]
             #[grammar = \"myfile.pest\"]
             pub struct MyParser<'a, T>;
         ".to_owned());
 
-        assert_eq!(tokens.as_str(), "# [ other_attr ] pub struct MyParser < \'a , T > ;");
         assert_eq!(filename, "myfile.pest");
     }
 
     #[test]
     #[should_panic(expected = "only 1 grammar file can be provided")]
     fn derive_multiple_grammars() {
-        let (tokens, name, filename) = parse_derive("
+        parse_derive("
             #[other_attr]
             #[grammar = \"myfile1.pest\"]
             #[grammar = \"myfile2.pest\"]
@@ -153,7 +146,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "grammar attribute must be a string")]
     fn derive_wrong_arg() {
-        let (tokens, name, filename) = parse_derive("
+        parse_derive("
             #[other_attr]
             #[grammar = 1]
             pub struct MyParser<'a, T>;

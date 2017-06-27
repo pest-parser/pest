@@ -21,10 +21,10 @@ use super::validator;
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum GrammarRule {
-    rules,
+    grammar_rules,
     soi,
     eoi,
-    rule,
+    grammar_rule,
     assignment_operator,
     silent_modifier,
     atomic_modifier,
@@ -60,7 +60,7 @@ impl Parser<GrammarRule> for GrammarParser {
         rule: GrammarRule,
         input: Rc<I>
     ) -> Result<Pairs<GrammarRule, I>, Error<GrammarRule, I>> {
-        fn rules<I: Input>(
+        fn grammar_rules<I: Input>(
             pos: Position<I>,
             state: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
@@ -89,7 +89,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn soi<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            _: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.at_start()
         }
@@ -98,7 +98,7 @@ impl Parser<GrammarRule> for GrammarParser {
             pos: Position<I>,
             state: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::eoi, pos, |state, pos| {
+            state.rule(GrammarRule::eoi, pos, |_, pos| {
                 pos.at_end()
             })
         }
@@ -107,7 +107,7 @@ impl Parser<GrammarRule> for GrammarParser {
             pos: Position<I>,
             state: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::rule, pos, |state, pos| {
+            state.rule(GrammarRule::grammar_rule, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
                         identifier(pos, state).and_then(|pos| {
@@ -493,7 +493,7 @@ impl Parser<GrammarRule> for GrammarParser {
             pos: Position<I>,
             state: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::quote, pos, |state, pos| {
+            state.rule(GrammarRule::quote, pos, |_, pos| {
                 pos.match_string("\"")
             })
         }
@@ -538,7 +538,7 @@ impl Parser<GrammarRule> for GrammarParser {
             pos: Position<I>,
             state: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::range_operator, pos, |state, pos| {
+            state.rule(GrammarRule::range_operator, pos, |_, pos| {
                 pos.match_string("..")
             })
         }
@@ -572,7 +572,7 @@ impl Parser<GrammarRule> for GrammarParser {
             pos: Position<I>,
             state: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::single_quote, pos, |state, pos| {
+            state.rule(GrammarRule::single_quote, pos, |_, pos| {
                 pos.match_string("'")
             })
         }
@@ -722,10 +722,10 @@ impl Parser<GrammarRule> for GrammarParser {
 
         pest::state(input, move |mut state, pos| {
             match rule {
-                GrammarRule::rules => rules(pos, &mut state),
+                GrammarRule::grammar_rules => grammar_rules(pos, &mut state),
                 GrammarRule::soi => soi(pos, &mut state),
                 GrammarRule::eoi => eoi(pos, &mut state),
-                GrammarRule::rule => grammar_rule(pos, &mut state),
+                GrammarRule::grammar_rule => grammar_rule(pos, &mut state),
                 GrammarRule::assignment_operator => assignment_operator(pos, &mut state),
                 GrammarRule::silent_modifier => silent_modifier(pos, &mut state),
                 GrammarRule::atomic_modifier => atomic_modifier(pos, &mut state),
@@ -763,12 +763,6 @@ impl Parser<GrammarRule> for GrammarParser {
 
 pub fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> (Vec<Rule>, Vec<Ident>) {
     let defaults = validator::validate_pairs(pairs.clone());
-
-    let climber = PrecClimber::new(vec![
-        Operator::new(GrammarRule::choice_operator, Assoc::Left),
-        Operator::new(GrammarRule::sequence_operator, Assoc::Left)
-    ]);
-
     let rules = consume_rules_with_spans(pairs);
 
     validator::validate_ast(&rules);
@@ -776,13 +770,13 @@ pub fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> (Vec<Rule>, Vec<
     (rules.into_iter().map(|(rule, _)| rule).collect(), defaults)
 }
 
-fn consume_rules_with_spans<I: Input>(mut pairs: Pairs<GrammarRule, I>) -> Vec<(Rule, Span<I>)> {
+fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<(Rule, Span<I>)> {
     let climber = PrecClimber::new(vec![
         Operator::new(GrammarRule::choice_operator, Assoc::Left),
         Operator::new(GrammarRule::sequence_operator, Assoc::Left)
     ]);
 
-    pairs.filter(|pair| pair.as_rule() == GrammarRule::rule).map(|pair| {
+    pairs.filter(|pair| pair.as_rule() == GrammarRule::grammar_rule).map(|pair| {
         let mut pairs = pair.into_inner().peekable();
 
         let span = pairs.next().unwrap().into_span();
@@ -832,8 +826,8 @@ fn consume_expr<I: Input>(
             GrammarRule::negative_predicate_operator => {
                 Expr::NegPred(Box::new(unaries(pairs, climber)))
             }
-            grammar_rule => {
-                let expr = match grammar_rule {
+            other_rule => {
+                let expr = match other_rule {
                     GrammarRule::expression => consume_expr(pair.into_inner().peekable(), climber),
                     GrammarRule::push => {
                         let mut pairs = pair.into_inner();
@@ -909,9 +903,9 @@ mod tests {
         parses_to! {
             parser: GrammarParser,
             input: "a = { b } c = { d }",
-            rule: GrammarRule::rules,
+            rule: GrammarRule::grammar_rules,
             tokens: [
-                rule(0, 9, [
+                grammar_rule(0, 9, [
                     identifier(0, 1),
                     assignment_operator(2, 3),
                     opening_brace(4, 5),
@@ -922,7 +916,7 @@ mod tests {
                     ]),
                     closing_brace(8, 9)
                 ]),
-                rule(10, 19, [
+                grammar_rule(10, 19, [
                     identifier(10, 11),
                     assignment_operator(12, 13),
                     opening_brace(14, 15),
@@ -943,9 +937,9 @@ mod tests {
         parses_to! {
             parser: GrammarParser,
             input: "a = !@ { b ~ c }",
-            rule: GrammarRule::rule,
+            rule: GrammarRule::grammar_rule,
             tokens: [
-                rule(0, 16, [
+                grammar_rule(0, 16, [
                     identifier(0, 1),
                     assignment_operator(2, 3),
                     non_atomic_modifier(4, 6),
@@ -1144,7 +1138,7 @@ mod tests {
     fn ast() {
         let input = Rc::new(StringInput::new("rule = _{ a ~ b | !(c | push(d))?* }".to_owned()));
 
-        let mut pairs = GrammarParser::parse(GrammarRule::rules, input.clone()).unwrap();
+        let pairs = GrammarParser::parse(GrammarRule::grammar_rules, input.clone()).unwrap();
         let ast = consume_rules_with_spans(pairs);
         let ast: Vec<_> = ast.into_iter().map(|(rule, _)| rule).collect();
 
