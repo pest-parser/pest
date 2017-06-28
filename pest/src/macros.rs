@@ -8,11 +8,7 @@
 #[doc(hidden)]
 #[macro_export]
 macro_rules! consumes_to {
-    ( $_rules:ident, $tokens:expr, [] ) => {
-        let rest: Vec<_> = $tokens.map(|r| r.unwrap()).collect();
-
-        assert!(rest.is_empty(), format!("expected end of stream, but found {:?}", rest));
-    };
+    ( $_rules:ident, $tokens:expr, [] ) => ();
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr ) ] ) => {
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
@@ -200,11 +196,18 @@ macro_rules! parses_to {
     ( parser: $parser:ident, input: $string:expr, rule: $rules:tt :: $rule:tt,
       tokens: [ $( $names:ident $calls:tt ),* ] ) => {
 
-        let input = $crate::inputs::StringInput::new($string.to_owned());
-        let mut tokens = $parser::parse($rules::$rule,
-                                        ::std::rc::Rc::new(input)).unwrap().into_iter();
+        #[allow(unused_mut)]
+        {
+            let input = $crate::inputs::StringInput::new($string.to_owned());
+            let mut tokens = $parser::parse($rules::$rule,
+                                            ::std::rc::Rc::new(input)).unwrap().into_iter();
 
-        consumes_to!($rules, tokens, [ $( $names $calls ),* ]);
+            consumes_to!($rules, &mut tokens, [ $( $names $calls ),* ]);
+
+            let rest: Vec<_> = tokens.collect();
+
+            assert!(rest.is_empty(), format!("expected end of stream, but found {:?}", rest));
+        }
     };
 }
 
@@ -255,6 +258,32 @@ mod tests {
                 ]),
                 c(4, 5)
             ]
+        };
+    }
+
+    #[test]
+    #[should_panic]
+    fn missing_end() {
+        parses_to! {
+            parser: AbcParser,
+            input: "abcde",
+            rule: Rule::a,
+            tokens: [
+                a(0, 3, [
+                    b(1, 2)
+                ])
+            ]
+        };
+    }
+
+    #[test]
+    #[should_panic]
+    fn empty() {
+        parses_to! {
+            parser: AbcParser,
+            input: "abcde",
+            rule: Rule::a,
+            tokens: []
         };
     }
 }
