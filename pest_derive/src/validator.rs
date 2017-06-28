@@ -79,6 +79,13 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
     pest_keywords.insert("push");
     pest_keywords.insert("soi");
 
+    let mut predefined = HashSet::new();
+    predefined.insert("any");
+    predefined.insert("eoi");
+    predefined.insert("peek");
+    predefined.insert("pop");
+    predefined.insert("soi");
+
     let definitions: Vec<_> = pairs.clone()
                                    .filter(|pair| pair.as_rule() == GrammarRule::grammar_rule)
                                    .map(|pair| {
@@ -90,13 +97,7 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
     let called_rules: Vec<_> = pairs.clone()
                                     .filter(|pair| pair.as_rule() == GrammarRule::grammar_rule)
                                     .flat_map(|pair| {
-                                        let expr = pair.into_inner()
-                                                       .skip(4)
-                                                       .next()
-                                                       .unwrap()
-                                                       .into_inner();
-
-                                        expr.flatten().filter(|pair| {
+                                        pair.into_inner().flatten().skip(1).filter(|pair| {
                                             pair.as_rule() == GrammarRule::identifier
                                         }).map(|pair| {
                                             pair.into_span()
@@ -108,8 +109,7 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
     errors.extend(validate_rust_keywords(&definitions, &rust_keywords));
     errors.extend(validate_pest_keywords(&definitions, &pest_keywords));
     errors.extend(validate_already_defined(&definitions));
-    // TODO: Add the actual set of predefined rules.
-    errors.extend(validate_undefined(&definitions, &called_rules, &HashSet::new()));
+    errors.extend(validate_undefined(&definitions, &called_rules, &predefined));
 
     let errors = errors.into_iter().map(|error| {
         format!("grammar error\n\n{}", error)

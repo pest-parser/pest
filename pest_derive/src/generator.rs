@@ -44,7 +44,8 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
             pos: pest::inputs::Position<I>,
             state: &mut pest::ParserState<Rule, I>
         ) -> Result<pest::inputs::Position<I>, pest::inputs::Position<I>> {
-            let string = state.stack.pop().expect("pop was called on empty stack").capture();
+            let span = state.stack.pop().expect("pop was called on empty stack");
+            let string = span.capture();
 
             pos.match_string(string)
         }
@@ -156,8 +157,8 @@ fn generate_rule(rule: Rule) -> Tokens {
                 pos: pest::inputs::Position<I>,
                 state: &mut pest::ParserState<Rule, I>
             ) -> Result<pest::inputs::Position<I>, pest::inputs::Position<I>> {
-                state.atomic(true, move |state| {
-                    state.rule(Rule::#name, pos, |state, pos| {
+                state.rule(Rule::#name, pos, |state, pos| {
+                    state.atomic(true, move |state| {
                         #expr
                     })
                 })
@@ -169,8 +170,8 @@ fn generate_rule(rule: Rule) -> Tokens {
                 pos: pest::inputs::Position<I>,
                 state: &mut pest::ParserState<Rule, I>
             ) -> Result<pest::inputs::Position<I>, pest::inputs::Position<I>> {
-                state.atomic(false, move |state| {
-                    state.rule(Rule::#name, pos, |state, pos| {
+                state.rule(Rule::#name, pos, |state, pos| {
+                    state.atomic(false, move |state| {
                         #expr
                     })
                 })
@@ -197,9 +198,13 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
                 pos: pest::inputs::Position<I>,
                 state: &mut pest::ParserState<Rule, I>
             ) -> Result<pest::inputs::Position<I>, pest::inputs::Position<I>> {
-                pos.repeat(|pos| {
-                    whitespace(pos, state)
-                })
+                if !state.is_atomic {
+                    pos.repeat(|pos| {
+                        whitespace(pos, state)
+                    })
+                } else {
+                    Ok(pos)
+                }
             }
         },
         (false, true) => quote! {
@@ -207,9 +212,13 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
                 pos: pest::inputs::Position<I>,
                 state: &mut pest::ParserState<Rule, I>
             ) -> Result<pest::inputs::Position<I>, pest::inputs::Position<I>> {
-                pos.repeat(|pos| {
-                    comment(pos, state)
-                })
+                if !state.is_atomic {
+                    pos.repeat(|pos| {
+                        comment(pos, state)
+                    })
+                } else {
+                    Ok(pos)
+                }
             }
         },
         (true, true) => quote! {
@@ -217,22 +226,24 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
                 pos: pest::inputs::Position<I>,
                 state: &mut pest::ParserState<Rule, I>
             ) -> Result<pest::inputs::Position<I>, pest::inputs::Position<I>> {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        pos.repeat(|pos| {
-                            whitespace(pos, state)
-                        }).and_then(|pos| {
+                if !state.is_atomic {
+                    state.sequence(move |state| {
+                        pos.sequence(|pos| {
                             pos.repeat(|pos| {
-                                state.sequence(move |state| {
-                                    pos.sequence(|pos| {
-                                        pos.optional(|pos| {
-                                            comment(pos, state)
-                                        }).and_then(|pos| {
-                                            state.sequence(move |state| {
-                                                pos.sequence(|pos| {
-                                                    whitespace(pos, state).and_then(|pos| {
-                                                        pos.repeat(|pos| {
-                                                            whitespace(pos, state)
+                                whitespace(pos, state)
+                            }).and_then(|pos| {
+                                pos.repeat(|pos| {
+                                    state.sequence(move |state| {
+                                        pos.sequence(|pos| {
+                                            pos.optional(|pos| {
+                                                comment(pos, state)
+                                            }).and_then(|pos| {
+                                                state.sequence(move |state| {
+                                                    pos.sequence(|pos| {
+                                                        whitespace(pos, state).and_then(|pos| {
+                                                            pos.repeat(|pos| {
+                                                                whitespace(pos, state)
+                                                            })
                                                         })
                                                     })
                                                 })
@@ -243,7 +254,9 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
                             })
                         })
                     })
-                })
+                } else {
+                    Ok(pos)
+                }
             }
         }
     }
@@ -477,7 +490,10 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                     let start = pos.clone();
 
                     match #expr {
-                        Ok(end) => pos.match_string(start.span(end).capture()),
+                        Ok(end) => {
+                            state.stack.push(start.span(end.clone()));
+                            Ok(end)
+                        }
                         Err(pos) => Err(pos)
                     }
                 }

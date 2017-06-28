@@ -15,6 +15,7 @@ extern crate proc_macro;
 extern crate quote;
 extern crate syn;
 
+use std::env;
 use std::path::Path;
 use std::rc::Rc;
 
@@ -38,7 +39,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
 
     let (name, path) = parse_derive(source);
 
-    let root = std::env::var("CARGO_MANIFEST_DIR").unwrap_or(".".into());
+    let root = env::var("CARGO_MANIFEST_DIR").unwrap_or(".".into());
     let path = Path::new(&root).join("src/").join(&path);
     let file_name = match path.file_name() {
         Some(file_name) => file_name,

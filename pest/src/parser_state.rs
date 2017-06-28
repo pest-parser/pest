@@ -26,10 +26,11 @@ pub enum Lookahead {
 pub struct ParserState<R: RuleType, I: Input> {
     queue: Vec<QueueableToken<R>>,
     lookahead: Lookahead,
-    is_atomic: bool,
     pos_attempts: Vec<R>,
     neg_attempts: Vec<R>,
     attempt_pos: usize,
+    /// Specifies whether the current state is atomic
+    pub is_atomic: bool,
     /// Stack of `Span`s
     pub stack: Vec<Span<I>>
 }

@@ -847,18 +847,17 @@ fn consume_expr<I: Input>(
                     GrammarRule::insensitive_string => {
                         let span = pair.into_span();
                         let string = span.capture();
-                        Expr::Insens(string[1..string.len() - 1].to_owned())
+                        Expr::Insens(string[2..string.len() - 1].to_owned())
                     }
                     GrammarRule::range => {
+                        let mut pairs = pair.into_inner();
                         let span = pairs.next().unwrap().into_span();
                         let start = span.capture();
+                        pairs.next();
                         let span = pairs.next().unwrap().into_span();
                         let end = span.capture();
 
-                        Expr::Range(
-                            start[1..start.len() - 1].to_owned(),
-                            end[1..end.len() - 1].to_owned()
-                        )
+                        Expr::Range(start.to_owned(), end.to_owned())
                     }
                     _ => unreachable!()
                 };
