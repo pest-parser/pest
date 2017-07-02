@@ -264,7 +264,11 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, (&Expr, &Span<I>)>) -> Vec<Err
 
                 names.insert(other.clone());
 
-                check_expr(names, rules.get(other).unwrap().0, span, rules)
+                if let Some(rule) = rules.get(other) {
+                    check_expr(names, rule.0, span, rules)
+                } else {
+                    None
+                }
             },
             Expr::Seq(ref lhs, _) => check_expr(names, &lhs, span, rules),
             Expr::Choice(ref lhs, _) => check_expr(names, &lhs, span, rules),

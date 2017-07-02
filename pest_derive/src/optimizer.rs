@@ -44,15 +44,21 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
                 name,
                 ty,
                 expr: expr.map_bottom_up(rotate_right).map_bottom_up(|expr| {
-                    match expr {
-                        Expr::Seq(lhs, rhs) => {
-                            match (*lhs, *rhs) {
-                                (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),
-                                (Expr::Insens(lhs), Expr::Insens(rhs)) => Expr::Insens(lhs + &rhs),
-                                (lhs, rhs) => Expr::Seq(Box::new(lhs), Box::new(rhs))
+                    if ty == RuleType::Atomic {
+                        match expr {
+                            Expr::Seq(lhs, rhs) => {
+                                match (*lhs, *rhs) {
+                                    (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),
+                                    (Expr::Insens(lhs), Expr::Insens(rhs)) => {
+                                        Expr::Insens(lhs + &rhs)
+                                    }
+                                    (lhs, rhs) => Expr::Seq(Box::new(lhs), Box::new(rhs))
+                                }
                             }
+                            expr => expr
                         }
-                        expr => expr
+                    } else {
+                        expr
                     }
                 }).map_top_down(|expr| {
                     match expr {

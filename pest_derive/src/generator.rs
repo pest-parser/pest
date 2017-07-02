@@ -264,6 +264,66 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
 
 fn generate_expr(expr: Expr) -> Tokens {
     match expr {
+        Expr::Str(string) => {
+            let mut tokens = quote! {
+                pos.match_string
+            };
+
+            tokens.append("(");
+            tokens.append(format!("\"{}\"", string));
+            tokens.append(")");
+
+            tokens
+        }
+        Expr::Insens(string) => {
+            let mut tokens = quote! {
+                pos.match_insensitive
+            };
+
+            tokens.append("(");
+            tokens.append(format!("\"{}\"", string));
+            tokens.append(")");
+
+            tokens
+        }
+        Expr::Range(start, end) => {
+            let mut tokens = quote! {
+                pos.match_range
+            };
+
+            tokens.append("(");
+            tokens.append(start);
+            tokens.append("..");
+            tokens.append(end);
+            tokens.append(")");
+
+            tokens
+        },
+        Expr::Ident(ident) => quote! {
+            self::#ident(pos, state)
+        },
+        Expr::PosPred(expr) => {
+            let expr = generate_expr(*expr);
+
+            quote! {
+                state.lookahead(true, move |state| {
+                    pos.lookahead(true, |pos| {
+                        #expr
+                    })
+                })
+            }
+        }
+        Expr::NegPred(expr) => {
+            let expr = generate_expr(*expr);
+
+            quote! {
+                state.lookahead(false, move |state| {
+                    pos.lookahead(false, |pos| {
+                        #expr
+                    })
+                })
+            }
+        }
         Expr::Seq(lhs, rhs) => {
             let head = generate_expr(*lhs);
             let mut tail = vec![];
@@ -294,6 +354,42 @@ fn generate_expr(expr: Expr) -> Tokens {
                             })
                         )*
                     })
+                })
+            }
+        }
+        Expr::Choice(lhs, rhs) => {
+            let head = generate_expr(*lhs);
+            let mut tail = vec![];
+            let mut current = *rhs;
+
+            loop {
+                match current {
+                    Expr::Choice(lhs, rhs) => {
+                        tail.push(generate_expr(*lhs));
+                        current = *rhs;
+                    }
+                    expr => {
+                        tail.push(generate_expr(expr));
+                        break;
+                    }
+                }
+            }
+
+            quote! {
+                #head
+                #(
+                    .or_else(|pos| {
+                        #tail
+                    })
+                )*
+            }
+        }
+        Expr::Opt(expr) => {
+            let expr = generate_expr(*expr);
+
+            quote! {
+                pos.optional(|pos| {
+                    #expr
                 })
             }
         }
@@ -341,18 +437,50 @@ fn generate_expr(expr: Expr) -> Tokens {
                 })
             }
         }
-        expr => generate_expr_atomic(expr)
+        Expr::Push(expr) => {
+            let expr = generate_expr(*expr);
+
+            quote! {
+                {
+                    let start = pos.clone();
+
+                    match #expr {
+                        Ok(end) => {
+                            state.stack.push(start.span(end.clone()));
+                            Ok(end)
+                        }
+                        Err(pos) => Err(pos)
+                    }
+                }
+            }
+        }
     }
 }
 
 fn generate_expr_atomic(expr: Expr) -> Tokens {
     match expr {
-        Expr::Str(string) => quote! {
-            pos.match_string(#string)
-        },
-        Expr::Insens(string) => quote! {
-            pos.match_insensitive(#string)
-        },
+        Expr::Str(string) => {
+            let mut tokens = quote! {
+                pos.match_string
+            };
+
+            tokens.append("(");
+            tokens.append(format!("\"{}\"", string));
+            tokens.append(")");
+
+            tokens
+        }
+        Expr::Insens(string) => {
+            let mut tokens = quote! {
+                pos.match_insensitive
+            };
+
+            tokens.append("(");
+            tokens.append(format!("\"{}\"", string));
+            tokens.append(")");
+
+            tokens
+        }
         Expr::Range(start, end) => {
             let mut tokens = quote! {
                 pos.match_range
