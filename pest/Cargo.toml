@@ -10,5 +10,8 @@ categories = ["parsing"]
 license = "MPL-2.0"
 readme = "../README.md"
 
+[dev-dependencies]
+pest_grammars = { git = "https://github.com/pest-parser/pest", branch = "procedural" }
+
 [badges]
 travis-ci = { repository = "pest-parser/pest" }
