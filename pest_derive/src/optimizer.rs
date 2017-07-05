@@ -102,7 +102,7 @@ mod tests {
         let rules = vec![
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Silent,
+                ty:   RuleType::Atomic,
                 expr: Expr::Seq(
                     Box::new(Expr::Seq(
                         Box::new(Expr::Str("a".to_owned())),
@@ -118,7 +118,7 @@ mod tests {
         let concatenated = vec![
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Silent,
+                ty:   RuleType::Atomic,
                 expr: Expr::Str("abcd".to_owned())
             }
         ];
@@ -131,7 +131,7 @@ mod tests {
         let rules = vec![
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Silent,
+                ty:   RuleType::Atomic,
                 expr: Expr::Seq(
                     Box::new(Expr::Seq(
                         Box::new(Expr::Insens("a".to_owned())),
@@ -147,7 +147,7 @@ mod tests {
         let concatenated = vec![
             Rule {
                 name: Ident::new("rule"),
-                ty:   RuleType::Silent,
+                ty:   RuleType::Atomic,
                 expr: Expr::Insens("abcd".to_owned())
             }
         ];
