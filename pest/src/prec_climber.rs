@@ -202,6 +202,8 @@ impl<R: RuleType> PrecClimber<R> {
                     }
 
                     lhs = infix(lhs, op, rhs);
+                } else {
+                    break;
                 }
             } else {
                 break;
