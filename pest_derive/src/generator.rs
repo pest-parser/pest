@@ -124,7 +124,12 @@ fn generate_patterns(rules: &Vec<Rule>) -> Tokens {
 
 fn generate_rule(rule: Rule) -> Tokens {
     let name = rule.name;
-    let expr = if rule.ty == RuleType::Atomic {
+    let expr = if {
+        rule.ty == RuleType::Atomic ||
+        rule.ty == RuleType::CompoundAtomic ||
+        &name == "whitespace" ||
+        &name == "comment"
+    } {
         generate_expr_atomic(rule.expr)
     } else {
         generate_expr(rule.expr)
@@ -164,7 +169,7 @@ fn generate_rule(rule: Rule) -> Tokens {
                 })
             }
         },
-        RuleType::NonAtomic => quote! {
+        RuleType::CompoundAtomic => quote! {
             #[allow(unused_variables)]
             pub fn #name<I: pest::inputs::Input>(
                 pos: pest::inputs::Position<I>,
@@ -174,6 +179,17 @@ fn generate_rule(rule: Rule) -> Tokens {
                     state.atomic(false, move |state| {
                         #expr
                     })
+                })
+            }
+        },
+        RuleType::NonAtomic => quote! {
+            #[allow(unused_variables)]
+            pub fn #name<I: pest::inputs::Input>(
+                pos: pest::inputs::Position<I>,
+                state: &mut pest::ParserState<Rule, I>
+            ) -> Result<pest::inputs::Position<I>, pest::inputs::Position<I>> {
+                state.rule(Rule::#name, pos, |state, pos| {
+                    #expr
                 })
             }
         }

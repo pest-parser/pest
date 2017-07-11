@@ -58,6 +58,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
                 GrammarRule::assignment_operator => "`=`".to_owned(),
                 GrammarRule::silent_modifier => "`_`".to_owned(),
                 GrammarRule::atomic_modifier => "`@`".to_owned(),
+                GrammarRule::compound_atomic_modifier => "`$`".to_owned(),
                 GrammarRule::non_atomic_modifier => "`!@`".to_owned(),
                 GrammarRule::opening_brace => "`{`".to_owned(),
                 GrammarRule::closing_brace => "`}`".to_owned(),

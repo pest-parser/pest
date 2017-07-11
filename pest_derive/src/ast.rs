@@ -19,6 +19,7 @@ pub enum RuleType {
     Normal,
     Silent,
     Atomic,
+    CompoundAtomic,
     NonAtomic
 }
 

@@ -28,6 +28,7 @@ pub enum GrammarRule {
     assignment_operator,
     silent_modifier,
     atomic_modifier,
+    compound_atomic_modifier,
     non_atomic_modifier,
     opening_brace,
     closing_brace,
@@ -154,6 +155,8 @@ impl Parser<GrammarRule> for GrammarParser {
             silent_modifier(pos, state).or_else(|pos| {
                 atomic_modifier(pos, state)
             }).or_else(|pos| {
+                compound_atomic_modifier(pos, state)
+            }).or_else(|pos| {
                 non_atomic_modifier(pos, state)
             })
         }
@@ -173,6 +176,15 @@ impl Parser<GrammarRule> for GrammarParser {
         ) -> Result<Position<I>, Position<I>> {
             state.rule(GrammarRule::atomic_modifier, pos, |_, pos| {
                 pos.match_string("@")
+            })
+        }
+
+        fn compound_atomic_modifier<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::compound_atomic_modifier, pos, |_, pos| {
+                pos.match_string("$")
             })
         }
 
@@ -729,6 +741,7 @@ impl Parser<GrammarRule> for GrammarParser {
                 GrammarRule::assignment_operator => assignment_operator(pos, &mut state),
                 GrammarRule::silent_modifier => silent_modifier(pos, &mut state),
                 GrammarRule::atomic_modifier => atomic_modifier(pos, &mut state),
+                GrammarRule::compound_atomic_modifier => compound_atomic_modifier(pos, &mut state),
                 GrammarRule::non_atomic_modifier => non_atomic_modifier(pos, &mut state),
                 GrammarRule::opening_brace => opening_brace(pos, &mut state),
                 GrammarRule::closing_brace => closing_brace(pos, &mut state),
@@ -788,6 +801,7 @@ fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<(Rule
             match pairs.next().unwrap().as_rule() {
                 GrammarRule::silent_modifier => RuleType::Silent,
                 GrammarRule::atomic_modifier => RuleType::Atomic,
+                GrammarRule::compound_atomic_modifier => RuleType::CompoundAtomic,
                 GrammarRule::non_atomic_modifier => RuleType::NonAtomic,
                 _ => unreachable!()
             }
