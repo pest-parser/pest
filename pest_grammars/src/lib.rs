@@ -9,3 +9,11 @@ pub mod json {
     #[grammar = "grammars/json.pest"]
     pub struct JsonParser;
 }
+
+pub mod toml {
+    use super::pest;
+
+    #[derive(Parser)]
+    #[grammar = "grammars/toml.pest"]
+    pub struct TomlParser;
+}

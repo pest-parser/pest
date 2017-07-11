@@ -2,6 +2,11 @@
 extern crate pest;
 extern crate pest_grammars;
 
+use std::fs::File;
+use std::io::Read;
+use std::rc::Rc;
+
+use pest::inputs::StringInput;
 use pest::Parser;
 
 use pest_grammars::json::*;
@@ -148,4 +153,16 @@ fn object() {
             ])
         ]
     };
+}
+
+#[test]
+fn examples() {
+    let mut file = File::open("tests/examples.json").unwrap();
+    let mut data = String::new();
+
+    file.read_to_string(&mut data).unwrap();
+
+    let input = Rc::new(StringInput::new(data.to_owned()));
+
+    JsonParser::parse(Rule::json, input.clone()).unwrap();
 }
