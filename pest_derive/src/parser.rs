@@ -193,7 +193,7 @@ impl Parser<GrammarRule> for GrammarParser {
             state: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
             state.rule(GrammarRule::non_atomic_modifier, pos, |_, pos| {
-                pos.match_string("!@")
+                pos.match_string("!")
             })
         }
 
@@ -949,24 +949,24 @@ mod tests {
     fn rule() {
         parses_to! {
             parser: GrammarParser,
-            input: "a = !@ { b ~ c }",
+            input: "a = ! { b ~ c }",
             rule: GrammarRule::grammar_rule,
             tokens: [
-                grammar_rule(0, 16, [
+                grammar_rule(0, 15, [
                     identifier(0, 1),
                     assignment_operator(2, 3),
-                    non_atomic_modifier(4, 6),
-                    opening_brace(7, 8),
-                    expression(9, 14, [
-                        primary(9, 10, [
-                            identifier(9, 10)
+                    non_atomic_modifier(4, 5),
+                    opening_brace(6, 7),
+                    expression(8, 13, [
+                        primary(8, 9, [
+                            identifier(8, 9)
                         ]),
-                        sequence_operator(11, 12),
-                        primary(13, 14, [
-                            identifier(13, 14)
+                        sequence_operator(10, 11),
+                        primary(12, 13, [
+                            identifier(12, 13)
                         ])
                     ]),
-                    closing_brace(15, 16)
+                    closing_brace(14, 15)
                 ])
             ]
         };
