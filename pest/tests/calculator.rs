@@ -182,7 +182,7 @@ fn consume(pair: Pair<Rule, StringInput>, climber: &PrecClimber<Rule>) -> i32 {
 
     match pair.as_rule() {
         Rule::expression => climber.climb(pair.into_inner(), primary, infix),
-        Rule::number => pair.into_span().capture().parse().unwrap(),
+        Rule::number => pair.into_span().as_str().parse().unwrap(),
         _ => unreachable!()
     }
 }

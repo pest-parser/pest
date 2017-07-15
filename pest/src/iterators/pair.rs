@@ -88,7 +88,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     /// #     state.rule(Rule::ab, pos, |_, p| p.match_string("ab"))
     /// }).unwrap().next().unwrap();
     ///
-    /// assert_eq!(pair.into_span().capture(), "ab");
+    /// assert_eq!(pair.into_span().as_str(), "ab");
     /// ```
     pub fn into_span(self) -> Span<I> {
         let start = self.pos(self.start);

@@ -104,10 +104,10 @@ impl<I: Input> Span<I> {
     /// let end = start.clone().match_string("b").unwrap();
     /// let span = start.span(end);
     ///
-    /// assert_eq!(span.capture(), "b");
+    /// assert_eq!(span.as_str(), "b");
     /// ```
     #[inline]
-    pub fn capture(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         unsafe { self.input.slice(self.start, self.end) }
     }
 }

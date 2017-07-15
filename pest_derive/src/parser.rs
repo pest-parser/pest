@@ -793,7 +793,7 @@ fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<(Rule
         let mut pairs = pair.into_inner().peekable();
 
         let span = pairs.next().unwrap().into_span();
-        let name = Ident::new(span.capture());
+        let name = Ident::new(span.as_str());
 
         pairs.next().unwrap(); // assignment_operator
 
@@ -852,24 +852,24 @@ fn consume_expr<I: Input>(
                         Expr::Push(Box::new(expr))
 
                     }
-                    GrammarRule::identifier => Expr::Ident(Ident::new(pair.into_span().capture())),
+                    GrammarRule::identifier => Expr::Ident(Ident::new(pair.into_span().as_str())),
                     GrammarRule::string => {
                         let span = pair.into_span();
-                        let string = span.capture();
+                        let string = span.as_str();
                         Expr::Str(string[1..string.len() - 1].to_owned())
                     }
                     GrammarRule::insensitive_string => {
                         let span = pair.into_span();
-                        let string = span.capture();
+                        let string = span.as_str();
                         Expr::Insens(string[2..string.len() - 1].to_owned())
                     }
                     GrammarRule::range => {
                         let mut pairs = pair.into_inner();
                         let span = pairs.next().unwrap().into_span();
-                        let start = span.capture();
+                        let start = span.as_str();
                         pairs.next();
                         let span = pairs.next().unwrap().into_span();
-                        let end = span.capture();
+                        let end = span.as_str();
 
                         Expr::Range(start.to_owned(), end.to_owned())
                     }

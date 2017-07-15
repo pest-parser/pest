@@ -40,14 +40,14 @@ fn consume<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
         match pair.as_rule() {
             Rule::null => Json::Null,
             Rule::bool => {
-                match pair.into_span().capture() {
+                match pair.into_span().as_str() {
                     "false" => Json::Bool(false),
                     "true" => Json::Bool(true),
                     _ => unreachable!()
                 }
             }
             Rule::number => {
-                Json::Number(pair.into_span().capture().parse().unwrap())
+                Json::Number(pair.into_span().as_str().parse().unwrap())
             }
             Rule::string => {
                 Json::String(pair.into_span())

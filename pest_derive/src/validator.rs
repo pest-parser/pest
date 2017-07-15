@@ -119,8 +119,8 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
         panic!("{}", errors);
     }
 
-    let definitions: HashSet<_> = definitions.iter().map(|span| span.capture()).collect();
-    let called_rules: HashSet<_> = called_rules.iter().map(|span| span.capture()).collect();
+    let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
+    let called_rules: HashSet<_> = called_rules.iter().map(|span| span.as_str()).collect();
 
     let defaults = called_rules.difference(&definitions);
 
@@ -134,7 +134,7 @@ pub fn validate_rust_keywords<I: Input>(
     let mut errors = vec![];
 
     for definition in definitions {
-        let name = definition.capture();
+        let name = definition.as_str();
 
         if rust_keywords.contains(name) {
             errors.push(Error::CustomErrorSpan {
@@ -154,7 +154,7 @@ pub fn validate_pest_keywords<I: Input>(
     let mut errors = vec![];
 
     for definition in definitions {
-        let name = definition.capture();
+        let name = definition.as_str();
 
         if pest_keywords.contains(name) {
             errors.push(Error::CustomErrorSpan {
@@ -174,7 +174,7 @@ pub fn validate_already_defined<I: Input>(
     let mut defined = HashSet::new();
 
     for definition in definitions {
-        let name = definition.capture();
+        let name = definition.as_str();
 
         if defined.contains(&name) {
             errors.push(Error::CustomErrorSpan {
@@ -195,10 +195,10 @@ pub fn validate_undefined<I: Input>(
     predefined: &HashSet<&str>
 ) -> Vec<Error<GrammarRule, I>> {
     let mut errors = vec![];
-    let definitions: HashSet<_> = definitions.iter().map(|span| span.capture()).collect();
+    let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
 
     for rule in called_rules {
-        let name = rule.capture();
+        let name = rule.as_str();
 
         if !definitions.contains(name) && !predefined.contains(name) {
             errors.push(Error::CustomErrorSpan {
@@ -257,7 +257,7 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, (&Expr, &Span<I>)>) -> Vec<Err
             Expr::Ident(ref other)  => {
                 if names.contains(other) {
                     return Some(Error::CustomErrorSpan {
-                        message: format!("rule {} is left-recursive", span.capture()),
+                        message: format!("rule {} is left-recursive", span.as_str()),
                         span: span.clone()
                     });
                 }

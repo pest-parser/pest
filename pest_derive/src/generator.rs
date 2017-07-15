@@ -34,7 +34,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
             pos: pest::inputs::Position<I>,
             state: &mut pest::ParserState<Rule, I>
         ) -> Result<pest::inputs::Position<I>, pest::inputs::Position<I>> {
-            let string = state.stack.last().expect("peek was called on empty stack").capture();
+            let string = state.stack.last().expect("peek was called on empty stack").as_str();
 
             pos.match_string(string)
         }
@@ -45,7 +45,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
             state: &mut pest::ParserState<Rule, I>
         ) -> Result<pest::inputs::Position<I>, pest::inputs::Position<I>> {
             let span = state.stack.pop().expect("pop was called on empty stack");
-            let string = span.capture();
+            let string = span.as_str();
 
             pos.match_string(string)
         }
