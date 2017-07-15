@@ -8,7 +8,7 @@
 use std::iter::Peekable;
 use std::rc::Rc;
 
-use pest::inputs::{Input, Position, Span};
+use pest::inputs::{Input, StringInput, Position, Span};
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 use pest::{self, Error, Parser, ParserState};
@@ -771,6 +771,10 @@ impl Parser<GrammarRule> for GrammarParser {
                 GrammarRule::single_quote => single_quote(pos, &mut state)
             }
         })
+    }
+
+    fn parse_str(rule: GrammarRule, input: &str) -> Result<Pairs<GrammarRule, StringInput>, Error<GrammarRule, StringInput>> {
+        Self::parse(rule, Rc::new(StringInput::new(input.to_owned())))
     }
 }
 

@@ -150,7 +150,7 @@ macro_rules! consumes_to {
 /// # extern crate pest;
 /// # use std::rc::Rc;
 /// # use pest::{Error, Parser};
-/// # use pest::inputs::Input;
+/// # use pest::inputs::{Input, StringInput};
 /// # use pest::iterators::Pairs;
 /// # fn main() {
 /// # #[allow(non_camel_case_types)]
@@ -177,6 +177,10 @@ macro_rules! consumes_to {
 /// #             })
 /// #         })
 /// #     }
+/// #
+/// #     fn parse_str(rule: Rule, input: &str) -> Result<Pairs<Rule, StringInput>, Error<Rule, StringInput>> {
+/// #         Self::parse(rule, Rc::new(StringInput::new(input.to_owned())))
+/// #     }
 /// # }
 /// parses_to! {
 ///     parser: AbcParser,
@@ -198,9 +202,7 @@ macro_rules! parses_to {
 
         #[allow(unused_mut)]
         {
-            let input = $crate::inputs::StringInput::new($string.to_owned());
-            let mut tokens = $parser::parse($rules::$rule,
-                                            ::std::rc::Rc::new(input)).unwrap().into_iter();
+            let mut tokens = $parser::parse_str($rules::$rule, $string).unwrap().into_iter();
 
             consumes_to!($rules, &mut tokens, [ $( $names $calls ),* ]);
 
@@ -216,7 +218,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::super::error::Error;
-    use super::super::inputs::Input;
+    use super::super::inputs::{Input, StringInput};
     use super::super::{Parser, state};
     use super::super::iterators::Pairs;
 
@@ -243,6 +245,10 @@ mod tests {
                     })
                 })
             })
+        }
+
+        fn parse_str(rule: Rule, input: &str) -> Result<Pairs<Rule, StringInput>, Error<Rule, StringInput>> {
+            Self::parse(rule, Rc::new(StringInput::new(input.to_owned())))
         }
     }
 

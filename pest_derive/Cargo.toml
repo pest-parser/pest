@@ -17,7 +17,8 @@ proc-macro = true
 [dependencies]
 quote = "^0.3"
 syn = "^0.10"
-pest = { git = "https://github.com/pest-parser/pest", branch = "procedural" }
+# pest = { git = "https://github.com/pest-parser/pest", branch = "procedural" }
+pest = { path = "../pest" }
 
 [badges]
 travis-ci = { repository = "pest-parser/pest" }

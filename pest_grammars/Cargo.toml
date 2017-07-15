@@ -11,8 +11,10 @@ license = "MPL-2.0"
 readme = "../README.md"
 
 [dependencies]
-pest = { git = "https://github.com/pest-parser/pest", branch = "procedural" }
-pest_derive = { git = "https://github.com/pest-parser/pest", branch = "procedural" }
+#pest = { git = "https://github.com/pest-parser/pest", branch = "procedural" }
+pest = { path = "../pest" }
+#pest_derive = { git = "https://github.com/pest-parser/pest", branch = "procedural" }
+pest_derive = { path = "../pest_derive" }
 
 [badges]
 travis-ci = { repository = "pest-parser/pest" }
