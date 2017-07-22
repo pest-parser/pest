@@ -78,7 +78,8 @@ where
         Err(Error::ParsingError {
             positives: state.pos_attempts,
             negatives: state.neg_attempts,
-            pos: position::new(input, state.attempt_pos)
+            // All attempted positions were legal.
+            pos: unsafe { position::new(input, state.attempt_pos) }
         })
     }
 }

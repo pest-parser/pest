@@ -86,8 +86,9 @@ impl<I: Input> Span<I> {
     /// ```
     #[inline]
     pub fn split(self) -> (position::Position<I>, position::Position<I>) {
-        let pos1 = position::new(self.input.clone(), self.start);
-        let pos2 = position::new(self.input, self.end);
+        // Span start and end positions are UTF-8 borders and safe.
+        let pos1 = unsafe { position::new(self.input.clone(), self.start) };
+        let pos2 = unsafe { position::new(self.input, self.end) };
 
         (pos1, pos2)
     }

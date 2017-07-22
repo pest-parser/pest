@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn display_parsing_error() {
         let input = StringInput::new("ab\ncd\nef".to_owned());
-        let pos = position::new(Rc::new(input), 4);
+        let pos = unsafe { position::new(Rc::new(input), 4) };
         let error: Error<u32, _> = Error::ParsingError {
             positives: vec![1, 2, 3],
             negatives: vec![4, 5, 6],
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn display_custom() {
         let input = StringInput::new("ab\ncd\nef".to_owned());
-        let pos = position::new(Rc::new(input), 4);
+        let pos = unsafe { position::new(Rc::new(input), 4) };
         let error: Error<&str, _> = Error::CustomErrorPos {
             message: "error: big one".to_owned(),
             pos: pos
@@ -338,7 +338,7 @@ mod tests {
     #[test]
     fn mapped_parsing_error() {
         let input = StringInput::new("ab\ncd\nef".to_owned());
-        let pos = position::new(Rc::new(input), 4);
+        let pos = unsafe { position::new(Rc::new(input), 4) };
         let error: Error<u32, _> = Error::ParsingError {
             positives: vec![1, 2, 3],
             negatives: vec![4, 5, 6],

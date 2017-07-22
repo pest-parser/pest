@@ -56,13 +56,15 @@ impl<R: RuleType, I: Input> Iterator for TokenIterator<R, I> {
 
                 Token::Start {
                     rule: rule,
-                    pos: position::new(self.input.clone(), pos)
+                    // QueueableTokens are safely created.
+                    pos: unsafe { position::new(self.input.clone(), pos) }
                 }
             }
             QueueableToken::End { rule, pos } => {
                 Token::End {
                     rule: rule,
-                    pos: position::new(self.input.clone(), pos)
+                    // QueueableTokens are safely created.
+                    pos: unsafe { position::new(self.input.clone(), pos) }
                 }
             }
         };

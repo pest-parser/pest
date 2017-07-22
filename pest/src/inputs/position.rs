@@ -21,7 +21,7 @@ pub struct Position<I: Input> {
     pos: usize
 }
 
-pub fn new<I: Input>(input: Rc<I>, pos: usize) -> Position<I> {
+pub unsafe fn new<I: Input>(input: Rc<I>, pos: usize) -> Position<I> {
     Position {
         input,
         pos
@@ -46,10 +46,8 @@ impl<I: Input> Position<I> {
     /// ```
     #[inline]
     pub fn from_start(input: Rc<I>) -> Position<I> {
-        Position {
-            input: input,
-            pos: 0
-        }
+        // Position 0 is always safe because it's always a valid UTF-8 border.
+        unsafe { new(input, 0) }
     }
 
     /// Returns the current position as a `usize`.
@@ -72,6 +70,10 @@ impl<I: Input> Position<I> {
 
     /// Creates a `Span` from two `Position`s.
     ///
+    /// # Panics
+    ///
+    /// Panics when the positions come from different inputs.
+    ///
     /// # Examples
     ///
     /// ```
@@ -87,10 +89,10 @@ impl<I: Input> Position<I> {
     /// ```
     #[inline]
     pub fn span(self, other: Position<I>) -> span::Span<I> {
-        if &*self.input as *const I == &*other.input as *const I {
+        if Rc::ptr_eq(&self.input, &other.input) {
             span::new(self.input, self.pos, other.pos)
         } else {
-            panic!("Span created from positions from different inputs")
+            panic!("span created from positions from different inputs")
         }
     }
 
@@ -197,7 +199,10 @@ impl<I: Input> Position<I> {
         let skipped = unsafe { self.input.skip(n, self.pos) };
 
         match skipped {
-            Some(len) => Ok(new(self.input, self.pos + len)),
+            Some(len) => {
+                // Safe since adding the string length keeps the position on a UTF-8 border.
+                Ok(unsafe { new(self.input, self.pos + len) })
+            }
             None => Err(self)
         }
     }
@@ -221,7 +226,8 @@ impl<I: Input> Position<I> {
         // Matching is safe since, even if the string does not fall on UTF-8 borders, that
         // particular slice is only used for comparison which will be handled correctly.
         if unsafe { self.input.match_string(string, self.pos) } {
-            Ok(new(self.input, self.pos + string.len()))
+            // Safe since adding the string length keeps the position on a UTF-8 border.
+            Ok(unsafe { new(self.input, self.pos + string.len()) })
         } else {
             Err(self)
         }
@@ -246,7 +252,8 @@ impl<I: Input> Position<I> {
         // Matching is safe since, even if the string does not fall on UTF-8 borders, that
         // particular slice is only used for comparison which will be handled correctly.
         if unsafe { self.input.match_insensitive(string, self.pos) } {
-            Ok(new(self.input, self.pos + string.len()))
+            // Safe since adding the string length keeps the position on a UTF-8 border.
+            Ok(unsafe { new(self.input, self.pos + string.len()) })
         } else {
             Err(self)
         }
@@ -268,10 +275,14 @@ impl<I: Input> Position<I> {
     /// ```
     #[inline]
     pub fn match_range(self, range: Range<char>) -> Result<Position<I>, Position<I>> {
+        // Cannot actually cause undefined behavior.
         let len = unsafe { self.input.match_range(range, self.pos) };
 
         match len {
-            Some(len) => Ok(new(self.input, self.pos + len)),
+            Some(len) => {
+                // Safe since adding the string length keeps the position on a UTF-8 border.
+                Ok(unsafe { new(self.input, self.pos + len) })
+            }
             None => Err(self)
         }
     }
@@ -487,7 +498,8 @@ impl<I: Input> fmt::Debug for Position<I> {
 
 impl<I: Input> Clone for Position<I> {
     fn clone(&self) -> Position<I> {
-        new(self.input.clone(), self.pos)
+        // Cloning a safe position is safe.
+        unsafe { new(self.input.clone(), self.pos) }
     }
 }
 
