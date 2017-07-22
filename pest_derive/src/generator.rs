@@ -111,7 +111,8 @@ fn generate_enum(rules: &Vec<Rule>) -> Tokens {
 fn generate_patterns(rules: &Vec<Rule>) -> Tokens {
     let mut tokens = Tokens::new();
 
-    let rules = rules.iter().map(|rule| &rule.name).map(|rule| {
+    let rules = rules.iter().map(|rule| {
+        let rule = &rule.name;
         quote! {
             Rule::#rule => rules::#rule(pos, &mut state)
         }

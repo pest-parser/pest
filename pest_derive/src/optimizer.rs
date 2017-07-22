@@ -10,6 +10,7 @@ use super::ast::*;
 pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
     rules.into_iter().map(|rule| {
         let rotate_right = |expr| {
+            // TODO: Use box syntax when it gets stabilized.
             match expr {
                 Expr::Seq(lhs, rhs) => {
                     let lhs = *lhs;
@@ -45,6 +46,7 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
                 ty,
                 expr: expr.map_bottom_up(rotate_right).map_bottom_up(|expr| {
                     if ty == RuleType::Atomic {
+                        // TODO: Use box syntax when it gets stabilized.
                         match expr {
                             Expr::Seq(lhs, rhs) => {
                                 match (*lhs, *rhs) {
@@ -61,6 +63,7 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
                         expr
                     }
                 }).map_top_down(|expr| {
+                    // TODO: Use box syntax when it gets stabilized.
                     match expr {
                         Expr::Choice(lhs, rhs) => {
                             match (*lhs, *rhs) {

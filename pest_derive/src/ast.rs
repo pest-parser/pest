@@ -45,6 +45,7 @@ impl Expr {
             let expr = f(expr);
 
             match expr {
+                // TODO: Use box syntax when it gets stabilized.
                 Expr::PosPred(expr) => {
                     let mapped = Box::new(f(*expr));
                     Expr::PosPred(mapped)
@@ -88,46 +89,46 @@ impl Expr {
 
     pub fn map_bottom_up<F>(self, mut f: F) -> Expr where F: FnMut(Expr) -> Expr {
         pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr where F: FnMut(Expr) -> Expr {
-            match expr {
-                Expr::Str(_) => f(expr),
-                Expr::Insens(_) => f(expr),
-                Expr::Range(..) => f(expr),
-                Expr::Ident(_) => f(expr),
+            let mapped = match expr {
                 Expr::PosPred(expr) => {
+                    // TODO: Use box syntax when it gets stabilized.
                     let mapped = Box::new(f(*expr));
-                    f(Expr::PosPred(mapped))
+                    Expr::PosPred(mapped)
                 }
                 Expr::NegPred(expr) => {
                     let mapped = Box::new(f(*expr));
-                    f(Expr::NegPred(mapped))
+                    Expr::NegPred(mapped)
                 }
                 Expr::Seq(lhs, rhs) => {
                     let mapped_lhs = Box::new(map_internal(*lhs, f));
                     let mapped_rhs = Box::new(map_internal(*rhs, f));
-                    f(Expr::Seq(mapped_lhs, mapped_rhs))
+                    Expr::Seq(mapped_lhs, mapped_rhs)
                 }
                 Expr::Choice(lhs, rhs) => {
                     let mapped_lhs = Box::new(map_internal(*lhs, f));
                     let mapped_rhs = Box::new(map_internal(*rhs, f));
-                    f(Expr::Choice(mapped_lhs, mapped_rhs))
+                    Expr::Choice(mapped_lhs, mapped_rhs)
                 }
                 Expr::Rep(expr) => {
                     let mapped = Box::new(f(*expr));
-                    f(Expr::Rep(mapped))
+                    Expr::Rep(mapped)
                 }
                 Expr::RepOnce(expr) => {
                     let mapped = Box::new(f(*expr));
-                    f(Expr::RepOnce(mapped))
+                    Expr::RepOnce(mapped)
                 }
                 Expr::Opt(expr) => {
                     let mapped = Box::new(f(*expr));
-                    f(Expr::Opt(mapped))
+                    Expr::Opt(mapped)
                 }
                 Expr::Push(expr) => {
                     let mapped = Box::new(f(*expr));
-                    f(Expr::Push(mapped))
+                    Expr::Push(mapped)
                 }
-            }
+                expr => expr
+            };
+
+            f(mapped)
         }
 
         map_internal(self, &mut f)
