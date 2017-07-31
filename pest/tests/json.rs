@@ -378,10 +378,6 @@ impl Parser<Rule> for JsonParser {
             }
         })
     }
-
-    fn parse_str(rule: Rule, input: &str) -> Result<Pairs<Rule, StringInput>, Error<Rule, StringInput>> {
-        Self::parse(rule, Rc::new(StringInput::new(input.to_owned())))
-    }
 }
 
 #[derive(Debug, PartialEq)]

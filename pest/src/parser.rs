@@ -16,6 +16,8 @@ use super::RuleType;
 pub trait Parser<R: RuleType> {
     /// Parses `input` starting from `rule`.
     fn parse<I: Input>(rule: R, input: Rc<I>) -> Result<Pairs<R, I>, Error<R, I>>;
-    /// Parses an `input` string starting from `rule`.
-    fn parse_str(rule: R, input: &str) -> Result<Pairs<R, StringInput>, Error<R, StringInput>>;
+    /// Parses an `input` &str starting from `rule`.
+    fn parse_str(rule: R, input: &str) -> Result<Pairs<R, StringInput>, Error<R, StringInput>> {
+        Self::parse(rule, Rc::new(StringInput::new(input.to_owned())))
+    }
 }

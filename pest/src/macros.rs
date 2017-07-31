@@ -177,10 +177,6 @@ macro_rules! consumes_to {
 /// #             })
 /// #         })
 /// #     }
-/// #
-/// #     fn parse_str(rule: Rule, input: &str) -> Result<Pairs<Rule, StringInput>, Error<Rule, StringInput>> {
-/// #         Self::parse(rule, Rc::new(StringInput::new(input.to_owned())))
-/// #     }
 /// # }
 /// parses_to! {
 ///     parser: AbcParser,
@@ -218,7 +214,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::super::error::Error;
-    use super::super::inputs::{Input, StringInput};
+    use super::super::inputs::Input;
     use super::super::{Parser, state};
     use super::super::iterators::Pairs;
 
@@ -245,10 +241,6 @@ mod tests {
                     })
                 })
             })
-        }
-
-        fn parse_str(rule: Rule, input: &str) -> Result<Pairs<Rule, StringInput>, Error<Rule, StringInput>> {
-            Self::parse(rule, Rc::new(StringInput::new(input.to_owned())))
         }
     }
 

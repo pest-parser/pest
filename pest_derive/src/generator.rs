@@ -87,13 +87,6 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
                     }
                 })
             }
-
-            fn parse_str(
-                rule: Rule,
-                input: &str
-            ) -> Result<pest::iterators::Pairs<Rule, pest::inputs::StringInput>, pest::Error<Rule, pest::inputs::StringInput>> {
-                Self::parse(rule, ::std::rc::Rc::new(pest::inputs::StringInput::new(input.to_owned())))
-            }
         }
     };
 
@@ -845,13 +838,6 @@ mod tests {
                             Rule::a => rules::a(pos, &mut state)
                         }
                     })
-                }
-
-                fn parse_str(
-                    rule: Rule,
-                    input: &str
-                ) -> Result<pest::iterators::Pairs<Rule, pest::inputs::StringInput>, pest::Error<Rule, pest::inputs::StringInput>> {
-                    Self::parse(rule, ::std::rc::Rc::new(pest::inputs::StringInput::new(input.to_owned())))
                 }
             }
         });
