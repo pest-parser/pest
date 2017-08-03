@@ -4,9 +4,7 @@ extern crate pest_grammars;
 
 use std::fs::File;
 use std::io::Read;
-use std::rc::Rc;
 
-use pest::inputs::StringInput;
 use pest::Parser;
 
 use pest_grammars::json::*;
@@ -162,7 +160,5 @@ fn examples() {
 
     file.read_to_string(&mut data).unwrap();
 
-    let input = Rc::new(StringInput::new(data.to_owned()));
-
-    JsonParser::parse(Rule::json, input.clone()).unwrap();
+    JsonParser::parse_str(Rule::json, &data).unwrap();
 }

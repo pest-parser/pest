@@ -247,13 +247,12 @@ fn expression() {
 
 #[test]
 fn prec_climb() {
-    let input = Rc::new(StringInput::new("-12+3*(4-9)^3^2".to_owned()));
     let climber = PrecClimber::new(vec![
         Operator::new(Rule::plus, Assoc::Left) | Operator::new(Rule::minus, Assoc::Left),
         Operator::new(Rule::times, Assoc::Left) | Operator::new(Rule::divide, Assoc::Left),
         Operator::new(Rule::power, Assoc::Right)
     ]);
 
-    let pair = CalculatorParser::parse(Rule::expression, input.clone()).unwrap().next().unwrap();
-    assert_eq!(-5859387, consume(pair, &climber));
+    let pairs = CalculatorParser::parse_str(Rule::expression, "-12+3*(4-9)^3^2");
+    assert_eq!(-5859387, consume(pairs.unwrap().next().unwrap(), &climber));
 }

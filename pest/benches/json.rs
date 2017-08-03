@@ -14,13 +14,12 @@ extern crate pest_grammars;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::rc::Rc;
 
 use test::Bencher;
 
-use pest::inputs::{Input, Position, Span, StringInput};
-use pest::iterators::{Pair, Pairs};
-use pest::{Error, Parser, ParserState, state};
+use pest::inputs::{Input, Span};
+use pest::iterators::Pair;
+use pest::Parser;
 
 use pest_grammars::json::*;
 
@@ -81,9 +80,7 @@ fn data(b: &mut Bencher) {
 
     file.read_to_string(&mut data).unwrap();
 
-    let input = Rc::new(StringInput::new(data.to_owned()));
-
     b.iter(|| {
-        JsonParser::parse(Rule::json, input.clone()).unwrap()
+        consume(JsonParser::parse_str(Rule::json, &data).unwrap().next().unwrap())
     });
 }

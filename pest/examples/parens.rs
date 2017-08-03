@@ -3,7 +3,7 @@ extern crate pest;
 use std::io::{self, Write};
 use std::rc::Rc;
 
-use pest::inputs::{Input, Position, StringInput};
+use pest::inputs::{Input, Position};
 use pest::iterators::Pairs;
 use pest::{Error, Parser, ParserState, state};
 
@@ -94,9 +94,7 @@ fn main() {
         io::stdin().read_line(&mut line).unwrap();
         line.pop();
 
-        let input = Rc::new(StringInput::new(line));
-
-        match ParenParser::parse(Rule::expr, input) {
+        match ParenParser::parse_str(Rule::expr, &line) {
             Ok(pairs) => println!("{:?}", expr(pairs)),
             Err(e) => println!("\n{}", e)
         };

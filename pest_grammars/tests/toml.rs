@@ -4,9 +4,7 @@ extern crate pest_grammars;
 
 use std::fs::File;
 use std::io::Read;
-use std::rc::Rc;
 
-use pest::inputs::StringInput;
 use pest::Parser;
 
 use pest_grammars::toml::*;
@@ -159,7 +157,7 @@ fn multi_line_literal() {
 fn string() {
     parses_to! {
         parser: TomlParser,
-        input: "\"\\\n\"",
+        input: r#""\n""#,
         rule: Rule::string,
         tokens: [
             string(0, 4)
@@ -171,7 +169,7 @@ fn string() {
 fn multi_line_string() {
     parses_to! {
         parser: TomlParser,
-        input: "\"\"\" \\\n \"\"\"",
+        input: r#"""" \n """"#,
         rule: Rule::multi_line_string,
         tokens: [
             multi_line_string(0, 10)
@@ -273,7 +271,5 @@ fn examples() {
 
     file.read_to_string(&mut data).unwrap();
 
-    let input = Rc::new(StringInput::new(data.to_owned()));
-
-    TomlParser::parse(Rule::toml, input.clone()).unwrap();
+    TomlParser::parse_str(Rule::toml, &data).unwrap();
 }
