@@ -164,7 +164,8 @@
 //! * `pop` - pops a string from the stack and matches it
 //! * `peek` - peeks a string from the stack and matches it
 //!
-//! `whitespace` and `comment` should be defined and are unavailable otherwise.
+//! `whitespace` and `comment` should be defined manually if needed. All other rules cannot be
+//! overridden.
 
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
 #![recursion_limit="256"]
