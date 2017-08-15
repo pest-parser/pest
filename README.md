@@ -2,86 +2,62 @@
   <img src="https://cdn.rawgit.com/dragostis/pest/9605855a9c4e86d5e89bc963fe50ee344d8a40e6/pest-logo.svg"/>
 </p>
 
-# pest. Elegant, efficient grammars
+# pest. The Elegant Parser <sup>(beta)</sup>
 
 [![Join the chat at https://gitter.im/dragostis/pest](https://badges.gitter.im/dragostis/pest.svg)](https://gitter.im/dragostis/pest?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/dragostis/pest.svg?branch=master)](https://travis-ci.org/dragostis/pest)
-[![Coverage Status](https://coveralls.io/repos/github/dragostis/pest/badge.svg?branch=master)](https://coveralls.io/github/dragostis/pest?branch=master)
+[![Build Status](https://travis-ci.org/pest-parser/pest.svg?branch=master)](https://travis-ci.org/pest-parser/pest)
+[![codecov](https://codecov.io/gh/pest-parser/pest/branch/master/graph/badge.svg)](https://codecov.io/gh/pest-parser/pest)
 [![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
+[![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)
 
-pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
-generator with *simplicity* and *speed* in mind.
+pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser with *simplicity* and *speed* in mind.
 
 ## Usage
-You will need Cargo and Rust, follow the [installation instructions](https://www.rust-lang.org/en-US/downloads.html)
-to get them.
+You will need [Cargo and Rust](https://www.rust-lang.org/en-US/downloads.html).
 
 Add the following to `Cargo.toml`:
 
 ```toml
-pest = "0.4"
+pest = "1.0-beta.1"
+pest_derive = "1.0-beta.1"
 ```
 
 and in your Rust `lib.rs` or `main.rs`:
 
 ```rust
-#[macro_use]
 extern crate pest;
+#[macro_use]
+extern crate pest_derive;
 ```
 
-You can run the calculator example by using `cargo run --example calculator`.
+## Example
 
+Grammar is specified in a `paren.pest` file:
 
-## [Documentation](https://docs.rs/pest/0.4.1/pest/)
+```
+expression = _{ paren ~ expression? }
+paren      =  { "(" ~ expression? ~ ")" }
+```
 
-## Elegant
-
-pest uses PEG syntax to enable expressive grammar creation.
+and then used in Rust:
 
 ```rust
-impl_rdp! {
-    grammar! {
-      expression = _{ paren ~ expression? }
-      paren      =  { ["("] ~ expression? ~ [")"] }
-    }
-}
+#[derive(Parser)]
+#[grammar = "paren.pest"]
+struct ParenParser;
 
-let mut parser = Rdp::new(StringInput::new("(()((())())())"));
-
-assert!(parser.expression());
-assert!(parser.end());
+assert!(ParenParser::parse_str("((())())").is_ok());
 ```
-
-## Fast
-
-pest generates a fast parser at compile time through the use of macros, without
-forcing you to use nightly. Yes, it works on **stable** (1.9.0+).
-
-| Parser generator | Time to parse 272.5 KB of JSON | pest speedup |
-|------------------|--------------------------------|-------------:|
-| ANTRL 4          | 153,000 μs (+/- 15,000)        |       48.12x |
-| Bison + Flex     | 8,761.9 μs (+/- 697)           |        2.76x |
-| **pest**         | 3,178.9 μs (+/- 40.6)          |        1.00x |
-
-Tests have been run on an Intel Q8200, 4GB DDR2, Linux 4.6.2 as follows:
-
-* ANTLR 4 [JSON grammar]
-  (https://github.com/antlr/grammars-v4/blob/master/json/JSON.g4) measured with
-  [JMH](http://openjdk.java.net/projects/code-tools/jmh/) SingleShotTime
-* Bison + Flex [JSON grammar](https://gist.github.com/justjkk/436828) with
-  string capturing and printing removed
-* pest [JSON grammar](benches/json.rs) measured with `cargo bench`
-
 ## Features
 
-* simple PEG grammar
-* smart error reporting with `atomic` and `silent` rules
-* precedence climbing rule
+* simple yet elegant [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) grammar
+* smart, out-of-the-box error reporting
+* precedence climbing API
 * no generation step (one-step compilation)
 * fast macro-generated recursive descent parser
 * runs on stable Rust
-* elegant functional-style `Token` processing
+* elegant `Iterator`-inspired token pair processing
 
 ## Comparison
 
@@ -102,13 +78,3 @@ pest is the youngest among them, but is continuously improving.
 
 [1]: https://github.com/Geal/nom
 [2]: https://github.com/nikomatsakis/lalrpop
-
-## Roadmap
-
-* [Packrat parsing](https://github.com/pest-parser/pest/issues/7)
-* [parsing parallelization](https://github.com/pest-parser/pest/issues/25)
-
-## FAQ
-
-### I get recursion errors, what should I do?
-You will need to increase the recursion limit of the crate by adding `#![recursion_limit = "x"]` in your `lib.rs` or `main.rs`. Try different values for `x` until it doesn't error anymore. You can start with a value of 200 and go up or down.

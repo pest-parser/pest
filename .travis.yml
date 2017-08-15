@@ -1,14 +1,13 @@
+# Largely based off of the example from travis-cargo.
+# https://github.com/huonw/travis-cargo
+
 sudo: false
 language: rust
 cache: cargo
 os:
   - linux
-  - osx
 rust:
   - stable
-  - beta
-  - nightly
-  - 1.9.0
 addons:
   apt:
     packages:
@@ -16,50 +15,28 @@ addons:
       - libelf-dev
       - libdw-dev
       - binutils-dev
+      - cmake
+    sources:
+      - kalakris-cmake
 git:
   depth: 1
 branches:
   only:
     - master
+    - procedural
 notifications:
   email: false
-cache:
-  directories:
-    - $TRAVIS_BUILD_DIR/target
-    - $HOME/.cargo
 before_script:
   - |
-    if [[ $TRAVIS_OS_NAME =~ linux ]]; then
-      pip install 'travis-cargo<0.2' --user &&
-      export PATH=$HOME/.local/bin:$PATH
-    fi
+      cargo install --force cargo-travis &&
+      export PATH=$HOME/.cargo/bin:$PATH
 script:
+  # Need a custom script because we are using cargo workspaces.
   - |
-    if [[ $TRAVIS_OS_NAME =~ linux ]]; then
-      travis-cargo test &&
-      travis-cargo --only stable doc &&
-      python -c '
-    import os
-    import re
-
-    for path, subdirs, files in os.walk("."):
-        for name in files:
-            if "macro" in name:
-                with open(os.path.join(path, name), "r") as inputfile:
-                    out = re.sub(" *\( (<[^>]*>)?@((?!\{ \.\.\. \};)(.|\\n))*{ \.\.\. \};\\n", "",
-                                 inputfile.read())
-
-                with open(os.path.join(path, name), "w") as outputfile:
-                    outputfile.write(out)
-      '
-    else
-      cargo test
-    fi
-after_success: |
-  if [[ $TRAVIS_OS_NAME =~ linux && $TRAVIS_RUST_VERSION =~ stable ]]; then
-    travis-cargo coveralls --no-sudo --verify \
-    --kcov-options="--exclude-path=target/,tests/"
-  fi
-env:
-  global:
-    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
+      cargo build --all --verbose &&
+      cargo test --all --verbose &&
+      cargo doc --all --verbose
+after_success:
+  - |
+      cargo coverage -m ../kcov --all
+      bash <(curl -s https://codecov.io/bash)

@@ -1,13 +1,6 @@
-[package]
-name = "pest"
-description = "Elegant, efficient grammars"
-version = "0.4.1"
-authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
-repository = "https://github.com/dragostis/pest"
-documentation = "http://dragostis.github.io/pest/pest/"
-keywords = ["pest", "parser", "peg", "grammar"]
-categories = ["parsing"]
-license = "MPL-2.0"
-
-[badges]
-travis-ci = { repository = "dragostis/pest" }
+[workspace]
+members = [
+    "pest",
+    "pest_derive",
+    "pest_grammars"
+]

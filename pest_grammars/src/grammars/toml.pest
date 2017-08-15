@@ -1,0 +1,74 @@
+// pest. The Elegant Parser
+// Copyright (C) 2017  Dragoș Tiselice
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+toml = { soi ~ (table | array_table | pair)* ~ eoi }
+
+table       = { "[" ~ key ~ ("." ~ key)* ~ "]" ~ pair* }
+array_table = { "[[" ~ key ~ ("." ~ key)* ~ "]]" ~ pair* }
+pair        = { key ~ "=" ~ value }
+
+key   = @{ identifier | string | literal }
+value = _{
+    inline_table |
+    array |
+    multi_line_string |
+    string |
+    multi_line_literal |
+    literal |
+    date_time |
+    local_date_time |
+    full_date |
+    partial_time |
+    float |
+    integer |
+    boolean
+}
+
+inline_table = { "{" ~ pair ~ ("," ~ pair)* ~ ","? ~ "}" | "{" ~ "}" }
+
+array = { "[" ~ value ~ ("," ~ value)* ~ ","? ~ "]" | "[" ~ "]" }
+
+identifier = { ('a'..'z' | 'A'..'Z' | '0'..'9' | "_" | "-")+ }
+
+multi_line_string  = @{ "\"\"\"" ~ (escape | !("\"" | "\\" | "\u{0000}" | "\u{001F}") ~ any)* ~ "\"\"\"" }
+string             = @{ "\"" ~ (escape | !("\"" | "\\" | "\u{0000}" | "\u{001F}") ~ any)* ~ "\"" }
+multi_line_literal = @{ "'''" ~ (!"'''" ~ any)* ~ "'''" }
+literal            = @{ "'" ~ (!"'" ~ any)* ~ "'" }
+
+escape  = @{ "\\" ~ ("b" | "t" | "n" | "f" | "r" | "\"" | "\\" | unicode | newline)? }
+unicode = @{ "u" ~ hex ~ hex ~ hex ~ hex | "U" ~ hex ~ hex ~ hex ~ hex ~ hex ~ hex ~ hex ~ hex }
+hex     =  { '0'..'9' | 'A'..'F' }
+
+date_time       = ${ full_date ~ "T" ~ full_time }
+local_date_time = ${ full_date ~ "T" ~ partial_time }
+
+partial_time = ${ time_hour ~ ":" ~ time_minute ~ ":" ~ time_second ~ time_secfrac? }
+full_date    = ${ date_fullyear ~ "-" ~ date_month ~ "-" ~ date_mday }
+full_time    = ${ partial_time ~ time_offset }
+
+date_fullyear = @{ digit ~ digit ~ digit ~ digit }
+date_month    = @{ digit ~ digit }
+date_mday     = @{ digit ~ digit }
+
+time_hour    = @{ digit ~ digit }
+time_minute  = @{ digit ~ digit }
+time_second  = @{ digit ~ digit }
+time_secfrac = @{ "." ~ digit+ }
+time_offset  = ${ "Z" | ("+" | "-") ~ time_hour ~ ":" ~ time_minute }
+
+integer = @{ ("+" | "-")? ~ int }
+float   = @{ ("+" | "-")? ~ int ~ ("." ~ digits ~ exp? | exp)? }
+int     = @{ "0" | ('1'..'9' ~ digits?) }
+digits  = @{ (digit | ("_" ~ digit))+ }
+digit   =  { '0'..'9' }
+exp     = @{ ("E" | "e") ~ ("+" | "-")? ~ int }
+
+boolean = { "true" | "false" }
+
+newline    = _{ "\n" | "\r\n" }
+whitespace = _{ " " | "\t" | newline }
+comment    = _{ "#" ~ (!newline ~ any)* }
