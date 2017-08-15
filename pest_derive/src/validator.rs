@@ -257,7 +257,8 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, (&Expr, &Span<I>)>) -> Vec<Err
             Expr::Ident(ref other)  => {
                 if names.contains(other) {
                     return Some(Error::CustomErrorSpan {
-                        message: format!("rule {} is left-recursive", span.as_str()),
+                        message: format!("rule {} is left-recursive; pest::prec_climber might be \
+                                          useful in this case", span.as_str()),
                         span: span.clone()
                     });
                 }
