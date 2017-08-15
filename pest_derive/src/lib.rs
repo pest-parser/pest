@@ -68,60 +68,60 @@
 //!
 //! 1. Silent (`_`)
 //!
-//! Silent rules do not create token pairs during parsing, nor are they error-reported.
+//!     Silent rules do not create token pairs during parsing, nor are they error-reported.
 //!
-//! ```text
-//! a = _{ "a" }
-//! b =  { a ~ "b" }
-//! ```
+//!     ```text
+//!     a = _{ "a" }
+//!     b =  { a ~ "b" }
+//!     ```
 //!
-//! Parsing `"ab"` produces the token pair `b()`.
+//!     Parsing `"ab"` produces the token pair `b()`.
 //!
 //! 2. Atomic (`@`)
 //!
-//! Atomic rules do not accept whitespace or comments between within their expressions and have a
-//! cascading effect on any rule they call. I.e. rules that are not atomic but are called by atomic
-//! rules behave atomically.
+//!     Atomic rules do not accept whitespace or comments between within their expressions and have a
+//!     cascading effect on any rule they call. I.e. rules that are not atomic but are called by atomic
+//!     rules behave atomically.
 //!
-//! Any rules called by atomic rules do not generate token pairs.
+//!     Any rules called by atomic rules do not generate token pairs.
 //!
-//! ```text
-//! a =  { "a" }
-//! b = @{ a ~ "b" }
+//!     ```text
+//!     a =  { "a" }
+//!     b = @{ a ~ "b" }
 //!
-//! whitespace = _{ " " }
-//! ```
+//!     whitespace = _{ " " }
+//!     ```
 //!
-//! Parsing `"ab"` produces the token pair `b()`, while `"a   b"` produces an error.
+//!     Parsing `"ab"` produces the token pair `b()`, while `"a   b"` produces an error.
 //!
 //! 3. Compound-atomic (`$`)
 //!
-//! Compound-atomic are identical to atomic rules with the exception that rules called by them are
-//! not forbidden from generating token pairs.
+//!     Compound-atomic are identical to atomic rules with the exception that rules called by them are
+//!     not forbidden from generating token pairs.
 //!
-//! ```text
-//! a =  { "a" }
-//! b = ${ a ~ "b" }
+//!     ```text
+//!     a =  { "a" }
+//!     b = ${ a ~ "b" }
 //!
-//! whitespace = _{ " " }
-//! ```
+//!     whitespace = _{ " " }
+//!     ```
 //!
-//! Parsing `"ab"` produces the token pairs `b(a())`, while `"a   b"` produces an error.
+//!     Parsing `"ab"` produces the token pairs `b(a())`, while `"a   b"` produces an error.
 //!
 //! 4. Non-atomic (`!`)
 //!
-//! Non-atomic are identical to normal rules with the exception that they stop the cascading effect
-//! of atomic and compound-atomic rules.
+//!     Non-atomic are identical to normal rules with the exception that they stop the cascading effect
+//!     of atomic and compound-atomic rules.
 //!
-//! ```text
-//! a =  { "a" }
-//! b = !{ a ~ "b" }
-//! c = @{ b }
+//!     ```text
+//!     a =  { "a" }
+//!     b = !{ a ~ "b" }
+//!     c = @{ b }
 //!
-//! whitespace = _{ " " }
-//! ```
+//!     whitespace = _{ " " }
+//!     ```
 //!
-//! Parsing both `"ab"` and `"a   b"` produces the token pairs `c(b(a()))`.
+//!     Parsing both `"ab"` and `"a   b"` produce the token pairs `c(b(a()))`.
 //!
 //! #### Expressions
 //!
@@ -129,28 +129,28 @@
 //!
 //! 1. Terminals
 //!
-//! | Terminal   | Usage                                                          |
-//! |------------|----------------------------------------------------------------|
-//! | `"a"`      | matches the exact string `"a"`                                 |
-//! | `^"a"`     | matches the exact string `"a"` case insensitively (ASCII only) |
-//! | `'a'..'z'` | matches one character between `'a'` and `'z'`                  |
-//! | `a`        | matches rule `a`                                               |
+//!     | Terminal   | Usage                                                          |
+//!     |------------|----------------------------------------------------------------|
+//!     | `"a"`      | matches the exact string `"a"`                                 |
+//!     | `^"a"`     | matches the exact string `"a"` case insensitively (ASCII only) |
+//!     | `'a'..'z'` | matches one character between `'a'` and `'z'`                  |
+//!     | `a`        | matches rule `a`                                               |
 //!
 //! 2. Non-terminals
 //!
-//! | Non-terminal | Usage                                                      |
-//! |--------------|------------------------------------------------------------|
-//! | `(e)`        | matches `e`                                                |
-//! | `e1 ~ e2`    | matches the sequence `e1` `e2`                             |
-//! | `e1 | e2`    | matches either `e1` or `e1`                                |
-//! | `e*`         | matches `e` zero or more times                             |
-//! | `e+`         | matches `e` one or more times                              |
-//! | `e?`         | optionally matches `e`                                     |
-//! | `&e`         | matches `e` without making progress                        |
-//! | `!e`         | matches if `e` doesn't match without making progress       |
-//! | `push(e)`    | matches `e` and pushes it's captured string down the stack |
+//!     | Non-terminal | Usage                                                      |
+//!     |--------------|------------------------------------------------------------|
+//!     | `(e)`        | matches `e`                                                |
+//!     | `e1 ~ e2`    | matches the sequence `e1` `e2`                             |
+//!     | `e1 | e2`    | matches either `e1` or `e1`                                |
+//!     | `e*`         | matches `e` zero or more times                             |
+//!     | `e+`         | matches `e` one or more times                              |
+//!     | `e?`         | optionally matches `e`                                     |
+//!     | `&e`         | matches `e` without making progress                        |
+//!     | `!e`         | matches if `e` doesn't match without making progress       |
+//!     | `push(e)`    | matches `e` and pushes it's captured string down the stack |
 //!
-//! where `e`, `e1`, and `e2` are expressions.
+//!     where `e`, `e1`, and `e2` are expressions.
 //!
 //! ## Special rules
 //!
