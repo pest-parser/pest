@@ -19,8 +19,8 @@ You will need [Cargo and Rust](https://www.rust-lang.org/en-US/downloads.html).
 Add the following to `Cargo.toml`:
 
 ```toml
-pest = "1.0-beta.1"
-pest_derive = "1.0-beta.1"
+pest = "1.0.0-beta.1"
+pest_derive = "1.0.0-beta.1"
 ```
 
 and in your Rust `lib.rs` or `main.rs`:
