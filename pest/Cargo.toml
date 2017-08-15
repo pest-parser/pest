@@ -1,7 +1,7 @@
 [package]
 name = "pest"
 description = "The Elegant Parser"
-version = "1.0.0"
+version = "1.0.0-beta.1"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
@@ -11,7 +11,7 @@ license = "MPL-2.0"
 readme = "../README.md"
 
 [dev-dependencies]
-pest_grammars = { git = "https://github.com/pest-parser/pest", branch = "procedural" }
+pest_grammars = "1.0.0-beta.1"
 
 [badges]
 travis-ci = { repository = "pest-parser/pest" }
