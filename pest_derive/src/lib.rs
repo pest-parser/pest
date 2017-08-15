@@ -10,7 +10,7 @@
 //! pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser built with
 //! *simplicity* and *speed* in mind.
 //!
-//! This crate works in conjunction with the [`pest` crate](https://docs.rs/pest_derive) by
+//! This crate works in conjunction with the [`pest` crate](https://docs.rs/pest) by
 //! deriving a grammar implementation based on a provided grammar.
 //!
 //! ## `.pest` files
