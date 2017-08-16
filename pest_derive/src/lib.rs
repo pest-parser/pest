@@ -166,6 +166,11 @@
 //!
 //! `whitespace` and `comment` should be defined manually if needed. All other rules cannot be
 //! overridden.
+//!
+//! ## `Rule`
+//!
+//! All rules defined or used in the grammar populate a generated `enum` called `Rule`. This
+//! implements `pest`'s `RuleType` and can be used throughout the API.
 
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
 #![recursion_limit="256"]
