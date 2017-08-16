@@ -13,8 +13,74 @@
 
 pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser with *simplicity* and *speed* in mind.
 
+## Elegant grammar
+
+Defining a grammar for an alpha-numeric identifier that does not start with a digit is a straight-forward as:
+
+```
+alpha = { 'a'..'z' | 'A'..'Z' }
+digit = { '0'..'9' }
+
+ident = _{ !digit ~ (alpha | digit)+ }
+     // ^
+     // ident is silent which means it produces no tokens
+```
+
+This is then saved in a `.pest` grammar file and is never mixed up with Rust code. This results in an always up-to-date
+formal definition of the grammar which is very easy to maintain.
+
+## Pairs API
+
+The grammar can be used to derive a `Parser` implementation automatically. Parsing then results in nested token pairs
+that can be simply iterated over in order to print out letters and digits:
+
+```rust
+extern crate pest;
+#[macro_use]
+extern crate pest_derive;
+
+use pest::Parser;
+
+#[derive(Parser)]
+#[grammar = "ident.pest"]
+struct IdentParser;
+
+fn main() {
+    let pairs = IdentParser::parse_str(Rule::ident, "abc123").unwrap_or_else(|e| panic!("{}", e));
+
+    for pair in pairs {
+        match pair.as_rule() {
+            Rule::alpha => println!("letter: {}", pair.into_span().as_str()),
+            Rule::digit => println!("digit: {}", pair.into_span().as_str()),
+            _ => unreachable!()
+        };
+    }
+}
+```
+
+## Meaningful error reporting
+
+Parsing `"123"` instead of `"abc123"` will result in the following panic:
+
+```
+thread 'main' panicked at ' --> 1:1
+  |
+1 | 123
+  | ^---
+  |
+  = unexpected digit', src/main.rs:12:78
+```
+
+## Other features
+
+* fast macro-generated recursive descent parser
+* precedence climbing API
+* input handling API
+* error API
+* runs on stable Rust
+
 ## Usage
-You will need [Cargo and Rust](https://www.rust-lang.org/en-US/downloads.html).
+pest requires [Cargo and Rust](https://www.rust-lang.org/en-US/downloads.html).
 
 Add the following to `Cargo.toml`:
 
@@ -30,51 +96,3 @@ extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 ```
-
-## Example
-
-Grammar is specified in a `paren.pest` file:
-
-```
-expression = _{ paren ~ expression? }
-paren      =  { "(" ~ expression? ~ ")" }
-```
-
-and then used in Rust:
-
-```rust
-#[derive(Parser)]
-#[grammar = "paren.pest"]
-struct ParenParser;
-
-assert!(ParenParser::parse_str("((())())").is_ok());
-```
-## Features
-
-* simple yet elegant [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) grammar
-* smart, out-of-the-box error reporting
-* precedence climbing API
-* no generation step (one-step compilation)
-* fast macro-generated recursive descent parser
-* runs on stable Rust
-* elegant `Iterator`-inspired token pair processing
-
-## Comparison
-
-Short comparison with other parsing tools. Please take into consideration that
-pest is the youngest among them, but is continuously improving.
-
-|                      | [nom][1]             | [LALRPOP][2]    | pest               |
-|----------------------|----------------------|-----------------|--------------------|
-| **type**             | combinator           | generator       | generator (macros) |
-| **goals**            | speed, extensibility | usability       | simplicity, speed  |
-| **grammar**          | specialized          | LR(1) / LALR(1) | PEG                |
-| **steps**            | 1                    | 2               | 1                  |
-| **code**             | separate / mixed     | mixed           | separate           |
-| **extensibility**    | great                | great           | little             |
-| **great for**        | binary formats       | any text        | languages          |
-| **error reporting**  | yes                  | yes             | yes                |
-| **GitHub additions** | ~10K                 | ~500K           | ~6K                |
-
-[1]: https://github.com/Geal/nom
-[2]: https://github.com/nikomatsakis/lalrpop
