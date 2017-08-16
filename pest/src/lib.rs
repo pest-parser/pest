@@ -16,14 +16,14 @@
 //! an input source, while `Parser` provides an interface to the parsing functionality. Since
 //! `Parser` is a `trait`, parsing needs to be defined either though the `#[derive(Parser)]`
 //! attribute, or manually through the [`Position API`](inputs/struct.Position.html). The use of the
-//! `derive` is highly encouraged since this is the only way you can make use of the pest's PEG
+//! `derive` is highly encouraged since this is the only way you can make use of pest's PEG
 //! grammar, while manual parser definition can be used where highly specific or efficient parsing
 //! is required.
 //!
 //! ## `#[derive(Parser)]`
 //!
 //! pest comes with a procedural macro crate--`pest_derive`--which needs to be included in
-//! `Cargo.toml` order to enable the `derive`.
+//! `Cargo.toml` in order to enable the `derive`.
 //!
 //! ```toml
 //! pest_derive = "*"
@@ -32,7 +32,7 @@
 //! ## `.pest` files
 //!
 //! Grammar definitions reside in custom `.pest` files located in the `src` directory. Their path is
-//! relative to `src` and is specified between the `derive` attribute and empty `struct` that
+//! relative to `src` and is specified between the `derive` attribute and an empty `struct` that
 //! `Parser` will be derived on.
 //!
 //! Because of a limitation in procedural macros, there is no way for Cargo to know that a module
@@ -68,7 +68,7 @@ mod token;
 
 /// A `trait` which parser rules must implement.
 ///
-/// This trait is setup so that any struct that implements all of its required traits will
+/// This trait is set up so that any struct that implements all of its required traits will
 /// automatically implement this trait as well.
 ///
 /// This is essentially a [trait alias](https://github.com/rust-lang/rfcs/pull/1733). When trait

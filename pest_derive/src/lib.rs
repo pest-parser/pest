@@ -79,7 +79,7 @@
 //!
 //! 2. Atomic (`@`)
 //!
-//!     Atomic rules do not accept whitespace or comments between within their expressions and have a
+//!     Atomic rules do not accept whitespace or comments within their expressions and have a
 //!     cascading effect on any rule they call. I.e. rules that are not atomic but are called by atomic
 //!     rules behave atomically.
 //!
