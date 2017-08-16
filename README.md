@@ -23,16 +23,16 @@ digit = { '0'..'9' }
 
 ident = _{ !digit ~ (alpha | digit)+ }
      // ^
-     // ident is silent which means it produces no tokens
+     // ident rule is silent which means it produces no tokens
 ```
 
-This is then saved in a `.pest` grammar file and is never mixed up with Rust code. This results in an always up-to-date
+This is then saved in a `.pest` grammar file and is never mixed up with Rust code which results in an always up-to-date
 formal definition of the grammar which is very easy to maintain.
 
 ## Pairs API
 
-The grammar can be used to derive a `Parser` implementation automatically. Parsing then results in nested token pairs
-that can be simply iterated over in order to print out letters and digits:
+The grammar can be used to derive a `Parser` implementation automatically. Parsing returns nested token pairs that can
+be simply iterated over in order to print out letters and digits:
 
 ```rust
 extern crate pest;
@@ -52,7 +52,7 @@ fn main() {
         match pair.as_rule() {
             Rule::alpha => println!("letter: {}", pair.into_span().as_str()),
             Rule::digit => println!("digit: {}", pair.into_span().as_str()),
-            _ => unreachable!()
+            _ => unreachable!() // ident rule is silent and cannot be reached
         };
     }
 }
@@ -60,7 +60,7 @@ fn main() {
 
 ## Meaningful error reporting
 
-Parsing `"123"` instead of `"abc123"` will result in the following panic:
+Parsing `"123"` instead of `"abc123"` in the code above will result in the following panic:
 
 ```
 thread 'main' panicked at ' --> 1:1
@@ -74,9 +74,9 @@ thread 'main' panicked at ' --> 1:1
 ## Other features
 
 * fast macro-generated recursive descent parser
-* precedence climbing API
-* input handling API
-* error API
+* precedence climbing
+* input handling
+* custom errors
 * runs on stable Rust
 
 ## Usage
