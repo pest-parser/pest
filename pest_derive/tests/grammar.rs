@@ -84,6 +84,18 @@ fn neg_pred() {
 }
 
 #[test]
+fn double_neg_pred() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::double_neg_pred,
+        tokens: [
+            double_neg_pred(0, 0)
+        ]
+    };
+}
+
+#[test]
 fn sequence() {
     parses_to! {
         parser: GrammarParser,

@@ -127,7 +127,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
 
         let result = f(self, pos);
 
-        if result.is_err() {
+        if result.is_err() || self.lookahead == Lookahead::Negative {
             self.track(rule, actual_pos, pos_attempts_index, neg_attempts_index);
         }
 
@@ -261,9 +261,17 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         let initial_lookahead = self.lookahead;
 
         self.lookahead = if is_positive {
-            Lookahead::Positive
+            match initial_lookahead {
+                Lookahead::None => Lookahead::Positive,
+                Lookahead::Positive => Lookahead::Positive,
+                Lookahead::Negative => Lookahead::Negative
+            }
         } else {
-            Lookahead::Negative
+            match initial_lookahead {
+                Lookahead::None => Lookahead::Negative,
+                Lookahead::Positive => Lookahead::Negative,
+                Lookahead::Negative => Lookahead::Positive
+            }
         };
 
         let result = f(self);
