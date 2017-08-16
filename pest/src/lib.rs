@@ -17,7 +17,7 @@
 //! `Parser` is a `trait`, parsing needs to be defined either though the `#[derive(Parser)]`
 //! attribute, or manually through the [`Position API`](inputs/struct.Position.html). The use of the
 //! `derive` is highly encouraged since this is the only way you can make use of pest's PEG
-//! grammar, while `manual parser definition` can be used where highly specific or efficient parsing
+//! grammar, while manual parser definition can be used where highly specific or efficient parsing
 //! is required.
 //!
 //! ## `#[derive(Parser)]`
