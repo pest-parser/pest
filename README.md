@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://cdn.rawgit.com/dragostis/pest/9605855a9c4e86d5e89bc963fe50ee344d8a40e6/pest-logo.svg"/>
+  <img src="https://cdn.rawgit.com/pest-parser/pest/9e2510b8/pest-logo.svg" width="80%"/>
 </p>
 
 # pest. The Elegant Parser <sup>(beta)</sup>
