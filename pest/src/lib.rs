@@ -42,7 +42,7 @@
 //! file can be included in a dummy `const` definition while debugging.
 //!
 //! ```ignore
-//! const _GRAMMAR: &'static = include_str!("path/to/my_grammar.pest"); // relative to this file
+//! const _GRAMMAR: &'static str = include_str!("path/to/my_grammar.pest"); // relative to this file
 //!
 //! #[derive(Parser)]
 //! #[grammar = "path/to/my_grammar.pest"] // relative to src
