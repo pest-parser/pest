@@ -106,29 +106,49 @@ impl Input for StringInput {
             panic!("position out of bounds");
         }
 
-        if self.string.slice_unchecked(pos, pos + 1) == "\n" {
-            pos -= 1;
-        }
+        let start = if pos == 0 {
+            0
+        } else {
+            if self.string.slice_unchecked(pos, pos + 1) == "\n" {
+                pos -= 1;
+            }
 
-        let start = self.string.char_indices()
-                               .rev()
-                               .skip_while(|&(i, _)| i > pos)
-                               .find(|&(_, c)| c == '\n');
-        let start = match start {
-            Some((i, _)) => i + 1,
-            None => 0
+            let start = self.string.char_indices()
+                                   .rev()
+                                   .skip_while(|&(i, _)| i > pos)
+                                   .find(|&(_, c)| c == '\n');
+            match start {
+                Some((i, _)) => i + 1,
+                None => 0
+            }
         };
 
-        let end = self.string.char_indices()
-                             .skip_while(|&(i, _)| i < pos)
-                             .find(|&(_, c)| c == '\n');
-        let mut end = match end {
-            Some((i, _)) => i,
-            None => self.string.len()
+        let end = if pos == self.string.len() - 1 {
+            let mut end = self.string.len();
+
+            if end > 0 && self.string.slice_unchecked(end - 1, end) == "\n" {
+                end -= 1;
+            }
+            if end > 0 && self.string.slice_unchecked(end - 1, end) == "\r" {
+                end -= 1;
+            }
+
+            end
+        } else {
+            let end = self.string.char_indices()
+                .skip_while(|&(i, _)| i < pos)
+                .find(|&(_, c)| c == '\n');
+            let mut end = match end {
+                Some((i, _)) => i,
+                None => self.string.len()
+            };
+
+            if end > 0 && self.string.slice_unchecked(end - 1, end) == "\r" {
+                end -= 1;
+            }
+
+            end
         };
-        if end > 0 && self.string.slice_unchecked(end - 1, end) == "\r" {
-            end -= 1;
-        }
 
         self.string.slice_unchecked(start, end)
     }
@@ -262,6 +282,15 @@ mod tests {
             assert_eq!(input.line_of(7), "d嗨");
             assert_eq!(input.line_of(8), "d嗨");
             assert_eq!(input.line_of(11), "d嗨");
+        }
+    }
+
+    #[test]
+    fn line_of_new_line() {
+        let input = StringInput::new("\n".to_owned());
+
+        unsafe {
+            assert_eq!(input.line_of(0), "");
         }
     }
 
