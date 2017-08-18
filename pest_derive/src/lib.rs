@@ -41,7 +41,7 @@
 //!
 //! Comments start with `//` and end at the end of the line.
 //!
-//! ```text
+//! ```ignore
 //! // a comment
 //! ```
 //!
@@ -49,7 +49,7 @@
 //!
 //! Rules have the following form:
 //!
-//! ```text
+//! ```ignore
 //! name = optional_modifier { expression }
 //! ```
 //!
@@ -70,7 +70,7 @@
 //!
 //!     Silent rules do not create token pairs during parsing, nor are they error-reported.
 //!
-//!     ```text
+//!     ```ignore
 //!     a = _{ "a" }
 //!     b =  { a ~ "b" }
 //!     ```
@@ -85,7 +85,7 @@
 //!
 //!     Any rules called by atomic rules do not generate token pairs.
 //!
-//!     ```text
+//!     ```ignore
 //!     a =  { "a" }
 //!     b = @{ a ~ "b" }
 //!
@@ -99,7 +99,7 @@
 //!     Compound-atomic are identical to atomic rules with the exception that rules called by them are
 //!     not forbidden from generating token pairs.
 //!
-//!     ```text
+//!     ```ignore
 //!     a =  { "a" }
 //!     b = ${ a ~ "b" }
 //!
@@ -113,7 +113,7 @@
 //!     Non-atomic are identical to normal rules with the exception that they stop the cascading effect
 //!     of atomic and compound-atomic rules.
 //!
-//!     ```text
+//!     ```ignore
 //!     a =  { "a" }
 //!     b = !{ a ~ "b" }
 //!     c = @{ b }

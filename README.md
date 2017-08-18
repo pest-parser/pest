@@ -17,7 +17,7 @@ pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
 
 Defining a grammar for an alpha-numeric identifier that does not start with a digit is a straight-forward as:
 
-```
+```rust
 alpha = { 'a'..'z' | 'A'..'Z' }
 digit = { '0'..'9' }
 
