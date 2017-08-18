@@ -103,6 +103,7 @@ extern crate pest_derive;
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
 * [pest](https://github.com/pest-parser/pest/blob/master/pest_derive/src/parser.rs) (bootstrapped)
 * [rouler](https://github.com/jarcane/rouler)
+* [rs_pbrt](https://github.com/wahn/rs_pbrt)
 * [stache](https://github.com/dgraham/stache)
 * [tera](https://github.com/Keats/tera)
 * [ukhasnet-parser](https://github.com/adamgreig/ukhasnet-parser)
