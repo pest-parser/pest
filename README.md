@@ -96,3 +96,12 @@ extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 ```
+
+## Projects using pest
+
+* [brain](https://github.com/brain-lang/brain)
+* [handlebars-rust](https://github.com/sunng87/handlebars-rust)
+* [pest](https://github.com/pest-parser/pest/blob/master/pest_derive/src/parser.rs) (bootstrapped)
+* [rouler](https://github.com/jarcane/rouler)
+* [tera](https://github.com/Keats/tera)
+* [ukhasnet-parser](https://github.com/adamgreig/ukhasnet-parser)
