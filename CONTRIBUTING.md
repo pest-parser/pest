@@ -1,18 +1,20 @@
-# Contributing to Pest
-
-## TODO: This file has mostly not been written yet.
+# Contributing to pest
 
 ## How to contribute
-TODO
+
+The simplest way to contribute is by opening issues. If you see a mistake in the docs, a bug, or even some bad
+indentation in the code, don't hesitate to open up an issue. If you have a feature request or know how to
+redesign a key component of pest, an issue is the way to go.
+
+However, if you have the time and energy to make your very own contribution to the project, we'd warmly
+encourage you to open a pull request. A maintainer will soon review your code and you can follow up from there.
 
 ### Finding something to contribute
-TODO
 
-### Getting Help
-TODO
+The simplest way to get started is to take a look at the issues. If something is not specific enough or not
+detailed enough, feel free to leave a comment.
 
-### Getting Your Changes Merged
-TODO
+Reach out on [Gitter](https://gitter.im/pest-parser/pest) for more ideas.
 
 ## Security Issues
 
