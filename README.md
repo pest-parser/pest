@@ -17,7 +17,7 @@ pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
 
 Defining a grammar for a list of alpha-numeric identifiers that do not start with a digit is a straight-forward as:
 
-```
+```rust
 alpha = { 'a'..'z' | 'A'..'Z' }
 digit = { '0'..'9' }
 
@@ -47,16 +47,16 @@ use pest::Parser;
 struct IdentParser;
 
 fn main() {
-    let pairs = IdentParser::parse_str(Rule::ident_list, "abc123 def456").unwrap_or_else(|e| panic!("{}", e));
+    let pairs = IdentParser::parse_str(Rule::ident_list, "a1 b2").unwrap_or_else(|e| panic!("{}", e));
 
-    //Because ident_list is silent, the iterator will contain idents
+    // Because ident_list is silent, the iterator will contain idents
     for pair in pairs {
-        //A pair is a combination of the rule which matched and a span of input
+        // A pair is a combination of the rule which matched and a span of input
         println!("Rule: {:?}", pair.as_rule());
         println!("Span: {:?}", pair.clone().into_span());
         println!("Text: {}", pair.clone().into_span().as_str());
 
-        //A pair can be converted to an iterator of the tokens which make it up:
+        // A pair can be converted to an iterator of the tokens which make it up:
         for inner_pair in pair.into_inner() {
             match inner_pair.as_rule() {
                 Rule::alpha => println!("letter: {}", inner_pair.into_span().as_str()),
@@ -71,28 +71,20 @@ fn main() {
 This produces the following output:
 ```
 Rule: ident
-Span: Span { start: 0, end: 6 }
-Text: abc123
+Span: Span { start: 0, end: 2 }
+Text: a1
 letter: a
-letter: b
-letter: c
 digit: 1
-digit: 2
-digit: 3
 Rule: ident
-Span: Span { start: 7, end: 13 }
-Text: def456
-letter: d
-letter: e
-letter: f
-digit: 4
-digit: 5
-digit: 6
+Span: Span { start: 3, end: 5 }
+Text: b2
+letter: b
+digit: 2
 ```
 
 ## Meaningful error reporting
 
-Parsing `"123"` instead of `"abc123 def456"` in the code above will result in the following panic:
+Parsing `"123"` instead of `"a1 b2"` in the code above will result in the following panic:
 
 ```
 thread 'main' panicked at ' --> 1:1
