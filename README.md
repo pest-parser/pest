@@ -15,15 +15,16 @@ pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
 
 ## Elegant grammar
 
-Defining a grammar for a list of alpha-numeric identifiers that do not start with a digit is a straight-forward as:
+Defining a grammar for a list of alpha-numeric identifiers where the first identifier does not start with a digit is as
+straight-forward as:
 
 ```rust
 alpha = { 'a'..'z' | 'A'..'Z' }
 digit = { '0'..'9' }
 
-ident = { !digit ~ (alpha | digit)+ }
+ident = { (alpha | digit)+ }
 
-ident_list = _{ ident ~ ( " " ~ ident )+ }
+ident_list = _{ !digit ~ ident ~ (" " ~ ident)+ }
           // ^
           // ident_list rule is silent which means it produces no tokens
 ```
@@ -33,7 +34,8 @@ formal definition of the grammar which is very easy to maintain.
 
 ## Pairs API
 
-The grammar can be used to derive a `Parser` implementation automatically. Parsing returns an iterator of nested token pairs:
+The grammar can be used to derive a `Parser` implementation automatically. Parsing returns an iterator of nested token
+pairs:
 
 ```rust
 extern crate pest;
@@ -92,7 +94,18 @@ thread 'main' panicked at ' --> 1:1
 1 | 123
   | ^---
   |
-  = expected ident', src\main.rs:12
+  = unexpected digit', src/main.rs:12
+```
+
+while parsing `"ab *"` will result in:
+
+```
+thread 'main' panicked at ' --> 1:4
+  |
+1 | ab *
+  |    ^---
+  |
+  = expected ident', src/main.rs:12
 ```
 
 ## Other features
