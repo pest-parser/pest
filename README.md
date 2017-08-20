@@ -15,15 +15,17 @@ pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser
 
 ## Elegant grammar
 
-Defining a grammar for an alpha-numeric identifier that does not start with a digit is a straight-forward as:
+Defining a grammar for a list of alpha-numeric identifiers that do not start with a digit is a straight-forward as:
 
 ```rust
 alpha = { 'a'..'z' | 'A'..'Z' }
 digit = { '0'..'9' }
 
-ident = _{ !digit ~ (alpha | digit)+ }
-     // ^
-     // ident rule is silent which means it produces no tokens
+ident = { !digit ~ (alpha | digit)+ }
+
+ident_list = _{ ident ~ ( " " ~ ident )+ }
+          // ^
+          // ident_list rule is silent which means it produces no tokens
 ```
 
 This is then saved in a `.pest` grammar file and is never mixed up with Rust code which results in an always up-to-date
@@ -31,8 +33,7 @@ formal definition of the grammar which is very easy to maintain.
 
 ## Pairs API
 
-The grammar can be used to derive a `Parser` implementation automatically. Parsing returns nested token pairs that can
-be simply iterated over in order to print out letters and digits:
+The grammar can be used to derive a `Parser` implementation automatically. Parsing returns an iterator of nested token pairs:
 
 ```rust
 extern crate pest;
@@ -46,21 +47,44 @@ use pest::Parser;
 struct IdentParser;
 
 fn main() {
-    let pairs = IdentParser::parse_str(Rule::ident, "abc123").unwrap_or_else(|e| panic!("{}", e));
+    let pairs = IdentParser::parse_str(Rule::ident_list, "a1 b2").unwrap_or_else(|e| panic!("{}", e));
 
+    // Because ident_list is silent, the iterator will contain idents
     for pair in pairs {
-        match pair.as_rule() {
-            Rule::alpha => println!("letter: {}", pair.into_span().as_str()),
-            Rule::digit => println!("digit: {}", pair.into_span().as_str()),
-            _ => unreachable!() // ident rule is silent and cannot be reached
-        };
+        // A pair is a combination of the rule which matched and a span of input
+        println!("Rule: {:?}", pair.as_rule());
+        println!("Span: {:?}", pair.clone().into_span());
+        println!("Text: {}", pair.clone().into_span().as_str());
+
+        // A pair can be converted to an iterator of the tokens which make it up:
+        for inner_pair in pair.into_inner() {
+            match inner_pair.as_rule() {
+                Rule::alpha => println!("letter: {}", inner_pair.into_span().as_str()),
+                Rule::digit => println!("digit: {}", inner_pair.into_span().as_str()), 
+                _ => unreachable!()
+            };
+        }
     }
 }
 ```
 
+This produces the following output:
+```
+Rule: ident
+Span: Span { start: 0, end: 2 }
+Text: a1
+letter: a
+digit: 1
+Rule: ident
+Span: Span { start: 3, end: 5 }
+Text: b2
+letter: b
+digit: 2
+```
+
 ## Meaningful error reporting
 
-Parsing `"123"` instead of `"abc123"` in the code above will result in the following panic:
+Parsing `"123"` instead of `"a1 b2"` in the code above will result in the following panic:
 
 ```
 thread 'main' panicked at ' --> 1:1
@@ -68,7 +92,7 @@ thread 'main' panicked at ' --> 1:1
 1 | 123
   | ^---
   |
-  = unexpected digit', src/main.rs:12:78
+  = expected ident', src\main.rs:12
 ```
 
 ## Other features
