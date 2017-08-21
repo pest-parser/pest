@@ -346,3 +346,18 @@ fn pop() {
         ]
     };
 }
+
+#[test]
+fn pop_fail() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "010",
+        rule: Rule::pop_fail,
+        tokens: [
+            pop_fail(0, 3, [
+                range(0, 1),
+                range(1, 2)
+            ])
+        ]
+    };
+}
