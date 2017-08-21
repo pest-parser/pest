@@ -162,7 +162,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
             self.neg_attempts.truncate(neg_attempts_index);
         }
 
-        let mut attempts = if self.lookahead != Lookahead::Negative {
+        let attempts = if self.lookahead != Lookahead::Negative {
             &mut self.pos_attempts
         } else {
             &mut self.neg_attempts
@@ -262,14 +262,12 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
 
         self.lookahead = if is_positive {
             match initial_lookahead {
-                Lookahead::None => Lookahead::Positive,
-                Lookahead::Positive => Lookahead::Positive,
+                Lookahead::None | Lookahead::Positive => Lookahead::Positive,
                 Lookahead::Negative => Lookahead::Negative
             }
         } else {
             match initial_lookahead {
-                Lookahead::None => Lookahead::Negative,
-                Lookahead::Positive => Lookahead::Negative,
+                Lookahead::None | Lookahead::Positive => Lookahead::Negative,
                 Lookahead::Negative => Lookahead::Positive
             }
         };

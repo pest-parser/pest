@@ -52,7 +52,7 @@ fn consume<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
                 Json::String(pair.into_span())
             }
             Rule::array => {
-                Json::Array(pair.into_inner().map(|pos| value(pos)).collect())
+                Json::Array(pair.into_inner().map(value).collect())
             }
             Rule::object => {
                 let pairs = pair.into_inner().map(|pos| {

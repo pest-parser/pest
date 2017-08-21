@@ -93,14 +93,15 @@ fn message<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
         Error::ParsingError { ref positives, ref negatives, .. } => {
             parsing_error_message(positives, negatives, |r| format!("{:?}", r))
         }
-        Error::CustomErrorPos { ref message, .. } => message.to_owned(),
-        Error::CustomErrorSpan { ref message, .. } => message.to_owned()
+        Error::CustomErrorPos { ref message, .. } | Error::CustomErrorSpan { ref message, .. } => {
+            message.to_owned()
+        }
     }
 }
 
 fn parsing_error_message<R: fmt::Debug, F>(
-    positives: &Vec<R>,
-    negatives: &Vec<R>,
+    positives: &[R],
+    negatives: &[R],
     mut f: F
 ) -> String
 where
@@ -120,7 +121,7 @@ where
     }
 }
 
-fn enumerate<R: fmt::Debug, F>(rules: &Vec<R>, f: &mut F) -> String
+fn enumerate<R: fmt::Debug, F>(rules: &[R], f: &mut F) -> String
 where
     F: FnMut(&R) -> String
 {
@@ -161,8 +162,7 @@ fn underline<R: fmt::Debug, I: Input>(error: &Error<R, I>, offset: usize) -> Str
 
 fn format<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
     let pos = match *error {
-        Error::ParsingError { ref pos, .. } => pos.clone(),
-        Error::CustomErrorPos { ref pos, .. } => pos.clone(),
+        Error::ParsingError { ref pos, .. } | Error::CustomErrorPos { ref pos, .. } => pos.clone(),
         Error::CustomErrorSpan { ref span, .. } => span.clone().split().0.clone()
     };
     let (line, col) = pos.line_col();

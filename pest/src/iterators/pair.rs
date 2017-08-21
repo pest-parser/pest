@@ -149,11 +149,11 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     ///     // generating Token pair with Rule::a ...
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
     /// }).unwrap().next().unwrap();
-    /// let tokens: Vec<_> = pair.into_iter().collect();
+    /// let tokens: Vec<_> = pair.tokens().collect();
     ///
     /// assert_eq!(tokens.len(), 2);
     /// ```
-    pub fn into_iter(self) -> TokenIterator<R, I> {
+    pub fn tokens(self) -> TokenIterator<R, I> {
         let end = self.pair();
 
         token_iterator::new(
@@ -173,8 +173,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
 
     fn pos(&self, index: usize) -> usize {
         match self.queue[index] {
-            QueueableToken::Start { pos, .. } => pos,
-            QueueableToken::End { pos, .. } => pos
+            QueueableToken::Start { pos, .. } | QueueableToken::End { pos, .. } => pos
         }
     }
 }

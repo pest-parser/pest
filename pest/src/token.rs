@@ -69,11 +69,7 @@ impl<R: PartialEq, I: Input> PartialEq for Token<R, I> {
 impl<R: Hash, I: Input> Hash for Token<R, I> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match *self {
-            Token::Start { ref rule, ref pos } => {
-                rule.hash(state);
-                pos.hash(state);
-            }
-            Token::End { ref rule, ref pos } => {
+            Token::Start { ref rule, ref pos } | Token::End { ref rule, ref pos } => {
                 rule.hash(state);
                 pos.hash(state);
             }

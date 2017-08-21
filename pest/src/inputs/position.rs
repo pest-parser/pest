@@ -441,8 +441,7 @@ impl<I: Input> Position<I> {
         let result = f(self);
 
         match result {
-            Ok(pos) => Ok(pos),
-            Err(pos) => Ok(pos)
+            Ok(pos) | Err(pos) => Ok(pos)
         }
     }
 

@@ -25,7 +25,7 @@ pub enum Assoc {
     Right
 }
 
-/// A `struct` defining an infix operator used in [PrecClimber](struct.PrecClimber.html).
+/// A `struct` defining an infix operator used in [`PrecClimber`](struct.PrecClimber.html).
 #[derive(Debug)]
 pub struct Operator<R: RuleType> {
     rule: R,
@@ -104,7 +104,7 @@ impl<R: RuleType> PrecClimber<R> {
     /// ]);
     /// ```
     pub fn new(ops: Vec<Operator<R>>) -> PrecClimber<R> {
-        let ops = ops.into_iter().zip((1..)).fold(HashMap::new(), |mut map, (op, prec)| {
+        let ops = ops.into_iter().zip(1..).fold(HashMap::new(), |mut map, (op, prec)| {
             let mut next = Some(op);
 
             while let Some(op) = next.take() {
