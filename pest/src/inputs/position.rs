@@ -222,12 +222,12 @@ impl<I: Input> Position<I> {
     /// assert_eq!(start.clone().match_string("ac"), Err(start));
     /// ```
     #[inline]
-    pub fn match_string(self, string: &str) -> Result<Position<I>, Position<I>> {
+    pub fn match_string(mut self, string: &str) -> Result<Position<I>, Position<I>> {
         // Matching is safe since, even if the string does not fall on UTF-8 borders, that
         // particular slice is only used for comparison which will be handled correctly.
         if unsafe { self.input.match_string(string, self.pos) } {
-            // Safe since adding the string length keeps the position on a UTF-8 border.
-            Ok(unsafe { new(self.input, self.pos + string.len()) })
+            self.pos += string.len();
+            Ok(self)
         } else {
             Err(self)
         }
@@ -248,12 +248,12 @@ impl<I: Input> Position<I> {
     /// assert_eq!(start.clone().match_insensitive("AC"), Err(start));
     /// ```
     #[inline]
-    pub fn match_insensitive(self, string: &str) -> Result<Position<I>, Position<I>> {
+    pub fn match_insensitive(mut self, string: &str) -> Result<Position<I>, Position<I>> {
         // Matching is safe since, even if the string does not fall on UTF-8 borders, that
         // particular slice is only used for comparison which will be handled correctly.
         if unsafe { self.input.match_insensitive(string, self.pos) } {
-            // Safe since adding the string length keeps the position on a UTF-8 border.
-            Ok(unsafe { new(self.input, self.pos + string.len()) })
+            self.pos += string.len();
+            Ok(self)
         } else {
             Err(self)
         }
@@ -274,14 +274,14 @@ impl<I: Input> Position<I> {
     /// assert_eq!(start.clone().match_range('A'..'Z'), Err(start));
     /// ```
     #[inline]
-    pub fn match_range(self, range: Range<char>) -> Result<Position<I>, Position<I>> {
+    pub fn match_range(mut self, range: Range<char>) -> Result<Position<I>, Position<I>> {
         // Cannot actually cause undefined behavior.
         let len = unsafe { self.input.match_range(range, self.pos) };
 
         match len {
             Some(len) => {
-                // Safe since adding the string length keeps the position on a UTF-8 border.
-                Ok(unsafe { new(self.input, self.pos + len) })
+                self.pos += len;
+                Ok(self)
             }
             None => Err(self)
         }
