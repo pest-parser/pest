@@ -10,8 +10,5 @@ categories = ["parsing"]
 license = "MPL-2.0"
 readme = "../README.md"
 
-[dev-dependencies]
-pest_grammars = "^1.0.0-beta"
-
 [badges]
 travis-ci = { repository = "pest-parser/pest" }
