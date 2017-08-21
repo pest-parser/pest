@@ -32,7 +32,7 @@ pub fn new<I: Input>(input: Rc<I>, start: usize, end: usize) -> Span<I> {
 }
 
 impl<I: Input> Span<I> {
-    /// Returns the `Span`'s start position.
+    /// Returns the `Span`'s start position as a `usize`.
     ///
     /// # Examples
     ///
@@ -51,7 +51,7 @@ impl<I: Input> Span<I> {
         self.start
     }
 
-    /// Returns the `Span`'s end position.
+    /// Returns the `Span`'s end position as a `usize`.
     ///
     /// # Examples
     ///
@@ -68,6 +68,46 @@ impl<I: Input> Span<I> {
     #[inline]
     pub fn end(&self) -> usize {
         self.end
+    }
+
+    /// Returns the `Span`'s start `Position`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest::inputs::{Position, StringInput};
+    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// let start = Position::from_start(input);
+    /// let end = start.clone().match_string("ab").unwrap();
+    /// let span = start.clone().span(end);
+    ///
+    /// assert_eq!(span.start_pos(), start);
+    /// ```
+    #[inline]
+    pub fn start_pos(&self) -> position::Position<I> {
+        // Span start position is a UTF-8 border and is safe.
+        unsafe { position::new(self.input.clone(), self.start) }
+    }
+
+    /// Returns the `Span`'s end `Position`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest::inputs::{Position, StringInput};
+    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// let start = Position::from_start(input);
+    /// let end = start.clone().match_string("ab").unwrap();
+    /// let span = start.span(end.clone());
+    ///
+    /// assert_eq!(span.end_pos(), end);
+    /// ```
+    #[inline]
+    pub fn end_pos(&self) -> position::Position<I> {
+        // Span end position is a UTF-8 border and is safe.
+        unsafe { position::new(self.input.clone(), self.end) }
     }
 
     /// Splits the `Span` into a pair of `Position`s.
