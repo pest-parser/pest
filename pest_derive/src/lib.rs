@@ -221,6 +221,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         Ok(pairs) => pairs,
         Err(error) => panic!("error parsing {:?}\n\n{}", file_name, error.renamed_rules(|rule| {
             match *rule {
+                GrammarRule::grammar_rule => "rule".to_owned(),
                 GrammarRule::eoi => "end-of-input".to_owned(),
                 GrammarRule::assignment_operator => "`=`".to_owned(),
                 GrammarRule::silent_modifier => "`_`".to_owned(),

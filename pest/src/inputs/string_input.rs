@@ -123,7 +123,9 @@ impl Input for StringInput {
             }
         };
 
-        let end = if pos == self.string.len() - 1 {
+        let end = if self.string.len() == 0 {
+            0
+        } else if pos == self.string.len() - 1 {
             let mut end = self.string.len();
 
             if end > 0 && self.string.slice_unchecked(end - 1, end) == "\n" {
@@ -282,6 +284,15 @@ mod tests {
             assert_eq!(input.line_of(7), "d嗨");
             assert_eq!(input.line_of(8), "d嗨");
             assert_eq!(input.line_of(11), "d嗨");
+        }
+    }
+
+    #[test]
+    fn line_of_empty() {
+        let input = StringInput::new("".to_owned());
+
+        unsafe {
+            assert_eq!(input.line_of(0), "");
         }
     }
 

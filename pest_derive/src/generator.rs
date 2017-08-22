@@ -813,7 +813,6 @@ mod tests {
                     input: ::std::rc::Rc<I>
                 ) -> Result<::pest::iterators::Pairs<Rule, I>, ::pest::Error<Rule, I>> {
                     mod rules {
-                        use super::pest;
                         use super::Rule;
 
                         #[allow(unused_variables)]
