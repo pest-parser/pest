@@ -16,8 +16,6 @@ extern crate pest;
 extern crate pest_derive;
 
 pub mod json {
-    use super::pest;
-
     /// JSON parser.
     #[derive(Parser)]
     #[grammar = "grammars/json.pest"]
@@ -25,8 +23,6 @@ pub mod json {
 }
 
 pub mod toml {
-    use super::pest;
-
     /// TOML parser.
     #[derive(Parser)]
     #[grammar = "grammars/toml.pest"]

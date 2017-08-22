@@ -198,6 +198,8 @@ macro_rules! parses_to {
 
         #[allow(unused_mut)]
         {
+            use $crate::Parser;
+
             let mut tokens = $parser::parse_str($rules::$rule, $string).unwrap().tokens();
 
             consumes_to!($rules, &mut tokens, [ $( $names $calls ),* ]);
