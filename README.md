@@ -11,7 +11,10 @@
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
 [![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)
 
-pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser with *simplicity* and *speed* in mind.
+pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser with [simplicity][1] and [speed][2] in mind.
+
+[1]: https://github.com/pest-parser/pest#elegant-grammar
+[2]: https://github.com/pest-parser/pest#sheer-performance
 
 ## Elegant grammar
 
@@ -108,9 +111,27 @@ thread 'main' panicked at ' --> 1:4
   = expected ident', src/main.rs:12
 ```
 
+## Sheer performance
+
+pest provides parsing performance in the same league as carefully written manual parsers.
+The following JSON benchmark puts it somehwere in between [ujson4c](https://github.com/esnme/ujson4c)
+and [nom](https://github.com/Geal/nom).
+
+<p align="center">
+  <img src="https://cdn.rawgit.com/pest-parser/pest/9ca9a111/results.svg" width="80%"/>
+</p>
+
+The benchmark uses [a large 2MB JSON file](https://github.com/miloyip/nativejson-benchmark/blob/master/data/canada.json).
+
+Sources:
+
+* [ujson4c](https://gist.github.com/dragostis/541363fee0075480f13c357e1604f343)
+* [pest](https://github.com/pest-parser/benchmark)
+* [pest (custom AST)](https://github.com/pest-parser/pest/blob/master/pest_grammars/benches/json.rs)
+* [nom](https://github.com/Geal/nom/blob/master/benches/json.rs)
+
 ## Other features
 
-* fast macro-generated recursive descent parser
 * precedence climbing
 * input handling
 * custom errors
