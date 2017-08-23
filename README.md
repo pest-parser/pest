@@ -121,7 +121,7 @@ The first entry of pest scores 22ms, while the second scores 78ms since it's map
 to a custom JSON AST.
 
 <p align="center">
-  <img src="https://cdn.rawgit.com/pest-parser/pest/9ca9a111/results.svg" width="80%"/>
+  <img src="https://cdn.rawgit.com/pest-parser/pest/9ca9a111/results.svg"/>
 </p>
 
 The benchmark uses [a large 2MB JSON file](https://github.com/miloyip/nativejson-benchmark/blob/master/data/canada.json).
