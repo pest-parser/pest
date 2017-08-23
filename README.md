@@ -122,6 +122,7 @@ and [nom](https://github.com/Geal/nom).
 </p>
 
 The benchmark uses [a large 2MB JSON file](https://github.com/miloyip/nativejson-benchmark/blob/master/data/canada.json).
+Tested on a Intel® Core™ i7-6700HQ running Linux.
 
 Sources:
 
