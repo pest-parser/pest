@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 800 400" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41421;">
+    <rect x="0" y="0" width="800" height="400" style="fill:white;"/>
+    <g>
+        <g transform="matrix(1,0,0,1,134,54.05)">
+            <text x="0px" y="0px" style="font-family:'Arial-BoldMT', 'Arial', sans-serif;font-weight:700;font-size:13px;">T<tspan x="7.706px 11.318px " y="0px 0px ">im</tspan>e to parse canada.json</text>
+        </g>
+        <rect x="134" y="43" width="533" height="13" style="fill:white;fill-opacity:0;"/>
+    </g>
+    <g>
+        <rect x="680" y="77" width="107" height="13" style="fill:white;fill-opacity:0;"/>
+        <g>
+            <rect x="680" y="77" width="107" height="13" style="fill:white;fill-opacity:0;"/>
+            <g transform="matrix(1,0,0,1,711,88.05)">
+                <text x="0px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(34,34,34);">milliseconds</text>
+            </g>
+            <rect x="680" y="77" width="26" height="13" style="fill:rgb(51,102,204);"/>
+        </g>
+    </g>
+    <g>
+        <rect x="134" y="77" width="533" height="247" style="fill:white;fill-opacity:0;"/>
+        <g>
+            <g>
+                <rect x="134" y="77" width="1" height="247" style="fill:rgb(204,204,204);"/>
+                <rect x="267" y="77" width="1" height="247" style="fill:rgb(204,204,204);"/>
+                <rect x="400" y="77" width="1" height="247" style="fill:rgb(204,204,204);"/>
+                <rect x="533" y="77" width="1" height="247" style="fill:rgb(204,204,204);"/>
+                <rect x="666" y="77" width="1" height="247" style="fill:rgb(204,204,204);"/>
+            </g>
+            <g>
+                <rect x="135" y="89" width="11" height="38" style="fill:rgb(51,102,204);"/>
+                <rect x="135" y="151" width="38" height="38" style="fill:rgb(51,102,204);"/>
+                <rect x="135" y="212" width="137" height="38" style="fill:rgb(51,102,204);"/>
+                <rect x="135" y="274" width="441" height="38" style="fill:rgb(51,102,204);"/>
+            </g>
+            <rect x="134" y="77" width="1" height="247" style="fill:rgb(51,51,51);"/>
+        </g>
+        <g>
+            <g transform="matrix(1,0,0,1,134.5,343.05)">
+                <text x="-3.615px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">0</text>
+            </g>
+            <g transform="matrix(1,0,0,1,267.5,343.05)">
+                <text x="-7.23px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">75</text>
+            </g>
+            <g transform="matrix(1,0,0,1,400.5,343.05)">
+                <text x="-10.845px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">150</text>
+            </g>
+            <g transform="matrix(1,0,0,1,533.5,343.05)">
+                <text x="-10.845px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">225</text>
+            </g>
+            <g transform="matrix(1,0,0,1,666.5,343.05)">
+                <text x="-10.845px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">300</text>
+            </g>
+            <g transform="matrix(1,0,0,1,121,112.8)">
+                <text x="-44.808px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(34,34,34);">ujson4c</text>
+            </g>
+            <g transform="matrix(1,0,0,1,121,174.3)">
+                <text x="-24.572px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(34,34,34);">pest</text>
+            </g>
+            <g transform="matrix(1,0,0,1,121,235.8)">
+                <text x="-106.92px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(34,34,34);">pest (custom <tspan x="-29.612px -20.941px " y="0px 0px ">AS</tspan>T)</text>
+            </g>
+            <g transform="matrix(1,0,0,1,121,297.3)">
+                <text x="-25.289px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(34,34,34);">nom</text>
+            </g>
+        </g>
+    </g>
+</svg>
