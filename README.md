@@ -121,18 +121,12 @@ The first entry of pest scores 22ms, while the second scores 78ms since it's map
 to a custom JSON AST.
 
 <p align="center">
-  <img src="https://cdn.rawgit.com/pest-parser/pest/9ca9a111/results.svg"/>
+  <img src="https://cdn.rawgit.com/pest-parser/pest/df15f8f7/results.svg"/>
 </p>
 
-The benchmark uses [a large 2MB JSON file](https://github.com/miloyip/nativejson-benchmark/blob/master/data/canada.json).
-Tested on a Intel® Core™ i7-6700HQ running Linux.
-
-Sources:
-
-* [ujson4c](https://gist.github.com/dragostis/541363fee0075480f13c357e1604f343)
-* [pest](https://github.com/pest-parser/benchmark)
-* [pest (custom AST)](https://github.com/pest-parser/pest/blob/master/pest_grammars/benches/json.rs)
-* [nom](https://github.com/Geal/nom/blob/master/benches/json.rs)
+The [benchmark](https://github.com/Geal/pestvsnom) uses
+[a large 2MB JSON file](https://github.com/miloyip/nativejson-benchmark/blob/master/data/canada.json).
+Tested on a 2.6GHz Intel® Core™ i5 running macOS.
 
 ## Other features
 
