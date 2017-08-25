@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://cdn.rawgit.com/pest-parser/pest/3279f28f/pest-logo.svg" width="80%"/>
+  <img src="https://cdn.rawgit.com/pest-parser/pest/ac70b5c4/pest-logo.svg" width="80%"/>
 </p>
 
 # pest. The Elegant Parser <sup>(beta)</sup>
@@ -121,7 +121,7 @@ The first entry of pest scores 22ms, while the second scores 78ms since it's map
 to a custom JSON AST.
 
 <p align="center">
-  <img src="https://cdn.rawgit.com/pest-parser/pest/df15f8f7/results.svg"/>
+  <img src="https://cdn.rawgit.com/pest-parser/pest/ac70b5c4/results.svg"/>
 </p>
 
 The [benchmark](https://github.com/Geal/pestvsnom) uses
