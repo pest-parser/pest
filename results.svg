@@ -29,10 +29,10 @@
                 <rect x="666" y="77" width="1" height="247" style="fill:rgb(204,204,204);"/>
             </g>
             <g>
-                <rect x="135" y="89" width="11" height="38" style="fill:rgb(51,102,204);"/>
-                <rect x="135" y="151" width="38" height="38" style="fill:rgb(51,102,204);"/>
-                <rect x="135" y="212" width="137" height="38" style="fill:rgb(51,102,204);"/>
-                <rect x="135" y="274" width="441" height="38" style="fill:rgb(51,102,204);"/>
+                <rect x="135" y="89" width="63" height="38" style="fill:rgb(51,102,204);"/>
+                <rect x="135" y="151" width="191" height="38" style="fill:rgb(51,102,204);"/>
+                <rect x="135" y="212" width="377" height="38" style="fill:rgb(51,102,204);"/>
+                <rect x="135" y="274" width="510" height="38" style="fill:rgb(51,102,204);"/>
             </g>
             <rect x="134" y="77" width="1" height="247" style="fill:rgb(51,51,51);"/>
         </g>
@@ -41,16 +41,16 @@
                 <text x="-3.615px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">0</text>
             </g>
             <g transform="matrix(1,0,0,1,267.5,343.05)">
-                <text x="-7.23px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">75</text>
+                <text x="-7.23px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">25</text>
             </g>
             <g transform="matrix(1,0,0,1,400.5,343.05)">
-                <text x="-10.845px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">150</text>
+                <text x="-7.23px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">50</text>
             </g>
             <g transform="matrix(1,0,0,1,533.5,343.05)">
-                <text x="-10.845px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">225</text>
+                <text x="-7.23px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">75</text>
             </g>
             <g transform="matrix(1,0,0,1,666.5,343.05)">
-                <text x="-10.845px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">300</text>
+                <text x="-10.845px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(68,68,68);">100</text>
             </g>
             <g transform="matrix(1,0,0,1,121,112.8)">
                 <text x="-44.808px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(34,34,34);">ujson4c</text>
@@ -59,10 +59,10 @@
                 <text x="-24.572px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(34,34,34);">pest</text>
             </g>
             <g transform="matrix(1,0,0,1,121,235.8)">
-                <text x="-106.92px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(34,34,34);">pest (custom <tspan x="-29.612px -20.941px " y="0px 0px ">AS</tspan>T)</text>
+                <text x="-25.289px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(34,34,34);">nom</text>
             </g>
             <g transform="matrix(1,0,0,1,121,297.3)">
-                <text x="-25.289px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(34,34,34);">nom</text>
+                <text x="-106.92px" y="0px" style="font-family:'ArialMT', 'Arial', sans-serif;font-size:13px;fill:rgb(34,34,34);">pest (custom <tspan x="-29.612px -20.941px " y="0px 0px ">AS</tspan>T)</text>
             </g>
         </g>
     </g>
