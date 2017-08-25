@@ -117,7 +117,7 @@ pest provides parsing performance in the same league as carefully written manual
 The following JSON benchmark puts it somewhere in between one of the most optimized JSON parsers,
 [ujson4c](https://github.com/esnme/ujson4c), and a static native-speed parser, [nom](https://github.com/Geal/nom).
 
-The first entry of pest scores 22ms, while the second scores 78ms since it's mapping `Pair`s
+The first entry of pest scores 36ms, while the second scores 96ms since it's mapping `Pair`s
 to a custom JSON AST.
 
 <p align="center">
