@@ -17,7 +17,7 @@ proc-macro = true
 [dependencies]
 quote = "^0.3"
 syn = "^0.10"
-pest = "^1.0.0-beta"
+pest = { path = "../pest", version = "^1.0.0-beta" }
 
 [badges]
 travis-ci = { repository = "pest-parser/pest" }

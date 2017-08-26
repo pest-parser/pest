@@ -11,8 +11,8 @@ license = "MPL-2.0"
 readme = "_README.md"
 
 [dependencies]
-pest = "^1.0.0-beta"
-pest_derive = "^1.0.0-beta"
+pest = { path = "../pest", version = "^1.0.0-beta" }
+pest_derive = { path = "../pest_derive", version = "^1.0.0-beta" }
 
 [badges]
 travis-ci = { repository = "pest-parser/pest" }
