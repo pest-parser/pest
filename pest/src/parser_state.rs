@@ -125,10 +125,12 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
             self.queue.push(QueueableToken::Start { pair: 0, pos: actual_pos });
         }
 
+        let attempts = self.pos_attempts.len() + self.neg_attempts.len();
+
         let result = f(self, pos);
 
         if result.is_err() || self.lookahead == Lookahead::Negative {
-            self.track(rule, actual_pos, pos_attempts_index, neg_attempts_index);
+            self.track(rule, actual_pos, pos_attempts_index, neg_attempts_index, attempts);
         }
 
         if self.lookahead == Lookahead::None && !self.is_atomic {
@@ -150,13 +152,26 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         result
     }
 
-    fn track(&mut self, rule: R, pos: usize, pos_attempts_index: usize, neg_attempts_index: usize) {
+    fn track(
+        &mut self,
+        rule: R,
+        pos: usize,
+        pos_attempts_index: usize,
+        neg_attempts_index: usize,
+        prev_attempts: usize
+    ) {
         if self.is_atomic {
             return;
         }
 
         // If nested rules made no progress, there is no use to report them; it's only useful to
-        // track the current rule.
+        // track the current rule, the exception being when only one attempt has been made during
+        // the children rules.
+        let curr_attempts = self.pos_attempts.len() + self.neg_attempts.len();
+        if curr_attempts > prev_attempts && curr_attempts - prev_attempts == 1 {
+            return;
+        }
+
         if pos == self.attempt_pos {
             self.pos_attempts.truncate(pos_attempts_index);
             self.neg_attempts.truncate(neg_attempts_index);
