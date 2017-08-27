@@ -69,6 +69,36 @@ impl<R: RuleType, I: Input> Pair<R, I> {
         }
     }
 
+    /// Captures a `&str` slice from the `Input` defined by the token `Pair`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # use pest::inputs::StringInput;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     ab
+    /// }
+    ///
+    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// let pair = pest::state(input, |state, pos| {
+    ///     // generating Token pair with Rule::ab ...
+    /// #     state.rule(Rule::ab, pos, |_, p| p.match_string("ab"))
+    /// }).unwrap().next().unwrap();
+    ///
+    /// assert_eq!(pair.as_str(), "ab");
+    /// ```
+    #[inline]
+    pub fn as_str(&self) -> &str {
+        let start = self.pos(self.start);
+        let end = self.pos(self.pair());
+
+        unsafe { self.input.slice(start, end) }
+    }
+
     /// Returns the `Span` defined by the `Pair`, consuming it.
     ///
     /// # Examples

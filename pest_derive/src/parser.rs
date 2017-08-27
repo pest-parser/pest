@@ -852,24 +852,22 @@ fn consume_expr<I: Input>(
                         Expr::Push(Box::new(expr))
 
                     }
-                    GrammarRule::identifier => Expr::Ident(Ident::new(pair.into_span().as_str())),
+                    GrammarRule::identifier => Expr::Ident(Ident::new(pair.as_str())),
                     GrammarRule::string => {
-                        let span = pair.into_span();
-                        let string = span.as_str();
+                        let string = pair.as_str();
                         Expr::Str(string[1..string.len() - 1].to_owned())
                     }
                     GrammarRule::insensitive_string => {
-                        let span = pair.into_span();
-                        let string = span.as_str();
+                        let string = pair.as_str();
                         Expr::Insens(string[2..string.len() - 1].to_owned())
                     }
                     GrammarRule::range => {
                         let mut pairs = pair.into_inner();
-                        let span = pairs.next().unwrap().into_span();
-                        let start = span.as_str();
+                        let pair = pairs.next().unwrap();
+                        let start = pair.as_str();
                         pairs.next();
-                        let span = pairs.next().unwrap().into_span();
-                        let end = span.as_str();
+                        let pair = pairs.next().unwrap();
+                        let end = pair.as_str();
 
                         Expr::Range(start.to_owned(), end.to_owned())
                     }
