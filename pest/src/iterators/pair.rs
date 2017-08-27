@@ -61,6 +61,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     ///
     /// assert_eq!(pair.as_rule(), Rule::a);
     /// ```
+    #[inline]
     pub fn as_rule(&self) -> R {
         match self.queue[self.pair()] {
             QueueableToken::End { rule, .. } => rule,
@@ -90,6 +91,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     ///
     /// assert_eq!(pair.into_span().as_str(), "ab");
     /// ```
+    #[inline]
     pub fn into_span(self) -> Span<I> {
         let start = self.pos(self.start);
         let end = self.pos(self.pair());
@@ -119,6 +121,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     ///
     /// assert!(pair.into_inner().next().is_none());
     /// ```
+    #[inline]
     pub fn into_inner(self) -> Pairs<R, I> {
         let pair = self.pair();
 
@@ -153,6 +156,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     ///
     /// assert_eq!(tokens.len(), 2);
     /// ```
+    #[inline]
     pub fn tokens(self) -> TokenIterator<R, I> {
         let end = self.pair();
 

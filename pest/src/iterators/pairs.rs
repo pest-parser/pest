@@ -65,6 +65,7 @@ impl<R: RuleType, I: Input> Pairs<R, I> {
     ///
     /// assert_eq!(tokens.len(), 4);
     /// ```
+    #[inline]
     pub fn flatten(self) -> FlatPairs<R, I> {
         flat_pairs::new(
             self.queue,
@@ -97,6 +98,7 @@ impl<R: RuleType, I: Input> Pairs<R, I> {
     ///
     /// assert_eq!(tokens.len(), 2);
     /// ```
+    #[inline]
     pub fn tokens(self) -> TokenIterator<R, I> {
         token_iterator::new(
             self.queue,
