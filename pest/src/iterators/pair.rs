@@ -41,7 +41,7 @@ pub fn new<R: RuleType, I: Input>(
 impl<R: RuleType, I: Input> Pair<R, I> {
     /// Returns the `Rule` of the `Pair`.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use std::rc::Rc;
@@ -70,7 +70,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
 
     /// Returns the `Span` defined by the `Pair`, consuming it.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use std::rc::Rc;
@@ -99,7 +99,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
 
     /// Returns the inner `Pairs` between the `Pair`, consuming it.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use std::rc::Rc;
@@ -132,7 +132,7 @@ impl<R: RuleType, I: Input> Pair<R, I> {
 
     /// Converts the `Pair` into a `TokenIterator`.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use std::rc::Rc;

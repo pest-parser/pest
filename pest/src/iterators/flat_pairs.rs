@@ -40,7 +40,7 @@ pub fn new<R: RuleType, I: Input>(
 impl<R: RuleType, I: Input> FlatPairs<R, I> {
     /// Converts the `FlatPairs` into a `TokenIterator`.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use std::rc::Rc;

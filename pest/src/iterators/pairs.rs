@@ -41,7 +41,7 @@ pub fn new<R: RuleType, I: Input>(
 impl<R: RuleType, I: Input> Pairs<R, I> {
     /// Flattens the `Pairs`.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use std::rc::Rc;
@@ -76,7 +76,7 @@ impl<R: RuleType, I: Input> Pairs<R, I> {
 
     /// Converts the `Pairs` into a `TokenIterator`.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use std::rc::Rc;
