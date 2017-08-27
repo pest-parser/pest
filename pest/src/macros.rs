@@ -232,7 +232,7 @@ mod tests {
 
     impl Parser<Rule> for AbcParser {
         fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
-            state(input, |mut state, pos| {
+            state(input, |state, pos| {
                 state.rule(Rule::a, pos, |state, pos| {
                     state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
                         pos.skip(1)
