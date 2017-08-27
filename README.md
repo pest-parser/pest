@@ -118,7 +118,9 @@ The following JSON benchmark puts it somewhere in between one of the most optimi
 [ujson4c](https://github.com/esnme/ujson4c), and a static native-speed parser, [nom](https://github.com/Geal/nom).
 
 The first entry of pest scores 36ms, while the second scores 96ms since it's mapping `Pair`s
-to a custom JSON AST.
+to a custom JSON AST. While the first entry forms a perfectly usable tree, it does not process
+the file to a fully-processed JSON object. The second one does, but since it has an extra
+intermediate representation of the object, it repeats some work.
 
 <p align="center">
   <img src="https://cdn.rawgit.com/pest-parser/pest/ac70b5c4/results.svg"/>
