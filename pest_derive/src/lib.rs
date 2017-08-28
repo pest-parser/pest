@@ -121,7 +121,7 @@
 //!     whitespace = _{ " " }
 //!     ```
 //!
-//!     Parsing both `"ab"` and `"a   b"` produce the token pairs `c(b(a()))`.
+//!     Parsing both `"ab"` and `"a   b"` produce the token pairs `c(a())`.
 //!
 //! #### Expressions
 //!
