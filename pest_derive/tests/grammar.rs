@@ -128,6 +128,21 @@ fn sequence_atomic() {
 }
 
 #[test]
+fn sequence_non_atomic() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc   abc",
+        rule: Rule::sequence_non_atomic,
+        tokens: [
+            sequence_non_atomic(0, 9, [
+                string(0, 3),
+                string(6, 9)
+            ])
+        ]
+    };
+}
+
+#[test]
 #[should_panic]
 fn sequence_atomic_space() {
     parses_to! {

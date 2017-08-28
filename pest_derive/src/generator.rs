@@ -195,7 +195,9 @@ fn generate_rule(rule: Rule) -> Tokens {
                 state: &mut ::pest::ParserState<Rule, I>
             ) -> Result<::pest::inputs::Position<I>, ::pest::inputs::Position<I>> {
                 state.rule(Rule::#name, pos, |state, pos| {
-                    #expr
+                    state.atomic(false, move |state| {
+                        #expr
+                    })
                 })
             }
         }
