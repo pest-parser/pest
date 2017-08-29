@@ -141,7 +141,7 @@ macro_rules! consumes_to {
     };
 }
 
-/// A `macro` which facilitates grammar testing and debugging.
+/// A `macro` which facilitates grammar testing and debugging by comparing produced tokens.
 ///
 /// # Examples
 ///
@@ -211,6 +211,76 @@ macro_rules! parses_to {
     };
 }
 
+/// A `macro` which facilitates grammar testing and debugging by comparing produced errors.
+///
+/// # Examples
+///
+/// ```
+/// # #[macro_use]
+/// # extern crate pest;
+/// # use std::rc::Rc;
+/// # use pest::{Error, Parser};
+/// # use pest::inputs::Input;
+/// # use pest::iterators::Pairs;
+/// # fn main() {
+/// # #[allow(non_camel_case_types)]
+/// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+/// # enum Rule {
+/// #     a,
+/// #     b,
+/// #     c
+/// # }
+/// #
+/// # struct AbcParser;
+/// #
+/// # impl Parser<Rule> for AbcParser {
+/// #     fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+/// #         pest::state(input, |state, pos| {
+/// #             state.rule(Rule::a, pos, |state, pos| {
+/// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
+/// #                     pos.skip(1)
+/// #                 }).unwrap().skip(1)
+/// #             }).and_then(|p| {
+/// #                 state.rule(Rule::c, p.skip(1).unwrap(), |_, pos| {
+/// #                     pos.match_string("e")
+/// #                 })
+/// #             })
+/// #         })
+/// #     }
+/// # }
+/// fails_with! {
+///     parser: AbcParser,
+///     input: "abcdf",
+///     rule: Rule::a,
+///     positives: vec![Rule::c],
+///     negatives: vec![],
+///     pos: 4
+/// };
+/// # }
+/// ```
+#[macro_export]
+macro_rules! fails_with {
+    ( parser: $parser:ident, input: $string:expr, rule: $rules:tt :: $rule:tt,
+      positives: $positives:expr, negatives: $negatives:expr, pos: $pos:expr ) => {
+
+        #[allow(unused_mut)]
+        {
+            use $crate::Parser;
+
+            let error = $parser::parse_str($rules::$rule, $string).unwrap_err();
+
+            match error {
+                Error::ParsingError { positives, negatives, pos } => {
+                    assert_eq!(positives, $positives);
+                    assert_eq!(negatives, $negatives);
+                    assert_eq!(pos.pos(), $pos);
+                }
+                _ => unreachable!()
+            };
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use std::rc::Rc;
@@ -239,7 +309,7 @@ mod tests {
                     }).unwrap().skip(1)
                 }).and_then(|p| {
                     state.rule(Rule::c, p.skip(1).unwrap(), |_, pos| {
-                        pos.skip(1)
+                        pos.match_string("e")
                     })
                 })
             })
@@ -284,6 +354,57 @@ mod tests {
             input: "abcde",
             rule: Rule::a,
             tokens: []
+        };
+    }
+
+    #[test]
+    fn fails_with() {
+        fails_with! {
+            parser: AbcParser,
+            input: "abcdf",
+            rule: Rule::a,
+            positives: vec![Rule::c],
+            negatives: vec![],
+            pos: 4
+        };
+    }
+
+    #[test]
+    #[should_panic]
+    fn wrong_positives() {
+        fails_with! {
+            parser: AbcParser,
+            input: "abcdf",
+            rule: Rule::a,
+            positives: vec![Rule::a],
+            negatives: vec![],
+            pos: 4
+        };
+    }
+
+    #[test]
+    #[should_panic]
+    fn wrong_negatives() {
+        fails_with! {
+            parser: AbcParser,
+            input: "abcdf",
+            rule: Rule::a,
+            positives: vec![Rule::c],
+            negatives: vec![Rule::c],
+            pos: 4
+        };
+    }
+
+    #[test]
+    #[should_panic]
+    fn wrong_pos() {
+        fails_with! {
+            parser: AbcParser,
+            input: "abcdf",
+            rule: Rule::a,
+            positives: vec![Rule::c],
+            negatives: vec![],
+            pos: 3
         };
     }
 }
