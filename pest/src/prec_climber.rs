@@ -47,8 +47,7 @@ impl<R: RuleType> Operator<R> {
     /// #     plus,
     /// #     minus
     /// # }
-    /// let additive = Operator::new(Rule::plus, Assoc::Left) |
-    ///                Operator::new(Rule::minus, Assoc::Right);
+    /// Operator::new(Rule::plus, Assoc::Left) | Operator::new(Rule::minus, Assoc::Right);
     /// ```
     pub fn new(rule: R, assoc: Assoc) -> Operator<R> {
         Operator {
@@ -97,7 +96,7 @@ impl<R: RuleType> PrecClimber<R> {
     /// #     divide,
     /// #     power
     /// # }
-    /// let climber = PrecClimber::new(vec![
+    /// PrecClimber::new(vec![
     ///     Operator::new(Rule::plus, Assoc::Left) | Operator::new(Rule::minus, Assoc::Left),
     ///     Operator::new(Rule::times, Assoc::Left) | Operator::new(Rule::divide, Assoc::Left),
     ///     Operator::new(Rule::power, Assoc::Right)

@@ -345,12 +345,6 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     /// # use std::rc::Rc;
     /// # use pest;
     /// # use pest::inputs::StringInput;
-    /// # #[allow(non_camel_case_types)]
-    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    /// enum Rule {
-    ///     a
-    /// }
-    ///
     /// let input = Rc::new(StringInput::new("a".to_owned()));
     /// let pairs: Vec<_> = pest::state::<(), _, _>(input, |state, pos| {
     ///     assert!(!state.is_atomic());

@@ -27,9 +27,8 @@ impl FileInput {
     /// # Examples
     ///
     /// ```no_run
-    /// # use std::fs::File;
-    /// # use pest::inputs::{Input, FileInput};
-    /// let input = FileInput::new("file").unwrap();
+    /// # use pest::inputs::FileInput;
+    /// FileInput::new("file").unwrap();
     /// ```
     pub fn new<P: AsRef<Path>>(path: P) -> io::Result<FileInput> {
         let mut file = File::open(path.as_ref())?;

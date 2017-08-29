@@ -150,7 +150,7 @@ macro_rules! consumes_to {
 /// # extern crate pest;
 /// # use std::rc::Rc;
 /// # use pest::{Error, Parser};
-/// # use pest::inputs::{Input, StringInput};
+/// # use pest::inputs::Input;
 /// # use pest::iterators::Pairs;
 /// # fn main() {
 /// # #[allow(non_camel_case_types)]
@@ -165,7 +165,7 @@ macro_rules! consumes_to {
 /// #
 /// # impl Parser<Rule> for AbcParser {
 /// #     fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
-/// #         pest::state(input, |mut state, pos| {
+/// #         pest::state(input, |state, pos| {
 /// #             state.rule(Rule::a, pos, |state, pos| {
 /// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
 /// #                     pos.skip(1)
