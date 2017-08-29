@@ -6,13 +6,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::fmt;
-use std::hash::{Hash, Hasher};
 
 use super::inputs::{Input, position, Position, Span};
 use super::RuleType;
 
 /// An `enum` which defines possible errors.
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Error<R, I: Input> {
     /// Generated parsing error with expected and unexpected `Rule`s and a position
     ParsingError {
@@ -194,98 +193,6 @@ fn format<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
 impl<R: fmt::Debug, I: Input> fmt::Display for Error<R, I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format(self))
-    }
-}
-
-// We don't want to enforce derivable traits on the Input which forces to implement them manually.
-
-impl<R: Clone, I: Input> Clone for Error<R, I> {
-    fn clone(&self) -> Error<R, I> {
-        match *self {
-            Error::ParsingError { ref positives, ref negatives, ref pos } => {
-                Error::ParsingError {
-                    positives: positives.clone(),
-                    negatives: negatives.clone(),
-                    pos: pos.clone()
-                }
-            }
-            Error::CustomErrorPos { ref message, ref pos } => {
-                Error::CustomErrorPos {
-                    message: message.clone(),
-                    pos: pos.clone()
-                }
-            }
-            Error::CustomErrorSpan { ref message, ref span } => {
-                Error::CustomErrorSpan {
-                    message: message.clone(),
-                    span: span.clone()
-                }
-            }
-        }
-    }
-}
-
-impl<R: PartialEq, I: Input> PartialEq for Error<R, I> {
-    fn eq(&self, other: &Error<R, I>) -> bool {
-        match *self {
-            Error::ParsingError { ref positives, ref negatives, ref pos } => {
-                match *other {
-                    Error::ParsingError {
-                        positives: ref other_positives,
-                        negatives: ref other_negatives,
-                        pos: ref other_pos
-                    } => {
-                        positives == other_positives && negatives == other_negatives &&
-                            pos == other_pos
-                    }
-                    _ => false
-                }
-            }
-            Error::CustomErrorPos { ref message, ref pos } => {
-                match *other {
-                    Error::CustomErrorPos {
-                        message: ref other_message,
-                        pos: ref other_pos
-                    } => {
-                        message == other_message && pos == other_pos
-                    }
-                    _ => false
-                }
-            }
-            Error::CustomErrorSpan { ref message, ref span } => {
-                match *other {
-                    Error::CustomErrorSpan {
-                        message: ref other_message,
-                        span: ref other_span
-                    } => {
-                        message == other_message && span == other_span
-                    }
-                    _ => false
-                }
-            }
-        }
-    }
-}
-
-impl<R: Eq, I: Input> Eq for Error<R, I> {}
-
-impl<R: Hash, I: Input> Hash for Error<R, I> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match *self {
-            Error::ParsingError { ref positives, ref negatives, ref pos } => {
-                positives.hash(state);
-                negatives.hash(state);
-                pos.hash(state);
-            }
-            Error::CustomErrorPos { ref message, ref pos } => {
-                message.hash(state);
-                pos.hash(state);
-            }
-            Error::CustomErrorSpan { ref message, ref span } => {
-                message.hash(state);
-                span.hash(state);
-            }
-        }
     }
 }
 

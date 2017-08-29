@@ -7,6 +7,7 @@
 
 use std::ffi::OsString;
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::ops::Range;
 
 // The use of unsafe in this trait is motivated by two reasons:
@@ -25,7 +26,7 @@ use std::ops::Range;
 /// Implementors should **NOT** introduce undefined behavior in these methods. Undefined behavior is
 /// acceptable **ONLY** when the positions are either out of bounds or don't match UTF-8 indices,
 /// since these cases are avoided by using the [`Position`](struct.Position.html) API.
-pub trait Input: Debug {
+pub trait Input: Clone + Debug + Eq + Hash {
     /// Returns length of the input.
     fn len(&self) -> usize;
 

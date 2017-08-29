@@ -13,7 +13,7 @@ use std::str;
 use super::Input;
 
 /// A `struct` useful for matching heap-allocated `String`s.
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct StringInput {
     string: String
 }

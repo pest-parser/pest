@@ -6,6 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use super::pairs::{self, Pairs};
@@ -20,6 +21,7 @@ use super::super::RuleType;
 /// same `Rule`, with the condition that all `Token`s between them can form such pairs as well.
 /// This is similar to the [brace matching problem](https://en.wikipedia.org/wiki/Brace_matching) in
 /// editors.
+#[derive(Clone)]
 pub struct Pair<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
@@ -219,12 +221,19 @@ impl<R: RuleType, I: Input> fmt::Debug for Pair<R, I> {
     }
 }
 
-impl<R: Clone, I: Input> Clone for Pair<R, I> {
-    fn clone(&self) -> Pair<R, I> {
-        Pair {
-            queue: self.queue.clone(),
-            input: self.input.clone(),
-            start: self.start
-        }
+impl<R: PartialEq, I: Input> PartialEq for Pair<R, I> {
+    fn eq(&self, other: &Pair<R, I>) -> bool {
+        Rc::ptr_eq(&self.queue, &other.queue) && Rc::ptr_eq(&self.input, &other.input) &&
+        self.start == other.start
+    }
+}
+
+impl<R: Eq, I: Input> Eq for Pair<R, I> {}
+
+impl<R: Hash, I: Input> Hash for Pair<R, I> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
+        (&*self.input as *const I).hash(state);
+        self.start.hash(state);
     }
 }

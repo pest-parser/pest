@@ -15,7 +15,7 @@ use std::path::Path;
 use super::{Input, StringInput};
 
 /// A `struct` useful for matching `File`s by allocating the contents at the beginning.
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct FileInput {
     input: StringInput,
     file_name: OsString

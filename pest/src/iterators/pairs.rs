@@ -6,6 +6,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 use super::flat_pairs::{self, FlatPairs};
@@ -17,6 +18,7 @@ use super::super::RuleType;
 
 /// A `struct` containing `Pairs`. It is created by [`pest::state`](../fn.state.html) and
 /// [`Pair::into_inner`](struct.Pair.html#method.into_inner).
+#[derive(Clone)]
 pub struct Pairs<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
@@ -142,13 +144,21 @@ impl<R: RuleType, I: Input> fmt::Debug for Pairs<R, I> {
     }
 }
 
-impl<R: Clone, I: Input> Clone for Pairs<R, I> {
-    fn clone(&self) -> Pairs<R, I> {
-        Pairs {
-            queue: self.queue.clone(),
-            input: self.input.clone(),
-            start: self.start,
-            end: self.end
-        }
+impl<R: PartialEq, I: Input> PartialEq for Pairs<R, I> {
+    fn eq(&self, other: &Pairs<R, I>) -> bool {
+        Rc::ptr_eq(&self.queue, &other.queue) && Rc::ptr_eq(&self.input, &other.input) &&
+        self.start == other.start && self.end == other.end
     }
 }
+
+impl<R: Eq, I: Input> Eq for Pairs<R, I> {}
+
+impl<R: Hash, I: Input> Hash for Pairs<R, I> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
+        (&*self.input as *const I).hash(state);
+        self.start.hash(state);
+        self.end.hash(state);
+    }
+}
+

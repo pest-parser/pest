@@ -15,7 +15,7 @@ use super::super::token::Token;
 /// A `struct` containing `Token`s. It is returned by either
 /// [`Pair::into_iter`](struct.Pair.html#method.into_iter) or
 /// [`Pairs::into_iter`](struct.Pairs.html#method.into_iter)
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct TokenIterator<R, I: Input> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
@@ -72,17 +72,5 @@ impl<R: RuleType, I: Input> Iterator for TokenIterator<R, I> {
         self.index += 1;
 
         Some(token)
-    }
-}
-
-impl<R: Clone, I: Input> Clone for TokenIterator<R, I> {
-    fn clone(&self) -> TokenIterator<R, I> {
-        TokenIterator {
-            queue: self.queue.clone(),
-            input: self.input.clone(),
-            index: self.index,
-            start: self.start,
-            end: self.end
-        }
     }
 }
