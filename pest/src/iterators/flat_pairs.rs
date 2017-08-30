@@ -74,11 +74,7 @@ impl<R: RuleType, I: Input> FlatPairs<R, I> {
     fn next_start(&mut self) {
         self.start += 1;
 
-        while !self.is_start() {
-            if self.start >= self.end {
-                break;
-            }
-
+        while self.start < self.end && !self.is_start() {
             self.start += 1;
         }
     }
