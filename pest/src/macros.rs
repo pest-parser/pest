@@ -270,7 +270,7 @@ macro_rules! fails_with {
             let error = $parser::parse_str($rules::$rule, $string).unwrap_err();
 
             match error {
-                Error::ParsingError { positives, negatives, pos } => {
+                $crate::Error::ParsingError { positives, negatives, pos } => {
                     assert_eq!(positives, $positives);
                     assert_eq!(negatives, $negatives);
                     assert_eq!(pos.pos(), $pos);
