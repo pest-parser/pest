@@ -1,0 +1,22 @@
+// pest. The Elegant Parser
+// Copyright (C) 2017  Dragoș Tiselice
+//
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+a = { "a" }
+b = { "b" }
+c = { "c" }
+d = { any }
+
+choices = _{ a | b | c }
+choices_no_progress = { a | b | c }
+choices_a_progress = { a ~ a | b | c }
+choices_b_progress = { a | b ~ b | c }
+
+level1 = _{ level2 }
+level2 = _{ a | b | c }
+
+negative = _{ !d }
+mixed = _{ !d | a }
