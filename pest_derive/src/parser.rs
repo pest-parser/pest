@@ -35,7 +35,7 @@ pub enum GrammarRule {
     opening_paren,
     closing_paren,
     expression,
-    primary,
+    term,
     positive_predicate_operator,
     negative_predicate_operator,
     sequence_operator,
@@ -240,7 +240,7 @@ impl Parser<GrammarRule> for GrammarParser {
             state.rule(GrammarRule::expression, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
-                        primary(pos, state).and_then(|pos| {
+                        term(pos, state).and_then(|pos| {
                             pos.repeat(|pos| {
                                 state.sequence(move |state| {
                                     pos.sequence(|pos| {
@@ -249,7 +249,7 @@ impl Parser<GrammarRule> for GrammarParser {
                                         }).and_then(|pos| {
                                             skip(pos, state)
                                         }).and_then(|pos| {
-                                            primary(pos, state)
+                                            term(pos, state)
                                         })
                                     })
                                 })
@@ -260,11 +260,11 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn primary<I: Input>(
+        fn term<I: Input>(
             pos: Position<I>,
             state: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::primary, pos, |state, pos| {
+            state.rule(GrammarRule::term, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
                         pos.repeat(|pos| {
@@ -276,18 +276,18 @@ impl Parser<GrammarRule> for GrammarParser {
                         }).and_then(|pos| {
                             state.sequence(move |state| {
                                 pos.sequence(|pos| {
-                                    pos.match_string("(").and_then(|pos| {
+                                    opening_paren(pos, state).and_then(|pos| {
                                         skip(pos, state)
                                     }).and_then(|pos| {
                                         expression(pos, state)
                                     }).and_then(|pos| {
                                         skip(pos, state)
                                     }).and_then(|pos| {
-                                        pos.match_string(")")
+                                        closing_paren(pos, state)
                                     })
                                 })
                             }).or_else(|pos| {
-                                term(pos, state)
+                                terminal(pos, state)
                             })
                         }).and_then(|pos| {
                             pos.repeat(|pos| {
@@ -303,7 +303,7 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn term<I: Input>(
+        fn terminal<I: Input>(
             pos: Position<I>,
             state: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
@@ -748,7 +748,7 @@ impl Parser<GrammarRule> for GrammarParser {
                 GrammarRule::opening_paren => opening_paren(pos, &mut state),
                 GrammarRule::closing_paren => closing_paren(pos, &mut state),
                 GrammarRule::expression => expression(pos, &mut state),
-                GrammarRule::primary => primary(pos, &mut state),
+                GrammarRule::term => term(pos, &mut state),
                 GrammarRule::positive_predicate_operator => {
                     positive_predicate_operator(pos, &mut state)
                 },
@@ -834,6 +834,7 @@ fn consume_expr<I: Input>(
         let pair = pairs.next().unwrap();
 
         match pair.as_rule() {
+            GrammarRule::opening_paren => unaries(pairs, climber),
             GrammarRule::positive_predicate_operator => {
                 Expr::PosPred(Box::new(unaries(pairs, climber)))
             }
@@ -879,6 +880,7 @@ fn consume_expr<I: Input>(
                         GrammarRule::optional_operator => Expr::Opt(Box::new(expr)),
                         GrammarRule::repeat_operator => Expr::Rep(Box::new(expr)),
                         GrammarRule::repeat_once_operator => Expr::RepOnce(Box::new(expr)),
+                        GrammarRule::closing_paren => expr,
                         _ => unreachable!()
                     }
                 })
@@ -887,7 +889,7 @@ fn consume_expr<I: Input>(
         }
     }
 
-    let primary = |pair: Pair<GrammarRule, I>| {
+    let term = |pair: Pair<GrammarRule, I>| {
         unaries(pair.into_inner().peekable(), climber)
     };
     let infix = |lhs: Expr, op: Pair<GrammarRule, I>, rhs: Expr| {
@@ -898,7 +900,7 @@ fn consume_expr<I: Input>(
         }
     };
 
-    climber.climb(pairs, primary, infix)
+    climber.climb(pairs, term, infix)
 }
 
 #[cfg(test)]
@@ -921,7 +923,7 @@ mod tests {
                     assignment_operator(2, 3),
                     opening_brace(4, 5),
                     expression(6, 7, [
-                        primary(6, 7, [
+                        term(6, 7, [
                             identifier(6, 7)
                         ])
                     ]),
@@ -932,7 +934,7 @@ mod tests {
                     assignment_operator(12, 13),
                     opening_brace(14, 15),
                     expression(16, 17, [
-                        primary(16, 17, [
+                        term(16, 17, [
                             identifier(16, 17)
                         ])
                     ]),
@@ -956,11 +958,11 @@ mod tests {
                     non_atomic_modifier(4, 5),
                     opening_brace(6, 7),
                     expression(8, 13, [
-                        primary(8, 9, [
+                        term(8, 9, [
                             identifier(8, 9)
                         ]),
                         sequence_operator(10, 11),
-                        primary(12, 13, [
+                        term(12, 13, [
                             identifier(12, 13)
                         ])
                     ]),
@@ -978,11 +980,11 @@ mod tests {
             rule: GrammarRule::expression,
             tokens: [
                 expression(0, 35, [
-                    primary(0, 2, [
+                    term(0, 2, [
                         identifier(0, 2)
                     ]),
                     choice_operator(3, 4),
-                    primary(5, 13, [
+                    term(5, 13, [
                         range(5, 13, [
                             character(5, 8, [
                                 single_quote(5, 6),
@@ -996,7 +998,7 @@ mod tests {
                         ])
                     ]),
                     sequence_operator(14, 15),
-                    primary(16, 23, [
+                    term(16, 23, [
                         negative_predicate_operator(16, 17),
                         insensitive_string(17, 23, [
                             string(18, 23, [
@@ -1006,16 +1008,18 @@ mod tests {
                         ])
                     ]),
                     sequence_operator(24, 25),
-                    primary(26, 35, [
+                    term(26, 35, [
+                        opening_paren(26, 27),
                         expression(27, 32, [
-                            primary(27, 28, [
+                            term(27, 28, [
                                 identifier(27, 28)
                             ]),
                             choice_operator(29, 30),
-                            primary(31, 32, [
+                            term(31, 32, [
                                 identifier(31, 32)
                             ])
                         ]),
+                        closing_paren(32, 33),
                         repeat_operator(33, 34),
                         optional_operator(34, 35)
                     ])
@@ -1034,7 +1038,7 @@ mod tests {
                 push(0, 10, [
                     opening_paren(5, 6),
                     expression(7, 8, [
-                        primary(7, 8, [
+                        term(7, 8, [
                             identifier(7, 8)
                         ])
                     ]),
@@ -1133,15 +1137,200 @@ mod tests {
             rule: GrammarRule::expression,
             tokens: [
                 expression(0, 17, [
-                    primary(0, 1, [
+                    term(0, 1, [
                         identifier(0, 1)
                     ]),
                     sequence_operator(2, 3),
-                    primary(16, 17, [
+                    term(16, 17, [
                         identifier(16, 17)
                     ])
                 ])
             ]
+        };
+    }
+
+    #[test]
+    fn wrong_identifier() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "0",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![GrammarRule::identifier],
+            negatives: vec![],
+            pos: 0
+        };
+    }
+
+    #[test]
+    fn missing_assignment_operator() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a {}",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![GrammarRule::assignment_operator],
+            negatives: vec![],
+            pos: 2
+        };
+    }
+
+    #[test]
+    fn wrong_modifier() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = *{}",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![
+                GrammarRule::silent_modifier,
+                GrammarRule::atomic_modifier,
+                GrammarRule::compound_atomic_modifier,
+                GrammarRule::non_atomic_modifier,
+                GrammarRule::opening_brace
+            ],
+            negatives: vec![],
+            pos: 4
+        };
+    }
+
+    #[test]
+    fn missing_opening_brace() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = _",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![GrammarRule::opening_brace],
+            negatives: vec![],
+            pos: 5
+        };
+    }
+
+    #[test]
+    fn empty_rule() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = {}",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![GrammarRule::expression],
+            negatives: vec![],
+            pos: 5
+        };
+    }
+
+    #[test]
+    fn missing_rhs() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = { b ~ }",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![GrammarRule::term],
+            negatives: vec![],
+            pos: 10
+        };
+    }
+
+    #[test]
+    fn wrong_op() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = { b % }",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![
+                GrammarRule::closing_brace,
+                GrammarRule::sequence_operator,
+                GrammarRule::choice_operator,
+                GrammarRule::optional_operator,
+                GrammarRule::repeat_operator,
+                GrammarRule::repeat_once_operator
+            ],
+            negatives: vec![],
+            pos: 8
+        };
+    }
+
+    #[test]
+    fn missing_closing_paren() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = { (b }",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![
+                GrammarRule::closing_paren,
+                GrammarRule::sequence_operator,
+                GrammarRule::choice_operator,
+                GrammarRule::optional_operator,
+                GrammarRule::repeat_operator,
+                GrammarRule::repeat_once_operator
+            ],
+            negatives: vec![],
+            pos: 9
+        };
+    }
+
+    #[test]
+    fn missing_term() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = { ! }",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![
+                GrammarRule::opening_paren,
+                GrammarRule::positive_predicate_operator,
+                GrammarRule::negative_predicate_operator,
+                GrammarRule::push,
+                GrammarRule::identifier,
+                GrammarRule::quote,
+                GrammarRule::insensitive_string,
+                GrammarRule::single_quote
+            ],
+            negatives: vec![],
+            pos: 8
+        };
+    }
+
+    #[test]
+    fn string_missing_ending_quote() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = { \" }",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![GrammarRule::quote],
+            negatives: vec![],
+            pos: 9
+        };
+    }
+
+    #[test]
+    fn insensitive_missing_string() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = { ^ }",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![GrammarRule::string],
+            negatives: vec![],
+            pos: 8
+        };
+    }
+
+    #[test]
+    fn char_missing_ending_single_quote() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = { \' }",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![GrammarRule::single_quote],
+            negatives: vec![],
+            pos: 8
+        };
+    }
+
+    #[test]
+    fn range_missing_range_operator() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = { \'a\' }",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![GrammarRule::range_operator],
+            negatives: vec![],
+            pos: 10
         };
     }
 
