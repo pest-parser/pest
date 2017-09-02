@@ -13,8 +13,7 @@ use pest::iterators::Pairs;
 
 use quote::Ident;
 
-use super::ast::*;
-use super::parser::GrammarRule;
+use super::parser::{GrammarRule, ParserExpr, ParserNode, ParserRule};
 
 pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
     let mut rust_keywords = HashSet::new();
@@ -211,7 +210,7 @@ pub fn validate_undefined<I: Input>(
     errors
 }
 
-pub fn validate_ast<I: Input>(rules: &Vec<(Rule, Span<I>)>) {
+pub fn validate_ast<I: Input>(rules: &Vec<ParserRule<I>>) {
     let mut errors = vec![];
 
     errors.extend(validate_left_recursion(rules));
@@ -232,68 +231,166 @@ pub fn validate_ast<I: Input>(rules: &Vec<(Rule, Span<I>)>) {
     }
 }
 
-fn validate_left_recursion<I: Input>(rules: &Vec<(Rule, Span<I>)>) -> Vec<Error<GrammarRule, I>> {
+fn validate_left_recursion<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
     left_recursion(to_hash_map(rules))
 }
 
-fn to_hash_map<I: Input>(rules: &Vec<(Rule, Span<I>)>) -> HashMap<Ident, (&Expr, &Span<I>)> {
+fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<Ident, &ParserNode<I>> {
     let mut hash_map = HashMap::new();
 
-    for &(ref rule, ref span) in rules {
-        hash_map.insert(rule.name.clone(), (&rule.expr, span));
+    for rule in rules {
+        hash_map.insert(rule.name.clone(), &rule.node);
     }
 
     hash_map
 }
 
-fn left_recursion<I: Input>(rules: HashMap<Ident, (&Expr, &Span<I>)>) -> Vec<Error<GrammarRule, I>> {
+fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<GrammarRule, I>> {
     fn check_expr<I: Input>(
         mut names: HashSet<Ident>,
-        expr: &Expr,
-        span: &Span<I>,
-        rules: &HashMap<Ident, (&Expr, &Span<I>)>
+        node: &ParserNode<I>,
+        rules: &HashMap<Ident, &ParserNode<I>>
     ) -> Option<Error<GrammarRule, I>> {
-        match *expr {
-            Expr::Ident(ref other)  => {
+        match node.expr {
+            ParserExpr::Ident(ref other)  => {
                 if names.contains(other) {
                     return Some(Error::CustomErrorSpan {
                         message: format!("rule {} is left-recursive; pest::prec_climber might be \
-                                          useful in this case", span.as_str()),
-                        span: span.clone()
+                                          useful in this case", node.span.as_str()),
+                        span: node.span.clone()
                     });
                 }
 
                 names.insert(other.clone());
 
-                if let Some(rule) = rules.get(other) {
-                    check_expr(names, rule.0, span, rules)
+                if let Some(node) = rules.get(other) {
+                    check_expr(names, node, rules)
                 } else {
                     None
                 }
             },
-            Expr::Seq(ref lhs, _) => check_expr(names, &lhs, span, rules),
-            Expr::Choice(ref lhs, _) => check_expr(names, &lhs, span, rules),
-            Expr::Rep(ref expr) => check_expr(names, &expr, span, rules),
-            Expr::RepOnce(ref expr) => check_expr(names, &expr, span, rules),
-            Expr::Opt(ref expr) => check_expr(names, &expr, span, rules),
-            Expr::PosPred(ref expr) => check_expr(names, &expr, span, rules),
-            Expr::NegPred(ref expr) => check_expr(names, &expr, span, rules),
-            Expr::Push(ref expr) => check_expr(names, &expr, span, rules),
+            ParserExpr::Seq(ref lhs, _) => check_expr(names, &lhs, rules),
+            ParserExpr::Choice(ref lhs, _) => check_expr(names, &lhs, rules),
+            ParserExpr::Rep(ref node) => check_expr(names, &node, rules),
+            ParserExpr::RepOnce(ref node) => check_expr(names, &node, rules),
+            ParserExpr::Opt(ref node) => check_expr(names, &node, rules),
+            ParserExpr::PosPred(ref node) => check_expr(names, &node, rules),
+            ParserExpr::NegPred(ref node) => check_expr(names, &node, rules),
+            ParserExpr::Push(ref node) => check_expr(names, &node, rules),
             _ => None
         }
     }
 
     let mut errors = vec![];
 
-    for (ref name, &(ref expr, ref span)) in &rules {
+    for (ref name, ref node) in &rules {
         let mut names = HashSet::new();
 
         names.insert((*name).clone());
 
-        if let Some(error) = check_expr(names, expr, span, &rules) {
+        if let Some(error) = check_expr(names, node, &rules) {
             errors.push(error);
         }
     }
 
     errors
+}
+
+#[cfg(test)]
+mod tests {
+    use pest::Parser;
+
+    use super::*;
+    use super::super::parser::{GrammarParser, consume_rules};
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:1
+  |
+1 | let = { \"a\" }
+  | ^-^
+  |
+  = let is a rust keyword")]
+    fn rust_keyword() {
+        let input = "let = { \"a\" }";
+        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:1
+  |
+1 | any = { \"a\" }
+  | ^-^
+  |
+  = any is a pest keyword")]
+    fn pest_keyword() {
+        let input = "any = { \"a\" }";
+        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:13
+  |
+1 | a = { \"a\" } a = { \"a\" }
+  |             ^
+  |
+  = rule a already defined")]
+    fn already_defined() {
+        let input = "a = { \"a\" } a = { \"a\" }";
+        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | a = { b }
+  |       ^
+  |
+  = rule b is undefined")]
+    fn undefined() {
+        let input = "a = { b }";
+        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | a = { a }
+  |       ^
+  |
+  = rule a is left-recursive; pest::prec_climber might be useful in this case")]
+    fn simple_left_recursion() {
+        let input = "a = { a }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | a = { b } b = { a }
+  |       ^
+  |
+  = rule b is left-recursive; pest::prec_climber might be useful in this case
+
+ --> 1:17
+  |
+1 | a = { b } b = { a }
+  |                 ^
+  |
+  = rule a is left-recursive; pest::prec_climber might be useful in this case")]
+    fn indirect_left_recursion() {
+        let input = "a = { b } b = { a }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
 }

@@ -97,11 +97,9 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn eoi<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            _: &mut ParserState<GrammarRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::eoi, pos, |_, pos| {
-                pos.at_end()
-            })
+            pos.at_end()
         }
 
         fn grammar_rule<I: Input>(
@@ -774,16 +772,79 @@ impl Parser<GrammarRule> for GrammarParser {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ParserRule<I: Input> {
+    pub name: Ident,
+    pub span: Span<I>,
+    pub ty: RuleType,
+    pub node: ParserNode<I>
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ParserNode<I: Input> {
+    pub expr: ParserExpr<I>,
+    pub span: Span<I>
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ParserExpr<I: Input> {
+    Str(String),
+    Insens(String),
+    Range(String, String),
+    Ident(Ident),
+    PosPred(Box<ParserNode<I>>),
+    NegPred(Box<ParserNode<I>>),
+    Seq(Box<ParserNode<I>>, Box<ParserNode<I>>),
+    Choice(Box<ParserNode<I>>, Box<ParserNode<I>>),
+    Opt(Box<ParserNode<I>>),
+    Rep(Box<ParserNode<I>>),
+    RepOnce(Box<ParserNode<I>>),
+    Push(Box<ParserNode<I>>)
+}
+
+fn convert_rule<I: Input>(rule: ParserRule<I>) -> Rule {
+    match rule {
+        ParserRule { name, ty, node, .. } => {
+            let expr = convert_node(node);
+
+            Rule { name, ty, expr }
+        }
+    }
+}
+
+fn convert_node<I: Input>(node: ParserNode<I>) -> Expr {
+    match node.expr {
+        ParserExpr::Str(string) => Expr::Str(string),
+        ParserExpr::Insens(string) => Expr::Insens(string),
+        ParserExpr::Range(start, end) => Expr::Range(start, end),
+        ParserExpr::Ident(ident) => Expr::Ident(ident),
+        ParserExpr::PosPred(node) => Expr::PosPred(Box::new(convert_node(*node))),
+        ParserExpr::NegPred(node) => Expr::NegPred(Box::new(convert_node(*node))),
+        ParserExpr::Seq(node1, node2) => Expr::Seq(
+            Box::new(convert_node(*node1)),
+            Box::new(convert_node(*node2))
+        ),
+        ParserExpr::Choice(node1, node2) => Expr::Choice(
+            Box::new(convert_node(*node1)),
+            Box::new(convert_node(*node2))
+        ),
+        ParserExpr::Opt(node) => Expr::Opt(Box::new(convert_node(*node))),
+        ParserExpr::Rep(node) => Expr::Rep(Box::new(convert_node(*node))),
+        ParserExpr::RepOnce(node) => Expr::RepOnce(Box::new(convert_node(*node))),
+        ParserExpr::Push(node) => Expr::Push(Box::new(convert_node(*node)))
+    }
+}
+
 pub fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> (Vec<Rule>, Vec<Ident>) {
     let defaults = validator::validate_pairs(pairs.clone());
     let rules = consume_rules_with_spans(pairs);
 
     validator::validate_ast(&rules);
 
-    (rules.into_iter().map(|(rule, _)| rule).collect(), defaults)
+    (rules.into_iter().map(|rule| convert_rule(rule)).collect(), defaults)
 }
 
-fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<(Rule, Span<I>)> {
+fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<ParserRule<I>> {
     let climber = PrecClimber::new(vec![
         Operator::new(GrammarRule::choice_operator, Assoc::Left),
         Operator::new(GrammarRule::sequence_operator, Assoc::Left)
@@ -811,76 +872,127 @@ fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<(Rule
 
         pairs.next().unwrap(); // opening_brace
 
-        let expr = consume_expr(pairs.next().unwrap().into_inner().peekable(), &climber);
+        let node = consume_expr(pairs.next().unwrap().into_inner().peekable(), &climber);
 
-        let rule = Rule {
+        ParserRule {
             name,
+            span,
             ty,
-            expr
-        };
-
-        (rule, span)
+            node
+        }
     }).collect()
 }
 
 fn consume_expr<I: Input>(
     pairs: Peekable<Pairs<GrammarRule, I>>,
     climber: &PrecClimber<GrammarRule>
-) -> Expr {
+) -> ParserNode<I> {
     fn unaries<I: Input>(
         mut pairs: Peekable<Pairs<GrammarRule, I>>,
         climber: &PrecClimber<GrammarRule>
-    ) -> Expr {
+    ) -> ParserNode<I> {
         let pair = pairs.next().unwrap();
 
         match pair.as_rule() {
             GrammarRule::opening_paren => unaries(pairs, climber),
             GrammarRule::positive_predicate_operator => {
-                Expr::PosPred(Box::new(unaries(pairs, climber)))
+                let node = unaries(pairs, climber);
+                let end = node.span.end_pos();
+
+                ParserNode {
+                    expr: ParserExpr::PosPred(Box::new(node)),
+                    span: pair.into_span().start_pos().span(end)
+                }
             }
             GrammarRule::negative_predicate_operator => {
-                Expr::NegPred(Box::new(unaries(pairs, climber)))
+                let node = unaries(pairs, climber);
+                let end = node.span.end_pos();
+
+                ParserNode {
+                    expr: ParserExpr::NegPred(Box::new(node)),
+                    span: pair.into_span().start_pos().span(end)
+                }
             }
             other_rule => {
-                let expr = match other_rule {
+                let node = match other_rule {
                     GrammarRule::expression => consume_expr(pair.into_inner().peekable(), climber),
                     GrammarRule::push => {
+                        let start = pair.clone().into_span().start_pos();
                         let mut pairs = pair.into_inner();
                         pairs.next().unwrap(); // opening_paren
                         let pair = pairs.next().unwrap();
 
-                        let expr = consume_expr(pair.into_inner().peekable(), climber);
-                        Expr::Push(Box::new(expr))
+                        let node = consume_expr(pair.into_inner().peekable(), climber);
+                        let end = node.span.end_pos();
+
+                        ParserNode {
+                            expr: ParserExpr::Push(Box::new(node)),
+                            span: start.span(end)
+                        }
 
                     }
-                    GrammarRule::identifier => Expr::Ident(Ident::new(pair.as_str())),
+                    GrammarRule::identifier => {
+                        ParserNode {
+                            expr: ParserExpr::Ident(Ident::new(pair.as_str())),
+                            span: pair.clone().into_span()
+                        }
+                    }
                     GrammarRule::string => {
                         let string = pair.as_str();
-                        Expr::Str(string[1..string.len() - 1].to_owned())
+                        ParserNode {
+                            expr: ParserExpr::Str(string[1..string.len() - 1].to_owned()),
+                            span: pair.clone().into_span()
+                        }
                     }
                     GrammarRule::insensitive_string => {
                         let string = pair.as_str();
-                        Expr::Insens(string[2..string.len() - 1].to_owned())
+                        ParserNode {
+                            expr: ParserExpr::Insens(string[2..string.len() - 1].to_owned()),
+                            span: pair.clone().into_span()
+                        }
                     }
                     GrammarRule::range => {
                         let mut pairs = pair.into_inner();
                         let pair = pairs.next().unwrap();
                         let start = pair.as_str();
+                        let start_pos = pair.clone().into_span().start_pos();
                         pairs.next();
                         let pair = pairs.next().unwrap();
                         let end = pair.as_str();
+                        let end_pos = pair.clone().into_span().end_pos();
 
-                        Expr::Range(start.to_owned(), end.to_owned())
+                        ParserNode {
+                            expr: ParserExpr::Range(start.to_owned(), end.to_owned()),
+                            span: start_pos.span(end_pos)
+                        }
                     }
                     _ => unreachable!()
                 };
 
-                pairs.fold(expr, |expr, pair| {
+                pairs.fold(node, |node, pair| {
                     match pair.as_rule() {
-                        GrammarRule::optional_operator => Expr::Opt(Box::new(expr)),
-                        GrammarRule::repeat_operator => Expr::Rep(Box::new(expr)),
-                        GrammarRule::repeat_once_operator => Expr::RepOnce(Box::new(expr)),
-                        GrammarRule::closing_paren => expr,
+                        GrammarRule::optional_operator => {
+                            let start = node.span.start_pos();
+                            ParserNode {
+                                expr: ParserExpr::Opt(Box::new(node)),
+                                span: start.span(pair.into_span().end_pos())
+                            }
+                        }
+                        GrammarRule::repeat_operator => {
+                            let start = node.span.start_pos();
+                            ParserNode {
+                                expr: ParserExpr::Rep(Box::new(node)),
+                                span: start.span(pair.into_span().end_pos())
+                            }
+                        }
+                        GrammarRule::repeat_once_operator => {
+                            let start = node.span.start_pos();
+                            ParserNode {
+                                expr: ParserExpr::RepOnce(Box::new(node)),
+                                span: start.span(pair.into_span().end_pos())
+                            }
+                        }
+                        GrammarRule::closing_paren => node,
                         _ => unreachable!()
                     }
                 })
@@ -892,10 +1004,26 @@ fn consume_expr<I: Input>(
     let term = |pair: Pair<GrammarRule, I>| {
         unaries(pair.into_inner().peekable(), climber)
     };
-    let infix = |lhs: Expr, op: Pair<GrammarRule, I>, rhs: Expr| {
+    let infix = |lhs: ParserNode<I>, op: Pair<GrammarRule, I>, rhs: ParserNode<I>| {
         match op.as_rule() {
-            GrammarRule::sequence_operator => Expr::Seq(Box::new(lhs), Box::new(rhs)),
-            GrammarRule::choice_operator => Expr::Choice(Box::new(lhs), Box::new(rhs)),
+            GrammarRule::sequence_operator => {
+                let start = lhs.span.start_pos();
+                let end = rhs.span.end_pos();
+
+                ParserNode {
+                    expr: ParserExpr::Seq(Box::new(lhs), Box::new(rhs)),
+                    span: start.span(end)
+                }
+            },
+            GrammarRule::choice_operator => {
+                let start = lhs.span.start_pos();
+                let end = rhs.span.end_pos();
+
+                ParserNode {
+                    expr: ParserExpr::Choice(Box::new(lhs), Box::new(rhs)),
+                    span: start.span(end)
+                }
+            },
             _ => unreachable!()
         }
     };
@@ -905,10 +1033,6 @@ fn consume_expr<I: Input>(
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
-    use pest::inputs::StringInput;
-
     use super::*;
 
     #[test]
@@ -939,8 +1063,7 @@ mod tests {
                         ])
                     ]),
                     closing_brace(18, 19)
-                ]),
-                eoi(19, 19)
+                ])
             ]
         };
     }
@@ -1336,11 +1459,11 @@ mod tests {
 
     #[test]
     fn ast() {
-        let input = Rc::new(StringInput::new("rule = _{ a ~ b | !(c | push(d))?* }".to_owned()));
+        let input = "rule = _{ a ~ b | !(c | push(d))?* }";
 
-        let pairs = GrammarParser::parse(GrammarRule::grammar_rules, input.clone()).unwrap();
+        let pairs = GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs);
-        let ast: Vec<_> = ast.into_iter().map(|(rule, _)| rule).collect();
+        let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule)).collect();
 
         assert_eq!(ast, vec![
             Rule {
