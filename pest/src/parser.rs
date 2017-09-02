@@ -18,6 +18,6 @@ pub trait Parser<R: RuleType> {
     fn parse<I: Input>(rule: R, input: Rc<I>) -> Result<Pairs<R, I>, Error<R, I>>;
     /// Parses an `input` &str starting from `rule`.
     fn parse_str(rule: R, input: &str) -> Result<Pairs<R, StringInput>, Error<R, StringInput>> {
-        Self::parse(rule, Rc::new(StringInput::new(input.to_owned())))
+        Self::parse(rule, Rc::new(StringInput::new_borrowed(input)))
     }
 }

@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::borrow::Cow;
 use std::ascii::AsciiExt;
 use std::ffi::OsString;
 use std::ops::Range;
@@ -14,11 +15,11 @@ use super::Input;
 
 /// A `struct` useful for matching heap-allocated `String`s.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct StringInput {
-    string: String
+pub struct StringInput<'a> {
+    string: Cow<'a, str>,
 }
 
-impl StringInput {
+impl<'a> StringInput<'a> {
     /// Creates a new `StringInput` from a `String`.
     ///
     /// # Examples
@@ -29,14 +30,26 @@ impl StringInput {
     ///
     /// assert_eq!(input.len(), 3);
     /// ```
-    pub fn new(string: String) -> StringInput {
-        StringInput {
-            string
-        }
+    pub fn new(string: String) -> StringInput<'a> {
+        StringInput { string: Cow::Owned(string) }
+    }
+
+    /// Creates a new `StringInput` from a `&str`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::inputs::{Input, StringInput};
+    /// let input = StringInput::new_borrowed("asd");
+    ///
+    /// assert_eq!(input.len(), 3);
+    /// ```
+    pub fn new_borrowed(source: &'a str) -> StringInput<'a> {
+        StringInput { string: Cow::Borrowed(source) }
     }
 }
 
-impl Input for StringInput {
+impl<'a> Input for StringInput<'a> {
     #[inline]
     fn len(&self) -> usize {
         self.string.len()
@@ -113,13 +126,14 @@ impl Input for StringInput {
                 pos -= 1;
             }
 
-            let start = self.string.char_indices()
-                                   .rev()
-                                   .skip_while(|&(i, _)| i > pos)
-                                   .find(|&(_, c)| c == '\n');
+            let start = self.string
+                .char_indices()
+                .rev()
+                .skip_while(|&(i, _)| i > pos)
+                .find(|&(_, c)| c == '\n');
             match start {
                 Some((i, _)) => i + 1,
-                None => 0
+                None => 0,
             }
         };
 
@@ -137,12 +151,13 @@ impl Input for StringInput {
 
             end
         } else {
-            let end = self.string.char_indices()
+            let end = self.string
+                .char_indices()
                 .skip_while(|&(i, _)| i < pos)
                 .find(|&(_, c)| c == '\n');
             let mut end = match end {
                 Some((i, _)) => i,
-                None => self.string.len()
+                None => self.string.len(),
             };
 
             if end > 0 && self.string.slice_unchecked(end - 1, end) == "\r" {

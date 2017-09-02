@@ -16,12 +16,12 @@ use super::{Input, StringInput};
 
 /// A `struct` useful for matching `File`s by allocating the contents at the beginning.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct FileInput {
-    input: StringInput,
+pub struct FileInput<'a> {
+    input: StringInput<'a>,
     file_name: OsString
 }
 
-impl FileInput {
+impl<'a> FileInput<'a> {
     /// Creates a new `FileInput` from a `File`.
     ///
     /// # Examples
@@ -30,7 +30,7 @@ impl FileInput {
     /// # use pest::inputs::FileInput;
     /// FileInput::new("file").unwrap();
     /// ```
-    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<FileInput> {
+    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<FileInput<'a>> {
         let mut file = File::open(path.as_ref())?;
         let mut string = String::new();
         file.read_to_string(&mut string)?;
@@ -47,7 +47,7 @@ impl FileInput {
     }
 }
 
-impl Input for FileInput {
+impl<'a> Input for FileInput<'a> {
     #[inline]
     fn len(&self) -> usize {
         self.input.len()

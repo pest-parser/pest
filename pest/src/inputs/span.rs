@@ -19,19 +19,15 @@ use super::position;
 pub struct Span<I: Input> {
     input: Rc<I>,
     start: usize,
-    end: usize
+    end: usize,
 }
 
 #[inline]
 pub fn new<I: Input>(input: Rc<I>, start: usize, end: usize) -> Span<I> {
-    Span {
-        input,
-        start,
-        end
-    }
+    Span { input, start, end }
 }
 
-impl<I: Input> Span<I> {
+impl<'a, I: Input> Span<I> {
     /// Returns the `Span`'s start position as a `usize`.
     ///
     /// # Examples
@@ -148,7 +144,7 @@ impl<I: Input> Span<I> {
     /// assert_eq!(span.as_str(), "b");
     /// ```
     #[inline]
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&'a self) -> &'a str {
         unsafe { self.input.slice(self.start, self.end) }
     }
 }
@@ -169,9 +165,7 @@ impl<I: Input> Clone for Span<I> {
 
 impl<I: Input> PartialEq for Span<I> {
     fn eq(&self, other: &Span<I>) -> bool {
-        Rc::ptr_eq(&self.input, &other.input) &&
-        self.start == other.start &&
-        self.end == other.end
+        Rc::ptr_eq(&self.input, &other.input) && self.start == other.start && self.end == other.end
     }
 }
 
@@ -182,7 +176,7 @@ impl<I: Input> PartialOrd for Span<I> {
         if Rc::ptr_eq(&self.input, &other.input) {
             match self.start.partial_cmp(&other.start) {
                 Some(Ordering::Equal) => self.end.partial_cmp(&other.end),
-                ordering => ordering
+                ordering => ordering,
             }
         } else {
             None
@@ -192,7 +186,9 @@ impl<I: Input> PartialOrd for Span<I> {
 
 impl<I: Input> Ord for Span<I> {
     fn cmp(&self, other: &Span<I>) -> Ordering {
-        self.partial_cmp(other).expect("cannot compare spans from different inputs")
+        self.partial_cmp(other).expect(
+            "cannot compare spans from different inputs",
+        )
     }
 }
 
