@@ -245,6 +245,21 @@ fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<Ident, &ParserNo
     hash_map
 }
 
+fn is_non_failing<I: Input>(expr: &ParserExpr<I>) -> bool {
+    match *expr {
+        ParserExpr::Str(ref string) => string == "",
+        ParserExpr::Opt(_) => true,
+        ParserExpr::Rep(_) => true,
+        ParserExpr::Seq(ref lhs, ref rhs) => {
+            is_non_failing(&lhs.expr) && is_non_failing(&rhs.expr)
+        }
+        ParserExpr::Choice(ref lhs, ref rhs) => {
+            is_non_failing(&lhs.expr) || is_non_failing(&rhs.expr)
+        }
+        _ => false
+    }
+}
+
 fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<GrammarRule, I>> {
     fn check_expr<I: Input>(
         mut names: HashSet<Ident>,
@@ -269,7 +284,13 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<
                     None
                 }
             },
-            ParserExpr::Seq(ref lhs, _) => check_expr(names, &lhs, rules),
+            ParserExpr::Seq(ref lhs, ref rhs) => {
+                if is_non_failing(&lhs.expr) {
+                    check_expr(names, rhs, rules)
+                } else {
+                    check_expr(names, lhs, rules)
+                }
+            }
             ParserExpr::Choice(ref lhs, _) => check_expr(names, &lhs, rules),
             ParserExpr::Rep(ref node) => check_expr(names, &node, rules),
             ParserExpr::RepOnce(ref node) => check_expr(names, &node, rules),
@@ -391,6 +412,26 @@ mod tests {
   = rule a is left-recursive; pest::prec_climber might be useful in this case")]
     fn indirect_left_recursion() {
         let input = "a = { b } b = { a }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:39
+  |
+1 | a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }
+  |                                       ^
+  |
+  = rule a is left-recursive; pest::prec_climber might be useful in this case")]
+    fn non_failing_left_recursion() {
+        let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    fn valid_recursion() {
+        let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"b\") ~ a }";
         consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
     }
 }
