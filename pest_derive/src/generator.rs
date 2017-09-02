@@ -29,6 +29,14 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
             pos.at_end()
         }
     });
+    predefined.insert("soi", quote! {
+        fn soi<I: ::pest::inputs::Input>(
+            pos: ::pest::inputs::Position<I>,
+            _: &mut ::pest::ParserState<Rule, I>
+        ) -> Result<::pest::inputs::Position<I>, ::pest::inputs::Position<I>> {
+            pos.at_start()
+        }
+    });
     predefined.insert("peek", quote! {
         fn peek<I: ::pest::inputs::Input>(
             pos: ::pest::inputs::Position<I>,
@@ -54,14 +62,6 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
             }
 
             pos
-        }
-    });
-    predefined.insert("soi", quote! {
-        fn soi<I: ::pest::inputs::Input>(
-            pos: ::pest::inputs::Position<I>,
-            _: &mut ::pest::ParserState<Rule, I>
-        ) -> Result<::pest::inputs::Position<I>, ::pest::inputs::Position<I>> {
-            pos.at_start()
         }
     });
 
