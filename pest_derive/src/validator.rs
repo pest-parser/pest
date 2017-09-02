@@ -214,6 +214,7 @@ pub fn validate_ast<I: Input>(rules: &Vec<ParserRule<I>>) {
     let mut errors = vec![];
 
     errors.extend(validate_left_recursion(rules));
+    errors.extend(validate_non_failing_repetition(rules));
 
     errors.sort_by_key(|error| {
         match *error {
@@ -231,18 +232,36 @@ pub fn validate_ast<I: Input>(rules: &Vec<ParserRule<I>>) {
     }
 }
 
-fn validate_left_recursion<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
-    left_recursion(to_hash_map(rules))
+fn validate_non_failing_repetition<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
+    rules.into_iter().filter_map(|rule| non_failing_repetition(&rule.node)).collect()
 }
 
-fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<Ident, &ParserNode<I>> {
-    let mut hash_map = HashMap::new();
-
-    for rule in rules {
-        hash_map.insert(rule.name.clone(), &rule.node);
+fn non_failing_repetition<I: Input>(node: &ParserNode<I>) -> Option<Error<GrammarRule, I>> {
+    match node.expr {
+        ParserExpr::Rep(ref other) => {
+            if is_non_failing(&other.expr) {
+                Some(Error::CustomErrorSpan {
+                    message: "expression inside repetition is non-failing and will repeat \
+                              infinitely".to_owned(),
+                    span: node.span.clone()
+                })
+            } else {
+                None
+            }
+        }
+        ParserExpr::RepOnce(ref other) => {
+            if is_non_failing(&other.expr) {
+                Some(Error::CustomErrorSpan {
+                    message: "expression inside repetition is non-failing and will repeat \
+                              infinitely".to_owned(),
+                    span: node.span.clone()
+                })
+            } else {
+                None
+            }
+        }
+        _ => None
     }
-
-    hash_map
 }
 
 fn is_non_failing<I: Input>(expr: &ParserExpr<I>) -> bool {
@@ -258,6 +277,20 @@ fn is_non_failing<I: Input>(expr: &ParserExpr<I>) -> bool {
         }
         _ => false
     }
+}
+
+fn validate_left_recursion<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
+    left_recursion(to_hash_map(rules))
+}
+
+fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<Ident, &ParserNode<I>> {
+    let mut hash_map = HashMap::new();
+
+    for rule in rules {
+        hash_map.insert(rule.name.clone(), &rule.node);
+    }
+
+    hash_map
 }
 
 fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<GrammarRule, I>> {
@@ -432,6 +465,20 @@ mod tests {
     #[test]
     fn valid_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"b\") ~ a }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | a = { (\"\")* }
+  |       ^---^
+  |
+  = expression inside repetition is non-failing and will repeat infinitely")]
+    fn non_failing_repetition() {
+        let input = "a = { (\"\")* }";
         consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
     }
 }
