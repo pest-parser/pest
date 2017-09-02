@@ -894,7 +894,15 @@ fn consume_expr<I: Input>(
         let pair = pairs.next().unwrap();
 
         match pair.as_rule() {
-            GrammarRule::opening_paren => unaries(pairs, climber),
+            GrammarRule::opening_paren => {
+                let node = unaries(pairs, climber);
+                let end = node.span.end_pos();
+
+                ParserNode {
+                    expr: node.expr,
+                    span: pair.into_span().start_pos().span(end)
+                }
+            }
             GrammarRule::positive_predicate_operator => {
                 let node = unaries(pairs, climber);
                 let end = node.span.end_pos();
@@ -992,7 +1000,14 @@ fn consume_expr<I: Input>(
                                 span: start.span(pair.into_span().end_pos())
                             }
                         }
-                        GrammarRule::closing_paren => node,
+                        GrammarRule::closing_paren => {
+                            let start = node.span.start_pos();
+
+                            ParserNode {
+                                expr: node.expr,
+                                span: start.span(pair.into_span().end_pos())
+                            }
+                        },
                         _ => unreachable!()
                     }
                 })
