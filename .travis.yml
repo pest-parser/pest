@@ -1,6 +1,3 @@
-# Largely based off of the example from travis-cargo.
-# https://github.com/huonw/travis-cargo
-
 sudo: false
 language: rust
 cache: cargo
