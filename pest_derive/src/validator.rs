@@ -214,7 +214,7 @@ pub fn validate_ast<I: Input>(rules: &Vec<ParserRule<I>>) {
     let mut errors = vec![];
 
     errors.extend(validate_left_recursion(rules));
-    errors.extend(validate_non_failing_repetition(rules));
+    errors.extend(validate_repetition(rules));
 
     errors.sort_by_key(|error| {
         match *error {
@@ -232,36 +232,45 @@ pub fn validate_ast<I: Input>(rules: &Vec<ParserRule<I>>) {
     }
 }
 
-fn validate_non_failing_repetition<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
-    rules.into_iter().filter_map(|rule| non_failing_repetition(&rule.node)).collect()
+fn is_non_progressing<I: Input>(expr: &ParserExpr<I>) -> bool {
+    match *expr {
+        ParserExpr::Str(ref string) => string == "",
+        ParserExpr::Ident(ref ident) => ident == "soi" || ident == "eoi",
+        ParserExpr::PosPred(_) => true,
+        ParserExpr::NegPred(_) => true,
+        ParserExpr::Seq(ref lhs, ref rhs) => {
+            is_non_progressing(&lhs.expr) && is_non_progressing(&rhs.expr)
+        }
+        ParserExpr::Choice(ref lhs, ref rhs) => {
+            is_non_progressing(&lhs.expr) || is_non_progressing(&rhs.expr)
+        }
+        _ => false
+    }
 }
 
-fn non_failing_repetition<I: Input>(node: &ParserNode<I>) -> Option<Error<GrammarRule, I>> {
-    match node.expr {
-        ParserExpr::Rep(ref other) => {
-            if is_non_failing(&other.expr) {
-                Some(Error::CustomErrorSpan {
-                    message: "expression inside repetition is non-failing and will repeat \
-                              infinitely".to_owned(),
-                    span: node.span.clone()
-                })
-            } else {
-                None
+fn validate_repetition<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
+    rules.into_iter().filter_map(|rule| {
+        match rule.node.expr {
+            ParserExpr::Rep(ref other) | ParserExpr::RepOnce(ref other)=> {
+                if is_non_failing(&other.expr) {
+                    Some(Error::CustomErrorSpan {
+                        message: "expression inside repetition is non-failing and will repeat \
+                                  infinitely".to_owned(),
+                        span: rule.node.span.clone()
+                    })
+                } else if is_non_progressing(&other.expr) {
+                    Some(Error::CustomErrorSpan {
+                        message: "expression inside repetition is non-progressing and will repeat \
+                                  infinitely".to_owned(),
+                        span: rule.node.span.clone()
+                    })
+                } else {
+                    None
+                }
             }
+            _ => None
         }
-        ParserExpr::RepOnce(ref other) => {
-            if is_non_failing(&other.expr) {
-                Some(Error::CustomErrorSpan {
-                    message: "expression inside repetition is non-failing and will repeat \
-                              infinitely".to_owned(),
-                    span: node.span.clone()
-                })
-            } else {
-                None
-            }
-        }
-        _ => None
-    }
+    }).collect()
 }
 
 fn is_non_failing<I: Input>(expr: &ParserExpr<I>) -> bool {
@@ -479,6 +488,20 @@ mod tests {
   = expression inside repetition is non-failing and will repeat infinitely")]
     fn non_failing_repetition() {
         let input = "a = { (\"\")* }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }
+  |       ^-------------------------------^
+  |
+  = expression inside repetition is non-progressing and will repeat infinitely")]
+    fn non_progressing_repetition() {
+        let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }";
         consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
     }
 }
