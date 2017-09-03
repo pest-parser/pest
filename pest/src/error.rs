@@ -204,7 +204,7 @@ mod tests {
     use super::super::inputs::{position, StringInput};
 
     #[test]
-    fn display_parsing_error() {
+    fn display_parsing_error_mixed() {
         let input = StringInput::new("ab\ncd\nef".to_owned());
         let pos = unsafe { position::new(Rc::new(input), 4) };
         let error: Error<u32, _> = Error::ParsingError {
@@ -220,6 +220,66 @@ mod tests {
             "  |  ^---",
             "  |",
             "  = unexpected 4, 5, or 6; expected 1, 2, or 3"
+        ].join("\n"));
+    }
+
+    #[test]
+    fn display_parsing_error_positives() {
+        let input = StringInput::new("ab\ncd\nef".to_owned());
+        let pos = unsafe { position::new(Rc::new(input), 4) };
+        let error: Error<u32, _> = Error::ParsingError {
+            positives: vec![1, 2],
+            negatives: vec![],
+            pos: pos
+        };
+
+        assert_eq!(format!("{}", error), vec![
+            " --> 2:2",
+            "  |",
+            "2 | cd",
+            "  |  ^---",
+            "  |",
+            "  = expected 1 or 2"
+        ].join("\n"));
+    }
+
+    #[test]
+    fn display_parsing_error_negatives() {
+        let input = StringInput::new("ab\ncd\nef".to_owned());
+        let pos = unsafe { position::new(Rc::new(input), 4) };
+        let error: Error<u32, _> = Error::ParsingError {
+            positives: vec![],
+            negatives: vec![4, 5, 6],
+            pos: pos
+        };
+
+        assert_eq!(format!("{}", error), vec![
+            " --> 2:2",
+            "  |",
+            "2 | cd",
+            "  |  ^---",
+            "  |",
+            "  = unexpected 4, 5, or 6"
+        ].join("\n"));
+    }
+
+    #[test]
+    fn display_parsing_error_unknown() {
+        let input = StringInput::new("ab\ncd\nef".to_owned());
+        let pos = unsafe { position::new(Rc::new(input), 4) };
+        let error: Error<u32, _> = Error::ParsingError {
+            positives: vec![],
+            negatives: vec![],
+            pos: pos
+        };
+
+        assert_eq!(format!("{}", error), vec![
+            " --> 2:2",
+            "  |",
+            "2 | cd",
+            "  |  ^---",
+            "  |",
+            "  = unknown parsing error"
         ].join("\n"));
     }
 

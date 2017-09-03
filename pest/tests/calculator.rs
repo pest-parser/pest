@@ -253,6 +253,6 @@ fn prec_climb() {
         Operator::new(Rule::power, Assoc::Right)
     ]);
 
-    let pairs = CalculatorParser::parse_str(Rule::expression, "-12+3*(4-9)^3^2");
-    assert_eq!(-5_859_387, consume(pairs.unwrap().next().unwrap(), &climber));
+    let pairs = CalculatorParser::parse_str(Rule::expression, "-12+3*(4-9)^3^2/9");
+    assert_eq!(-651_053, consume(pairs.unwrap().next().unwrap(), &climber));
 }
