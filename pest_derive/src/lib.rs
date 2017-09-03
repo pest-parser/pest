@@ -194,6 +194,28 @@
 //! a = { b ~ whitespace* ~ (comment? ~ whitespace+)* ~ c }
 //! ```
 //!
+//! ## `push`, `pop`, and `peek`
+//!
+//! `push(e)` simply pushes the captured string of the expression `e` down a stack. This stack can
+//! then later be used to match grammar based on its content with `pop` and `peek`.
+//!
+//! `peek` always matches the string at the top of stack. So, if the stack contains `["a", "b"]`,
+//! the this grammar:
+//!
+//! ```ignore
+//! a = { peek }
+//! ```
+//!
+//! is effectively transformed into at parse time:
+//!
+//! ```ignore
+//! a = { "a" }
+//! ```
+//!
+//! `pop` works the same way with the exception that it pops the string off of the stack if the
+//! the match worked. With the stack from above, if `pop` matches `"a"`, the stack will be mutated
+//! to `["b"]`.
+//!
 //! ## `Rule`
 //!
 //! All rules defined or used in the grammar populate a generated `enum` called `Rule`. This
