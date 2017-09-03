@@ -26,6 +26,7 @@
 //! file can be included in a dummy `const` definition while debugging.
 //!
 //! ```ignore
+//! #[cfg(debug_assertions)]
 //! const _GRAMMAR: &'static str = include_str!("path/to/my_grammar.pest"); // relative to this file
 //!
 //! #[derive(Parser)]
