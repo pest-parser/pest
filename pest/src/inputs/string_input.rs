@@ -328,6 +328,14 @@ mod tests {
             assert!(input.match_string("", 0));
             assert!(!input.match_string("a", 0));
         }
+
+        let input2 = StrInput::new("");
+
+        unsafe {
+            assert!(input2.is_empty());
+            assert!(input2.match_string("", 0));
+            assert!(!input2.match_string("a", 0));
+        }
     }
 
     #[test]
@@ -339,11 +347,20 @@ mod tests {
             assert!(input.match_string("asd", 0));
             assert!(input.match_string("asdf", 3));
         }
+
+        let input2 = StrInput::new("asdasdf");
+
+        unsafe {
+            assert!(!input2.is_empty());
+            assert!(input2.match_string("asd", 0));
+            assert!(input2.match_string("asdf", 3));
+        }
     }
 
     #[test]
     fn len() {
         assert_eq!(StringInput::new("asdasdf".to_owned()).len(), 7);
+        assert_eq!(StrInput::new("asdasdf").len(), 7);
     }
 
     #[test]
@@ -352,6 +369,12 @@ mod tests {
 
         unsafe {
             assert_eq!(input.slice(1, 3), "sd");
+        }
+
+        let input2 = StrInput::new("asdasdf");
+
+        unsafe {
+            assert_eq!(input2.slice(1, 3), "sd");
         }
     }
 
@@ -371,6 +394,21 @@ mod tests {
             assert_eq!(input.line_col(8), (3, 2));
             assert_eq!(input.line_col(11), (3, 3));
         }
+
+        let input2 = StrInput::new("a\rb\nc\r\nd嗨");
+
+        unsafe {
+            assert_eq!(input2.line_col(0), (1, 1));
+            assert_eq!(input2.line_col(1), (1, 2));
+            assert_eq!(input2.line_col(2), (1, 3));
+            assert_eq!(input2.line_col(3), (1, 4));
+            assert_eq!(input2.line_col(4), (2, 1));
+            assert_eq!(input2.line_col(5), (2, 2));
+            assert_eq!(input2.line_col(6), (2, 3));
+            assert_eq!(input2.line_col(7), (3, 1));
+            assert_eq!(input2.line_col(8), (3, 2));
+            assert_eq!(input2.line_col(11), (3, 3));
+        }
     }
 
     #[test]
@@ -389,6 +427,21 @@ mod tests {
             assert_eq!(input.line_of(8), "d嗨");
             assert_eq!(input.line_of(11), "d嗨");
         }
+
+        let input2 = StrInput::new("a\rb\nc\r\nd嗨");
+
+        unsafe {
+            assert_eq!(input2.line_of(0), "a\rb");
+            assert_eq!(input2.line_of(1), "a\rb");
+            assert_eq!(input2.line_of(2), "a\rb");
+            assert_eq!(input2.line_of(3), "a\rb");
+            assert_eq!(input2.line_of(4), "c");
+            assert_eq!(input2.line_of(5), "c");
+            assert_eq!(input2.line_of(6), "c");
+            assert_eq!(input2.line_of(7), "d嗨");
+            assert_eq!(input2.line_of(8), "d嗨");
+            assert_eq!(input2.line_of(11), "d嗨");
+        }
     }
 
     #[test]
@@ -398,6 +451,12 @@ mod tests {
         unsafe {
             assert_eq!(input.line_of(0), "");
         }
+
+        let input2 = StrInput::new("");
+
+        unsafe {
+            assert_eq!(input2.line_of(0), "");
+        }
     }
 
     #[test]
@@ -406,6 +465,12 @@ mod tests {
 
         unsafe {
             assert_eq!(input.line_of(0), "");
+        }
+
+        let input2 = StrInput::new("\n");
+
+        unsafe {
+            assert_eq!(input2.line_of(0), "");
         }
     }
 
@@ -417,6 +482,13 @@ mod tests {
             assert_eq!(input.skip(0, 0), Some(0));
             assert_eq!(input.skip(1, 0), None);
         }
+
+        let input2 = StrInput::new("");
+
+        unsafe {
+            assert_eq!(input2.skip(0, 0), Some(0));
+            assert_eq!(input2.skip(1, 0), None);
+        }
     }
 
     #[test]
@@ -427,6 +499,14 @@ mod tests {
             assert_eq!(input.skip(0, 0), Some(0));
             assert_eq!(input.skip(1, 0), Some(1));
             assert_eq!(input.skip(1, 1), Some(3));
+        }
+
+        let input2 = StrInput::new("d嗨");
+
+        unsafe {
+            assert_eq!(input2.skip(0, 0), Some(0));
+            assert_eq!(input2.skip(1, 0), Some(1));
+            assert_eq!(input2.skip(1, 1), Some(3));
         }
     }
 
@@ -441,6 +521,16 @@ mod tests {
             assert!(input.match_range('c'..'c', 0).is_none());
             assert!(input.match_range('a'..'嗨', 0).is_some());
         }
+
+        let input2 = StrInput::new("b");
+
+        unsafe {
+            assert!(input2.match_range('a'..'c', 0).is_some());
+            assert!(input2.match_range('b'..'b', 0).is_some());
+            assert!(input2.match_range('a'..'a', 0).is_none());
+            assert!(input2.match_range('c'..'c', 0).is_none());
+            assert!(input2.match_range('a'..'嗨', 0).is_some());
+        }
     }
 
     #[test]
@@ -450,6 +540,13 @@ mod tests {
         unsafe {
             assert!(input.match_insensitive("asd", 0));
             assert!(input.match_insensitive("asdf", 3));
+        }
+
+        let input2 = StrInput::new("AsdASdF");
+
+        unsafe {
+            assert!(input2.match_insensitive("asd", 0));
+            assert!(input2.match_insensitive("asdf", 3));
         }
     }
 }
