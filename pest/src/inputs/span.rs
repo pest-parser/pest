@@ -176,7 +176,7 @@ impl<I: Input> PartialOrd for Span<I> {
         if Rc::ptr_eq(&self.input, &other.input) {
             match self.start.partial_cmp(&other.start) {
                 Some(Ordering::Equal) => self.end.partial_cmp(&other.end),
-                ordering => ordering,
+                ordering => ordering
             }
         } else {
             None
