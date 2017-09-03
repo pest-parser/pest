@@ -134,3 +134,36 @@ impl Expr {
         map_internal(self, &mut f)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn identity() {
+        let expr = Expr::Choice(
+            Box::new(Expr::Seq(
+                Box::new(Expr::Ident(Ident::new("a"))),
+                Box::new(Expr::Str("b".to_owned()))
+            )),
+            Box::new(Expr::PosPred(
+                Box::new(Expr::NegPred(
+                    Box::new(Expr::Rep(
+                        Box::new(Expr::RepOnce(
+                            Box::new(Expr::Opt(
+                                Box::new(Expr::Choice(
+                                    Box::new(Expr::Insens("c".to_owned())),
+                                    Box::new(Expr::Push(
+                                        Box::new(Expr::Range("'d'".to_owned(), "'e'".to_owned()))
+                                    ))
+                                ))
+                            ))
+                        ))
+                    ))
+                ))
+            ))
+        );
+
+        assert_eq!(expr.clone().map_bottom_up(|expr| expr).map_top_down(|expr| expr), expr);
+    }
+}

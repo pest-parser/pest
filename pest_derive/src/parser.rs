@@ -1474,7 +1474,7 @@ mod tests {
 
     #[test]
     fn ast() {
-        let input = "rule = _{ a ~ b | !(c | push(d))?* }";
+        let input = "rule = _{ a ~ \"b\" | !(^\"c\" | push('d'..'e'))?* }";
 
         let pairs = GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs);
@@ -1487,15 +1487,15 @@ mod tests {
                 expr: Expr::Choice(
                     Box::new(Expr::Seq(
                         Box::new(Expr::Ident(Ident::new("a"))),
-                        Box::new(Expr::Ident(Ident::new("b")))
+                        Box::new(Expr::Str("b".to_owned()))
                     )),
                     Box::new(Expr::NegPred(
                         Box::new(Expr::Rep(
                             Box::new(Expr::Opt(
                                 Box::new(Expr::Choice(
-                                    Box::new(Expr::Ident(Ident::new("c"))),
+                                    Box::new(Expr::Insens("c".to_owned())),
                                     Box::new(Expr::Push(
-                                        Box::new(Expr::Ident(Ident::new("d")))
+                                        Box::new(Expr::Range("'d'".to_owned(), "'e'".to_owned()))
                                     )
                                 ))
                             ))

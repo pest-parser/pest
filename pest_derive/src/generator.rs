@@ -676,9 +676,42 @@ mod tests {
             }
         });
     }
-
     #[test]
     fn sequence() {
+        let expr = Expr::Seq(
+            Box::new(Expr::Str("a".to_owned())),
+            Box::new(Expr::Seq(
+                Box::new(Expr::Str("b".to_owned())),
+                Box::new(Expr::Seq(
+                    Box::new(Expr::Str("c".to_owned())),
+                    Box::new(Expr::Str("d".to_owned()))
+                ))
+            ))
+        );
+
+        assert_eq!(generate_expr(expr), quote! {
+            state.sequence(move |state| {
+                pos.sequence(|pos| {
+                    pos.match_string("a").and_then(|pos| {
+                        self::skip(pos, state)
+                    }).and_then(|pos| {
+                        pos.match_string("b")
+                    }).and_then(|pos| {
+                        self::skip(pos, state)
+                    }).and_then(|pos| {
+                        pos.match_string("c")
+                    }).and_then(|pos| {
+                        self::skip(pos, state)
+                    }).and_then(|pos| {
+                        pos.match_string("d")
+                    })
+                })
+            })
+        });
+    }
+
+    #[test]
+    fn sequence_atomic() {
         let expr = Expr::Seq(
             Box::new(Expr::Str("a".to_owned())),
             Box::new(Expr::Seq(
@@ -702,11 +735,35 @@ mod tests {
                     })
                 })
             })
-        })
+        });
     }
 
     #[test]
     fn choice() {
+        let expr = Expr::Choice(
+            Box::new(Expr::Str("a".to_owned())),
+            Box::new(Expr::Choice(
+                Box::new(Expr::Str("b".to_owned())),
+                Box::new(Expr::Choice(
+                    Box::new(Expr::Str("c".to_owned())),
+                    Box::new(Expr::Str("d".to_owned()))
+                ))
+            ))
+        );
+
+        assert_eq!(generate_expr(expr), quote! {
+            pos.match_string("a").or_else(|pos| {
+                pos.match_string("b")
+            }).or_else(|pos| {
+                pos.match_string("c")
+            }).or_else(|pos| {
+                pos.match_string("d")
+            })
+        });
+    }
+
+    #[test]
+    fn choice_atomic() {
         let expr = Expr::Choice(
             Box::new(Expr::Str("a".to_owned())),
             Box::new(Expr::Choice(
@@ -726,11 +783,104 @@ mod tests {
             }).or_else(|pos| {
                 pos.match_string("d")
             })
-        })
+        });
     }
 
     #[test]
     fn expr_complex() {
+        let expr = Expr::Choice(
+            Box::new(Expr::Ident(Ident::new("a"))),
+            Box::new(Expr::Seq(
+                Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
+                Box::new(Expr::Seq(
+                    Box::new(Expr::NegPred(
+                        Box::new(Expr::RepOnce(
+                            Box::new(Expr::Insens("b".to_owned()))
+                        ))
+                    )),
+                    Box::new(Expr::PosPred(
+                        Box::new(Expr::Opt(
+                            Box::new(Expr::Rep(
+                                Box::new(Expr::Choice(
+                                    Box::new(Expr::Str("c".to_owned())),
+                                    Box::new(Expr::Str("d".to_owned()))
+                                ))
+                            ))
+                        ))
+                    ))
+                ))
+            ))
+        );
+
+        assert_eq!(generate_expr(expr), quote! {
+            self::a(pos, state).or_else(|pos| {
+                state.sequence(move |state| {
+                    pos.sequence(|pos| {
+                        pos.match_range( 'a' .. 'b' ).and_then(|pos| {
+                            self::skip(pos, state)
+                        }).and_then(|pos| {
+                            state.lookahead(false, move |state| {
+                                pos.lookahead(false, |pos| {
+                                    state.sequence(move |state| {
+                                        pos.sequence(|pos| {
+                                            pos.match_insensitive("b").and_then(|pos| {
+                                                pos.repeat(|pos| {
+                                                    state.sequence(move |state| {
+                                                        pos.sequence(|pos| {
+                                                            self::skip(pos, state).and_then(|pos| {
+                                                                pos.match_insensitive("b")
+                                                            })
+                                                        })
+                                                    })
+                                                })
+                                            })
+                                        })
+                                    })
+                                })
+                            })
+                        }).and_then(|pos| {
+                            self::skip(pos, state)
+                        }).and_then(|pos| {
+                            state.lookahead(true, move |state| {
+                                pos.lookahead(true, |pos| {
+                                    pos.optional(|pos| {
+                                        state.sequence(move |state| {
+                                            pos.sequence(|pos| {
+                                                pos.optional(|pos| {
+                                                    pos.match_string("c").or_else(|pos| {
+                                                        pos.match_string("d")
+                                                    })
+                                                }).and_then(|pos| {
+                                                    pos.repeat(|pos| {
+                                                        state.sequence(move |state| {
+                                                            pos.sequence(|pos| {
+                                                                self::skip(pos, state)
+                                                                     .and_then(|pos| {
+                                                                         pos.match_string("c")
+                                                                            .or_else(|pos| {
+                                                                                pos.match_string(
+                                                                                    "d"
+                                                                                )
+                                                                            })
+                                                                     })
+                                                            })
+                                                        })
+                                                    })
+                                                })
+                                            })
+                                        })
+                                    })
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+        });
+    }
+
+    #[test]
+    fn expr_complex_atomic() {
         let expr = Expr::Choice(
             Box::new(Expr::Ident(Ident::new("a"))),
             Box::new(Expr::Seq(
@@ -789,7 +939,7 @@ mod tests {
                     })
                 })
             })
-        })
+        });
     }
 
     #[test]
