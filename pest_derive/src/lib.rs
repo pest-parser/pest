@@ -137,6 +137,11 @@
 //!     | `'a'..'z'` | matches one character between `'a'` and `'z'`                  |
 //!     | `a`        | matches rule `a`                                               |
 //!
+//! Strings and characters follow
+//! [Rust's escape mechanisms](https://doc.rust-lang.org/reference/tokens.html#byte-escapes), while
+//! identifiers can contain alpha-numeric characters and underscores (`_`), as long as they do not
+//! start with a digit.
+//!
 //! 2. Non-terminals
 //!
 //!     | Non-terminal | Usage                                                      |
