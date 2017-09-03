@@ -381,17 +381,17 @@ impl Parser<Rule> for JsonParser {
 }
 
 #[derive(Debug, PartialEq)]
-enum Json<'a> {
+enum Json {
     Null,
     Bool(bool),
     Number(f64),
-    String(Span<StringInput<'a>>),
-    Array(Vec<Json<'a>>),
-    Object(HashMap<Span<StringInput<'a>>, Json<'a>>)
+    String(Span<StringInput>),
+    Array(Vec<Json>),
+    Object(HashMap<Span<StringInput>, Json>)
 }
 
-fn consume<'a>(pair: Pair<Rule, StringInput<'a>>) -> Json<'a> {
-    fn value<'a>(pair: Pair<Rule, StringInput<'a>>) -> Json<'a> {
+fn consume(pair: Pair<Rule, StringInput>) -> Json {
+    fn value(pair: Pair<Rule, StringInput>) -> Json {
         let pair = pair.into_inner().next().unwrap();
 
         match pair.as_rule() {

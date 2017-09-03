@@ -10,7 +10,7 @@ extern crate pest;
 
 use std::rc::Rc;
 
-use pest::inputs::{Input, Position, StringInput};
+use pest::inputs::{Input, Position, StrInput};
 use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
@@ -165,11 +165,11 @@ impl Parser<Rule> for CalculatorParser {
     }
 }
 
-fn consume(pair: Pair<Rule, StringInput>, climber: &PrecClimber<Rule>) -> i32 {
+fn consume(pair: Pair<Rule, StrInput>, climber: &PrecClimber<Rule>) -> i32 {
     let primary = |pair| {
         consume(pair, climber)
     };
-    let infix = |lhs: i32, op: Pair<Rule, StringInput>, rhs: i32| {
+    let infix = |lhs: i32, op: Pair<Rule, StrInput>, rhs: i32| {
         match op.as_rule() {
             Rule::plus => lhs + rhs,
             Rule::minus => lhs - rhs,

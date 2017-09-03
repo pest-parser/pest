@@ -16,5 +16,5 @@ mod string_input;
 pub use self::file_input::FileInput;
 pub use self::input::Input;
 pub use self::position::Position;
-pub use self::string_input::StringInput;
+pub use self::string_input::{StringInput, StrInput};
 pub use self::span::Span;

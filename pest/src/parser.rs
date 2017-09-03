@@ -8,7 +8,7 @@
 use std::rc::Rc;
 
 use super::error::Error;
-use super::inputs::{Input, StringInput};
+use super::inputs::{Input, StrInput};
 use super::iterators::Pairs;
 use super::RuleType;
 
@@ -17,7 +17,7 @@ pub trait Parser<R: RuleType> {
     /// Parses `input` starting from `rule`.
     fn parse<I: Input>(rule: R, input: Rc<I>) -> Result<Pairs<R, I>, Error<R, I>>;
     /// Parses an `input` &str starting from `rule`.
-    fn parse_str(rule: R, input: &str) -> Result<Pairs<R, StringInput>, Error<R, StringInput>> {
-        Self::parse(rule, Rc::new(StringInput::new_borrowed(input)))
+    fn parse_str(rule: R, input: &str) -> Result<Pairs<R, StrInput>, Error<R, StrInput>> {
+        Self::parse(rule, Rc::new(StrInput::new(input)))
     }
 }
