@@ -144,6 +144,15 @@ impl<R: RuleType, I: Input> fmt::Debug for Pairs<R, I> {
     }
 }
 
+impl<R: RuleType, I: Input> fmt::Display for Pairs<R, I> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[{}]", self.clone()
+                              .map(|pair| format!("{}", pair))
+                              .collect::<Vec<_>>()
+                              .join(", "))
+    }
+}
+
 impl<R: PartialEq, I: Input> PartialEq for Pairs<R, I> {
     fn eq(&self, other: &Pairs<R, I>) -> bool {
         Rc::ptr_eq(&self.queue, &other.queue) && Rc::ptr_eq(&self.input, &other.input) &&
@@ -162,3 +171,30 @@ impl<R: Hash, I: Input> Hash for Pairs<R, I> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::super::super::macros::tests::*;
+    use super::super::super::Parser;
+
+    #[test]
+    fn pairs_debug() {
+        let pairs = AbcParser::parse_str(Rule::a, "abcde").unwrap();
+
+        assert_eq!(
+            format!("{:?}", pairs),
+            "Pairs { pairs: [\
+                Pair { rule: a, span: Span { start: 0, end: 3 }, inner: Pairs { pairs: [\
+                    Pair { rule: b, span: Span { start: 1, end: 2 }, \
+                        inner: Pairs { pairs: [] } }] } }, \
+                    Pair { rule: c, span: Span { start: 4, end: 5 }, \
+                        inner: Pairs { pairs: [] } }] }".to_owned()
+        );
+    }
+
+    #[test]
+    fn pairs_display() {
+        let pairs = AbcParser::parse_str(Rule::a, "abcde").unwrap();
+
+        assert_eq!(format!("{}", pairs), "[a(0, 3, [b(1, 2)]), c(4, 5)]".to_owned());
+    }
+}

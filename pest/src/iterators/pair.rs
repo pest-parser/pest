@@ -221,6 +221,24 @@ impl<R: RuleType, I: Input> fmt::Debug for Pair<R, I> {
     }
 }
 
+impl<R: RuleType, I: Input> fmt::Display for Pair<R, I> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let rule = self.as_rule();
+        let start = self.pos(self.start);
+        let end = self.pos(self.pair());
+        let mut pairs = self.clone().into_inner().peekable();
+
+        if pairs.peek().is_none() {
+            write!(f, "{:?}({}, {})", rule, start, end)
+        } else {
+            write!(f, "{:?}({}, {}, [{}])", rule, start, end,
+                   pairs.map(|pair| format!("{}", pair))
+                        .collect::<Vec<_>>()
+                        .join(", "))
+        }
+    }
+}
+
 impl<R: PartialEq, I: Input> PartialEq for Pair<R, I> {
     fn eq(&self, other: &Pair<R, I>) -> bool {
         Rc::ptr_eq(&self.queue, &other.queue) && Rc::ptr_eq(&self.input, &other.input) &&

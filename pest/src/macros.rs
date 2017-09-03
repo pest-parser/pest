@@ -282,7 +282,7 @@ macro_rules! fails_with {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::rc::Rc;
 
     use super::super::error::Error;
@@ -292,13 +292,13 @@ mod tests {
 
     #[allow(non_camel_case_types)]
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    enum Rule {
+    pub enum Rule {
         a,
         b,
         c
     }
 
-    struct AbcParser;
+    pub struct AbcParser;
 
     impl Parser<Rule> for AbcParser {
         fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
