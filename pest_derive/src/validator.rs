@@ -213,8 +213,9 @@ pub fn validate_undefined<I: Input>(
 pub fn validate_ast<I: Input>(rules: &Vec<ParserRule<I>>) {
     let mut errors = vec![];
 
-    errors.extend(validate_left_recursion(rules));
     errors.extend(validate_repetition(rules));
+    errors.extend(validate_whitespace_comment(rules));
+    errors.extend(validate_left_recursion(rules));
 
     errors.sort_by_key(|error| {
         match *error {
@@ -248,6 +249,21 @@ fn is_non_progressing<I: Input>(expr: &ParserExpr<I>) -> bool {
     }
 }
 
+fn is_non_failing<I: Input>(expr: &ParserExpr<I>) -> bool {
+    match *expr {
+        ParserExpr::Str(ref string) => string == "",
+        ParserExpr::Opt(_) => true,
+        ParserExpr::Rep(_) => true,
+        ParserExpr::Seq(ref lhs, ref rhs) => {
+            is_non_failing(&lhs.expr) && is_non_failing(&rhs.expr)
+        }
+        ParserExpr::Choice(ref lhs, ref rhs) => {
+            is_non_failing(&lhs.expr) || is_non_failing(&rhs.expr)
+        }
+        _ => false
+    }
+}
+
 fn validate_repetition<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
     rules.into_iter().filter_map(|rule| {
         match rule.node.expr {
@@ -273,19 +289,27 @@ fn validate_repetition<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<Gramma
     }).collect()
 }
 
-fn is_non_failing<I: Input>(expr: &ParserExpr<I>) -> bool {
-    match *expr {
-        ParserExpr::Str(ref string) => string == "",
-        ParserExpr::Opt(_) => true,
-        ParserExpr::Rep(_) => true,
-        ParserExpr::Seq(ref lhs, ref rhs) => {
-            is_non_failing(&lhs.expr) && is_non_failing(&rhs.expr)
+fn validate_whitespace_comment<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
+    rules.into_iter().filter_map(|rule| {
+        if &rule.name == "whitespace" || &rule.name == "comment" {
+            if is_non_failing(&rule.node.expr) {
+                Some(Error::CustomErrorSpan {
+                    message: format!("{} is non-failing and will repeat infinitely", &rule.name),
+                    span: rule.node.span.clone()
+                })
+            } else if is_non_progressing(&rule.node.expr) {
+                Some(Error::CustomErrorSpan {
+                    message: format!("{} is non-progressing and will repeat infinitely",
+                                     &rule.name),
+                    span: rule.node.span.clone()
+                })
+            } else {
+                None
+            }
+        } else {
+            None
         }
-        ParserExpr::Choice(ref lhs, ref rhs) => {
-            is_non_failing(&lhs.expr) || is_non_failing(&rhs.expr)
-        }
-        _ => false
-    }
+    }).collect()
 }
 
 fn validate_left_recursion<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
@@ -423,6 +447,68 @@ mod tests {
     }
 
     #[test]
+    fn valid_recursion() {
+        let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"b\") ~ a }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:16
+  |
+1 | whitespace = { \"\" }
+  |                ^^
+  |
+  = whitespace is non-failing and will repeat infinitely")]
+    fn non_failing_whitespace() {
+        let input = "whitespace = { \"\" }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:13
+  |
+1 | comment = { soi }
+  |             ^-^
+  |
+  = comment is non-progressing and will repeat infinitely")]
+    fn non_progressing_comment() {
+        let input = "comment = { soi }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | a = { (\"\")* }
+  |       ^---^
+  |
+  = expression inside repetition is non-failing and will repeat infinitely")]
+    fn non_failing_repetition() {
+        let input = "a = { (\"\")* }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }
+  |       ^-------------------------------^
+  |
+  = expression inside repetition is non-progressing and will repeat infinitely")]
+    fn non_progressing_repetition() {
+        let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
     #[should_panic(expected = "grammar error
 
  --> 1:7
@@ -468,40 +554,6 @@ mod tests {
   = rule a is left-recursive; pest::prec_climber might be useful in this case")]
     fn non_failing_left_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
-    }
-
-    #[test]
-    fn valid_recursion() {
-        let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"b\") ~ a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
-    }
-
-    #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:7
-  |
-1 | a = { (\"\")* }
-  |       ^---^
-  |
-  = expression inside repetition is non-failing and will repeat infinitely")]
-    fn non_failing_repetition() {
-        let input = "a = { (\"\")* }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
-    }
-
-    #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:7
-  |
-1 | a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }
-  |       ^-------------------------------^
-  |
-  = expression inside repetition is non-progressing and will repeat infinitely")]
-    fn non_progressing_repetition() {
-        let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }";
         consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
     }
 }

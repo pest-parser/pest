@@ -173,6 +173,27 @@
 //! `whitespace` and `comment` should be defined manually if needed. All other rules cannot be
 //! overridden.
 //!
+//! ## `whitespace` and `comment`
+//!
+//! When defined, these rules get matched automatically in sequences (`~`) and repetitions
+//! (`*`, `+`) between expressions. Atomic rules and those rules called by atomic rules are exempt
+//! from this behavior.
+//!
+//! These rules should be defined so as to match one whitespace character and one comment only since
+//! they are run in repetitions.
+//!
+//! If both `whitespace` and `comment` are defined, this grammar:
+//!
+//! ```ignore
+//! a = { b ~ c }
+//! ```
+//!
+//! is effectively transformed into this one behind the scenes:
+//!
+//! ```ignore
+//! a = { b ~ whitespace* ~ (comment? ~ whitespace+)* ~ c }
+//! ```
+//!
 //! ## `Rule`
 //!
 //! All rules defined or used in the grammar populate a generated `enum` called `Rule`. This
