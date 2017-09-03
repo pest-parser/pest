@@ -94,7 +94,7 @@ unsafe fn line_col(source: &str, pos: usize) -> (usize, usize) {
                 pos -= c.len_utf8();
                 line_col = (line_col.0, line_col.1 + 1);
             }
-            None => unreachable!(),
+            None => unreachable!()
         }
     }
 
@@ -120,7 +120,7 @@ unsafe fn line_of(source: &str, mut pos: usize) -> &str {
                           .find(|&(_, c)| c == '\n');
         match start {
             Some((i, _)) => i + 1,
-            None => 0,
+            None => 0
         }
     };
 
@@ -138,15 +138,12 @@ unsafe fn line_of(source: &str, mut pos: usize) -> &str {
 
         end
     } else {
-        let end = source.char_indices().skip_while(|&(i, _)| i < pos).find(
-            |&(_,
-               c)| {
-                c == '\n'
-            }
-        );
+        let end = source.char_indices()
+                        .skip_while(|&(i, _)| i < pos)
+                        .find(|&(_, c)| c == '\n');
         let mut end = match end {
             Some((i, _)) => i,
-            None => source.len(),
+            None => source.len()
         };
 
         if end > 0 && source.slice_unchecked(end - 1, end) == "\r" {
