@@ -15,13 +15,13 @@ use super::Input;
 /// A `struct` useful for matching heap-allocated `String`s.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct StringInput {
-    string: String,
+    string: String
 }
 
 /// A `struct` useful for matching borrowed `str`s.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct StrInput<'a> {
-    str_ref: &'a str,
+    str_ref: &'a str
 }
 
 impl StringInput {
@@ -114,11 +114,10 @@ unsafe fn line_of(source: &str, mut pos: usize) -> &str {
             pos -= 1;
         }
 
-        let start = source
-            .char_indices()
-            .rev()
-            .skip_while(|&(i, _)| i > pos)
-            .find(|&(_, c)| c == '\n');
+        let start = source.char_indices()
+                          .rev()
+                          .skip_while(|&(i, _)| i > pos)
+                          .find(|&(_, c)| c == '\n');
         match start {
             Some((i, _)) => i + 1,
             None => 0,
@@ -143,7 +142,7 @@ unsafe fn line_of(source: &str, mut pos: usize) -> &str {
             |&(_,
                c)| {
                 c == '\n'
-            },
+            }
         );
         let mut end = match end {
             Some((i, _)) => i,

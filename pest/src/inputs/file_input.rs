@@ -18,7 +18,7 @@ use super::{Input, StringInput};
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct FileInput {
     input: StringInput,
-    file_name: OsString,
+    file_name: OsString
 }
 
 impl FileInput {

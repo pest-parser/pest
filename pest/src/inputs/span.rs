@@ -19,7 +19,7 @@ use super::position;
 pub struct Span<I: Input> {
     input: Rc<I>,
     start: usize,
-    end: usize,
+    end: usize
 }
 
 #[inline]
@@ -27,7 +27,7 @@ pub fn new<I: Input>(input: Rc<I>, start: usize, end: usize) -> Span<I> {
     Span { input, start, end }
 }
 
-impl<'a, I: Input> Span<I> {
+impl<I: Input> Span<I> {
     /// Returns the `Span`'s start position as a `usize`.
     ///
     /// # Examples
@@ -187,12 +187,13 @@ impl<I: Input> PartialOrd for Span<I> {
 impl<I: Input> Ord for Span<I> {
     fn cmp(&self, other: &Span<I>) -> Ordering {
         self.partial_cmp(other).expect(
-            "cannot compare spans from different inputs",
+            "cannot compare spans from \
+             different inputs"
         )
     }
 }
 
-impl<'a, I: Input> Hash for Span<I> {
+impl<I: Input> Hash for Span<I> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&*self.input as *const I).hash(state);
         self.start.hash(state);
