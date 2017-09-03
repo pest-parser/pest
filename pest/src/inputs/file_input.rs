@@ -38,12 +38,7 @@ impl FileInput {
         let input = StringInput::new(string);
         let file_name = path.as_ref().file_name().unwrap().to_os_string();
 
-        Ok(
-            FileInput {
-                input,
-                file_name
-            }
-        )
+        Ok(FileInput { input, file_name })
     }
 }
 

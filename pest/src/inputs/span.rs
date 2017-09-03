@@ -24,11 +24,7 @@ pub struct Span<I: Input> {
 
 #[inline]
 pub fn new<I: Input>(input: Rc<I>, start: usize, end: usize) -> Span<I> {
-    Span {
-        input,
-        start,
-        end
-    }
+    Span { input, start, end }
 }
 
 impl<I: Input> Span<I> {
@@ -169,9 +165,7 @@ impl<I: Input> Clone for Span<I> {
 
 impl<I: Input> PartialEq for Span<I> {
     fn eq(&self, other: &Span<I>) -> bool {
-        Rc::ptr_eq(&self.input, &other.input) &&
-        self.start == other.start &&
-        self.end == other.end
+        Rc::ptr_eq(&self.input, &other.input) && self.start == other.start && self.end == other.end
     }
 }
 
@@ -192,11 +186,14 @@ impl<I: Input> PartialOrd for Span<I> {
 
 impl<I: Input> Ord for Span<I> {
     fn cmp(&self, other: &Span<I>) -> Ordering {
-        self.partial_cmp(other).expect("cannot compare spans from different inputs")
+        self.partial_cmp(other).expect(
+            "cannot compare spans from \
+             different inputs"
+        )
     }
 }
 
-impl<'a, I: Input> Hash for Span<I> {
+impl<I: Input> Hash for Span<I> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&*self.input as *const I).hash(state);
         self.start.hash(state);
