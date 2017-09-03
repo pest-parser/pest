@@ -20,7 +20,6 @@ git:
 branches:
   only:
     - master
-    - procedural
 notifications:
   email: false
 before_script:
