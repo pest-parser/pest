@@ -144,7 +144,7 @@ impl<'a, I: Input> Span<I> {
     /// assert_eq!(span.as_str(), "b");
     /// ```
     #[inline]
-    pub fn as_str(&'a self) -> &'a str {
+    pub fn as_str(&self) -> &str {
         unsafe { self.input.slice(self.start, self.end) }
     }
 }
