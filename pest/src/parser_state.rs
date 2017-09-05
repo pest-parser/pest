@@ -196,7 +196,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     /// Wrapper which removes `Tokens` in case of a sequence's failure.
     ///
     /// Usually used in conjunction with
-    /// [`Position::sequence`](../inputs/struct.Position#method.sequence).
+    /// [`Position::sequence`](inputs/struct.Position.html#method.sequence).
     ///
     /// # Examples
     ///
@@ -245,7 +245,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     /// Wrapper which stops `Token`s from being generated.
     ///
     /// Usually used in conjunction with
-    /// [`Position::lookahead`](../inputs/struct.Position#method.lookahead).
+    /// [`Position::lookahead`](inputs/struct.Position.html#method.lookahead).
     ///
     /// # Examples
     ///
