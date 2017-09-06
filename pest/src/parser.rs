@@ -14,9 +14,9 @@ use super::RuleType;
 
 /// A `trait` that defines a `Parser`.
 pub trait Parser<R: RuleType> {
-    /// Parses `input` starting from `rule`.
+    /// Parses an `Input` starting from `rule`.
     fn parse<I: Input>(rule: R, input: Rc<I>) -> Result<Pairs<R, I>, Error<R, I>>;
-    /// Parses an `input` &str starting from `rule`.
+    /// Parses an `&str` starting from `rule`.
     fn parse_str(rule: R, input: &str) -> Result<Pairs<R, StrInput>, Error<R, StrInput>> {
         Self::parse(rule, Rc::new(StrInput::new(input)))
     }
