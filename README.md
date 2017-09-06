@@ -167,3 +167,8 @@ extern crate pest_derive;
 * [stache](https://github.com/dgraham/stache)
 * [tera](https://github.com/Keats/tera)
 * [ukhasnet-parser](https://github.com/adamgreig/ukhasnet-parser)
+
+## Special thanks
+
+A special round of applause goes to prof. Marius Minea for his guidance and all pest contribuitors,
+some of which being none other than my friends.
