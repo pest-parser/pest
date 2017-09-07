@@ -330,14 +330,21 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<
     fn check_expr<I: Input>(
         names: &mut HashSet<Ident>,
         node: &ParserNode<I>,
-        rules: &HashMap<Ident, &ParserNode<I>>
+        rules: &HashMap<Ident, &ParserNode<I>>,
+        trace: &mut Vec<Ident>
     ) -> Option<Error<GrammarRule, I>> {
         match node.expr {
             ParserExpr::Ident(ref other)  => {
                 if names.contains(other) {
+                    trace.push(other.clone());
+                    let chain = trace.iter()
+                                     .map(|ident| ident.as_ref())
+                                     .collect::<Vec<_>>()
+                                     .join(" -> ");
+
                     return Some(Error::CustomErrorSpan {
-                        message: format!("rule {} is left-recursive; pest::prec_climber might be \
-                                          useful in this case", node.span.as_str()),
+                        message: format!("rule {} is left-recursive ({}); pest::prec_climber might \
+                                          be useful in this case", node.span.as_str(), chain),
                         span: node.span.clone()
                     });
                 }
@@ -345,27 +352,31 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<
                 names.insert(other.clone());
 
                 if let Some(node) = rules.get(other) {
-                    check_expr(names, node, rules)
+                    trace.push(other.clone());
+                    let result = check_expr(names, node, rules, trace);
+                    trace.pop().unwrap();
+
+                    result
                 } else {
                     None
                 }
             },
             ParserExpr::Seq(ref lhs, ref rhs) => {
                 if is_non_failing(&lhs.expr) {
-                    check_expr(names, rhs, rules)
+                    check_expr(names, rhs, rules, trace)
                 } else {
-                    check_expr(names, lhs, rules)
+                    check_expr(names, lhs, rules, trace)
                 }
             }
             ParserExpr::Choice(ref lhs, ref rhs) => {
-                check_expr(names, &lhs, rules).or(check_expr(names, &rhs, rules))
+                check_expr(names, &lhs, rules, trace).or(check_expr(names, &rhs, rules, trace))
             }
-            ParserExpr::Rep(ref node) => check_expr(names, &node, rules),
-            ParserExpr::RepOnce(ref node) => check_expr(names, &node, rules),
-            ParserExpr::Opt(ref node) => check_expr(names, &node, rules),
-            ParserExpr::PosPred(ref node) => check_expr(names, &node, rules),
-            ParserExpr::NegPred(ref node) => check_expr(names, &node, rules),
-            ParserExpr::Push(ref node) => check_expr(names, &node, rules),
+            ParserExpr::Rep(ref node) => check_expr(names, &node, rules, trace),
+            ParserExpr::RepOnce(ref node) => check_expr(names, &node, rules, trace),
+            ParserExpr::Opt(ref node) => check_expr(names, &node, rules, trace),
+            ParserExpr::PosPred(ref node) => check_expr(names, &node, rules, trace),
+            ParserExpr::NegPred(ref node) => check_expr(names, &node, rules, trace),
+            ParserExpr::Push(ref node) => check_expr(names, &node, rules, trace),
             _ => None
         }
     }
@@ -374,10 +385,11 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<
 
     for (ref name, ref node) in &rules {
         let mut names = HashSet::new();
+        let name = (*name).clone();
 
-        names.insert((*name).clone());
+        names.insert(name.clone());
 
-        if let Some(error) = check_expr(&mut names, node, &rules) {
+        if let Some(error) = check_expr(&mut names, node, &rules, &mut vec![name]) {
             errors.push(error);
         }
     }
@@ -518,7 +530,7 @@ mod tests {
 1 | a = { a }
   |       ^
   |
-  = rule a is left-recursive; pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn simple_left_recursion() {
         let input = "a = { a }";
         consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
@@ -532,14 +544,14 @@ mod tests {
 1 | a = { b } b = { a }
   |       ^
   |
-  = rule b is left-recursive; pest::prec_climber might be useful in this case
+  = rule b is left-recursive (b -> a -> b); pest::prec_climber might be useful in this case
 
  --> 1:17
   |
 1 | a = { b } b = { a }
   |                 ^
   |
-  = rule a is left-recursive; pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> b -> a); pest::prec_climber might be useful in this case")]
     fn indirect_left_recursion() {
         let input = "a = { b } b = { a }";
         consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
@@ -553,7 +565,7 @@ mod tests {
 1 | a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }
   |                                       ^
   |
-  = rule a is left-recursive; pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn non_failing_left_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }";
         consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
@@ -567,7 +579,7 @@ mod tests {
 1 | a = { \"a\" | a }
   |             ^
   |
-  = rule a is left-recursive; pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn non_primary_choice_left_recursion() {
         let input = "a = { \"a\" | a }";
         consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
