@@ -328,7 +328,7 @@ fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<Ident, &ParserNo
 
 fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<GrammarRule, I>> {
     fn check_expr<I: Input>(
-        mut names: HashSet<Ident>,
+        names: &mut HashSet<Ident>,
         node: &ParserNode<I>,
         rules: &HashMap<Ident, &ParserNode<I>>
     ) -> Option<Error<GrammarRule, I>> {
@@ -357,7 +357,9 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<
                     check_expr(names, lhs, rules)
                 }
             }
-            ParserExpr::Choice(ref lhs, _) => check_expr(names, &lhs, rules),
+            ParserExpr::Choice(ref lhs, ref rhs) => {
+                check_expr(names, &lhs, rules).or(check_expr(names, &rhs, rules))
+            }
             ParserExpr::Rep(ref node) => check_expr(names, &node, rules),
             ParserExpr::RepOnce(ref node) => check_expr(names, &node, rules),
             ParserExpr::Opt(ref node) => check_expr(names, &node, rules),
@@ -375,7 +377,7 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<
 
         names.insert((*name).clone());
 
-        if let Some(error) = check_expr(names, node, &rules) {
+        if let Some(error) = check_expr(&mut names, node, &rules) {
             errors.push(error);
         }
     }
@@ -554,6 +556,20 @@ mod tests {
   = rule a is left-recursive; pest::prec_climber might be useful in this case")]
     fn non_failing_left_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }";
+        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:13
+  |
+1 | a = { \"a\" | a }
+  |             ^
+  |
+  = rule a is left-recursive; pest::prec_climber might be useful in this case")]
+    fn non_primary_choice_left_recursion() {
+        let input = "a = { \"a\" | a }";
         consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
     }
 }
