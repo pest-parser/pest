@@ -328,14 +328,13 @@ fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<Ident, &ParserNo
 
 fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<GrammarRule, I>> {
     fn check_expr<I: Input>(
-        names: &mut HashSet<Ident>,
         node: &ParserNode<I>,
         rules: &HashMap<Ident, &ParserNode<I>>,
         trace: &mut Vec<Ident>
     ) -> Option<Error<GrammarRule, I>> {
         match node.expr {
             ParserExpr::Ident(ref other)  => {
-                if names.contains(other) {
+                if trace[0] == other {
                     trace.push(other.clone());
                     let chain = trace.iter()
                                      .map(|ident| ident.as_ref())
@@ -349,11 +348,9 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<
                     });
                 }
 
-                names.insert(other.clone());
-
                 if let Some(node) = rules.get(other) {
                     trace.push(other.clone());
-                    let result = check_expr(names, node, rules, trace);
+                    let result = check_expr(node, rules, trace);
                     trace.pop().unwrap();
 
                     result
@@ -363,20 +360,20 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<
             },
             ParserExpr::Seq(ref lhs, ref rhs) => {
                 if is_non_failing(&lhs.expr) {
-                    check_expr(names, rhs, rules, trace)
+                    check_expr(rhs, rules, trace)
                 } else {
-                    check_expr(names, lhs, rules, trace)
+                    check_expr(lhs, rules, trace)
                 }
             }
             ParserExpr::Choice(ref lhs, ref rhs) => {
-                check_expr(names, &lhs, rules, trace).or(check_expr(names, &rhs, rules, trace))
+                check_expr(&lhs, rules, trace).or(check_expr(&rhs, rules, trace))
             }
-            ParserExpr::Rep(ref node) => check_expr(names, &node, rules, trace),
-            ParserExpr::RepOnce(ref node) => check_expr(names, &node, rules, trace),
-            ParserExpr::Opt(ref node) => check_expr(names, &node, rules, trace),
-            ParserExpr::PosPred(ref node) => check_expr(names, &node, rules, trace),
-            ParserExpr::NegPred(ref node) => check_expr(names, &node, rules, trace),
-            ParserExpr::Push(ref node) => check_expr(names, &node, rules, trace),
+            ParserExpr::Rep(ref node) => check_expr(&node, rules, trace),
+            ParserExpr::RepOnce(ref node) => check_expr(&node, rules, trace),
+            ParserExpr::Opt(ref node) => check_expr(&node, rules, trace),
+            ParserExpr::PosPred(ref node) => check_expr(&node, rules, trace),
+            ParserExpr::NegPred(ref node) => check_expr(&node, rules, trace),
+            ParserExpr::Push(ref node) => check_expr(&node, rules, trace),
             _ => None
         }
     }
@@ -384,12 +381,9 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<
     let mut errors = vec![];
 
     for (ref name, ref node) in &rules {
-        let mut names = HashSet::new();
         let name = (*name).clone();
 
-        names.insert(name.clone());
-
-        if let Some(error) = check_expr(&mut names, node, &rules, &mut vec![name]) {
+        if let Some(error) = check_expr(node, &rules, &mut vec![name]) {
             errors.push(error);
         }
     }
