@@ -50,7 +50,7 @@ impl<I: Input> Position<I> {
         unsafe { new(input, 0) }
     }
 
-    /// Returns the current position as a `usize`.
+    /// Returns the current byte position as a `usize`.
     ///
     /// # Examples
     ///

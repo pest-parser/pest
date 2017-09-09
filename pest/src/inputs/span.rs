@@ -28,7 +28,7 @@ pub fn new<I: Input>(input: Rc<I>, start: usize, end: usize) -> Span<I> {
 }
 
 impl<I: Input> Span<I> {
-    /// Returns the `Span`'s start position as a `usize`.
+    /// Returns the `Span`'s start byte position as a `usize`.
     ///
     /// # Examples
     ///
@@ -47,7 +47,7 @@ impl<I: Input> Span<I> {
         self.start
     }
 
-    /// Returns the `Span`'s end position as a `usize`.
+    /// Returns the `Span`'s end byte position as a `usize`.
     ///
     /// # Examples
     ///

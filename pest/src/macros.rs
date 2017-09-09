@@ -143,6 +143,15 @@ macro_rules! consumes_to {
 
 /// A `macro` which facilitates grammar testing and debugging by comparing produced tokens.
 ///
+/// This macro takes several arguments:
+///
+/// * `parser` - name of the data structure implementing `Parser`
+/// * `input` - input to be tested against
+/// * `rule` - `Rule` which will be run
+/// * `tokens` - token pairs of the form `name(start_pos, end_pos, [nested_child_tokens])`
+///
+/// *Note:* `start_pos` and `end_pos` are byte positions.
+///
 /// # Examples
 ///
 /// ```
@@ -212,6 +221,15 @@ macro_rules! parses_to {
 }
 
 /// A `macro` which facilitates grammar testing and debugging by comparing produced errors.
+///
+/// This macro takes several arguments:
+///
+/// * `parser` - name of the data structure implementing `Parser`
+/// * `input` - input to be tested against
+/// * `rule` - `Rule` which will be run
+/// * `positives` - positive `Rule` attempts that failed
+/// * `negative` - negative `Rule` attempts that failed
+/// * `pos` - byte position of failure
 ///
 /// # Examples
 ///
