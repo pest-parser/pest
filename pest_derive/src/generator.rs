@@ -210,6 +210,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
 
     match (whitespace, comment) {
         (false, false) => quote! {
+            #[allow(dead_code)]
             fn skip<I: ::pest::inputs::Input>(
                 pos: ::pest::inputs::Position<I>,
                 _: &mut ::pest::ParserState<Rule, I>
@@ -218,6 +219,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             }
         },
         (true, false) => quote! {
+            #[allow(dead_code)]
             fn skip<I: ::pest::inputs::Input>(
                 pos: ::pest::inputs::Position<I>,
                 state: &mut ::pest::ParserState<Rule, I>
@@ -232,6 +234,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             }
         },
         (false, true) => quote! {
+            #[allow(dead_code)]
             fn skip<I: ::pest::inputs::Input>(
                 pos: ::pest::inputs::Position<I>,
                 state: &mut ::pest::ParserState<Rule, I>
@@ -246,6 +249,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             }
         },
         (true, true) => quote! {
+            #[allow(dead_code)]
             fn skip<I: ::pest::inputs::Input>(
                 pos: ::pest::inputs::Position<I>,
                 state: &mut ::pest::ParserState<Rule, I>
@@ -982,6 +986,7 @@ mod tests {
                             pos.skip(1)
                         }
 
+                        #[allow(dead_code)]
                         fn skip<I: ::pest::inputs::Input>(
                             pos: ::pest::inputs::Position<I>,
                             _: &mut ::pest::ParserState<Rule, I>
