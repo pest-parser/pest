@@ -5,11 +5,13 @@
 # pest. The Elegant Parser <sup>(beta)</sup>
 
 [![Join the chat at https://gitter.im/dragostis/pest](https://badges.gitter.im/dragostis/pest.svg)](https://gitter.im/dragostis/pest?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Book](https://img.shields.io/badge/book-WIP-4d76ae.svg)](https://pest-parser.github.io/book)
+[![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)
+
 [![Build Status](https://travis-ci.org/pest-parser/pest.svg?branch=master)](https://travis-ci.org/pest-parser/pest)
 [![codecov](https://codecov.io/gh/pest-parser/pest/branch/master/graph/badge.svg)](https://codecov.io/gh/pest-parser/pest)
-[![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
-[![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)
+[![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
 
 pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser with [simplicity][1] and [speed][2] in mind.
 
