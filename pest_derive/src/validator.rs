@@ -348,15 +348,17 @@ fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<
                     });
                 }
 
-                if let Some(node) = rules.get(other) {
-                    trace.push(other.clone());
-                    let result = check_expr(node, rules, trace);
-                    trace.pop().unwrap();
+                if !trace.contains(other) {
+                    if let Some(node) = rules.get(other) {
+                        trace.push(other.clone());
+                        let result = check_expr(node, rules, trace);
+                        trace.pop().unwrap();
 
-                    result
-                } else {
-                    None
+                        return result;
+                    }
                 }
+
+                None
             },
             ParserExpr::Seq(ref lhs, ref rhs) => {
                 if is_non_failing(&lhs.expr) {
