@@ -195,13 +195,13 @@ impl<I: Input> Position<I> {
     /// assert_eq!(start.clone().skip(3), Err(start));
     /// ```
     #[inline]
-    pub fn skip(self, n: usize) -> Result<Position<I>, Position<I>> {
+    pub fn skip(mut self, n: usize) -> Result<Position<I>, Position<I>> {
         let skipped = unsafe { self.input.skip(n, self.pos) };
 
         match skipped {
             Some(len) => {
-                // Safe since adding the string length keeps the position on a UTF-8 border.
-                Ok(unsafe { new(self.input, self.pos + len) })
+                self.pos += len;
+                Ok(self)
             }
             None => Err(self)
         }
