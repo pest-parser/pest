@@ -175,27 +175,14 @@ fn generate_rule(rule: Rule) -> Tokens {
                 })
             }
         },
-        RuleType::CompoundAtomic => quote! {
+        RuleType::CompoundAtomic | RuleType::NonAtomic => quote! {
             #[allow(unused_variables)]
             pub fn #name<I: ::pest::inputs::Input>(
                 pos: ::pest::inputs::Position<I>,
                 state: &mut ::pest::ParserState<Rule, I>
             ) -> Result<::pest::inputs::Position<I>, ::pest::inputs::Position<I>> {
-                state.rule(Rule::#name, pos, |state, pos| {
-                    state.atomic(false, move |state| {
-                        #expr
-                    })
-                })
-            }
-        },
-        RuleType::NonAtomic => quote! {
-            #[allow(unused_variables)]
-            pub fn #name<I: ::pest::inputs::Input>(
-                pos: ::pest::inputs::Position<I>,
-                state: &mut ::pest::ParserState<Rule, I>
-            ) -> Result<::pest::inputs::Position<I>, ::pest::inputs::Position<I>> {
-                state.rule(Rule::#name, pos, |state, pos| {
-                    state.atomic(false, move |state| {
+                state.atomic(false, move |state| {
+                    state.rule(Rule::#name, pos, |state, pos| {
                         #expr
                     })
                 })

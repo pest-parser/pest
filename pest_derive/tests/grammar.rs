@@ -116,6 +116,21 @@ fn sequence() {
 }
 
 #[test]
+fn sequence_compound() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abcabc",
+        rule: Rule::sequence_compound,
+        tokens: [
+            sequence_compound(0, 6, [
+                string(0, 3),
+                string(3, 6)
+            ])
+        ]
+    };
+}
+
+#[test]
 fn sequence_atomic() {
     parses_to! {
         parser: GrammarParser,
@@ -135,8 +150,10 @@ fn sequence_non_atomic() {
         rule: Rule::sequence_non_atomic,
         tokens: [
             sequence_non_atomic(0, 9, [
-                string(0, 3),
-                string(6, 9)
+                sequence(0, 9, [
+                    string(0, 3),
+                    string(6, 9)
+                ])
             ])
         ]
     };
@@ -150,6 +167,23 @@ fn sequence_atomic_space() {
         input: "abc abc",
         rule: Rule::sequence_atomic,
         tokens: []
+    };
+}
+
+#[test]
+fn sequence_atomic_compound() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abcabc",
+        rule: Rule::sequence_atomic_compound,
+        tokens: [
+            sequence_atomic_compound(0, 6, [
+                sequence_compound(0, 6, [
+                    string(0, 3),
+                    string(3, 6)
+                ])
+            ])
+        ]
     };
 }
 
