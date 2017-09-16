@@ -188,6 +188,34 @@ fn sequence_atomic_compound() {
 }
 
 #[test]
+fn sequence_compound_nested() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abcabc",
+        rule: Rule::sequence_compound_nested,
+        tokens: [
+            sequence_compound_nested(0, 6, [
+                sequence_nested(0, 6, [
+                    string(0, 3),
+                    string(3, 6)
+                ])
+            ])
+        ]
+    };
+}
+
+#[test]
+#[should_panic]
+fn sequence_compound_nested_space() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc abc",
+        rule: Rule::sequence_compound_nested,
+        tokens: []
+    };
+}
+
+#[test]
 fn choice_string() {
     parses_to! {
         parser: GrammarParser,

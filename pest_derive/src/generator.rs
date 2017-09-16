@@ -169,19 +169,32 @@ fn generate_rule(rule: Rule) -> Tokens {
                 state: &mut ::pest::ParserState<Rule, I>
             ) -> Result<::pest::inputs::Position<I>, ::pest::inputs::Position<I>> {
                 state.rule(Rule::#name, pos, |state, pos| {
-                    state.atomic(true, move |state| {
+                    state.atomic(::pest::Atomicity::Atomic, move |state| {
                         #expr
                     })
                 })
             }
         },
-        RuleType::CompoundAtomic | RuleType::NonAtomic => quote! {
+        RuleType::CompoundAtomic => quote! {
             #[allow(unused_variables)]
             pub fn #name<I: ::pest::inputs::Input>(
                 pos: ::pest::inputs::Position<I>,
                 state: &mut ::pest::ParserState<Rule, I>
             ) -> Result<::pest::inputs::Position<I>, ::pest::inputs::Position<I>> {
-                state.atomic(false, move |state| {
+                state.atomic(::pest::Atomicity::CompoundAtomic, move |state| {
+                    state.rule(Rule::#name, pos, |state, pos| {
+                        #expr
+                    })
+                })
+            }
+        },
+        RuleType::NonAtomic => quote! {
+            #[allow(unused_variables)]
+            pub fn #name<I: ::pest::inputs::Input>(
+                pos: ::pest::inputs::Position<I>,
+                state: &mut ::pest::ParserState<Rule, I>
+            ) -> Result<::pest::inputs::Position<I>, ::pest::inputs::Position<I>> {
+                state.atomic(::pest::Atomicity::NonAtomic, move |state| {
                     state.rule(Rule::#name, pos, |state, pos| {
                         #expr
                     })
@@ -211,7 +224,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
                 pos: ::pest::inputs::Position<I>,
                 state: &mut ::pest::ParserState<Rule, I>
             ) -> Result<::pest::inputs::Position<I>, ::pest::inputs::Position<I>> {
-                if !state.is_atomic {
+                if state.atomicity == ::pest::Atomicity::NonAtomic {
                     pos.repeat(|pos| {
                         whitespace(pos, state)
                     })
@@ -226,7 +239,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
                 pos: ::pest::inputs::Position<I>,
                 state: &mut ::pest::ParserState<Rule, I>
             ) -> Result<::pest::inputs::Position<I>, ::pest::inputs::Position<I>> {
-                if !state.is_atomic {
+                if state.atomicity == ::pest::Atomicity::NonAtomic {
                     pos.repeat(|pos| {
                         comment(pos, state)
                     })
@@ -241,7 +254,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
                 pos: ::pest::inputs::Position<I>,
                 state: &mut ::pest::ParserState<Rule, I>
             ) -> Result<::pest::inputs::Position<I>, ::pest::inputs::Position<I>> {
-                if !state.is_atomic {
+                if state.atomicity == ::pest::Atomicity::NonAtomic {
                     state.sequence(move |state| {
                         pos.sequence(|pos| {
                             pos.repeat(|pos| {

@@ -21,6 +21,14 @@ pub enum Lookahead {
     None
 }
 
+/// An `enum` specifying the current atomicity of a `ParserState`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Atomicity {
+    Atomic,
+    CompoundAtomic,
+    NonAtomic
+}
+
 /// A `struct` which contains the complete state of a `Parser`.
 #[derive(Debug)]
 pub struct ParserState<R: RuleType, I: Input> {
@@ -29,8 +37,8 @@ pub struct ParserState<R: RuleType, I: Input> {
     pos_attempts: Vec<R>,
     neg_attempts: Vec<R>,
     attempt_pos: usize,
-    /// Specifies whether the current state is atomic
-    pub is_atomic: bool,
+    /// Specifies current atomicity
+    pub atomicity: Atomicity,
     /// Stack of `Span`s
     pub stack: Vec<Span<I>>
 }
@@ -59,10 +67,10 @@ where
     let mut state = ParserState {
         queue: vec![],
         lookahead: Lookahead::None,
-        is_atomic: false,
         pos_attempts: vec![],
         neg_attempts: vec![],
         attempt_pos: 0,
+        atomicity: Atomicity::NonAtomic,
         stack: vec![]
     };
 
@@ -120,7 +128,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
             (0, 0)
         };
 
-        if self.lookahead == Lookahead::None && !self.is_atomic {
+        if self.lookahead == Lookahead::None && self.atomicity != Atomicity::Atomic {
             // Pair's position will only be known after running the closure.
             self.queue.push(QueueableToken::Start { pair: 0, pos: actual_pos });
         }
@@ -133,7 +141,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
             self.track(rule, actual_pos, pos_attempts_index, neg_attempts_index, attempts);
         }
 
-        if self.lookahead == Lookahead::None && !self.is_atomic {
+        if self.lookahead == Lookahead::None && self.atomicity != Atomicity::Atomic {
             if let Ok(ref pos) = result {
                 // Storing the pair's index in the first token that was added before the closure was
                 // run.
@@ -160,7 +168,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         neg_attempts_index: usize,
         prev_attempts: usize
     ) {
-        if self.is_atomic {
+        if self.atomicity == Atomicity::Atomic {
             return;
         }
 
@@ -300,7 +308,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest;
+    /// # use pest::{self, Atomicity};
     /// # use pest::inputs::StringInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -310,7 +318,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     ///
     /// let input = Rc::new(StringInput::new("a".to_owned()));
     /// let pairs: Vec<_> = pest::state(input, |state, pos| {
-    ///     state.atomic(true, move |state| {
+    ///     state.atomic(Atomicity::Atomic, move |state| {
     ///         state.rule(Rule::a, pos, |_, p| Ok(p))
     ///     })
     /// }).unwrap().collect();
@@ -318,48 +326,23 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn atomic<F>(&mut self, is_atomic: bool, f: F) -> Result<Position<I>, Position<I>>
+    pub fn atomic<F>(&mut self, atomicity: Atomicity, f: F) -> Result<Position<I>, Position<I>>
     where
         F: FnOnce(&mut ParserState<R, I>) -> Result<Position<I>, Position<I>>
     {
-        let should_toggle = self.is_atomic != is_atomic;
+        let initial_atomicity = self.atomicity;
+        let should_toggle = self.atomicity != atomicity;
 
         if should_toggle {
-            self.is_atomic = is_atomic;
+            self.atomicity = atomicity;
         }
 
         let result = f(self);
 
         if should_toggle {
-            self.is_atomic = !is_atomic;
+            self.atomicity = initial_atomicity;
         }
 
         result
-    }
-
-    /// Returns whether the `ParserState` is in an atomic state.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use std::rc::Rc;
-    /// # use pest;
-    /// # use pest::inputs::StringInput;
-    /// let input = Rc::new(StringInput::new("a".to_owned()));
-    /// let pairs: Vec<_> = pest::state::<(), _, _>(input, |state, pos| {
-    ///     assert!(!state.is_atomic());
-    ///
-    ///     state.atomic(true, move |state| {
-    ///         assert!(state.is_atomic());
-    ///
-    ///         Ok(pos)
-    ///     })
-    /// }).unwrap().collect();
-    ///
-    /// assert_eq!(pairs.len(), 0);
-    /// ```
-    #[inline]
-    pub fn is_atomic(&self) -> bool {
-        self.is_atomic
     }
 }
