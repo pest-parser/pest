@@ -25,6 +25,7 @@ enum Rule {
     minus,
     times,
     divide,
+    modulus,
     power
 }
 
@@ -49,6 +50,8 @@ impl Parser<Rule> for CalculatorParser {
                                             times(pos, state)
                                         }).or_else(|pos| {
                                             divide(pos, state)
+                                        }).or_else(|pos| {
+                                            modulus(pos, state)
                                         }).or_else(|pos| {
                                             power(pos, state)
                                         }).and_then(|pos| {
@@ -141,6 +144,15 @@ impl Parser<Rule> for CalculatorParser {
             })
         }
 
+        fn modulus<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<Rule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(Rule::modulus, pos, |_, pos| {
+                pos.match_string("%")
+            })
+        }
+
         fn power<I: Input>(
             pos: Position<I>,
             state: &mut ParserState<Rule, I>
@@ -159,6 +171,7 @@ impl Parser<Rule> for CalculatorParser {
                 Rule::minus => minus(pos, &mut state),
                 Rule::times => times(pos, &mut state),
                 Rule::divide => divide(pos, &mut state),
+                Rule::modulus => modulus(pos, &mut state),
                 Rule::power => power(pos, &mut state)
             }
         })
@@ -175,6 +188,7 @@ fn consume(pair: Pair<Rule, StrInput>, climber: &PrecClimber<Rule>) -> i32 {
             Rule::minus => lhs - rhs,
             Rule::times => lhs * rhs,
             Rule::divide => lhs / rhs,
+            Rule::modulus => lhs % rhs,
             Rule::power => lhs.pow(rhs as u32),
             _ => unreachable!()
         }
@@ -249,10 +263,11 @@ fn expression() {
 fn prec_climb() {
     let climber = PrecClimber::new(vec![
         Operator::new(Rule::plus, Assoc::Left) | Operator::new(Rule::minus, Assoc::Left),
-        Operator::new(Rule::times, Assoc::Left) | Operator::new(Rule::divide, Assoc::Left),
+        Operator::new(Rule::times, Assoc::Left) | Operator::new(Rule::divide, Assoc::Left) |
+        Operator::new(Rule::modulus, Assoc::Left),
         Operator::new(Rule::power, Assoc::Right)
     ]);
 
-    let pairs = CalculatorParser::parse_str(Rule::expression, "-12+3*(4-9)^3^2/9");
-    assert_eq!(-651_053, consume(pairs.unwrap().next().unwrap(), &climber));
+    let pairs = CalculatorParser::parse_str(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
+    assert_eq!(-1_525, consume(pairs.unwrap().next().unwrap(), &climber));
 }
