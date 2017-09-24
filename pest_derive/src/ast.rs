@@ -47,11 +47,11 @@ impl Expr {
             match expr {
                 // TODO: Use box syntax when it gets stabilized.
                 Expr::PosPred(expr) => {
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::PosPred(mapped)
                 }
                 Expr::NegPred(expr) => {
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::NegPred(mapped)
                 }
                 Expr::Seq(lhs, rhs) => {
@@ -65,19 +65,19 @@ impl Expr {
                     Expr::Choice(mapped_lhs, mapped_rhs)
                 }
                 Expr::Rep(expr) => {
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::Rep(mapped)
                 }
                 Expr::RepOnce(expr) => {
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::RepOnce(mapped)
                 }
                 Expr::Opt(expr) => {
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::Opt(mapped)
                 }
                 Expr::Push(expr) => {
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
                 expr => expr
@@ -92,11 +92,11 @@ impl Expr {
             let mapped = match expr {
                 Expr::PosPred(expr) => {
                     // TODO: Use box syntax when it gets stabilized.
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::PosPred(mapped)
                 }
                 Expr::NegPred(expr) => {
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::NegPred(mapped)
                 }
                 Expr::Seq(lhs, rhs) => {
@@ -110,19 +110,19 @@ impl Expr {
                     Expr::Choice(mapped_lhs, mapped_rhs)
                 }
                 Expr::Rep(expr) => {
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::Rep(mapped)
                 }
                 Expr::RepOnce(expr) => {
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::RepOnce(mapped)
                 }
                 Expr::Opt(expr) => {
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::Opt(mapped)
                 }
                 Expr::Push(expr) => {
-                    let mapped = Box::new(f(*expr));
+                    let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
                 expr => expr
