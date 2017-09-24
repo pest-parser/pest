@@ -43,6 +43,8 @@ pub enum GrammarRule {
     optional_operator,
     repeat_operator,
     repeat_once_operator,
+    repeat_min_max,
+    comma,
     push,
     identifier,
     string,
@@ -51,6 +53,7 @@ pub enum GrammarRule {
     range,
     range_operator,
     character,
+    number,
     single_quote
 }
 
@@ -342,6 +345,8 @@ impl Parser<GrammarRule> for GrammarParser {
                 repeat_operator(pos, state)
             }).or_else(|pos| {
                 repeat_once_operator(pos, state)
+            }).or_else(|pos| {
+                repeat_min_max(pos, state)
             })
         }
 
@@ -405,6 +410,48 @@ impl Parser<GrammarRule> for GrammarParser {
         ) -> Result<Position<I>, Position<I>> {
             state.rule(GrammarRule::repeat_once_operator, pos, |_, pos| {
                 pos.match_string("+")
+            })
+        }
+
+        fn repeat_min_max<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::repeat_min_max, pos, |state, pos| {
+                state.sequence(move |state| {
+                    pos.sequence(|pos| {
+                        opening_brace(pos, state).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            number(pos, state)
+                        }).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            pos.optional(|pos| {
+                                state.sequence(move |state| {
+                                    pos.sequence(|pos| {
+                                        comma(pos, state).and_then(|pos| {
+                                            skip(pos, state)
+                                        }).and_then(|pos| {
+                                            number(pos, state)
+                                        })
+                                    })
+                                })
+                            })
+                        }).and_then(|pos| {
+                            closing_brace(pos, state)
+                        })
+                    })
+                })
+            })
+        }
+
+        fn comma<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::comma, pos, |_, pos| {
+                pos.match_string(",")
             })
         }
 
@@ -573,6 +620,21 @@ impl Parser<GrammarRule> for GrammarParser {
                         })
                     }).and_then(|pos| {
                         single_quote(pos, state)
+                    })
+                })
+            })
+        }
+
+        fn number<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::number, pos, |_, pos| {
+                pos.sequence(|pos| {
+                    pos.match_range('0'..'9').and_then(|pos| {
+                        pos.repeat(|pos| {
+                            pos.match_range('0'..'9')
+                        })
                     })
                 })
             })
@@ -758,6 +820,8 @@ impl Parser<GrammarRule> for GrammarParser {
                 GrammarRule::optional_operator => optional_operator(pos, &mut state),
                 GrammarRule::repeat_operator => repeat_operator(pos, &mut state),
                 GrammarRule::repeat_once_operator => repeat_once_operator(pos, &mut state),
+                GrammarRule::repeat_min_max => repeat_min_max(pos, &mut state),
+                GrammarRule::comma => comma(pos, &mut state),
                 GrammarRule::push => push(pos, &mut state),
                 GrammarRule::identifier => identifier(pos, &mut state),
                 GrammarRule::string => string(pos, &mut state),
@@ -766,6 +830,7 @@ impl Parser<GrammarRule> for GrammarParser {
                 GrammarRule::range => range(pos, &mut state),
                 GrammarRule::range_operator => range_operator(pos, &mut state),
                 GrammarRule::character => character(pos, &mut state),
+                GrammarRule::number => number(pos, &mut state),
                 GrammarRule::single_quote => single_quote(pos, &mut state)
             }
         })
@@ -799,6 +864,7 @@ pub enum ParserExpr<I: Input> {
     Opt(Box<ParserNode<I>>),
     Rep(Box<ParserNode<I>>),
     RepOnce(Box<ParserNode<I>>),
+    RepMinMax(Box<ParserNode<I>>, u32, u32),
     Push(Box<ParserNode<I>>)
 }
 
@@ -831,6 +897,11 @@ fn convert_node<I: Input>(node: ParserNode<I>) -> Expr {
         ParserExpr::Opt(node) => Expr::Opt(Box::new(convert_node(*node))),
         ParserExpr::Rep(node) => Expr::Rep(Box::new(convert_node(*node))),
         ParserExpr::RepOnce(node) => Expr::RepOnce(Box::new(convert_node(*node))),
+        ParserExpr::RepMinMax(node, min, max) => Expr::RepMinMax(
+            Box::new(convert_node(*node)),
+            min,
+            max
+        ),
         ParserExpr::Push(node) => Expr::Push(Box::new(convert_node(*node)))
     }
 }
@@ -1000,6 +1071,48 @@ fn consume_expr<I: Input>(
                                 span: start.span(pair.into_span().end_pos())
                             }
                         }
+                        GrammarRule::repeat_min_max => {
+                            let overflow = |span| {
+                                let error: Error<(), _> = Error::CustomErrorSpan {
+                                    message: "number cannot overflow u32".to_owned(),
+                                    span
+                                };
+
+                                format!("parsing error\n\n{}", error)
+                            };
+
+                            let mut inner = pair.clone().into_inner();
+
+                            inner.next().unwrap(); // opening_brace
+
+                            let number = inner.next().unwrap();
+                            let min: u32 = number.as_str()
+                                                 .parse()
+                                                 .expect(&overflow(number.into_span()));
+
+                            match inner.next().unwrap().as_rule() {
+                                GrammarRule::comma => {
+                                    let number = inner.next().unwrap();
+                                    let max: u32 = number.as_str()
+                                                         .parse()
+                                                         .expect(&overflow(number.into_span()));
+
+                                    let start = node.span.start_pos();
+                                    ParserNode {
+                                        expr: ParserExpr::RepMinMax(Box::new(node), min, max),
+                                        span: start.span(pair.into_span().end_pos())
+                                    }
+                                }
+                                GrammarRule::closing_brace => {
+                                    let start = node.span.start_pos();
+                                    ParserNode {
+                                        expr: ParserExpr::RepMinMax(Box::new(node), min, min),
+                                        span: start.span(pair.into_span().end_pos())
+                                    }
+                                }
+                                _ => unreachable!()
+                            }
+                        }
                         GrammarRule::closing_paren => {
                             let start = node.span.start_pos();
 
@@ -1167,6 +1280,40 @@ mod tests {
     }
 
     #[test]
+    fn repeat_min_max() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "{1, 2}",
+            rule: GrammarRule::repeat_min_max,
+            tokens: [
+                repeat_min_max(0, 6, [
+                    opening_brace(0, 1),
+                    number(1, 2),
+                    comma(2, 3),
+                    number(4, 5),
+                    closing_brace(5, 6)
+                ])
+            ]
+        };
+    }
+
+    #[test]
+    fn repeat_exact() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "{1}",
+            rule: GrammarRule::repeat_min_max,
+            tokens: [
+                repeat_min_max(0, 3, [
+                    opening_brace(0, 1),
+                    number(1, 2),
+                    closing_brace(2, 3)
+                ])
+            ]
+        };
+    }
+
+    #[test]
     fn push() {
         parses_to! {
             parser: GrammarParser,
@@ -1263,6 +1410,18 @@ mod tests {
                     single_quote(0, 1),
                     single_quote(11, 12)
                 ])
+            ]
+        };
+    }
+
+    #[test]
+    fn number() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "0123",
+            rule: GrammarRule::number,
+            tokens: [
+                number(0, 4)
             ]
         };
     }
@@ -1372,6 +1531,7 @@ mod tests {
             input: "a = { b % }",
             rule: GrammarRule::grammar_rules,
             positives: vec![
+                GrammarRule::opening_brace,
                 GrammarRule::closing_brace,
                 GrammarRule::sequence_operator,
                 GrammarRule::choice_operator,
@@ -1391,6 +1551,7 @@ mod tests {
             input: "a = { (b }",
             rule: GrammarRule::grammar_rules,
             positives: vec![
+                GrammarRule::opening_brace,
                 GrammarRule::closing_paren,
                 GrammarRule::sequence_operator,
                 GrammarRule::choice_operator,
@@ -1473,8 +1634,28 @@ mod tests {
     }
 
     #[test]
+    fn wrong_postfix() {
+        fails_with! {
+            parser: GrammarParser,
+            input: "a = { a& }",
+            rule: GrammarRule::grammar_rules,
+            positives: vec![
+                GrammarRule::opening_brace,
+                GrammarRule::closing_brace,
+                GrammarRule::sequence_operator,
+                GrammarRule::choice_operator,
+                GrammarRule::optional_operator,
+                GrammarRule::repeat_operator,
+                GrammarRule::repeat_once_operator
+            ],
+            negatives: vec![],
+            pos: 7
+        };
+    }
+
+    #[test]
     fn ast() {
-        let input = "rule = _{ a ~ \"b\" | !(^\"c\" | push('d'..'e'))?* }";
+        let input = "rule = _{ a{1} ~ \"b\"{1, 2} | !(^\"c\" | push('d'..'e'))?* }";
 
         let pairs = GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs);
@@ -1486,8 +1667,16 @@ mod tests {
                 ty: RuleType::Silent,
                 expr: Expr::Choice(
                     Box::new(Expr::Seq(
-                        Box::new(Expr::Ident(Ident::new("a"))),
-                        Box::new(Expr::Str("b".to_owned()))
+                        Box::new(Expr::RepMinMax(
+                            Box::new(Expr::Ident(Ident::new("a"))),
+                            1,
+                            1
+                        )),
+                        Box::new(Expr::RepMinMax(
+                            Box::new(Expr::Str("b".to_owned())),
+                            1,
+                            2
+                        ))
                     )),
                     Box::new(Expr::NegPred(
                         Box::new(Expr::Rep(

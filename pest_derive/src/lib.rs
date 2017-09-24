@@ -151,6 +151,8 @@
 //!     | `e1 | e2`    | matches either `e1` or `e1`                                |
 //!     | `e*`         | matches `e` zero or more times                             |
 //!     | `e+`         | matches `e` one or more times                              |
+//!     | `e{n}`       | matches `e` exactly `n` times                              |
+//!     | `e{m, n}`    | matches `e` between `m` and `n` times inclusively          |
 //!     | `e?`         | optionally matches `e`                                     |
 //!     | `&e`         | matches `e` without making progress                        |
 //!     | `!e`         | matches if `e` doesn't match without making progress       |
@@ -287,6 +289,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
                 GrammarRule::optional_operator => "`?`".to_owned(),
                 GrammarRule::repeat_operator => "`*`".to_owned(),
                 GrammarRule::repeat_once_operator => "`+`".to_owned(),
+                GrammarRule::comma => "`,`".to_owned(),
                 GrammarRule::closing_paren => "`)`".to_owned(),
                 GrammarRule::quote => "`\"`".to_owned(),
                 GrammarRule::insensitive_string => "`^`".to_owned(),

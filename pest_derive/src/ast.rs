@@ -36,6 +36,7 @@ pub enum Expr {
     Opt(Box<Expr>),
     Rep(Box<Expr>),
     RepOnce(Box<Expr>),
+    RepMinMax(Box<Expr>, u32, u32),
     Push(Box<Expr>)
 }
 
@@ -71,6 +72,10 @@ impl Expr {
                 Expr::RepOnce(expr) => {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::RepOnce(mapped)
+                }
+                Expr::RepMinMax(expr, min, max) => {
+                    let mapped = Box::new(map_internal(*expr, f));
+                    Expr::RepMinMax(mapped, min, max)
                 }
                 Expr::Opt(expr) => {
                     let mapped = Box::new(map_internal(*expr, f));
@@ -116,6 +121,10 @@ impl Expr {
                 Expr::RepOnce(expr) => {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::RepOnce(mapped)
+                }
+                Expr::RepMinMax(expr, min, max) => {
+                    let mapped = Box::new(map_internal(*expr, f));
+                    Expr::RepMinMax(mapped, min, max)
                 }
                 Expr::Opt(expr) => {
                     let mapped = Box::new(map_internal(*expr, f));
