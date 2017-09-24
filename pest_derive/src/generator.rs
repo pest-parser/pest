@@ -444,27 +444,6 @@ fn generate_expr(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::RepOnce(expr) => {
-            let expr = generate_expr(*expr);
-
-            quote! {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        #expr.and_then(|pos| {
-                            pos.repeat(|pos| {
-                                state.sequence(move |state| {
-                                    pos.sequence(|pos| {
-                                        self::skip(pos, state).and_then(|pos| {
-                                            #expr
-                                        })
-                                    })
-                                })
-                            })
-                        })
-                    })
-                })
-            }
-        }
         Expr::Push(expr) => {
             let expr = generate_expr(*expr);
 
@@ -482,6 +461,7 @@ fn generate_expr(expr: Expr) -> Tokens {
                 }
             }
         }
+        _ => unreachable!()
     }
 }
 
@@ -623,21 +603,6 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::RepOnce(expr) => {
-            let expr = generate_expr_atomic(*expr);
-
-            quote! {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        #expr.and_then(|pos| {
-                            pos.repeat(|pos| {
-                                #expr
-                            })
-                        })
-                    })
-                })
-            }
-        }
         Expr::Push(expr) => {
             let expr = generate_expr_atomic(*expr);
 
@@ -655,6 +620,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                 }
             }
         }
+        _ => unreachable!()
     }
 }
 
@@ -798,7 +764,7 @@ mod tests {
                 Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
                 Box::new(Expr::Seq(
                     Box::new(Expr::NegPred(
-                        Box::new(Expr::RepOnce(
+                        Box::new(Expr::Rep(
                             Box::new(Expr::Insens("b".to_owned()))
                         ))
                     )),
@@ -827,7 +793,9 @@ mod tests {
                                 pos.lookahead(false, |pos| {
                                     state.sequence(move |state| {
                                         pos.sequence(|pos| {
-                                            pos.match_insensitive("b").and_then(|pos| {
+                                            pos.optional(|pos| {
+                                                pos.match_insensitive("b")
+                                            }).and_then(|pos| {
                                                 pos.repeat(|pos| {
                                                     state.sequence(move |state| {
                                                         pos.sequence(|pos| {
@@ -891,7 +859,7 @@ mod tests {
                 Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
                 Box::new(Expr::Seq(
                     Box::new(Expr::NegPred(
-                        Box::new(Expr::RepOnce(
+                        Box::new(Expr::Rep(
                             Box::new(Expr::Insens("b".to_owned()))
                         ))
                     )),
@@ -916,14 +884,8 @@ mod tests {
                         pos.match_range('a'..'b').and_then(|pos| {
                             state.lookahead(false, move |state| {
                                 pos.lookahead(false, |pos| {
-                                    state.sequence(move |state| {
-                                        pos.sequence(|pos| {
-                                            pos.match_insensitive("b").and_then(|pos| {
-                                                pos.repeat(|pos| {
-                                                    pos.match_insensitive("b")
-                                                })
-                                            })
-                                        })
+                                    pos.repeat(|pos| {
+                                        pos.match_insensitive("b")
                                     })
                                 })
                             })

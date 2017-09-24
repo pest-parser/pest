@@ -40,55 +40,72 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
             }
         };
 
+        let unpack_repetitions = |expr| {
+            match expr {
+                Expr::RepOnce(expr) => {
+                    Expr::Seq(
+                        expr.clone(),
+                        Box::new(Expr::Rep(expr))
+                    )
+                }
+                expr => expr
+            }
+        };
+
         match rule {
             Rule { name, ty, expr } => Rule {
                 name,
                 ty,
-                expr: expr.map_bottom_up(rotate_right).map_bottom_up(|expr| {
-                    if ty == RuleType::Atomic {
-                        // TODO: Use box syntax when it gets stabilized.
-                        match expr {
-                            Expr::Seq(lhs, rhs) => {
-                                match (*lhs, *rhs) {
-                                    (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),
-                                    (Expr::Insens(lhs), Expr::Insens(rhs)) => {
-                                        Expr::Insens(lhs + &rhs)
-                                    }
-                                    (lhs, rhs) => Expr::Seq(Box::new(lhs), Box::new(rhs))
-                                }
-                            }
-                            expr => expr
-                        }
-                    } else {
-                        expr
-                    }
-                }).map_top_down(|expr| {
-                    // TODO: Use box syntax when it gets stabilized.
-                    match expr {
-                        Expr::Choice(lhs, rhs) => {
-                            match (*lhs, *rhs) {
-                                (Expr::Seq(l1, r1), Expr::Seq(l2, r2)) => {
-                                    if l1 == l2 {
-                                        Expr::Seq(
-                                            l1,
-                                            Box::new(Expr::Choice(
-                                                r1,
-                                                r2
-                                            ))
-                                        )
-                                    } else {
-                                        Expr::Choice(
-                                            Box::new(Expr::Seq(l1, r1)),
-                                            Box::new(Expr::Seq(l2, r2))
-                                        )
-                                    }
-                                }
-                                (lhs, rhs) => Expr::Choice(Box::new(lhs), Box::new(rhs))
-                            }
-                        }
-                        expr => expr
-                    }
-                })
+                expr: expr.map_bottom_up(rotate_right)
+                          .map_bottom_up(unpack_repetitions)
+                          .map_bottom_up(|expr| {
+                              if ty == RuleType::Atomic {
+                                  // TODO: Use box syntax when it gets stabilized.
+                                  match expr {
+                                      Expr::Seq(lhs, rhs) => {
+                                          match (*lhs, *rhs) {
+                                              (Expr::Str(lhs), Expr::Str(rhs)) => {
+                                                  Expr::Str(lhs + &rhs)
+                                              }
+                                              (Expr::Insens(lhs), Expr::Insens(rhs)) => {
+                                                  Expr::Insens(lhs + &rhs)
+                                              }
+                                              (lhs, rhs) => Expr::Seq(Box::new(lhs), Box::new(rhs))
+                                          }
+                                      }
+                                      expr => expr
+                                  }
+                              } else {
+                                  expr
+                              }
+                          })
+                          .map_top_down(|expr| {
+                              // TODO: Use box syntax when it gets stabilized.
+                              match expr {
+                                  Expr::Choice(lhs, rhs) => {
+                                      match (*lhs, *rhs) {
+                                          (Expr::Seq(l1, r1), Expr::Seq(l2, r2)) => {
+                                              if l1 == l2 {
+                                                  Expr::Seq(
+                                                      l1,
+                                                      Box::new(Expr::Choice(
+                                                          r1,
+                                                          r2
+                                                      ))
+                                                  )
+                                              } else {
+                                                  Expr::Choice(
+                                                      Box::new(Expr::Seq(l1, r1)),
+                                                      Box::new(Expr::Seq(l2, r2))
+                                                  )
+                                              }
+                                          }
+                                          (lhs, rhs) => Expr::Choice(Box::new(lhs), Box::new(rhs))
+                                      }
+                                  }
+                                  expr => expr
+                              }
+                          })
             }
         }
     }).collect()
