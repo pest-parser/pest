@@ -226,8 +226,8 @@
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
 #![recursion_limit="256"]
 
-#[macro_use]
 extern crate pest;
+extern crate pest_meta;
 extern crate proc_macro;
 #[macro_use]
 extern crate quote;
@@ -243,13 +243,11 @@ use proc_macro::TokenStream;
 use quote::Ident;
 use syn::{Attribute, Lit, MetaItem};
 
-mod ast;
 mod generator;
 mod optimizer;
-mod parser;
-mod validator;
 
 use parser::{GrammarParser, GrammarRule};
+use pest_meta::{ast, parser};
 
 #[proc_macro_derive(Parser, attributes(grammar))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {

@@ -2,5 +2,6 @@
 members = [
     "pest",
     "pest_derive",
-    "pest_grammars"
+    "pest_grammars",
+    "pest_meta"
 ]
