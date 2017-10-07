@@ -13,9 +13,9 @@ use pest::iterators::Pairs;
 
 use quote::Ident;
 
-use super::parser::{GrammarRule, ParserExpr, ParserNode, ParserRule};
+use super::parser::{PestRule, ParserExpr, ParserNode, ParserRule};
 
-pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
+pub fn validate_pairs<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<Ident> {
     let mut rust_keywords = HashSet::new();
     rust_keywords.insert("abstract");
     rust_keywords.insert("alignof");
@@ -86,7 +86,7 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
     predefined.insert("soi");
 
     let definitions: Vec<_> = pairs.clone()
-                                   .filter(|pair| pair.as_rule() == GrammarRule::grammar_rule)
+                                   .filter(|pair| pair.as_rule() == PestRule::grammar_rule)
                                    .map(|pair| {
                                        pair.into_inner()
                                            .next()
@@ -94,10 +94,10 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
                                            .into_span()
                                    }).collect();
     let called_rules: Vec<_> = pairs.clone()
-                                    .filter(|pair| pair.as_rule() == GrammarRule::grammar_rule)
+                                    .filter(|pair| pair.as_rule() == PestRule::grammar_rule)
                                     .flat_map(|pair| {
                                         pair.into_inner().flatten().skip(1).filter(|pair| {
-                                            pair.as_rule() == GrammarRule::identifier
+                                            pair.as_rule() == PestRule::identifier
                                         }).map(|pair| {
                                             pair.into_span()
                                         })
@@ -129,7 +129,7 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
 pub fn validate_rust_keywords<I: Input>(
     definitions: &Vec<Span<I>>,
     rust_keywords: &HashSet<&str>
-) -> Vec<Error<GrammarRule, I>> {
+) -> Vec<Error<PestRule, I>> {
     let mut errors = vec![];
 
     for definition in definitions {
@@ -149,7 +149,7 @@ pub fn validate_rust_keywords<I: Input>(
 pub fn validate_pest_keywords<I: Input>(
     definitions: &Vec<Span<I>>,
     pest_keywords: &HashSet<&str>
-) -> Vec<Error<GrammarRule, I>> {
+) -> Vec<Error<PestRule, I>> {
     let mut errors = vec![];
 
     for definition in definitions {
@@ -168,7 +168,7 @@ pub fn validate_pest_keywords<I: Input>(
 
 pub fn validate_already_defined<I: Input>(
     definitions: &Vec<Span<I>>
-) -> Vec<Error<GrammarRule, I>> {
+) -> Vec<Error<PestRule, I>> {
     let mut errors = vec![];
     let mut defined = HashSet::new();
 
@@ -192,7 +192,7 @@ pub fn validate_undefined<I: Input>(
     definitions: &Vec<Span<I>>,
     called_rules: &Vec<Span<I>>,
     predefined: &HashSet<&str>
-) -> Vec<Error<GrammarRule, I>> {
+) -> Vec<Error<PestRule, I>> {
     let mut errors = vec![];
     let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
 
@@ -264,7 +264,7 @@ fn is_non_failing<I: Input>(expr: &ParserExpr<I>) -> bool {
     }
 }
 
-fn validate_repetition<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
+fn validate_repetition<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<PestRule, I>> {
     rules.into_iter().filter_map(|rule| {
         match rule.node.expr {
             ParserExpr::Rep(ref other) | ParserExpr::RepOnce(ref other)=> {
@@ -289,7 +289,7 @@ fn validate_repetition<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<Gramma
     }).collect()
 }
 
-fn validate_whitespace_comment<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
+fn validate_whitespace_comment<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<PestRule, I>> {
     rules.into_iter().filter_map(|rule| {
         if &rule.name == "whitespace" || &rule.name == "comment" {
             if is_non_failing(&rule.node.expr) {
@@ -312,7 +312,7 @@ fn validate_whitespace_comment<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Erro
     }).collect()
 }
 
-fn validate_left_recursion<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
+fn validate_left_recursion<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<PestRule, I>> {
     left_recursion(to_hash_map(rules))
 }
 
@@ -326,12 +326,12 @@ fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<Ident, &ParserNo
     hash_map
 }
 
-fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<GrammarRule, I>> {
+fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<PestRule, I>> {
     fn check_expr<I: Input>(
         node: &ParserNode<I>,
         rules: &HashMap<Ident, &ParserNode<I>>,
         trace: &mut Vec<Ident>
-    ) -> Option<Error<GrammarRule, I>> {
+    ) -> Option<Error<PestRule, I>> {
         match node.expr {
             ParserExpr::Ident(ref other)  => {
                 if trace[0] == other {
@@ -398,7 +398,7 @@ mod tests {
     use pest::Parser;
 
     use super::*;
-    use super::super::parser::{GrammarParser, consume_rules};
+    use super::super::parser::{PestParser, consume_rules};
 
     #[test]
     #[should_panic(expected = "grammar error
@@ -411,7 +411,7 @@ mod tests {
   = let is a rust keyword")]
     fn rust_keyword() {
         let input = "let = { \"a\" }";
-        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -425,7 +425,7 @@ mod tests {
   = any is a pest keyword")]
     fn pest_keyword() {
         let input = "any = { \"a\" }";
-        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -439,7 +439,7 @@ mod tests {
   = rule a already defined")]
     fn already_defined() {
         let input = "a = { \"a\" } a = { \"a\" }";
-        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -453,13 +453,13 @@ mod tests {
   = rule b is undefined")]
     fn undefined() {
         let input = "a = { b }";
-        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
     fn valid_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"b\") ~ a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -473,7 +473,7 @@ mod tests {
   = whitespace is non-failing and will repeat infinitely")]
     fn non_failing_whitespace() {
         let input = "whitespace = { \"\" }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -487,7 +487,7 @@ mod tests {
   = comment is non-progressing and will repeat infinitely")]
     fn non_progressing_comment() {
         let input = "comment = { soi }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -501,7 +501,7 @@ mod tests {
   = expression inside repetition is non-failing and will repeat infinitely")]
     fn non_failing_repetition() {
         let input = "a = { (\"\")* }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -515,7 +515,7 @@ mod tests {
   = expression inside repetition is non-progressing and will repeat infinitely")]
     fn non_progressing_repetition() {
         let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -529,7 +529,7 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn simple_left_recursion() {
         let input = "a = { a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -550,7 +550,7 @@ mod tests {
   = rule a is left-recursive (a -> b -> a); pest::prec_climber might be useful in this case")]
     fn indirect_left_recursion() {
         let input = "a = { b } b = { a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -564,7 +564,7 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn non_failing_left_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -578,6 +578,6 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn non_primary_choice_left_recursion() {
         let input = "a = { \"a\" | a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
     }
 }

@@ -20,7 +20,7 @@ use super::validator;
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum GrammarRule {
+pub enum PestRule {
     grammar_rules,
     soi,
     eoi,
@@ -57,16 +57,16 @@ pub enum GrammarRule {
     single_quote
 }
 
-pub struct GrammarParser;
+pub struct PestParser;
 
-impl Parser<GrammarRule> for GrammarParser {
+impl Parser<PestRule> for PestParser {
     fn parse<I: Input>(
-        rule: GrammarRule,
+        rule: PestRule,
         input: Rc<I>
-    ) -> Result<Pairs<GrammarRule, I>, Error<GrammarRule, I>> {
+    ) -> Result<Pairs<PestRule, I>, Error<PestRule, I>> {
         fn grammar_rules<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.sequence(|pos| {
                 soi(pos, state).and_then(|pos| {
@@ -93,23 +93,23 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn soi<I: Input>(
             pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
+            _: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.at_start()
         }
 
         fn eoi<I: Input>(
             pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
+            _: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.at_end()
         }
 
         fn grammar_rule<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::grammar_rule, pos, |state, pos| {
+            state.rule(PestRule::grammar_rule, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
                         identifier(pos, state).and_then(|pos| {
@@ -142,16 +142,16 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn assignment_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::assignment_operator, pos, |_, pos| {
+            state.rule(PestRule::assignment_operator, pos, |_, pos| {
                 pos.match_string("=")
             })
         }
 
         fn modifier<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             silent_modifier(pos, state).or_else(|pos| {
                 atomic_modifier(pos, state)
@@ -164,81 +164,81 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn silent_modifier<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::silent_modifier, pos, |_, pos| {
+            state.rule(PestRule::silent_modifier, pos, |_, pos| {
                 pos.match_string("_")
             })
         }
 
         fn atomic_modifier<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::atomic_modifier, pos, |_, pos| {
+            state.rule(PestRule::atomic_modifier, pos, |_, pos| {
                 pos.match_string("@")
             })
         }
 
         fn compound_atomic_modifier<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::compound_atomic_modifier, pos, |_, pos| {
+            state.rule(PestRule::compound_atomic_modifier, pos, |_, pos| {
                 pos.match_string("$")
             })
         }
 
         fn non_atomic_modifier<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::non_atomic_modifier, pos, |_, pos| {
+            state.rule(PestRule::non_atomic_modifier, pos, |_, pos| {
                 pos.match_string("!")
             })
         }
 
         fn opening_brace<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::opening_brace, pos, |_, pos| {
+            state.rule(PestRule::opening_brace, pos, |_, pos| {
                 pos.match_string("{")
             })
         }
 
         fn closing_brace<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::closing_brace, pos, |_, pos| {
+            state.rule(PestRule::closing_brace, pos, |_, pos| {
                 pos.match_string("}")
             })
         }
 
         fn opening_paren<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::opening_paren, pos, |_, pos| {
+            state.rule(PestRule::opening_paren, pos, |_, pos| {
                 pos.match_string("(")
             })
         }
 
         fn closing_paren<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::closing_paren, pos, |_, pos| {
+            state.rule(PestRule::closing_paren, pos, |_, pos| {
                 pos.match_string(")")
             })
         }
 
         fn expression<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::expression, pos, |state, pos| {
+            state.rule(PestRule::expression, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
                         term(pos, state).and_then(|pos| {
@@ -263,9 +263,9 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn term<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::term, pos, |state, pos| {
+            state.rule(PestRule::term, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
                         pos.repeat(|pos| {
@@ -306,7 +306,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn terminal<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             push(pos, state).or_else(|pos| {
                 identifier(pos, state)
@@ -321,7 +321,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn prefix_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             positive_predicate_operator(pos, state).or_else(|pos| {
                 negative_predicate_operator(pos, state)
@@ -330,7 +330,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn infix_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             sequence_operator(pos, state).or_else(|pos| {
                 choice_operator(pos, state)
@@ -339,7 +339,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn postfix_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             optional_operator(pos, state).or_else(|pos| {
                 repeat_operator(pos, state)
@@ -352,72 +352,72 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn positive_predicate_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::positive_predicate_operator, pos, |_, pos| {
+            state.rule(PestRule::positive_predicate_operator, pos, |_, pos| {
                 pos.match_string("&")
             })
         }
 
         fn negative_predicate_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::negative_predicate_operator, pos, |_, pos| {
+            state.rule(PestRule::negative_predicate_operator, pos, |_, pos| {
                 pos.match_string("!")
             })
         }
 
         fn sequence_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::sequence_operator, pos, |_, pos| {
+            state.rule(PestRule::sequence_operator, pos, |_, pos| {
                 pos.match_string("~")
             })
         }
 
         fn choice_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::choice_operator, pos, |_, pos| {
+            state.rule(PestRule::choice_operator, pos, |_, pos| {
                 pos.match_string("|")
             })
         }
 
         fn optional_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::optional_operator, pos, |_, pos| {
+            state.rule(PestRule::optional_operator, pos, |_, pos| {
                 pos.match_string("?")
             })
         }
 
         fn repeat_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::repeat_operator, pos, |_, pos| {
+            state.rule(PestRule::repeat_operator, pos, |_, pos| {
                 pos.match_string("*")
             })
         }
 
         fn repeat_once_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::repeat_once_operator, pos, |_, pos| {
+            state.rule(PestRule::repeat_once_operator, pos, |_, pos| {
                 pos.match_string("+")
             })
         }
 
         fn repeat_min_max<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::repeat_min_max, pos, |state, pos| {
+            state.rule(PestRule::repeat_min_max, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
                         opening_brace(pos, state).and_then(|pos| {
@@ -448,18 +448,18 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn comma<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::comma, pos, |_, pos| {
+            state.rule(PestRule::comma, pos, |_, pos| {
                 pos.match_string(",")
             })
         }
 
         fn push<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::push, pos, |state, pos| {
+            state.rule(PestRule::push, pos, |state, pos| {
                 pos.sequence(|pos| {
                     pos.match_string("push").and_then(|pos| {
                         skip(pos, state)
@@ -480,9 +480,9 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn identifier<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::identifier, pos, |state, pos| {
+            state.rule(PestRule::identifier, pos, |state, pos| {
                 pos.sequence(|pos| {
                     pos.lookahead(false, |pos| {
                         pos.match_string("push")
@@ -503,7 +503,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn alpha<I: Input>(
             pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
+            _: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.match_range('a'..'z').or_else(|pos| {
                 pos.match_range('A'..'Z')
@@ -512,7 +512,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn alpha_num<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             alpha(pos, state).or_else(|pos| {
                 pos.match_range('0'..'9')
@@ -521,9 +521,9 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn string<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::string, pos, |state, pos| {
+            state.rule(PestRule::string, pos, |state, pos| {
                 pos.sequence(|pos| {
                     quote(pos, state).and_then(|pos| {
                         pos.repeat(|pos| {
@@ -548,18 +548,18 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn quote<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::quote, pos, |_, pos| {
+            state.rule(PestRule::quote, pos, |_, pos| {
                 pos.match_string("\"")
             })
         }
 
         fn insensitive_string<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::insensitive_string, pos, |state, pos| {
+            state.rule(PestRule::insensitive_string, pos, |state, pos| {
                 pos.sequence(|pos| {
                     pos.match_string("^").and_then(|pos| {
                         skip(pos, state)
@@ -572,9 +572,9 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn range<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::range, pos, |state, pos| {
+            state.rule(PestRule::range, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
                         character(pos, state).and_then(|pos| {
@@ -593,18 +593,18 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn range_operator<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::range_operator, pos, |_, pos| {
+            state.rule(PestRule::range_operator, pos, |_, pos| {
                 pos.match_string("..")
             })
         }
 
         fn character<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::character, pos, |state, pos| {
+            state.rule(PestRule::character, pos, |state, pos| {
                 pos.sequence(|pos| {
                     single_quote(pos, state).and_then(|pos| {
                         pos.sequence(|pos| {
@@ -627,9 +627,9 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn number<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::number, pos, |_, pos| {
+            state.rule(PestRule::number, pos, |_, pos| {
                 pos.sequence(|pos| {
                     pos.match_range('0'..'9').and_then(|pos| {
                         pos.repeat(|pos| {
@@ -642,16 +642,16 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn single_quote<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
-            state.rule(GrammarRule::single_quote, pos, |_, pos| {
+            state.rule(PestRule::single_quote, pos, |_, pos| {
                 pos.match_string("'")
             })
         }
 
         fn escape<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.sequence(|pos| {
                 pos.match_string("\\").and_then(|pos| {
@@ -678,7 +678,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn unicode<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.sequence(|pos| {
                 pos.match_string("u").and_then(|pos| {
@@ -711,7 +711,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn code<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.sequence(|pos| {
                 pos.match_string("x").and_then(|pos| {
@@ -724,7 +724,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn hex_digit<I: Input>(
             pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
+            _: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.match_range('0'..'9').or_else(|pos| {
                 pos.match_range('a'..'f')
@@ -735,7 +735,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn skip<I: Input>(
             pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
+            state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.sequence(|pos| {
                 pos.repeat(|pos| {
@@ -762,7 +762,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn whitespace<I: Input>(
             pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
+            _: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.match_string(" ").or_else(|pos| {
                 pos.match_string("\t")
@@ -775,7 +775,7 @@ impl Parser<GrammarRule> for GrammarParser {
 
         fn comment<I: Input>(
             pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
+            _: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.sequence(|pos| {
                 pos.match_string("//").and_then(|pos| {
@@ -794,44 +794,44 @@ impl Parser<GrammarRule> for GrammarParser {
 
         pest::state(input, move |mut state, pos| {
             match rule {
-                GrammarRule::grammar_rules => grammar_rules(pos, &mut state),
-                GrammarRule::soi => soi(pos, &mut state),
-                GrammarRule::eoi => eoi(pos, &mut state),
-                GrammarRule::grammar_rule => grammar_rule(pos, &mut state),
-                GrammarRule::assignment_operator => assignment_operator(pos, &mut state),
-                GrammarRule::silent_modifier => silent_modifier(pos, &mut state),
-                GrammarRule::atomic_modifier => atomic_modifier(pos, &mut state),
-                GrammarRule::compound_atomic_modifier => compound_atomic_modifier(pos, &mut state),
-                GrammarRule::non_atomic_modifier => non_atomic_modifier(pos, &mut state),
-                GrammarRule::opening_brace => opening_brace(pos, &mut state),
-                GrammarRule::closing_brace => closing_brace(pos, &mut state),
-                GrammarRule::opening_paren => opening_paren(pos, &mut state),
-                GrammarRule::closing_paren => closing_paren(pos, &mut state),
-                GrammarRule::expression => expression(pos, &mut state),
-                GrammarRule::term => term(pos, &mut state),
-                GrammarRule::positive_predicate_operator => {
+                PestRule::grammar_rules => grammar_rules(pos, &mut state),
+                PestRule::soi => soi(pos, &mut state),
+                PestRule::eoi => eoi(pos, &mut state),
+                PestRule::grammar_rule => grammar_rule(pos, &mut state),
+                PestRule::assignment_operator => assignment_operator(pos, &mut state),
+                PestRule::silent_modifier => silent_modifier(pos, &mut state),
+                PestRule::atomic_modifier => atomic_modifier(pos, &mut state),
+                PestRule::compound_atomic_modifier => compound_atomic_modifier(pos, &mut state),
+                PestRule::non_atomic_modifier => non_atomic_modifier(pos, &mut state),
+                PestRule::opening_brace => opening_brace(pos, &mut state),
+                PestRule::closing_brace => closing_brace(pos, &mut state),
+                PestRule::opening_paren => opening_paren(pos, &mut state),
+                PestRule::closing_paren => closing_paren(pos, &mut state),
+                PestRule::expression => expression(pos, &mut state),
+                PestRule::term => term(pos, &mut state),
+                PestRule::positive_predicate_operator => {
                     positive_predicate_operator(pos, &mut state)
                 },
-                GrammarRule::negative_predicate_operator => {
+                PestRule::negative_predicate_operator => {
                     negative_predicate_operator(pos, &mut state)
                 },
-                GrammarRule::sequence_operator => sequence_operator(pos, &mut state),
-                GrammarRule::choice_operator => choice_operator(pos, &mut state),
-                GrammarRule::optional_operator => optional_operator(pos, &mut state),
-                GrammarRule::repeat_operator => repeat_operator(pos, &mut state),
-                GrammarRule::repeat_once_operator => repeat_once_operator(pos, &mut state),
-                GrammarRule::repeat_min_max => repeat_min_max(pos, &mut state),
-                GrammarRule::comma => comma(pos, &mut state),
-                GrammarRule::push => push(pos, &mut state),
-                GrammarRule::identifier => identifier(pos, &mut state),
-                GrammarRule::string => string(pos, &mut state),
-                GrammarRule::quote => quote(pos, &mut state),
-                GrammarRule::insensitive_string => insensitive_string(pos, &mut state),
-                GrammarRule::range => range(pos, &mut state),
-                GrammarRule::range_operator => range_operator(pos, &mut state),
-                GrammarRule::character => character(pos, &mut state),
-                GrammarRule::number => number(pos, &mut state),
-                GrammarRule::single_quote => single_quote(pos, &mut state)
+                PestRule::sequence_operator => sequence_operator(pos, &mut state),
+                PestRule::choice_operator => choice_operator(pos, &mut state),
+                PestRule::optional_operator => optional_operator(pos, &mut state),
+                PestRule::repeat_operator => repeat_operator(pos, &mut state),
+                PestRule::repeat_once_operator => repeat_once_operator(pos, &mut state),
+                PestRule::repeat_min_max => repeat_min_max(pos, &mut state),
+                PestRule::comma => comma(pos, &mut state),
+                PestRule::push => push(pos, &mut state),
+                PestRule::identifier => identifier(pos, &mut state),
+                PestRule::string => string(pos, &mut state),
+                PestRule::quote => quote(pos, &mut state),
+                PestRule::insensitive_string => insensitive_string(pos, &mut state),
+                PestRule::range => range(pos, &mut state),
+                PestRule::range_operator => range_operator(pos, &mut state),
+                PestRule::character => character(pos, &mut state),
+                PestRule::number => number(pos, &mut state),
+                PestRule::single_quote => single_quote(pos, &mut state)
             }
         })
     }
@@ -906,19 +906,19 @@ fn convert_node<I: Input>(node: ParserNode<I>) -> Expr {
     }
 }
 
-pub fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Rule> {
+pub fn consume_rules<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<Rule> {
     let rules = consume_rules_with_spans(pairs);
     validator::validate_ast(&rules);
     rules.into_iter().map(|rule| convert_rule(rule)).collect()
 }
 
-fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<ParserRule<I>> {
+fn consume_rules_with_spans<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<ParserRule<I>> {
     let climber = PrecClimber::new(vec![
-        Operator::new(GrammarRule::choice_operator, Assoc::Left),
-        Operator::new(GrammarRule::sequence_operator, Assoc::Left)
+        Operator::new(PestRule::choice_operator, Assoc::Left),
+        Operator::new(PestRule::sequence_operator, Assoc::Left)
     ]);
 
-    pairs.filter(|pair| pair.as_rule() == GrammarRule::grammar_rule).map(|pair| {
+    pairs.filter(|pair| pair.as_rule() == PestRule::grammar_rule).map(|pair| {
         let mut pairs = pair.into_inner().peekable();
 
         let span = pairs.next().unwrap().into_span();
@@ -926,12 +926,12 @@ fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Parse
 
         pairs.next().unwrap(); // assignment_operator
 
-        let ty = if pairs.peek().unwrap().as_rule() != GrammarRule::opening_brace {
+        let ty = if pairs.peek().unwrap().as_rule() != PestRule::opening_brace {
             match pairs.next().unwrap().as_rule() {
-                GrammarRule::silent_modifier => RuleType::Silent,
-                GrammarRule::atomic_modifier => RuleType::Atomic,
-                GrammarRule::compound_atomic_modifier => RuleType::CompoundAtomic,
-                GrammarRule::non_atomic_modifier => RuleType::NonAtomic,
+                PestRule::silent_modifier => RuleType::Silent,
+                PestRule::atomic_modifier => RuleType::Atomic,
+                PestRule::compound_atomic_modifier => RuleType::CompoundAtomic,
+                PestRule::non_atomic_modifier => RuleType::NonAtomic,
                 _ => unreachable!()
             }
         } else {
@@ -952,17 +952,17 @@ fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Parse
 }
 
 fn consume_expr<I: Input>(
-    pairs: Peekable<Pairs<GrammarRule, I>>,
-    climber: &PrecClimber<GrammarRule>
+    pairs: Peekable<Pairs<PestRule, I>>,
+    climber: &PrecClimber<PestRule>
 ) -> ParserNode<I> {
     fn unaries<I: Input>(
-        mut pairs: Peekable<Pairs<GrammarRule, I>>,
-        climber: &PrecClimber<GrammarRule>
+        mut pairs: Peekable<Pairs<PestRule, I>>,
+        climber: &PrecClimber<PestRule>
     ) -> ParserNode<I> {
         let pair = pairs.next().unwrap();
 
         match pair.as_rule() {
-            GrammarRule::opening_paren => {
+            PestRule::opening_paren => {
                 let node = unaries(pairs, climber);
                 let end = node.span.end_pos();
 
@@ -971,7 +971,7 @@ fn consume_expr<I: Input>(
                     span: pair.into_span().start_pos().span(end)
                 }
             }
-            GrammarRule::positive_predicate_operator => {
+            PestRule::positive_predicate_operator => {
                 let node = unaries(pairs, climber);
                 let end = node.span.end_pos();
 
@@ -980,7 +980,7 @@ fn consume_expr<I: Input>(
                     span: pair.into_span().start_pos().span(end)
                 }
             }
-            GrammarRule::negative_predicate_operator => {
+            PestRule::negative_predicate_operator => {
                 let node = unaries(pairs, climber);
                 let end = node.span.end_pos();
 
@@ -991,8 +991,8 @@ fn consume_expr<I: Input>(
             }
             other_rule => {
                 let node = match other_rule {
-                    GrammarRule::expression => consume_expr(pair.into_inner().peekable(), climber),
-                    GrammarRule::push => {
+                    PestRule::expression => consume_expr(pair.into_inner().peekable(), climber),
+                    PestRule::push => {
                         let start = pair.clone().into_span().start_pos();
                         let mut pairs = pair.into_inner();
                         pairs.next().unwrap(); // opening_paren
@@ -1007,27 +1007,27 @@ fn consume_expr<I: Input>(
                         }
 
                     }
-                    GrammarRule::identifier => {
+                    PestRule::identifier => {
                         ParserNode {
                             expr: ParserExpr::Ident(Ident::new(pair.as_str())),
                             span: pair.clone().into_span()
                         }
                     }
-                    GrammarRule::string => {
+                    PestRule::string => {
                         let string = pair.as_str();
                         ParserNode {
                             expr: ParserExpr::Str(string[1..string.len() - 1].to_owned()),
                             span: pair.clone().into_span()
                         }
                     }
-                    GrammarRule::insensitive_string => {
+                    PestRule::insensitive_string => {
                         let string = pair.as_str();
                         ParserNode {
                             expr: ParserExpr::Insens(string[2..string.len() - 1].to_owned()),
                             span: pair.clone().into_span()
                         }
                     }
-                    GrammarRule::range => {
+                    PestRule::range => {
                         let mut pairs = pair.into_inner();
                         let pair = pairs.next().unwrap();
                         let start = pair.as_str();
@@ -1047,28 +1047,28 @@ fn consume_expr<I: Input>(
 
                 pairs.fold(node, |node, pair| {
                     match pair.as_rule() {
-                        GrammarRule::optional_operator => {
+                        PestRule::optional_operator => {
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::Opt(Box::new(node)),
                                 span: start.span(pair.into_span().end_pos())
                             }
                         }
-                        GrammarRule::repeat_operator => {
+                        PestRule::repeat_operator => {
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::Rep(Box::new(node)),
                                 span: start.span(pair.into_span().end_pos())
                             }
                         }
-                        GrammarRule::repeat_once_operator => {
+                        PestRule::repeat_once_operator => {
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::RepOnce(Box::new(node)),
                                 span: start.span(pair.into_span().end_pos())
                             }
                         }
-                        GrammarRule::repeat_min_max => {
+                        PestRule::repeat_min_max => {
                             let overflow = |span| {
                                 let error: Error<(), _> = Error::CustomErrorSpan {
                                     message: "number cannot overflow u32".to_owned(),
@@ -1088,7 +1088,7 @@ fn consume_expr<I: Input>(
                                                  .expect(&overflow(number.into_span()));
 
                             match inner.next().unwrap().as_rule() {
-                                GrammarRule::comma => {
+                                PestRule::comma => {
                                     let number = inner.next().unwrap();
                                     let max: u32 = number.as_str()
                                                          .parse()
@@ -1100,7 +1100,7 @@ fn consume_expr<I: Input>(
                                         span: start.span(pair.into_span().end_pos())
                                     }
                                 }
-                                GrammarRule::closing_brace => {
+                                PestRule::closing_brace => {
                                     let start = node.span.start_pos();
                                     ParserNode {
                                         expr: ParserExpr::RepMinMax(Box::new(node), min, min),
@@ -1110,7 +1110,7 @@ fn consume_expr<I: Input>(
                                 _ => unreachable!()
                             }
                         }
-                        GrammarRule::closing_paren => {
+                        PestRule::closing_paren => {
                             let start = node.span.start_pos();
 
                             ParserNode {
@@ -1126,12 +1126,12 @@ fn consume_expr<I: Input>(
         }
     }
 
-    let term = |pair: Pair<GrammarRule, I>| {
+    let term = |pair: Pair<PestRule, I>| {
         unaries(pair.into_inner().peekable(), climber)
     };
-    let infix = |lhs: ParserNode<I>, op: Pair<GrammarRule, I>, rhs: ParserNode<I>| {
+    let infix = |lhs: ParserNode<I>, op: Pair<PestRule, I>, rhs: ParserNode<I>| {
         match op.as_rule() {
-            GrammarRule::sequence_operator => {
+            PestRule::sequence_operator => {
                 let start = lhs.span.start_pos();
                 let end = rhs.span.end_pos();
 
@@ -1140,7 +1140,7 @@ fn consume_expr<I: Input>(
                     span: start.span(end)
                 }
             },
-            GrammarRule::choice_operator => {
+            PestRule::choice_operator => {
                 let start = lhs.span.start_pos();
                 let end = rhs.span.end_pos();
 
@@ -1163,9 +1163,9 @@ mod tests {
     #[test]
     fn rules() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = { b } c = { d }",
-            rule: GrammarRule::grammar_rules,
+            rule: PestRule::grammar_rules,
             tokens: [
                 grammar_rule(0, 9, [
                     identifier(0, 1),
@@ -1196,9 +1196,9 @@ mod tests {
     #[test]
     fn rule() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = ! { b ~ c }",
-            rule: GrammarRule::grammar_rule,
+            rule: PestRule::grammar_rule,
             tokens: [
                 grammar_rule(0, 15, [
                     identifier(0, 1),
@@ -1223,9 +1223,9 @@ mod tests {
     #[test]
     fn expression() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "_a | 'a'..'b' ~ !^\"abc\" ~ (d | e)*?",
-            rule: GrammarRule::expression,
+            rule: PestRule::expression,
             tokens: [
                 expression(0, 35, [
                     term(0, 2, [
@@ -1279,9 +1279,9 @@ mod tests {
     #[test]
     fn repeat_min_max() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "{1, 2}",
-            rule: GrammarRule::repeat_min_max,
+            rule: PestRule::repeat_min_max,
             tokens: [
                 repeat_min_max(0, 6, [
                     opening_brace(0, 1),
@@ -1297,9 +1297,9 @@ mod tests {
     #[test]
     fn repeat_exact() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "{1}",
-            rule: GrammarRule::repeat_min_max,
+            rule: PestRule::repeat_min_max,
             tokens: [
                 repeat_min_max(0, 3, [
                     opening_brace(0, 1),
@@ -1313,9 +1313,9 @@ mod tests {
     #[test]
     fn push() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "push ( a )",
-            rule: GrammarRule::push,
+            rule: PestRule::push,
             tokens: [
                 push(0, 10, [
                     opening_paren(5, 6),
@@ -1333,9 +1333,9 @@ mod tests {
     #[test]
     fn identifier() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "_a8943",
-            rule: GrammarRule::identifier,
+            rule: PestRule::identifier,
             tokens: [
                 identifier(0, 6)
             ]
@@ -1345,9 +1345,9 @@ mod tests {
     #[test]
     fn string() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "\"aaaaa\\n\\r\\t\\\\\\0\\'\\\"\\x0F\\u{123abC}\\u{12}aaaaa\"",
-            rule: GrammarRule::string,
+            rule: PestRule::string,
             tokens: [
                 string(0, 46, [
                     quote(0, 1),
@@ -1360,9 +1360,9 @@ mod tests {
     #[test]
     fn insensitive_string() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "^  \"\\\"hi\"",
-            rule: GrammarRule::insensitive_string,
+            rule: PestRule::insensitive_string,
             tokens: [
                 insensitive_string(0, 9, [
                     string(3, 9, [
@@ -1377,9 +1377,9 @@ mod tests {
     #[test]
     fn range() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "'\\n' .. '\\x1a'",
-            rule: GrammarRule::range,
+            rule: PestRule::range,
             tokens: [
                 range(0, 14, [
                     character(0, 4, [
@@ -1399,9 +1399,9 @@ mod tests {
     #[test]
     fn character() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "'\\u{123abC}'",
-            rule: GrammarRule::character,
+            rule: PestRule::character,
             tokens: [
                 character(0, 12, [
                     single_quote(0, 1),
@@ -1414,9 +1414,9 @@ mod tests {
     #[test]
     fn number() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "0123",
-            rule: GrammarRule::number,
+            rule: PestRule::number,
             tokens: [
                 number(0, 4)
             ]
@@ -1426,9 +1426,9 @@ mod tests {
     #[test]
     fn comment() {
         parses_to! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a ~    // asda\n b",
-            rule: GrammarRule::expression,
+            rule: PestRule::expression,
             tokens: [
                 expression(0, 17, [
                     term(0, 1, [
@@ -1446,10 +1446,10 @@ mod tests {
     #[test]
     fn wrong_identifier() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "0",
-            rule: GrammarRule::grammar_rules,
-            positives: vec![GrammarRule::identifier],
+            rule: PestRule::grammar_rules,
+            positives: vec![PestRule::identifier],
             negatives: vec![],
             pos: 0
         };
@@ -1458,10 +1458,10 @@ mod tests {
     #[test]
     fn missing_assignment_operator() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a {}",
-            rule: GrammarRule::grammar_rules,
-            positives: vec![GrammarRule::assignment_operator],
+            rule: PestRule::grammar_rules,
+            positives: vec![PestRule::assignment_operator],
             negatives: vec![],
             pos: 2
         };
@@ -1470,15 +1470,15 @@ mod tests {
     #[test]
     fn wrong_modifier() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = *{}",
-            rule: GrammarRule::grammar_rules,
+            rule: PestRule::grammar_rules,
             positives: vec![
-                GrammarRule::silent_modifier,
-                GrammarRule::atomic_modifier,
-                GrammarRule::compound_atomic_modifier,
-                GrammarRule::non_atomic_modifier,
-                GrammarRule::opening_brace
+                PestRule::silent_modifier,
+                PestRule::atomic_modifier,
+                PestRule::compound_atomic_modifier,
+                PestRule::non_atomic_modifier,
+                PestRule::opening_brace
             ],
             negatives: vec![],
             pos: 4
@@ -1488,10 +1488,10 @@ mod tests {
     #[test]
     fn missing_opening_brace() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = _",
-            rule: GrammarRule::grammar_rules,
-            positives: vec![GrammarRule::opening_brace],
+            rule: PestRule::grammar_rules,
+            positives: vec![PestRule::opening_brace],
             negatives: vec![],
             pos: 5
         };
@@ -1500,10 +1500,10 @@ mod tests {
     #[test]
     fn empty_rule() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = {}",
-            rule: GrammarRule::grammar_rules,
-            positives: vec![GrammarRule::expression],
+            rule: PestRule::grammar_rules,
+            positives: vec![PestRule::expression],
             negatives: vec![],
             pos: 5
         };
@@ -1512,10 +1512,10 @@ mod tests {
     #[test]
     fn missing_rhs() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = { b ~ }",
-            rule: GrammarRule::grammar_rules,
-            positives: vec![GrammarRule::term],
+            rule: PestRule::grammar_rules,
+            positives: vec![PestRule::term],
             negatives: vec![],
             pos: 10
         };
@@ -1524,17 +1524,17 @@ mod tests {
     #[test]
     fn wrong_op() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = { b % }",
-            rule: GrammarRule::grammar_rules,
+            rule: PestRule::grammar_rules,
             positives: vec![
-                GrammarRule::opening_brace,
-                GrammarRule::closing_brace,
-                GrammarRule::sequence_operator,
-                GrammarRule::choice_operator,
-                GrammarRule::optional_operator,
-                GrammarRule::repeat_operator,
-                GrammarRule::repeat_once_operator
+                PestRule::opening_brace,
+                PestRule::closing_brace,
+                PestRule::sequence_operator,
+                PestRule::choice_operator,
+                PestRule::optional_operator,
+                PestRule::repeat_operator,
+                PestRule::repeat_once_operator
             ],
             negatives: vec![],
             pos: 8
@@ -1544,17 +1544,17 @@ mod tests {
     #[test]
     fn missing_closing_paren() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = { (b }",
-            rule: GrammarRule::grammar_rules,
+            rule: PestRule::grammar_rules,
             positives: vec![
-                GrammarRule::opening_brace,
-                GrammarRule::closing_paren,
-                GrammarRule::sequence_operator,
-                GrammarRule::choice_operator,
-                GrammarRule::optional_operator,
-                GrammarRule::repeat_operator,
-                GrammarRule::repeat_once_operator
+                PestRule::opening_brace,
+                PestRule::closing_paren,
+                PestRule::sequence_operator,
+                PestRule::choice_operator,
+                PestRule::optional_operator,
+                PestRule::repeat_operator,
+                PestRule::repeat_once_operator
             ],
             negatives: vec![],
             pos: 9
@@ -1564,18 +1564,18 @@ mod tests {
     #[test]
     fn missing_term() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = { ! }",
-            rule: GrammarRule::grammar_rules,
+            rule: PestRule::grammar_rules,
             positives: vec![
-                GrammarRule::opening_paren,
-                GrammarRule::positive_predicate_operator,
-                GrammarRule::negative_predicate_operator,
-                GrammarRule::push,
-                GrammarRule::identifier,
-                GrammarRule::quote,
-                GrammarRule::insensitive_string,
-                GrammarRule::single_quote
+                PestRule::opening_paren,
+                PestRule::positive_predicate_operator,
+                PestRule::negative_predicate_operator,
+                PestRule::push,
+                PestRule::identifier,
+                PestRule::quote,
+                PestRule::insensitive_string,
+                PestRule::single_quote
             ],
             negatives: vec![],
             pos: 8
@@ -1585,10 +1585,10 @@ mod tests {
     #[test]
     fn string_missing_ending_quote() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = { \" }",
-            rule: GrammarRule::grammar_rules,
-            positives: vec![GrammarRule::quote],
+            rule: PestRule::grammar_rules,
+            positives: vec![PestRule::quote],
             negatives: vec![],
             pos: 9
         };
@@ -1597,10 +1597,10 @@ mod tests {
     #[test]
     fn insensitive_missing_string() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = { ^ }",
-            rule: GrammarRule::grammar_rules,
-            positives: vec![GrammarRule::string],
+            rule: PestRule::grammar_rules,
+            positives: vec![PestRule::string],
             negatives: vec![],
             pos: 8
         };
@@ -1609,10 +1609,10 @@ mod tests {
     #[test]
     fn char_missing_ending_single_quote() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = { \' }",
-            rule: GrammarRule::grammar_rules,
-            positives: vec![GrammarRule::single_quote],
+            rule: PestRule::grammar_rules,
+            positives: vec![PestRule::single_quote],
             negatives: vec![],
             pos: 8
         };
@@ -1621,10 +1621,10 @@ mod tests {
     #[test]
     fn range_missing_range_operator() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = { \'a\' }",
-            rule: GrammarRule::grammar_rules,
-            positives: vec![GrammarRule::range_operator],
+            rule: PestRule::grammar_rules,
+            positives: vec![PestRule::range_operator],
             negatives: vec![],
             pos: 10
         };
@@ -1633,17 +1633,17 @@ mod tests {
     #[test]
     fn wrong_postfix() {
         fails_with! {
-            parser: GrammarParser,
+            parser: PestParser,
             input: "a = { a& }",
-            rule: GrammarRule::grammar_rules,
+            rule: PestRule::grammar_rules,
             positives: vec![
-                GrammarRule::opening_brace,
-                GrammarRule::closing_brace,
-                GrammarRule::sequence_operator,
-                GrammarRule::choice_operator,
-                GrammarRule::optional_operator,
-                GrammarRule::repeat_operator,
-                GrammarRule::repeat_once_operator
+                PestRule::opening_brace,
+                PestRule::closing_brace,
+                PestRule::sequence_operator,
+                PestRule::choice_operator,
+                PestRule::optional_operator,
+                PestRule::repeat_operator,
+                PestRule::repeat_once_operator
             ],
             negatives: vec![],
             pos: 7
@@ -1654,7 +1654,7 @@ mod tests {
     fn ast() {
         let input = "rule = _{ a{1} ~ \"b\"{1, 2} | !(^\"c\" | push('d'..'e'))?* }";
 
-        let pairs = GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap();
+        let pairs = PestParser::parse_str(PestRule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs);
         let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule)).collect();
 
