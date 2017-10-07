@@ -271,7 +271,6 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         Err(error) => panic!("error parsing {:?}\n\n{}", file_name, error.renamed_rules(|rule| {
             match *rule {
                 PestRule::grammar_rule => "rule".to_owned(),
-                PestRule::eoi => "end-of-input".to_owned(),
                 PestRule::assignment_operator => "`=`".to_owned(),
                 PestRule::silent_modifier => "`_`".to_owned(),
                 PestRule::atomic_modifier => "`@`".to_owned(),

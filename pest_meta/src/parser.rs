@@ -22,8 +22,6 @@ use super::validator;
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum PestRule {
     grammar_rules,
-    soi,
-    eoi,
     grammar_rule,
     assignment_operator,
     silent_modifier,
@@ -69,7 +67,7 @@ impl Parser<PestRule> for PestParser {
             state: &mut ParserState<PestRule, I>
         ) -> Result<Position<I>, Position<I>> {
             pos.sequence(|pos| {
-                soi(pos, state).and_then(|pos| {
+                pos.at_start().and_then(|pos| {
                     skip(pos, state)
                 }).and_then(|pos| {
                     grammar_rule(pos, state)
@@ -86,23 +84,9 @@ impl Parser<PestRule> for PestParser {
                 }).and_then(|pos| {
                     skip(pos, state)
                 }).and_then(|pos| {
-                    eoi(pos, state)
+                    pos.at_end()
                 })
             })
-        }
-
-        fn soi<I: Input>(
-            pos: Position<I>,
-            _: &mut ParserState<PestRule, I>
-        ) -> Result<Position<I>, Position<I>> {
-            pos.at_start()
-        }
-
-        fn eoi<I: Input>(
-            pos: Position<I>,
-            _: &mut ParserState<PestRule, I>
-        ) -> Result<Position<I>, Position<I>> {
-            pos.at_end()
         }
 
         fn grammar_rule<I: Input>(
@@ -795,8 +779,6 @@ impl Parser<PestRule> for PestParser {
         pest::state(input, move |mut state, pos| {
             match rule {
                 PestRule::grammar_rules => grammar_rules(pos, &mut state),
-                PestRule::soi => soi(pos, &mut state),
-                PestRule::eoi => eoi(pos, &mut state),
                 PestRule::grammar_rule => grammar_rule(pos, &mut state),
                 PestRule::assignment_operator => assignment_operator(pos, &mut state),
                 PestRule::silent_modifier => silent_modifier(pos, &mut state),
