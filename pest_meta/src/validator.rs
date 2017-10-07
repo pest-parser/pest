@@ -16,74 +16,15 @@ use quote::Ident;
 use super::parser::{PestRule, ParserExpr, ParserNode, ParserRule};
 
 pub fn validate_pairs<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<Ident> {
-    let mut rust_keywords = HashSet::new();
-    rust_keywords.insert("abstract");
-    rust_keywords.insert("alignof");
-    rust_keywords.insert("as");
-    rust_keywords.insert("become");
-    rust_keywords.insert("box");
-    rust_keywords.insert("break");
-    rust_keywords.insert("const");
-    rust_keywords.insert("continue");
-    rust_keywords.insert("crate");
-    rust_keywords.insert("do");
-    rust_keywords.insert("else");
-    rust_keywords.insert("enum");
-    rust_keywords.insert("extern");
-    rust_keywords.insert("false");
-    rust_keywords.insert("final");
-    rust_keywords.insert("fn");
-    rust_keywords.insert("for");
-    rust_keywords.insert("if");
-    rust_keywords.insert("impl");
-    rust_keywords.insert("in");
-    rust_keywords.insert("let");
-    rust_keywords.insert("loop");
-    rust_keywords.insert("macro");
-    rust_keywords.insert("match");
-    rust_keywords.insert("mod");
-    rust_keywords.insert("move");
-    rust_keywords.insert("mut");
-    rust_keywords.insert("offsetof");
-    rust_keywords.insert("override");
-    rust_keywords.insert("priv");
-    rust_keywords.insert("proc");
-    rust_keywords.insert("pure");
-    rust_keywords.insert("pub");
-    rust_keywords.insert("ref");
-    rust_keywords.insert("return");
-    rust_keywords.insert("Self");
-    rust_keywords.insert("self");
-    rust_keywords.insert("sizeof");
-    rust_keywords.insert("static");
-    rust_keywords.insert("struct");
-    rust_keywords.insert("super");
-    rust_keywords.insert("trait");
-    rust_keywords.insert("true");
-    rust_keywords.insert("type");
-    rust_keywords.insert("typeof");
-    rust_keywords.insert("unsafe");
-    rust_keywords.insert("unsized");
-    rust_keywords.insert("use");
-    rust_keywords.insert("virtual");
-    rust_keywords.insert("where");
-    rust_keywords.insert("while");
-    rust_keywords.insert("yield");
-
-    let mut pest_keywords = HashSet::new();
-    pest_keywords.insert("any");
-    pest_keywords.insert("eoi");
-    pest_keywords.insert("peek");
-    pest_keywords.insert("pop");
-    pest_keywords.insert("push");
-    pest_keywords.insert("soi");
-
-    let mut predefined = HashSet::new();
-    predefined.insert("any");
-    predefined.insert("eoi");
-    predefined.insert("peek");
-    predefined.insert("pop");
-    predefined.insert("soi");
+    let rust_keywords = hashset!{
+        "abstract", "alignof", "as", "become", "box", "break", "const", "continue", "crate", "do",
+        "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl", "in", "let", "loop",
+        "macro", "match", "mod", "move", "mut", "offsetof", "override", "priv", "proc", "pure",
+        "pub", "ref", "return", "Self", "self", "sizeof", "static", "struct", "super", "trait",
+        "true", "type", "typeof", "unsafe", "unsized", "use", "virtual", "where", "while", "yield"
+    };
+    let pest_keywords = hashset!{"any", "eoi", "peek", "pop", "push", "soi"};
+    let predefined = hashset!{"any", "eoi", "peek", "pop", "soi"};
 
     let definitions: Vec<_> = pairs.clone()
                                    .filter(|pair| pair.as_rule() == PestRule::grammar_rule)

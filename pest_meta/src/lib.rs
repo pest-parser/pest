@@ -6,6 +6,8 @@ extern crate pest;
 extern crate pest;
 
 extern crate quote;
+#[macro_use]
+extern crate maplit;
 
 pub mod parser;
 pub mod ast;
