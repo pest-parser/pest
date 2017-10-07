@@ -298,7 +298,8 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         }))
     };
 
-    let (ast, defaults) = parser::consume_rules(pairs);
+    let defaults = validator::validate_pairs(pairs.clone());
+    let ast = parser::consume_rules(pairs);
     let optimized = optimizer::optimize(ast);
     let generated = generator::generate(name, optimized, defaults);
 

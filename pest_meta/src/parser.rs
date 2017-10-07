@@ -906,13 +906,10 @@ fn convert_node<I: Input>(node: ParserNode<I>) -> Expr {
     }
 }
 
-pub fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> (Vec<Rule>, Vec<Ident>) {
-    let defaults = validator::validate_pairs(pairs.clone());
+pub fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Rule> {
     let rules = consume_rules_with_spans(pairs);
-
     validator::validate_ast(&rules);
-
-    (rules.into_iter().map(|rule| convert_rule(rule)).collect(), defaults)
+    rules.into_iter().map(|rule| convert_rule(rule)).collect()
 }
 
 fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<ParserRule<I>> {
