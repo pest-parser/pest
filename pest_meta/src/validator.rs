@@ -34,8 +34,7 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<Ident> {
                                            .unwrap()
                                            .into_span()
                                    }).collect();
-    let called_rules: Vec<_> = pairs.clone()
-                                    .filter(|pair| pair.as_rule() == PestRule::grammar_rule)
+    let called_rules: Vec<_> = pairs.filter(|pair| pair.as_rule() == PestRule::grammar_rule)
                                     .flat_map(|pair| {
                                         pair.into_inner().flatten().skip(1).filter(|pair| {
                                             pair.as_rule() == PestRule::identifier
@@ -67,66 +66,63 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<Ident> {
     defaults.into_iter().map(|string| Ident::new(*string)).collect()
 }
 
-pub fn validate_rust_keywords<I: Input>(
-    definitions: &Vec<Span<I>>,
+pub fn validate_rust_keywords<'a, I: Input+'a, Definitions: IntoIterator<Item=&'a Span<I>>>(
+    definitions: Definitions,
     rust_keywords: &HashSet<&str>
 ) -> Vec<Error<PestRule, I>> {
-    let mut errors = vec![];
+    definitions.into_iter()
+               .filter_map(|definition| {
+                   let name = definition.as_str();
 
-    for definition in definitions {
-        let name = definition.as_str();
-
-        if rust_keywords.contains(name) {
-            errors.push(Error::CustomErrorSpan {
-                message: format!("{} is a rust keyword", name),
-                span: definition.clone()
-            })
-        }
-    }
-
-    errors
+                   if rust_keywords.contains(name) {
+                       Some(Error::CustomErrorSpan {
+                           message: format!("{} is a rust keyword", name),
+                           span: definition.clone()
+                       })
+                   } else {
+                       None
+                   }
+               }).collect()
 }
 
-pub fn validate_pest_keywords<I: Input>(
-    definitions: &Vec<Span<I>>,
+pub fn validate_pest_keywords<'a, I: Input+'a, Definitions: IntoIterator<Item=&'a Span<I>>>(
+    definitions: Definitions,
     pest_keywords: &HashSet<&str>
 ) -> Vec<Error<PestRule, I>> {
-    let mut errors = vec![];
+    definitions.into_iter()
+               .filter_map(|definition| {
+                   let name = definition.as_str();
 
-    for definition in definitions {
-        let name = definition.as_str();
-
-        if pest_keywords.contains(name) {
-            errors.push(Error::CustomErrorSpan {
-                message: format!("{} is a pest keyword", name),
-                span: definition.clone()
-            })
-        }
-    }
-
-    errors
+                   if pest_keywords.contains(name) {
+                       Some(Error::CustomErrorSpan {
+                           message: format!("{} is a pest keyword", name),
+                           span: definition.clone()
+                       })
+                   } else {
+                       None
+                   }
+               }).collect()
 }
 
-pub fn validate_already_defined<I: Input>(
-    definitions: &Vec<Span<I>>
+pub fn validate_already_defined<'a, I: Input+'a, Definitions: IntoIterator<Item=&'a Span<I>>>(
+    definitions: Definitions
 ) -> Vec<Error<PestRule, I>> {
-    let mut errors = vec![];
+
     let mut defined = HashSet::new();
+    definitions.into_iter()
+               .filter_map(|definition| {
+                   let name = definition.as_str();
 
-    for definition in definitions {
-        let name = definition.as_str();
-
-        if defined.contains(&name) {
-            errors.push(Error::CustomErrorSpan {
-                message: format!("rule {} already defined", name),
-                span: definition.clone()
-            })
-        } else {
-            defined.insert(name);
-        }
-    }
-
-    errors
+                   if defined.insert(name) {
+                       None
+                   } else {
+                       Some(Error::CustomErrorSpan {
+                           message: format!("rule {} already defined", name),
+                           span: definition.clone()
+                       })
+                   }
+               })
+               .collect()
 }
 
 pub fn validate_undefined<I: Input>(
