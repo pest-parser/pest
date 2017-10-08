@@ -888,10 +888,14 @@ fn convert_node<I: Input>(node: ParserNode<I>) -> Expr {
     }
 }
 
-pub fn consume_rules<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<Rule> {
+pub fn consume_rules<I: Input>(pairs: Pairs<PestRule, I>) -> Result<Vec<Rule>, Vec<Error<PestRule, I>>> {
     let rules = consume_rules_with_spans(pairs);
-    validator::validate_ast(&rules);
-    rules.into_iter().map(|rule| convert_rule(rule)).collect()
+    let errors = validator::validate_ast(&rules);
+    if errors.len() == 0 {
+        Ok(rules.into_iter().map(|rule| convert_rule(rule)).collect())
+    } else {
+        Err(errors)
+    }
 }
 
 fn consume_rules_with_spans<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<ParserRule<I>> {

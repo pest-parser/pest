@@ -234,6 +234,7 @@ extern crate quote;
 extern crate syn;
 
 use std::env;
+use std::fmt::Display;
 use std::path::Path;
 use std::rc::Rc;
 
@@ -297,8 +298,15 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         }))
     };
 
-    let defaults = validator::validate_pairs(pairs.clone());
-    let ast = parser::consume_rules(pairs);
+    fn format_errors<Errors: IntoIterator>(errors: Errors) -> String where Errors::Item: Display {
+        errors.into_iter()
+            .map(|error| { format!("{}", error) })
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    }
+
+    let defaults = validator::validate_pairs(pairs.clone()).unwrap_or_else(|e| panic!(format_errors(e)));
+    let ast = parser::consume_rules(pairs).unwrap_or_else(|e| panic!(format_errors(e)));
     let optimized = optimizer::optimize(ast);
     let generated = generator::generate(name, optimized, defaults);
 

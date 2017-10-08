@@ -15,7 +15,7 @@ use quote::Ident;
 
 use super::parser::{PestRule, ParserExpr, ParserNode, ParserRule};
 
-pub fn validate_pairs<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<Ident> {
+pub fn validate_pairs<I: Input>(pairs: Pairs<PestRule, I>) -> Result<Vec<Ident>, Vec<Error<PestRule, I>>> {
     let rust_keywords = hashset!{
         "abstract", "alignof", "as", "become", "box", "break", "const", "continue", "crate", "do",
         "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl", "in", "let", "loop",
@@ -50,12 +50,8 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<Ident> {
     errors.extend(validate_already_defined(&definitions));
     errors.extend(validate_undefined(&definitions, &called_rules, &predefined));
 
-    let errors = errors.into_iter().map(|error| {
-        format!("grammar error\n\n{}", error)
-    }).collect::<Vec<_>>().join("\n\n");
-
     if errors.len() > 0 {
-        panic!("{}", errors);
+        return Err(errors)
     }
 
     let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
@@ -63,7 +59,7 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<Ident> {
 
     let defaults = called_rules.difference(&definitions);
 
-    defaults.into_iter().map(|string| Ident::new(*string)).collect()
+    Ok(defaults.into_iter().map(|string| Ident::new(*string)).collect())
 }
 
 pub fn validate_rust_keywords<'a, I: Input+'a, Definitions: IntoIterator<Item=&'a Span<I>>>(
@@ -147,7 +143,7 @@ pub fn validate_undefined<I: Input>(
     errors
 }
 
-pub fn validate_ast<I: Input>(rules: &Vec<ParserRule<I>>) {
+pub fn validate_ast<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<PestRule, I>> {
     let mut errors = vec![];
 
     errors.extend(validate_repetition(rules));
@@ -161,13 +157,7 @@ pub fn validate_ast<I: Input>(rules: &Vec<ParserRule<I>>) {
         }
     });
 
-    let errors = errors.into_iter().map(|error| {
-        format!("{}", error)
-    }).collect::<Vec<_>>().join("\n\n");
-
-    if errors.len() > 0 {
-        panic!("grammar error\n\n{}", errors);
-    }
+    errors
 }
 
 fn is_non_progressing<I: Input>(expr: &ParserExpr<I>) -> bool {
@@ -338,183 +328,208 @@ mod tests {
     use super::super::parser::{PestParser, consume_rules};
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:1
-  |
-1 | let = { \"a\" }
-  | ^-^
-  |
-  = let is a rust keyword")]
     fn rust_keyword() {
         let input = "let = { \"a\" }";
-        validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("`let` should not be allowed because it is a rust keyword");
+        assert_eq!(err.len(), 1);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "let is a rust keyword");
+                assert_eq!(span.start(), 0);
+                assert_eq!(span.end(), 3);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:1
-  |
-1 | any = { \"a\" }
-  | ^-^
-  |
-  = any is a pest keyword")]
     fn pest_keyword() {
         let input = "any = { \"a\" }";
-        validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("`any` should not be allowed because it is a pest keyword");
+        assert_eq!(err.len(), 1);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "any is a pest keyword");
+                assert_eq!(span.start(), 0);
+                assert_eq!(span.end(), 3);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:13
-  |
-1 | a = { \"a\" } a = { \"a\" }
-  |             ^
-  |
-  = rule a already defined")]
     fn already_defined() {
         let input = "a = { \"a\" } a = { \"a\" }";
-        validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("Re-defining a rule should produce an error");
+        assert_eq!(err.len(), 1);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "rule a already defined");
+                assert_eq!(span.start(), 12);
+                assert_eq!(span.end(), 13);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:7
-  |
-1 | a = { b }
-  |       ^
-  |
-  = rule b is undefined")]
     fn undefined() {
         let input = "a = { b }";
-        validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = validate_pairs(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("Cannot use rules without defining them");
+        assert_eq!(err.len(), 1);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "rule b is undefined");
+                assert_eq!(span.start(), 6);
+                assert_eq!(span.end(), 7);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 
     #[test]
     fn valid_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"b\") ~ a }";
-        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap()).unwrap();
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:16
-  |
-1 | whitespace = { \"\" }
-  |                ^^
-  |
-  = whitespace is non-failing and will repeat infinitely")]
     fn non_failing_whitespace() {
         let input = "whitespace = { \"\" }";
-        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("This should have produced an error");
+        assert_eq!(err.len(), 1);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "whitespace is non-failing and will repeat infinitely");
+                assert_eq!(span.start(), 15);
+                assert_eq!(span.end(), 17);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:13
-  |
-1 | comment = { soi }
-  |             ^-^
-  |
-  = comment is non-progressing and will repeat infinitely")]
     fn non_progressing_comment() {
         let input = "comment = { soi }";
-        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("This should have produced an error");
+        assert_eq!(err.len(), 1);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "comment is non-progressing and will repeat infinitely");
+                assert_eq!(span.start(), 12);
+                assert_eq!(span.end(), 15);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:7
-  |
-1 | a = { (\"\")* }
-  |       ^---^
-  |
-  = expression inside repetition is non-failing and will repeat infinitely")]
     fn non_failing_repetition() {
         let input = "a = { (\"\")* }";
-        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("This should have produced an error");
+        assert_eq!(err.len(), 1);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "expression inside repetition is non-failing and will repeat infinitely");
+                assert_eq!(span.start(), 6);
+                assert_eq!(span.end(), 11);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:7
-  |
-1 | a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }
-  |       ^-------------------------------^
-  |
-  = expression inside repetition is non-progressing and will repeat infinitely")]
     fn non_progressing_repetition() {
         let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }";
-        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("This should have produced an error");
+        assert_eq!(err.len(), 1);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "expression inside repetition is non-progressing and will repeat infinitely");
+                assert_eq!(span.start(), 6);
+                assert_eq!(span.end(), 39);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:7
-  |
-1 | a = { a }
-  |       ^
-  |
-  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn simple_left_recursion() {
         let input = "a = { a }";
-        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("This should have produced an error");
+        assert_eq!(err.len(), 1);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case");
+                assert_eq!(span.start(), 6);
+                assert_eq!(span.end(), 7);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:7
-  |
-1 | a = { b } b = { a }
-  |       ^
-  |
-  = rule b is left-recursive (b -> a -> b); pest::prec_climber might be useful in this case
-
- --> 1:17
-  |
-1 | a = { b } b = { a }
-  |                 ^
-  |
-  = rule a is left-recursive (a -> b -> a); pest::prec_climber might be useful in this case")]
     fn indirect_left_recursion() {
         let input = "a = { b } b = { a }";
-        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("This should have produced errors");
+        assert_eq!(err.len(), 2);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "rule b is left-recursive (b -> a -> b); pest::prec_climber might be useful in this case");
+                assert_eq!(span.start(), 6);
+                assert_eq!(span.end(), 7);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
+        match err[1] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "rule a is left-recursive (a -> b -> a); pest::prec_climber might be useful in this case");
+                assert_eq!(span.start(), 16);
+                assert_eq!(span.end(), 17);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:39
-  |
-1 | a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }
-  |                                       ^
-  |
-  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn non_failing_left_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }";
-        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("This should have produced an error");
+        assert_eq!(err.len(), 1);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case");
+                assert_eq!(span.start(), 38);
+                assert_eq!(span.end(), 39);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:13
-  |
-1 | a = { \"a\" | a }
-  |             ^
-  |
-  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn non_primary_choice_left_recursion() {
         let input = "a = { \"a\" | a }";
-        consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap());
+        let err = consume_rules(PestParser::parse_str(PestRule::grammar_rules, input).unwrap())
+            .expect_err("This should have produced an error");
+        assert_eq!(err.len(), 1);
+        match err[0] {
+            Error::CustomErrorSpan{ref message, ref span} => {
+                assert_eq!(message, "rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case");
+                assert_eq!(span.start(), 12);
+                assert_eq!(span.end(), 13);
+            }
+            ref other => panic!("Unexpected error {}", other)
+        }
     }
 }
