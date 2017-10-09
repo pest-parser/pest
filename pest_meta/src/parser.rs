@@ -776,44 +776,48 @@ impl Parser<PestRule> for PestParser {
             })
         }
 
-        pest::state(input, move |mut state, pos| {
-            match rule {
-                PestRule::grammar_rules => grammar_rules(pos, &mut state),
-                PestRule::grammar_rule => grammar_rule(pos, &mut state),
-                PestRule::assignment_operator => assignment_operator(pos, &mut state),
-                PestRule::silent_modifier => silent_modifier(pos, &mut state),
-                PestRule::atomic_modifier => atomic_modifier(pos, &mut state),
-                PestRule::compound_atomic_modifier => compound_atomic_modifier(pos, &mut state),
-                PestRule::non_atomic_modifier => non_atomic_modifier(pos, &mut state),
-                PestRule::opening_brace => opening_brace(pos, &mut state),
-                PestRule::closing_brace => closing_brace(pos, &mut state),
-                PestRule::opening_paren => opening_paren(pos, &mut state),
-                PestRule::closing_paren => closing_paren(pos, &mut state),
-                PestRule::expression => expression(pos, &mut state),
-                PestRule::term => term(pos, &mut state),
-                PestRule::positive_predicate_operator => {
-                    positive_predicate_operator(pos, &mut state)
-                },
-                PestRule::negative_predicate_operator => {
-                    negative_predicate_operator(pos, &mut state)
-                },
-                PestRule::sequence_operator => sequence_operator(pos, &mut state),
-                PestRule::choice_operator => choice_operator(pos, &mut state),
-                PestRule::optional_operator => optional_operator(pos, &mut state),
-                PestRule::repeat_operator => repeat_operator(pos, &mut state),
-                PestRule::repeat_once_operator => repeat_once_operator(pos, &mut state),
-                PestRule::repeat_min_max => repeat_min_max(pos, &mut state),
-                PestRule::comma => comma(pos, &mut state),
-                PestRule::push => push(pos, &mut state),
-                PestRule::identifier => identifier(pos, &mut state),
-                PestRule::string => string(pos, &mut state),
-                PestRule::quote => quote(pos, &mut state),
-                PestRule::insensitive_string => insensitive_string(pos, &mut state),
-                PestRule::range => range(pos, &mut state),
-                PestRule::range_operator => range_operator(pos, &mut state),
-                PestRule::character => character(pos, &mut state),
-                PestRule::number => number(pos, &mut state),
-                PestRule::single_quote => single_quote(pos, &mut state)
+        macro_rules! parse_rule {
+            ($pos:ident , $state:ident for $rule:ident in { $( $case:ident ),* }) => {
+                match $rule {
+                    $(PestRule::$case => $case($pos, &mut $state)),*
+                }
+            }
+        }
+
+        pest::state(input, move |mut state, pos| parse_rule!{
+            pos, state for rule in {
+                grammar_rules,
+                grammar_rule,
+                assignment_operator,
+                silent_modifier,
+                atomic_modifier,
+                compound_atomic_modifier,
+                non_atomic_modifier,
+                opening_brace,
+                closing_brace,
+                opening_paren,
+                closing_paren,
+                expression,
+                term,
+                positive_predicate_operator,
+                negative_predicate_operator,
+                sequence_operator,
+                choice_operator,
+                optional_operator,
+                repeat_operator,
+                repeat_once_operator,
+                repeat_min_max,
+                comma,
+                push,
+                identifier,
+                string,
+                quote,
+                insensitive_string,
+                range,
+                range_operator,
+                character,
+                number,
+                single_quote
             }
         })
     }

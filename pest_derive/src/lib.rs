@@ -300,9 +300,9 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
 
     fn format_errors<Errors: IntoIterator>(errors: Errors) -> String where Errors::Item: Display {
         errors.into_iter()
-            .map(|error| { format!("{}", error) })
-            .collect::<Vec<_>>()
-            .join("\n\n")
+              .map(|error| { format!("{}", error) })
+              .collect::<Vec<_>>()
+              .join("\n\n")
     }
 
     let defaults = validator::validate_pairs(pairs.clone()).unwrap_or_else(|e| panic!(format_errors(e)));
