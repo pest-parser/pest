@@ -39,7 +39,7 @@ macro_rules! consumes_to {
         };
     };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr ),
-                                    $( $names:ident $calls:tt ),* ] ) => {
+                                    $( $names:ident $calls:tt ),* $(,)* ] ) => {
 
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
@@ -72,7 +72,7 @@ macro_rules! consumes_to {
         consumes_to!($rules, $tokens, [ $( $names $calls ),* ]);
     };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr,
-                                                  [ $( $names:ident $calls:tt ),* ] ) ] ) => {
+                                                  [ $( $names:ident $calls:tt ),* $(,)* ] ) ] ) => {
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
@@ -104,7 +104,7 @@ macro_rules! consumes_to {
         };
     };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr,
-                                                  [ $( $nested_names:ident $nested_calls:tt ),* ] ),
+                                                  [ $( $nested_names:ident $nested_calls:tt ),* $(,)* ] ),
                                     $( $names:ident $calls:tt ),* ] ) => {
 
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
@@ -203,7 +203,7 @@ macro_rules! consumes_to {
 #[macro_export]
 macro_rules! parses_to {
     ( parser: $parser:ident, input: $string:expr, rule: $rules:tt :: $rule:tt,
-      tokens: [ $( $names:ident $calls:tt ),* ] ) => {
+      tokens: [ $( $names:ident $calls:tt ),* $(,)* ] ) => {
 
         #[allow(unused_mut)]
         {
@@ -342,7 +342,7 @@ pub mod tests {
             rule: Rule::a,
             tokens: [
                 a(0, 3, [
-                    b(1, 2)
+                    b(1, 2),
                 ]),
                 c(4, 5)
             ]
