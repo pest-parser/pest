@@ -776,16 +776,16 @@ impl Parser<PestRule> for PestParser {
             })
         }
 
-        macro_rules! parse_rule {
-            ($pos:ident , $state:ident for $rule:ident in { $( $case:ident ),* }) => {
-                match $rule {
-                    $(PestRule::$case => $case($pos, &mut $state)),*
-                }
+        macro_rules! state {
+            (match $rule:ident in $input:ident as { $( $case:ident ),* }) => {
+                pest::state($input, move |mut state, pos| match $rule {
+                    $(PestRule::$case => $case(pos, &mut state)),*
+                })
             }
         }
 
-        pest::state(input, move |mut state, pos| parse_rule!{
-            pos, state for rule in {
+        state!{
+            match rule in input as {
                 grammar_rules,
                 grammar_rule,
                 assignment_operator,
@@ -819,7 +819,7 @@ impl Parser<PestRule> for PestParser {
                 number,
                 single_quote
             }
-        })
+        }
     }
 }
 
