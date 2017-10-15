@@ -9,9 +9,9 @@ use std::collections::HashMap;
 
 use quote::{Ident, Tokens};
 
-use super::ast::*;
+use super::ast::{Rule, RuleType, Expr};
 
-pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
+pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<String>) -> Tokens {
     let mut predefined = HashMap::new();
     predefined.insert("any", quote! {
         fn any<I: ::pest::inputs::Input>(
@@ -70,7 +70,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
     let skip = generate_skip(&rules);
 
     let mut rules: Vec<_> = rules.into_iter().map(|rule| generate_rule(rule)).collect();
-    rules.extend(defaults.into_iter().map(|name| predefined.get(name.as_ref()).unwrap().clone()));
+    rules.extend(defaults.iter().map(|name| predefined.get(name.as_str()).unwrap().clone()));
 
 
     let parser_impl = quote! {
@@ -102,7 +102,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
 }
 
 fn generate_enum(rules: &Vec<Rule>) -> Tokens {
-    let rules = rules.iter().map(|rule| &rule.name);
+    let rules = rules.iter().map(|rule| Ident::new(rule.name.as_str()));
 
     quote! {
         #[allow(dead_code, non_camel_case_types)]
@@ -117,7 +117,7 @@ fn generate_patterns(rules: &Vec<Rule>) -> Tokens {
     let mut tokens = Tokens::new();
 
     let rules = rules.iter().map(|rule| {
-        let rule = &rule.name;
+        let rule = Ident::new(rule.name.as_str());
         quote! {
             Rule::#rule => rules::#rule(pos, &mut state)
         }
@@ -129,7 +129,7 @@ fn generate_patterns(rules: &Vec<Rule>) -> Tokens {
 }
 
 fn generate_rule(rule: Rule) -> Tokens {
-    let name = rule.name;
+    let name = Ident::new(rule.name.as_str());
     let expr = if {
         rule.ty == RuleType::Atomic ||
         rule.ty == RuleType::CompoundAtomic ||
@@ -205,8 +205,8 @@ fn generate_rule(rule: Rule) -> Tokens {
 }
 
 fn generate_skip(rules: &Vec<Rule>) -> Tokens {
-    let whitespace = rules.iter().any(|rule| rule.name.as_ref() == "whitespace");
-    let comment = rules.iter().any(|rule| rule.name.as_ref() == "comment");
+    let whitespace = rules.iter().any(|rule| rule.name.as_str() == "whitespace");
+    let comment = rules.iter().any(|rule| rule.name.as_str() == "comment");
 
     match (whitespace, comment) {
         (false, false) => quote! {
@@ -327,8 +327,9 @@ fn generate_expr(expr: Expr) -> Tokens {
 
             tokens
         },
-        Expr::Ident(ident) => quote! {
-            self::#ident(pos, state)
+        Expr::Ident(ident) => {
+            let ident = Ident::new(ident.as_str());
+            quote! { self::#ident(pos, state) }
         },
         Expr::PosPred(expr) => {
             let expr = generate_expr(*expr);
@@ -502,8 +503,9 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
 
             tokens
         },
-        Expr::Ident(ident) => quote! {
-            self::#ident(pos, state)
+        Expr::Ident(ident) => {
+            let ident = Ident::new(ident.as_str());
+            quote! { self::#ident(pos, state) }
         },
         Expr::PosPred(expr) => {
             let expr = generate_expr_atomic(*expr);
@@ -632,9 +634,9 @@ mod tests {
     fn rule_enum_simple() {
         let rules = vec![
             Rule {
-                name: Ident::new("f"),
+                name: "f".to_owned(),
                 ty: RuleType::Normal,
-                expr: Expr::Ident(Ident::new("g"))
+                expr: Expr::Ident("g".to_owned())
             }
         ];
 
@@ -759,7 +761,7 @@ mod tests {
     #[test]
     fn expr_complex() {
         let expr = Expr::Choice(
-            Box::new(Expr::Ident(Ident::new("a"))),
+            Box::new(Expr::Ident("a".to_owned())),
             Box::new(Expr::Seq(
                 Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
                 Box::new(Expr::Seq(
@@ -854,7 +856,7 @@ mod tests {
     #[test]
     fn expr_complex_atomic() {
         let expr = Expr::Choice(
-            Box::new(Expr::Ident(Ident::new("a"))),
+            Box::new(Expr::Ident("a".to_owned())),
             Box::new(Expr::Seq(
                 Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
                 Box::new(Expr::Seq(
@@ -912,11 +914,11 @@ mod tests {
     fn generate_complete() {
         let name = Ident::new("MyParser");
         let rules = vec![Rule {
-            name: Ident::new("a"),
+            name: "a".to_owned(),
             ty: RuleType::Silent,
             expr: Expr::Str("b".to_owned())
         }];
-        let defaults = vec![Ident::new("any")];
+        let defaults = vec!["any".to_owned()];
 
         assert_eq!(generate(name, rules, defaults), quote! {
             #[allow(dead_code, non_camel_case_types)]

@@ -5,11 +5,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use quote::Ident;
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rule {
-    pub name: Ident,
+    pub name: String,
     pub ty: RuleType,
     pub expr: Expr
 }
@@ -28,7 +26,7 @@ pub enum Expr {
     Str(String),
     Insens(String),
     Range(String, String),
-    Ident(Ident),
+    Ident(String),
     PosPred(Box<Expr>),
     NegPred(Box<Expr>),
     Seq(Box<Expr>, Box<Expr>),
@@ -152,7 +150,7 @@ mod tests {
     fn identity() {
         let expr = Expr::Choice(
             Box::new(Expr::Seq(
-                Box::new(Expr::Ident(Ident::new("a"))),
+                Box::new(Expr::Ident("a".to_owned())),
                 Box::new(Expr::Str("b".to_owned()))
             )),
             Box::new(Expr::PosPred(

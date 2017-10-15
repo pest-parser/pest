@@ -10,6 +10,5 @@ license = "MPL-2.0"
 readme = "_README.md"
 
 [dependencies]
-quote = "^0.3"
 maplit = "^0.1.5"
 pest = { path = "../pest", version = "^1.0.0-beta" }

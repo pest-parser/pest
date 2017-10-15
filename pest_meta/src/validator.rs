@@ -11,11 +11,9 @@ use pest::Error;
 use pest::inputs::{Input, Span};
 use pest::iterators::Pairs;
 
-use quote::Ident;
-
 use super::parser::{PestRule, ParserExpr, ParserNode, ParserRule};
 
-pub fn validate_pairs<I: Input>(pairs: Pairs<PestRule, I>) -> Result<Vec<Ident>, Vec<Error<PestRule, I>>> {
+pub fn validate_pairs<I: Input>(pairs: Pairs<PestRule, I>) -> Result<Vec<String>, Vec<Error<PestRule, I>>> {
     let rust_keywords = hashset!{
         "abstract", "alignof", "as", "become", "box", "break", "const", "continue", "crate", "do",
         "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl", "in", "let", "loop",
@@ -59,7 +57,7 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<PestRule, I>) -> Result<Vec<Ident>,
 
     let defaults = called_rules.difference(&definitions);
 
-    Ok(defaults.into_iter().map(|string| Ident::new(*string)).collect())
+    Ok(defaults.into_iter().map(|&string| string.to_owned()).collect())
 }
 
 pub fn validate_rust_keywords<'a, I: Input+'a, Definitions: IntoIterator<Item=&'a Span<I>>>(
@@ -243,7 +241,7 @@ fn validate_left_recursion<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<Pe
     left_recursion(to_hash_map(rules))
 }
 
-fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<Ident, &ParserNode<I>> {
+fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<String, &ParserNode<I>> {
     let mut hash_map = HashMap::new();
 
     for rule in rules {
@@ -253,15 +251,15 @@ fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<Ident, &ParserNo
     hash_map
 }
 
-fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<PestRule, I>> {
+fn left_recursion<I: Input>(rules: HashMap<String, &ParserNode<I>>) -> Vec<Error<PestRule, I>> {
     fn check_expr<I: Input>(
         node: &ParserNode<I>,
-        rules: &HashMap<Ident, &ParserNode<I>>,
-        trace: &mut Vec<Ident>
+        rules: &HashMap<String, &ParserNode<I>>,
+        trace: &mut Vec<String>
     ) -> Option<Error<PestRule, I>> {
         match node.expr {
             ParserExpr::Ident(ref other)  => {
-                if trace[0] == other {
+                if trace[0] == *other {
                     trace.push(other.clone());
                     let chain = trace.iter()
                                      .map(|ident| ident.as_ref())

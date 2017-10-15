@@ -13,8 +13,6 @@ use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 use pest::{self, Error, Parser, ParserState};
 
-use quote::Ident;
-
 use super::ast::{Expr, Rule, RuleType};
 use super::validator;
 
@@ -825,7 +823,7 @@ impl Parser<PestRule> for PestParser {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParserRule<I: Input> {
-    pub name: Ident,
+    pub name: String,
     pub span: Span<I>,
     pub ty: RuleType,
     pub node: ParserNode<I>
@@ -842,7 +840,7 @@ pub enum ParserExpr<I: Input> {
     Str(String),
     Insens(String),
     Range(String, String),
-    Ident(Ident),
+    Ident(String),
     PosPred(Box<ParserNode<I>>),
     NegPred(Box<ParserNode<I>>),
     Seq(Box<ParserNode<I>>, Box<ParserNode<I>>),
@@ -912,7 +910,7 @@ fn consume_rules_with_spans<I: Input>(pairs: Pairs<PestRule, I>) -> Vec<ParserRu
         let mut pairs = pair.into_inner().peekable();
 
         let span = pairs.next().unwrap().into_span();
-        let name = Ident::new(span.as_str());
+        let name = span.as_str().to_owned();
 
         pairs.next().unwrap(); // assignment_operator
 
@@ -999,7 +997,7 @@ fn consume_expr<I: Input>(
                     }
                     PestRule::identifier => {
                         ParserNode {
-                            expr: ParserExpr::Ident(Ident::new(pair.as_str())),
+                            expr: ParserExpr::Ident(pair.as_str().to_owned()),
                             span: pair.clone().into_span()
                         }
                     }
@@ -1650,12 +1648,12 @@ mod tests {
 
         assert_eq!(ast, vec![
             Rule {
-                name: Ident::new("rule"),
+                name: "rule".to_owned(),
                 ty: RuleType::Silent,
                 expr: Expr::Choice(
                     Box::new(Expr::Seq(
                         Box::new(Expr::RepMinMax(
-                            Box::new(Expr::Ident(Ident::new("a"))),
+                            Box::new(Expr::Ident("a".to_owned())),
                             1,
                             1
                         )),

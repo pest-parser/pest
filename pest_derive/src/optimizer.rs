@@ -139,13 +139,11 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
 mod tests {
     use super::*;
 
-    use quote::Ident;
-
     #[test]
     fn concat_strings() {
         let rules = vec![
             Rule {
-                name: Ident::new("rule"),
+                name: "rule".to_owned(),
                 ty:   RuleType::Atomic,
                 expr: Expr::Seq(
                     Box::new(Expr::Seq(
@@ -161,7 +159,7 @@ mod tests {
         ];
         let concatenated = vec![
             Rule {
-                name: Ident::new("rule"),
+                name: "rule".to_owned(),
                 ty:   RuleType::Atomic,
                 expr: Expr::Str("abcd".to_owned())
             }
@@ -174,7 +172,7 @@ mod tests {
     fn concat_insensitive_strings() {
         let rules = vec![
             Rule {
-                name: Ident::new("rule"),
+                name: "rule".to_owned(),
                 ty:   RuleType::Atomic,
                 expr: Expr::Seq(
                     Box::new(Expr::Seq(
@@ -190,7 +188,7 @@ mod tests {
         ];
         let concatenated = vec![
             Rule {
-                name: Ident::new("rule"),
+                name: "rule".to_owned(),
                 ty:   RuleType::Atomic,
                 expr: Expr::Insens("abcd".to_owned())
             }
@@ -203,37 +201,37 @@ mod tests {
     fn long_common_sequence() {
         let rules = vec![
             Rule {
-                name: Ident::new("rule"),
+                name: "rule".to_owned(),
                 ty:   RuleType::Silent,
                 expr: Expr::Choice(
                     Box::new(Expr::Seq(
-                        Box::new(Expr::Ident(Ident::new("a"))),
+                        Box::new(Expr::Ident("a".to_owned())),
                         Box::new(Expr::Seq(
-                            Box::new(Expr::Ident(Ident::new("b"))),
-                            Box::new(Expr::Ident(Ident::new("c")))
+                            Box::new(Expr::Ident("b".to_owned())),
+                            Box::new(Expr::Ident("c".to_owned()))
                         ))
                     )),
                     Box::new(Expr::Seq(
                         Box::new(Expr::Seq(
-                            Box::new(Expr::Ident(Ident::new("a"))),
-                            Box::new(Expr::Ident(Ident::new("b")))
+                            Box::new(Expr::Ident("a".to_owned())),
+                            Box::new(Expr::Ident("b".to_owned()))
                         )),
-                        Box::new(Expr::Ident(Ident::new("d")))
+                        Box::new(Expr::Ident("d".to_owned()))
                     ))
                 )
             }
         ];
         let optimized = vec![
             Rule {
-                name: Ident::new("rule"),
+                name: "rule".to_owned(),
                 ty:   RuleType::Silent,
                 expr: Expr::Seq(
-                    Box::new(Expr::Ident(Ident::new("a"))),
+                    Box::new(Expr::Ident("a".to_owned())),
                     Box::new(Expr::Seq(
-                        Box::new(Expr::Ident(Ident::new("b"))),
+                        Box::new(Expr::Ident("b".to_owned())),
                         Box::new(Expr::Choice(
-                            Box::new(Expr::Ident(Ident::new("c"))),
-                            Box::new(Expr::Ident(Ident::new("d")))
+                            Box::new(Expr::Ident("c".to_owned())),
+                            Box::new(Expr::Ident("d".to_owned()))
                         ))
                     ))
                 )
