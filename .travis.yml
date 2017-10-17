@@ -8,13 +8,7 @@ rust:
 addons:
   apt:
     packages:
-      - libcurl4-openssl-dev
-      - libelf-dev
-      - libdw-dev
-      - binutils-dev
-      - cmake
-    sources:
-      - kalakris-cmake
+      - libssl-dev
 git:
   depth: 1
 branches:
@@ -22,10 +16,6 @@ branches:
     - master
 notifications:
   email: false
-before_script:
-  - |
-      cargo install --force cargo-travis &&
-      export PATH=$HOME/.cargo/bin:$PATH
 script:
   # Need a custom script because we are using cargo workspaces.
   - |
@@ -34,5 +24,6 @@ script:
       cargo doc --all --verbose
 after_success:
   - |
-      cargo coverage -m ../kcov --all
+      bash <(curl https://raw.githubusercontent.com/xd009642/tarpaulin/master/travis-install.sh)
+      cargo tarpaulin --out Xml
       bash <(curl -s https://codecov.io/bash)
