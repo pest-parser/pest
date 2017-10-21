@@ -19,4 +19,5 @@ level1 = _{ level2 }
 level2 = _{ a | b | c }
 
 negative = _{ !d }
+negative_match = _{ !a ~ b }
 mixed = _{ !d | a }

@@ -87,6 +87,18 @@ fn negative() {
 }
 
 #[test]
+fn negative_match() {
+    fails_with! {
+        parser: ReportingParser,
+        input: "x",
+        rule: Rule::negative_match,
+        positives: vec![Rule::b],
+        negatives: vec![],
+        pos: 0
+    };
+}
+
+#[test]
 fn mixed() {
     fails_with! {
         parser: ReportingParser,
