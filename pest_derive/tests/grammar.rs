@@ -474,6 +474,21 @@ fn repeat_exact() {
 }
 
 #[test]
+fn repeat_comment() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc$$$ $$$abc",
+        rule: Rule::repeat_once,
+        tokens: [
+            repeat_once(0, 13, [
+                string(0, 3),
+                string(10, 13)
+            ])
+        ]
+    };
+}
+
+#[test]
 fn peek() {
     parses_to! {
         parser: GrammarParser,

@@ -193,7 +193,7 @@
 //! is effectively transformed into this one behind the scenes:
 //!
 //! ```ignore
-//! a = { b ~ whitespace* ~ (comment? ~ whitespace+)* ~ c }
+//! a = { b ~ whitespace* ~ (comment ~ whitespace*)* ~ c }
 //! ```
 //!
 //! ## `push`, `pop`, and `peek`

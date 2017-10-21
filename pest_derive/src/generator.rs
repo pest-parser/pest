@@ -263,17 +263,9 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
                                 pos.repeat(|pos| {
                                     state.sequence(move |state| {
                                         pos.sequence(|pos| {
-                                            pos.optional(|pos| {
-                                                comment(pos, state)
-                                            }).and_then(|pos| {
-                                                state.sequence(move |state| {
-                                                    pos.sequence(|pos| {
-                                                        whitespace(pos, state).and_then(|pos| {
-                                                            pos.repeat(|pos| {
-                                                                whitespace(pos, state)
-                                                            })
-                                                        })
-                                                    })
+                                            comment(pos, state).and_then(|pos| {
+                                                pos.repeat(|pos| {
+                                                    whitespace(pos, state)
                                                 })
                                             })
                                         })
