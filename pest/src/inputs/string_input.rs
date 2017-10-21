@@ -102,7 +102,7 @@ unsafe fn line_col(source: &str, pos: usize) -> (usize, usize) {
 }
 
 #[inline]
-unsafe fn line_of(source: &str, mut pos: usize) -> &str {
+unsafe fn line_of(source: &str, pos: usize) -> &str {
     if pos > source.len() {
         panic!("position out of bounds");
     }
@@ -110,13 +110,9 @@ unsafe fn line_of(source: &str, mut pos: usize) -> &str {
     let start = if pos == 0 {
         0
     } else {
-        if source.slice_unchecked(pos, pos + 1) == "\n" {
-            pos -= 1;
-        }
-
         let start = source.char_indices()
                           .rev()
-                          .skip_while(|&(i, _)| i > pos)
+                          .skip_while(|&(i, _)| i >= pos)
                           .find(|&(_, c)| c == '\n');
         match start {
             Some((i, _)) => i + 1,
@@ -467,6 +463,21 @@ mod tests {
 
         unsafe {
             assert_eq!(input2.line_of(0), "");
+        }
+    }
+
+    #[test]
+    fn line_of_between_new_line() {
+        let input = StringInput::new("\n\n".to_owned());
+
+        unsafe {
+            assert_eq!(input.line_of(1), "");
+        }
+
+        let input2 = StrInput::new("\n\n");
+
+        unsafe {
+            assert_eq!(input2.line_of(1), "");
         }
     }
 
