@@ -21,3 +21,5 @@ level2 = _{ a | b | c }
 negative = _{ !d }
 negative_match = _{ !a ~ b }
 mixed = _{ !d | a }
+mixed_progress = _{ (!d | a | b) ~ a }
+

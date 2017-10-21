@@ -109,3 +109,15 @@ fn mixed() {
         pos: 0
     };
 }
+
+#[test]
+fn mixed_progress() {
+    fails_with! {
+        parser: ReportingParser,
+        input: "b",
+        rule: Rule::mixed_progress,
+        positives: vec![Rule::a],
+        negatives: vec![],
+        pos: 1
+    };
+}
