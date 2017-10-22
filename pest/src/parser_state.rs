@@ -151,7 +151,7 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
                     _ => unreachable!()
                 };
 
-                self.queue.push(QueueableToken::End { rule: rule, pos: pos.pos() });
+                self.queue.push(QueueableToken::End { rule, pos: pos.pos() });
             } else {
                 self.queue.truncate(index);
             }

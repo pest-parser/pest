@@ -31,11 +31,11 @@ pub fn new<R: RuleType, I: Input>(
     end: usize
 ) -> TokenIterator<R, I> {
     TokenIterator {
-        queue: queue,
-        input: input,
+        queue,
+        input,
         index: 0,
-        start: start,
-        end: end
+        start,
+        end
     }
 }
 
@@ -55,14 +55,14 @@ impl<R: RuleType, I: Input> Iterator for TokenIterator<R, I> {
                 };
 
                 Token::Start {
-                    rule: rule,
+                    rule,
                     // QueueableTokens are safely created.
                     pos: unsafe { position::new(self.input.clone(), pos) }
                 }
             }
             QueueableToken::End { rule, pos } => {
                 Token::End {
-                    rule: rule,
+                    rule,
                     // QueueableTokens are safely created.
                     pos: unsafe { position::new(self.input.clone(), pos) }
                 }
