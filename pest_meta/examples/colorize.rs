@@ -42,7 +42,6 @@ fn main() {
     // processed (styled), in order to:
     // - skip sub-trees which overlap with already styled ones to avoid duplicating the text
     // - print the input spans between the styled sub-trees
-    // .
     let mut processed = 0;
     let input = input.as_ref();
     // We traverse the flattened AST tree,
@@ -67,10 +66,10 @@ fn main() {
         // Now, we print everything between the last processed code point and the beginning of the
         // current sub-tree span using the default text output style. Then we print the span of the
         // sub-tree itself using the selected style.
-        print!("{}{}", unsafe {input.slice(processed, span.start())}, style(span.as_str()));
+        print!("{}{}", unsafe { input.slice(processed, span.start()) }, style(span.as_str()));
         // We update the record of the last code point we processed.
         processed = span.end();
     }
     // To finish up, we print whatever is left from the input using the default style.
-    println!("{}", unsafe {input.slice(processed, input.len())});
+    println!("{}", unsafe { input.slice(processed, input.len()) });
 }
