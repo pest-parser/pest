@@ -148,7 +148,7 @@
 //!     |--------------|------------------------------------------------------------|
 //!     | `(e)`        | matches `e`                                                |
 //!     | `e1 ~ e2`    | matches the sequence `e1` `e2`                             |
-//!     | `e1 | e2`    | matches either `e1` or `e1`                                |
+//!     | `e1 | e2`    | matches either `e1` or `e2`                                |
 //!     | `e*`         | matches `e` zero or more times                             |
 //!     | `e+`         | matches `e` one or more times                              |
 //!     | `e{n}`       | matches `e` exactly `n` times                              |
