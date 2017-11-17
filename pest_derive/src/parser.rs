@@ -15,8 +15,8 @@ use pest::{self, Error, Parser, ParserState};
 
 use quote::Ident;
 
-use super::ast::{Expr, Rule, RuleType};
-use super::validator;
+use ast::{Expr, Rule, RuleType};
+use validator;
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use quote::{Ident, Tokens};
 
-use super::ast::*;
+use ast::*;
 
 pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
     let mut predefined = HashMap::new();

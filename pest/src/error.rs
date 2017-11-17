@@ -7,8 +7,8 @@
 
 use std::fmt;
 
-use super::inputs::{Input, position, Position, Span};
-use super::RuleType;
+use inputs::{Input, position, Position, Span};
+use RuleType;
 
 /// An `enum` which defines possible errors.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

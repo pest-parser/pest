@@ -12,9 +12,9 @@ use std::collections::HashMap;
 use std::iter::Peekable;
 use std::ops::BitOr;
 
-use super::inputs::Input;
-use super::iterators::Pair;
-use super::RuleType;
+use inputs::Input;
+use iterators::Pair;
+use RuleType;
 
 /// An `enum` describing an `Operator`'s associativity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

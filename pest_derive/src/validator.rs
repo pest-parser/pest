@@ -13,7 +13,7 @@ use pest::iterators::Pairs;
 
 use quote::Ident;
 
-use super::parser::{GrammarRule, ParserExpr, ParserNode, ParserRule};
+use parser::{GrammarRule, ParserExpr, ParserNode, ParserRule};
 
 pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
     let mut rust_keywords = HashSet::new();

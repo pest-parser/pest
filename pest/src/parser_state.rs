@@ -7,11 +7,11 @@
 
 use std::rc::Rc;
 
-use super::error::Error;
-use super::inputs::{Input, Position, Span};
-use super::inputs::position;
-use super::iterators::{pairs, QueueableToken};
-use super::RuleType;
+use error::Error;
+use inputs::{Input, Position, Span};
+use inputs::position;
+use iterators::{pairs, QueueableToken};
+use RuleType;
 
 /// An `enum` specifying the current lookahead status of a `ParserState`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

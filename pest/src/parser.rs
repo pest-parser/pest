@@ -7,10 +7,10 @@
 
 use std::rc::Rc;
 
-use super::error::Error;
-use super::inputs::{Input, StrInput};
-use super::iterators::Pairs;
-use super::RuleType;
+use error::Error;
+use inputs::{Input, StrInput};
+use iterators::Pairs;
+use RuleType;
 
 /// A `trait` that defines a `Parser`.
 pub trait Parser<R: RuleType> {
