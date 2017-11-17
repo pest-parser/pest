@@ -44,6 +44,7 @@ pub enum GrammarRule {
     repeat_operator,
     repeat_once_operator,
     repeat_exact,
+    repeat_max,
     repeat_min_max,
     comma,
     push,
@@ -349,6 +350,8 @@ impl Parser<GrammarRule> for GrammarParser {
             }).or_else(|pos| {
                 repeat_exact(pos, state)
             }).or_else(|pos| {
+                repeat_max(pos, state)
+            }).or_else(|pos| {
                 repeat_min_max(pos, state)
             })
         }
@@ -437,7 +440,30 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-
+        fn repeat_max<I: Input>(
+            pos: Position<I>,
+            state: &mut ParserState<GrammarRule, I>
+        ) -> Result<Position<I>, Position<I>> {
+            state.rule(GrammarRule::repeat_max, pos, |state, pos| {
+                state.sequence(move |state| {
+                    pos.sequence(|pos| {
+                        opening_brace(pos, state).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            comma(pos, state)
+                        }).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            number(pos, state)
+                        }).and_then(|pos| {
+                            skip(pos, state)
+                        }).and_then(|pos| {
+                            closing_brace(pos, state)
+                        })
+                    })
+                })
+            })
+        }
 
         fn repeat_min_max<I: Input>(
             pos: Position<I>,
@@ -843,6 +869,7 @@ impl Parser<GrammarRule> for GrammarParser {
                 GrammarRule::repeat_operator => repeat_operator(pos, &mut state),
                 GrammarRule::repeat_once_operator => repeat_once_operator(pos, &mut state),
                 GrammarRule::repeat_exact => repeat_exact(pos, &mut state),
+                GrammarRule::repeat_max => repeat_max(pos, &mut state),
                 GrammarRule::repeat_min_max => repeat_min_max(pos, &mut state),
                 GrammarRule::comma => comma(pos, &mut state),
                 GrammarRule::push => push(pos, &mut state),
@@ -888,6 +915,7 @@ pub enum ParserExpr<I: Input> {
     Rep(Box<ParserNode<I>>),
     RepOnce(Box<ParserNode<I>>),
     RepExact(Box<ParserNode<I>>, u32),
+    RepMax(Box<ParserNode<I>>, u32),
     RepMinMax(Box<ParserNode<I>>, u32, u32),
     Push(Box<ParserNode<I>>)
 }
@@ -924,6 +952,10 @@ fn convert_node<I: Input>(node: ParserNode<I>) -> Expr {
         ParserExpr::RepExact(node,num) => Expr::RepExact(
             Box::new(convert_node(*node)),
             num
+        ),
+        ParserExpr::RepMax(node,max) => Expr::RepMax(
+            Box::new(convert_node(*node)),
+            max
         ),
         ParserExpr::RepMinMax(node, min, max) => Expr::RepMinMax(
             Box::new(convert_node(*node)),
@@ -1121,6 +1153,33 @@ fn consume_expr<I: Input>(
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::RepExact(Box::new(node), num),
+                                span: start.span(pair.into_span().end_pos())
+                            }
+
+                        }
+                        GrammarRule::repeat_max => {
+                            let overflow = |span| {
+                                let error: Error<(), _> = Error::CustomErrorSpan {
+                                    message: "number cannot overflow u32".to_owned(),
+                                    span
+                                };
+
+                                format!("parsing error\n\n{}", error)
+                            };
+
+                            let mut inner = pair.clone().into_inner();
+
+                            inner.next().unwrap(); // opening_brace
+                            inner.next().unwrap(); // comma
+
+                            let max_number = inner.next().unwrap();
+                            let max: u32 = max_number.as_str()
+                                                     .parse()
+                                                     .expect(&overflow(max_number.into_span()));
+
+                            let start = node.span.start_pos();
+                            ParserNode {
+                                expr: ParserExpr::RepMax(Box::new(node), max),
                                 span: start.span(pair.into_span().end_pos())
                             }
 
@@ -1337,6 +1396,23 @@ mod tests {
                 ])
             ]
         };
+    }
+
+    #[test]
+    fn repeat_max() {
+        parses_to! {
+            parser: GrammarParser,
+            input: "{, 3}",
+            rule: GrammarRule::repeat_max,
+            tokens: [
+                repeat_max(0, 5, [
+                    opening_brace(0,1),
+                    comma(1,2),
+                    number(3,4),
+                    closing_brace(4,5)
+                ])
+            ]
+        }
     }
 
     #[test]
@@ -1699,7 +1775,7 @@ mod tests {
 
     #[test]
     fn ast() {
-        let input = "rule = _{ a{1} ~ \"b\"{1, 2} | !(^\"c\" | push('d'..'e'))?* }";
+        let input = "rule = _{ a{1} ~ b{, 2} ~ \"b\"{1, 2} | !(^\"c\" | push('d'..'e'))?* }";
 
         let pairs = GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs);
@@ -1711,9 +1787,15 @@ mod tests {
                 ty: RuleType::Silent,
                 expr: Expr::Choice(
                     Box::new(Expr::Seq(
-                        Box::new(Expr::RepExact(
-                            Box::new(Expr::Ident(Ident::new("a"))),
-                            1
+                        Box::new(Expr::Seq(
+                            Box::new(Expr::RepExact(
+                                Box::new(Expr::Ident(Ident::new("a"))),
+                                1
+                            )),
+                            Box::new(Expr::RepMax(
+                                Box::new(Expr::Ident(Ident::new("b"))),
+                                2
+                            )),
                         )),
                         Box::new(Expr::RepMinMax(
                             Box::new(Expr::Str("b".to_owned())),

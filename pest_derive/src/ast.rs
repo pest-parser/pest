@@ -37,6 +37,7 @@ pub enum Expr {
     Rep(Box<Expr>),
     RepOnce(Box<Expr>),
     RepExact(Box<Expr>, u32),
+    RepMax(Box<Expr>, u32),
     RepMinMax(Box<Expr>, u32, u32),
     Push(Box<Expr>)
 }
@@ -74,9 +75,13 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::RepOnce(mapped)
                 }
-                Expr::RepExact(expr, num) => {
+                Expr::RepExact(expr, max) => {
                     let mapped = Box::new(map_internal(*expr, f));
-                    Expr::RepExact(mapped, num)
+                    Expr::RepExact(mapped, max)
+                }
+                Expr::RepMax(expr, num) => {
+                    let mapped = Box::new(map_internal(*expr, f));
+                    Expr::RepMax(mapped, num)
                 }
                 Expr::RepMinMax(expr, min, max) => {
                     let mapped = Box::new(map_internal(*expr, f));
@@ -130,6 +135,10 @@ impl Expr {
                 Expr::RepExact(expr, num) => {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::RepExact(mapped, num)
+                }
+                Expr::RepMax(expr, max) => {
+                    let mapped = Box::new(map_internal(*expr, f));
+                    Expr::RepMax(mapped, max)
                 }
                 Expr::RepMinMax(expr, min, max) => {
                     let mapped = Box::new(map_internal(*expr, f));

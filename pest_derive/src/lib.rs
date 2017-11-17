@@ -152,6 +152,7 @@
 //!     | `e*`         | matches `e` zero or more times                             |
 //!     | `e+`         | matches `e` one or more times                              |
 //!     | `e{n}`       | matches `e` exactly `n` times                              |
+//!     | `e{, n}`     | matches `e` at most `n` times                              |
 //!     | `e{m, n}`    | matches `e` between `m` and `n` times inclusively          |
 //!     | `e?`         | optionally matches `e`                                     |
 //!     | `&e`         | matches `e` without making progress                        |
