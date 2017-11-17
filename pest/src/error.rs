@@ -200,7 +200,7 @@ impl<R: fmt::Debug, I: Input> fmt::Display for Error<R, I> {
 impl<R: fmt::Debug, I: Input> error::Error for Error<R, I> {
     fn description(&self) -> &str {
         match *self {
-            Error::ParsingError { ref positives, ref negatives, .. } => {
+            Error::ParsingError { .. } => {
                 "parsing error"
             }
             Error::CustomErrorPos { ref message, .. } | Error::CustomErrorSpan { ref message, .. } => {
