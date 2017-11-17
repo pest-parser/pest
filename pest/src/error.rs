@@ -5,6 +5,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use std::error;
 use std::fmt;
 
 use inputs::{Input, position, Position, Span};
@@ -193,6 +194,19 @@ fn format<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
 impl<R: fmt::Debug, I: Input> fmt::Display for Error<R, I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format(self))
+    }
+}
+
+impl<R: fmt::Debug, I: Input> error::Error for Error<R, I> {
+    fn description(&self) -> &str {
+        match *self {
+            Error::ParsingError { ref positives, ref negatives, .. } => {
+                "parsing error"
+            }
+            Error::CustomErrorPos { ref message, .. } | Error::CustomErrorSpan { ref message, .. } => {
+                message
+            }
+        }
     }
 }
 
