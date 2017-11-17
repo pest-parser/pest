@@ -48,6 +48,26 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
                         Box::new(Expr::Rep(expr))
                     )
                 }
+                Expr::RepExact(expr, num) => {
+                    (1..num + 1).map(|_| {
+                                    *expr.clone()
+                                })
+                                .rev()
+                                .fold(None, |rep, expr| {
+                                    match rep {
+                                        None => Some(expr),
+                                        Some(rep) => {
+                                            Some(
+                                                Expr::Seq(
+                                                    Box::new(expr),
+                                                    Box::new(rep)
+                                                )
+                                            )
+                                        }
+                                    }
+                                })
+                                .unwrap()
+                }
                 Expr::RepMinMax(expr, min, max) => {
                     (1..max + 1).map(|i| {
                                     if i <= min {

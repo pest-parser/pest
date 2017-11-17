@@ -226,8 +226,12 @@
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
 #![recursion_limit="256"]
 
+#[cfg(test)]
 #[macro_use]
 extern crate pest;
+#[cfg(not(test))]
+extern crate pest;
+
 extern crate proc_macro;
 #[macro_use]
 extern crate quote;
