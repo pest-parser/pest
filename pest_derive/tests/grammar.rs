@@ -474,6 +474,180 @@ fn repeat_exact() {
 }
 
 #[test]
+#[should_panic]
+fn repeat_min_once() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::repeat_min,
+        tokens: []
+    };
+}
+
+#[test]
+fn repeat_min_twice() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc abc",
+        rule: Rule::repeat_min,
+        tokens: [
+            repeat_min(0, 7, [
+                string(0, 3),
+                string(4, 7)
+            ])
+        ]
+    };
+}
+
+#[test]
+fn repeat_min_thrice() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc abc  abc",
+        rule: Rule::repeat_min,
+        tokens: [
+            repeat_min(0, 12, [
+                string(0, 3),
+                string(4, 7),
+                string(9, 12)
+            ])
+        ]
+    };
+}
+
+#[test]
+#[should_panic]
+fn repeat_min_atomic_once() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::repeat_min_atomic,
+        tokens: []
+    };
+}
+
+#[test]
+fn repeat_min_atomic_twice() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abcabc",
+        rule: Rule::repeat_min_atomic,
+        tokens: [
+            repeat_min_atomic(0, 6)
+        ]
+    };
+}
+
+#[test]
+fn repeat_min_atomic_thrice() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abcabcabc",
+        rule: Rule::repeat_min_atomic,
+        tokens: [
+            repeat_min_atomic(0, 9)
+        ]
+    };
+}
+
+#[test]
+#[should_panic]
+fn repeat_min_atomic_space() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc abc",
+        rule: Rule::repeat_min_atomic,
+        tokens: []
+    };
+}
+
+#[test]
+fn repeat_max_once() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::repeat_max,
+        tokens: [
+            repeat_max(0, 3, [
+                string(0, 3)
+            ])
+        ]
+    };
+}
+
+#[test]
+fn repeat_max_twice() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc abc",
+        rule: Rule::repeat_max,
+        tokens: [
+            repeat_max(0, 7, [
+                string(0, 3),
+                string(4, 7)
+            ])
+        ]
+    };
+}
+
+#[test]
+#[should_panic]
+fn repeat_max_thrice() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc abc",
+        rule: Rule::repeat_max,
+        tokens: []
+    };
+}
+
+#[test]
+fn repeat_max_atomic_once() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::repeat_max_atomic,
+        tokens: [
+            repeat_max_atomic(0, 3)
+        ]
+    };
+}
+
+#[test]
+fn repeat_max_atomic_twice() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abcabc",
+        rule: Rule::repeat_max_atomic,
+        tokens: [
+            repeat_max_atomic(0, 6)
+        ]
+    };
+}
+
+#[test]
+#[should_panic]
+fn repeat_max_atomic_thrice() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abcabcabc",
+        rule: Rule::repeat_max_atomic,
+        tokens: []
+    };
+}
+
+#[test]
+#[should_panic]
+fn repeat_max_atomic_space() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc abc",
+        rule: Rule::repeat_max_atomic,
+        tokens: []
+    };
+}
+
+#[test]
 fn repeat_comment() {
     parses_to! {
         parser: GrammarParser,

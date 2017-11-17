@@ -349,11 +349,9 @@ mod tests {
                 ty: RuleType::Atomic,
                 expr: Expr::Seq(
                     /* TODO possible room for improvement here:
-                     * not sure what rationale behind reversing
-                     * the unroll on min/max was, but it seems
-                     * to eliminate the possiblity of concatenating
-                     * repeated strings at the beginning of
-                     * repetitions
+                     * if the sequences were rolled out in the opposite
+                     * order, we could further optimize the strings
+                     * in cases like this.
                     Box::new(Expr::Str("aa".to_owned())),
                     Box::new(Expr::Opt(
                         Box::new(Expr::Str("a".to_owned()))
