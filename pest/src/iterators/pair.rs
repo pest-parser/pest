@@ -50,14 +50,14 @@ impl<'i, R: RuleType, I: Input<'i>> Pair<'i, R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
+    /// # use pest::inputs::StrInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("".to_owned()));
+    /// let input = Rc::new(StrInput::new(""));
     /// let pair = pest::state(input, |state, pos| {
     ///     // generating Token pair with Rule::a ...
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
@@ -80,14 +80,14 @@ impl<'i, R: RuleType, I: Input<'i>> Pair<'i, R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
+    /// # use pest::inputs::StrInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     ab
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let pair = pest::state(input, |state, pos| {
     ///     // generating Token pair with Rule::ab ...
     /// #     state.rule(Rule::ab, pos, |_, p| p.match_string("ab"))
@@ -110,14 +110,14 @@ impl<'i, R: RuleType, I: Input<'i>> Pair<'i, R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
+    /// # use pest::inputs::StrInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     ab
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let pair = pest::state(input, |state, pos| {
     ///     // generating Token pair with Rule::ab ...
     /// #     state.rule(Rule::ab, pos, |_, p| p.match_string("ab"))
@@ -140,14 +140,14 @@ impl<'i, R: RuleType, I: Input<'i>> Pair<'i, R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
+    /// # use pest::inputs::StrInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("".to_owned()));
+    /// let input = Rc::new(StrInput::new(""));
     /// let pair = pest::state(input, |state, pos| {
     ///     // generating Token pair with Rule::a ...
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
@@ -174,14 +174,14 @@ impl<'i, R: RuleType, I: Input<'i>> Pair<'i, R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
+    /// # use pest::inputs::StrInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("".to_owned()));
+    /// let input = Rc::new(StrInput::new(""));
     /// let pair = pest::state(input, |state, pos| {
     ///     // generating Token pair with Rule::a ...
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))

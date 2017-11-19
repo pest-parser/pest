@@ -234,10 +234,12 @@ extern crate quote;
 extern crate syn;
 
 use std::env;
+use std::fs::File;
+use std::io::{self, Read};
 use std::path::Path;
 use std::rc::Rc;
 
-use pest::inputs::FileInput;
+use pest::inputs::StrInput;
 use pest::Parser;
 use proc_macro::TokenStream;
 use quote::Ident;
@@ -264,10 +266,12 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         None => panic!("grammar attribute should point to a file")
     };
 
-    let input = match FileInput::new(&path) {
-        Ok(input) => Rc::new(input),
-        Err(error) => panic!("error opening {:?}: {}", file_name, error)
+    let data = match read_file(&path) {
+        Ok(data) => data,
+        Err(error) => panic!("error opening {:?}: {}", file_name, error),
     };
+
+    let input = Rc::new(StrInput::new(&data));
     let pairs = match GrammarParser::parse(GrammarRule::grammar_rules, input) {
         Ok(pairs) => pairs,
         Err(error) => panic!("error parsing {:?}\n\n{}", file_name, error.renamed_rules(|rule| {
@@ -305,6 +309,13 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
     let generated = generator::generate(name, optimized, defaults);
 
     generated.as_ref().parse().unwrap()
+}
+
+fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
+    let mut file = File::open(path.as_ref())?;
+    let mut string = String::new();
+    file.read_to_string(&mut string)?;
+    Ok(string)
 }
 
 fn parse_derive(source: String) -> (Ident, String) {

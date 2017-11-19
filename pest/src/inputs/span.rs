@@ -35,8 +35,8 @@ impl<'i, I: Input<'i>> Span<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.span(end);
@@ -54,8 +54,8 @@ impl<'i, I: Input<'i>> Span<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.span(end);
@@ -73,8 +73,8 @@ impl<'i, I: Input<'i>> Span<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.clone().span(end);
@@ -93,8 +93,8 @@ impl<'i, I: Input<'i>> Span<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.span(end.clone());
@@ -113,8 +113,8 @@ impl<'i, I: Input<'i>> Span<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.clone().span(end.clone());
@@ -136,8 +136,8 @@ impl<'i, I: Input<'i>> Span<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("abc".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("abc"));
     /// let start = Position::from_start(input).skip(1).unwrap();
     /// let end = start.clone().match_string("b").unwrap();
     /// let span = start.span(end);

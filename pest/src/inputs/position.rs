@@ -41,8 +41,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new(""));
     ///
     /// Position::from_start(input);
     /// ```
@@ -58,8 +58,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(start.pos(), 0);
@@ -80,8 +80,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.span(end);
@@ -104,8 +104,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("\na".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("\na"));
     /// let start = Position::from_start(input);
     /// let pos = start.match_string("\na").unwrap();
     ///
@@ -122,8 +122,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("\na".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("\na"));
     /// let start = Position::from_start(input);
     /// let pos = start.match_string("\na").unwrap();
     ///
@@ -141,8 +141,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     ///
@@ -165,8 +165,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     ///
@@ -189,8 +189,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(start.clone().skip(2).unwrap().pos(), 2);
@@ -216,8 +216,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(start.clone().match_string("ab").unwrap().pos(), 2);
@@ -242,8 +242,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(start.clone().match_insensitive("AB").unwrap().pos(), 2);
@@ -268,8 +268,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(start.clone().match_range('a'..'z').unwrap().pos(), 1);
@@ -304,8 +304,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(
@@ -355,8 +355,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(
@@ -414,8 +414,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(
@@ -454,8 +454,8 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     ///
     /// ```
     /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::inputs::{Position, StrInput};
+    /// let input = Rc::new(StrInput::new("ab"));
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(

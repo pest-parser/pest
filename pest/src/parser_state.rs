@@ -50,9 +50,9 @@ pub struct ParserState<'i, R: RuleType, I: Input<'i>> {
 /// ```
 /// # use std::rc::Rc;
 /// # use pest;
-/// # use pest::inputs::StringInput;
+/// # use pest::inputs::StrInput;
 ///
-/// let input = Rc::new(StringInput::new("".to_owned()));
+/// let input = Rc::new(StrInput::new(""));
 /// pest::state::<(), _, _>(input, |_, pos| {
 ///     Ok(pos)
 /// }).unwrap();
@@ -100,14 +100,14 @@ impl<'i, R: RuleType, I: Input<'i>> ParserState<'i, R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
+    /// # use pest::inputs::StrInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let input = Rc::new(StrInput::new("a"));
     /// let pairs: Vec<_> = pest::state(input, |state, pos| {
     ///     state.rule(Rule::a, pos, |_, p| Ok(p))
     /// }).unwrap().collect();
@@ -212,14 +212,14 @@ impl<'i, R: RuleType, I: Input<'i>> ParserState<'i, R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
+    /// # use pest::inputs::StrInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let input = Rc::new(StrInput::new("a"));
     /// let pairs: Vec<_> = pest::state(input, |state, pos| {
     ///     state.sequence(move |state| {
     ///         pos.sequence(|p| {
@@ -261,14 +261,14 @@ impl<'i, R: RuleType, I: Input<'i>> ParserState<'i, R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
+    /// # use pest::inputs::StrInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let input = Rc::new(StrInput::new("a"));
     /// let pairs: Vec<_> = pest::state(input, |state, pos| {
     ///     state.lookahead(true, move |state| {
     ///         state.rule(Rule::a, pos, |_, p| Ok(p))
@@ -310,14 +310,14 @@ impl<'i, R: RuleType, I: Input<'i>> ParserState<'i, R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest::{self, Atomicity};
-    /// # use pest::inputs::StringInput;
+    /// # use pest::inputs::StrInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let input = Rc::new(StrInput::new("a"));
     /// let pairs: Vec<_> = pest::state(input, |state, pos| {
     ///     state.atomic(Atomicity::Atomic, move |state| {
     ///         state.rule(Rule::a, pos, |_, p| Ok(p))

@@ -47,14 +47,14 @@ impl<'i, R: RuleType, I: Input<'i>> FlatPairs<'i, R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
+    /// # use pest::inputs::StrInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("".to_owned()));
+    /// let input = Rc::new(StrInput::new(""));
     /// let pairs = pest::state(input, |state, pos| {
     ///     // generating Token pair with Rule::a ...
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))

@@ -11,7 +11,7 @@ extern crate pest;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use pest::inputs::{Input, Position, Span, StringInput};
+use pest::inputs::{Input, Position, Span, StrInput};
 use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
 
@@ -385,13 +385,13 @@ enum Json<'i> {
     Null,
     Bool(bool),
     Number(f64),
-    String(Span<'i, StringInput>),
+    String(Span<'i, StrInput<'i>>),
     Array(Vec<Json<'i>>),
-    Object(HashMap<Span<'i, StringInput>, Json<'i>>)
+    Object(HashMap<Span<'i, StrInput<'i>>, Json<'i>>)
 }
 
-fn consume<'i>(pair: Pair<'i, Rule, StringInput>) -> Json<'i> {
-    fn value<'i>(pair: Pair<'i, Rule, StringInput>) -> Json<'i> {
+fn consume<'i>(pair: Pair<'i, Rule, StrInput<'i>>) -> Json<'i> {
+    fn value<'i>(pair: Pair<'i, Rule, StrInput<'i>>) -> Json<'i> {
         let pair = pair.into_inner().next().unwrap();
 
         match pair.as_rule() {
@@ -577,7 +577,7 @@ fn object() {
 
 #[test]
 fn ast() {
-    let input = Rc::new(StringInput::new("{\"a\": [null, true, 3.4]}".to_owned()));
+    let input = Rc::new(StrInput::new("{\"a\": [null, true, 3.4]}"));
     let start = Position::from_start(input.clone()).skip(1).unwrap();
     let end = start.clone().skip(3).unwrap();
     let span = start.span(end);

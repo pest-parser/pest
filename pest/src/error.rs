@@ -50,7 +50,7 @@ impl <'i, R: RuleType, I: Input<'i>> Error<'i, R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest::Error;
-    /// # use pest::inputs::{Position, StringInput};
+    /// # use pest::inputs::{Position, StrInput};
     /// # #[allow(non_camel_case_types)]
     /// # #[allow(dead_code)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -58,7 +58,7 @@ impl <'i, R: RuleType, I: Input<'i>> Error<'i, R, I> {
     /// #     open_paren,
     /// #     closed_paren
     /// # }
-    /// # let input = Rc::new(StringInput::new("".to_owned()));
+    /// # let input = Rc::new(StrInput::new(""));
     /// # let pos = Position::from_start(input);
     /// Error::ParsingError {
     ///     positives: vec![Rule::open_paren],
@@ -215,11 +215,11 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use super::super::inputs::{position, StringInput};
+    use super::super::inputs::{position, StrInput};
 
     #[test]
     fn display_parsing_error_mixed() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
+        let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
         let error: Error<u32, _> = Error::ParsingError {
             positives: vec![1, 2, 3],
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn display_parsing_error_positives() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
+        let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
         let error: Error<u32, _> = Error::ParsingError {
             positives: vec![1, 2],
@@ -259,7 +259,7 @@ mod tests {
 
     #[test]
     fn display_parsing_error_negatives() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
+        let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
         let error: Error<u32, _> = Error::ParsingError {
             positives: vec![],
@@ -279,7 +279,7 @@ mod tests {
 
     #[test]
     fn display_parsing_error_unknown() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
+        let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
         let error: Error<u32, _> = Error::ParsingError {
             positives: vec![],
@@ -299,7 +299,7 @@ mod tests {
 
     #[test]
     fn display_custom() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
+        let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
         let error: Error<&str, _> = Error::CustomErrorPos {
             message: "error: big one".to_owned(),
@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn mapped_parsing_error() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
+        let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
         let error: Error<u32, _> = Error::ParsingError {
             positives: vec![1, 2, 3],
