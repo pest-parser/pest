@@ -276,6 +276,19 @@ mod tests {
     }
 
     #[test]
+    fn slice_lifetime() {
+        let string: String = "asdasdf".to_owned();
+
+        let slice: &str = {
+            let input2 = StrInput::new(&string);
+            unsafe { input2.slice(1, 3) }
+
+        };
+
+        assert_eq!(slice, "sd");
+    }
+
+    #[test]
     fn line_col() {
         let input2 = StrInput::new("a\rb\nc\r\nd嗨");
 
