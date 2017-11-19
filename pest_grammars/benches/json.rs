@@ -23,17 +23,17 @@ use pest::Parser;
 
 use pest_grammars::json::*;
 
-enum Json<I: Input> {
+enum Json<'i, I: Input<'i>> {
     Null,
     Bool(bool),
     Number(f64),
-    String(Span<I>),
-    Array(Vec<Json<I>>),
-    Object(HashMap<Span<I>, Json<I>>)
+    String(Span<'i, I>),
+    Array(Vec<Json<'i, I>>),
+    Object(HashMap<Span<'i, I>, Json<'i, I>>)
 }
 
-fn consume<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
-    fn value<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
+fn consume<'i, I: Input<'i>>(pair: Pair<'i, Rule, I>) -> Json<'i, I> {
+    fn value<'i, I: Input<'i>>(pair: Pair<'i, Rule, I>) -> Json<'i, I> {
         let pair = pair.into_inner().next().unwrap();
 
         match pair.as_rule() {

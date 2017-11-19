@@ -173,7 +173,7 @@ macro_rules! consumes_to {
 /// # struct AbcParser;
 /// #
 /// # impl Parser<Rule> for AbcParser {
-/// #     fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+/// #     fn parse<'i, I: Input<'i>>(_: Rule, input: Rc<I>) -> Result<Pairs<'i, Rule, I>, Error<'i, Rule, I>> {
 /// #         pest::state(input, |state, pos| {
 /// #             state.rule(Rule::a, pos, |state, pos| {
 /// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
@@ -252,7 +252,7 @@ macro_rules! parses_to {
 /// # struct AbcParser;
 /// #
 /// # impl Parser<Rule> for AbcParser {
-/// #     fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+/// #     fn parse<'i, I: Input<'i>>(_: Rule, input: Rc<I>) -> Result<Pairs<'i, Rule, I>, Error<'i, Rule, I>> {
 /// #         pest::state(input, |state, pos| {
 /// #             state.rule(Rule::a, pos, |state, pos| {
 /// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
@@ -319,7 +319,7 @@ pub mod tests {
     pub struct AbcParser;
 
     impl Parser<Rule> for AbcParser {
-        fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+        fn parse<'i, I: Input<'i>>(_: Rule, input: Rc<I>) -> Result<Pairs<'i, Rule, I>, Error<'i, Rule, I>> {
             state(input, |state, pos| {
                 state.rule(Rule::a, pos, |state, pos| {
                     state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {

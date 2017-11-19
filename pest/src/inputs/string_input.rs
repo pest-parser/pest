@@ -207,7 +207,7 @@ unsafe fn match_range(source: &str, range: Range<char>, pos: usize) -> Option<us
     }
 }
 
-impl Input for StringInput {
+impl<'i> Input<'i> for StringInput {
     #[inline]
     fn len(&self) -> usize {
         self.string.len()
@@ -224,16 +224,16 @@ impl Input for StringInput {
     }
 
     #[inline]
-    unsafe fn slice(&self, start: usize, end: usize) -> &str {
-        self.string.slice_unchecked(start, end)
+    unsafe fn slice(&self, start: usize, end: usize) -> &'i str {
+        ::std::mem::transmute(self.string.slice_unchecked(start, end))
     }
 
     unsafe fn line_col(&self, pos: usize) -> (usize, usize) {
         line_col(&self.string, pos)
     }
 
-    unsafe fn line_of(&self, pos: usize) -> &str {
-        line_of(&self.string, pos)
+    unsafe fn line_of(&self, pos: usize) -> &'i str {
+        ::std::mem::transmute(line_of(&self.string, pos))
     }
 
     #[inline]
@@ -257,7 +257,7 @@ impl Input for StringInput {
     }
 }
 
-impl<'a> Input for StrInput<'a> {
+impl<'a> Input<'a> for StrInput<'a> {
     #[inline]
     fn len(&self) -> usize {
         self.str_ref.len()
@@ -274,7 +274,7 @@ impl<'a> Input for StrInput<'a> {
     }
 
     #[inline]
-    unsafe fn slice(&self, start: usize, end: usize) -> &str {
+    unsafe fn slice(&self, start: usize, end: usize) -> &'a str {
         self.str_ref.slice_unchecked(start, end)
     }
 
@@ -282,7 +282,7 @@ impl<'a> Input for StrInput<'a> {
         line_col(self.str_ref, pos)
     }
 
-    unsafe fn line_of(&self, pos: usize) -> &str {
+    unsafe fn line_of(&self, pos: usize) -> &'a str {
         line_of(self.str_ref, pos)
     }
 

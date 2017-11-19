@@ -18,11 +18,11 @@ enum Rule {
 struct ParenParser;
 
 impl Parser<Rule> for ParenParser {
-    fn parse<I: Input>(rule: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
-        fn expr<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+    fn parse<'i, I: Input<'i>>(rule: Rule, input: Rc<I>) -> Result<Pairs<'i, Rule, I>, Error<'i, Rule, I>> {
+        fn expr<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, Rule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.sequence(move |state| {
                 pos.sequence(|p| {
                     p.repeat(|p| {
@@ -34,10 +34,10 @@ impl Parser<Rule> for ParenParser {
             })
         }
 
-        fn paren<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn paren<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, Rule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(Rule::paren, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|p| {
@@ -80,7 +80,7 @@ impl Parser<Rule> for ParenParser {
 #[derive(Debug)]
 struct Paren(Vec<Paren>);
 
-fn expr<I: Input>(pairs: Pairs<Rule, I>) -> Vec<Paren> {
+fn expr<'i, I: Input<'i>>(pairs: Pairs<'i, Rule, I>) -> Vec<Paren> {
     pairs.filter(|p| p.as_rule() == Rule::paren).map(|p| Paren(expr(p.into_inner()))).collect()
 }
 

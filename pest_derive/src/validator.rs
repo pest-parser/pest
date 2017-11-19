@@ -15,7 +15,7 @@ use quote::Ident;
 
 use parser::{GrammarRule, ParserExpr, ParserNode, ParserRule};
 
-pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
+pub fn validate_pairs<'i, I: Input<'i>>(pairs: Pairs<'i, GrammarRule, I>) -> Vec<Ident> {
     let mut rust_keywords = HashSet::new();
     rust_keywords.insert("abstract");
     rust_keywords.insert("alignof");
@@ -126,10 +126,10 @@ pub fn validate_pairs<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Ident> {
     defaults.into_iter().map(|string| Ident::new(*string)).collect()
 }
 
-pub fn validate_rust_keywords<I: Input>(
-    definitions: &Vec<Span<I>>,
+pub fn validate_rust_keywords<'i, I: Input<'i>>(
+    definitions: &Vec<Span<'i, I>>,
     rust_keywords: &HashSet<&str>
-) -> Vec<Error<GrammarRule, I>> {
+) -> Vec<Error<'i, GrammarRule, I>> {
     let mut errors = vec![];
 
     for definition in definitions {
@@ -146,10 +146,10 @@ pub fn validate_rust_keywords<I: Input>(
     errors
 }
 
-pub fn validate_pest_keywords<I: Input>(
-    definitions: &Vec<Span<I>>,
+pub fn validate_pest_keywords<'i, I: Input<'i>>(
+    definitions: &Vec<Span<'i, I>>,
     pest_keywords: &HashSet<&str>
-) -> Vec<Error<GrammarRule, I>> {
+) -> Vec<Error<'i, GrammarRule, I>> {
     let mut errors = vec![];
 
     for definition in definitions {
@@ -166,9 +166,9 @@ pub fn validate_pest_keywords<I: Input>(
     errors
 }
 
-pub fn validate_already_defined<I: Input>(
-    definitions: &Vec<Span<I>>
-) -> Vec<Error<GrammarRule, I>> {
+pub fn validate_already_defined<'i, I: Input<'i>>(
+    definitions: &Vec<Span<'i, I>>
+) -> Vec<Error<'i, GrammarRule, I>> {
     let mut errors = vec![];
     let mut defined = HashSet::new();
 
@@ -188,11 +188,11 @@ pub fn validate_already_defined<I: Input>(
     errors
 }
 
-pub fn validate_undefined<I: Input>(
-    definitions: &Vec<Span<I>>,
-    called_rules: &Vec<Span<I>>,
+pub fn validate_undefined<'i, I: Input<'i>>(
+    definitions: &Vec<Span<'i, I>>,
+    called_rules: &Vec<Span<'i, I>>,
     predefined: &HashSet<&str>
-) -> Vec<Error<GrammarRule, I>> {
+) -> Vec<Error<'i, GrammarRule, I>> {
     let mut errors = vec![];
     let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
 
@@ -210,7 +210,7 @@ pub fn validate_undefined<I: Input>(
     errors
 }
 
-pub fn validate_ast<I: Input>(rules: &Vec<ParserRule<I>>) {
+pub fn validate_ast<'i, I: Input<'i>>(rules: &Vec<ParserRule<'i, I>>) {
     let mut errors = vec![];
 
     errors.extend(validate_repetition(rules));
@@ -233,7 +233,7 @@ pub fn validate_ast<I: Input>(rules: &Vec<ParserRule<I>>) {
     }
 }
 
-fn is_non_progressing<I: Input>(expr: &ParserExpr<I>) -> bool {
+fn is_non_progressing<'i, I: Input<'i>>(expr: &ParserExpr<'i, I>) -> bool {
     match *expr {
         ParserExpr::Str(ref string) => string == "",
         ParserExpr::Ident(ref ident) => ident == "soi" || ident == "eoi",
@@ -249,7 +249,7 @@ fn is_non_progressing<I: Input>(expr: &ParserExpr<I>) -> bool {
     }
 }
 
-fn is_non_failing<I: Input>(expr: &ParserExpr<I>) -> bool {
+fn is_non_failing<'i, I: Input<'i>>(expr: &ParserExpr<'i, I>) -> bool {
     match *expr {
         ParserExpr::Str(ref string) => string == "",
         ParserExpr::Opt(_) => true,
@@ -264,7 +264,7 @@ fn is_non_failing<I: Input>(expr: &ParserExpr<I>) -> bool {
     }
 }
 
-fn validate_repetition<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
+fn validate_repetition<'i, I: Input<'i>>(rules: &Vec<ParserRule<'i, I>>) -> Vec<Error<'i, GrammarRule, I>> {
     rules.into_iter().filter_map(|rule| {
         match rule.node.expr {
             ParserExpr::Rep(ref other) | ParserExpr::RepOnce(ref other)=> {
@@ -289,7 +289,7 @@ fn validate_repetition<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<Gramma
     }).collect()
 }
 
-fn validate_whitespace_comment<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
+fn validate_whitespace_comment<'i, I: Input<'i>>(rules: &Vec<ParserRule<'i, I>>) -> Vec<Error<'i, GrammarRule, I>> {
     rules.into_iter().filter_map(|rule| {
         if &rule.name == "whitespace" || &rule.name == "comment" {
             if is_non_failing(&rule.node.expr) {
@@ -312,11 +312,11 @@ fn validate_whitespace_comment<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Erro
     }).collect()
 }
 
-fn validate_left_recursion<I: Input>(rules: &Vec<ParserRule<I>>) -> Vec<Error<GrammarRule, I>> {
+fn validate_left_recursion<'i, I: Input<'i>>(rules: &Vec<ParserRule<'i, I>>) -> Vec<Error<'i, GrammarRule, I>> {
     left_recursion(to_hash_map(rules))
 }
 
-fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<Ident, &ParserNode<I>> {
+fn to_hash_map<'a, 'i, I: Input<'i>>(rules: &'a Vec<ParserRule<'i, I>>) -> HashMap<Ident, &'a ParserNode<'i, I>> {
     let mut hash_map = HashMap::new();
 
     for rule in rules {
@@ -326,12 +326,12 @@ fn to_hash_map<I: Input>(rules: &Vec<ParserRule<I>>) -> HashMap<Ident, &ParserNo
     hash_map
 }
 
-fn left_recursion<I: Input>(rules: HashMap<Ident, &ParserNode<I>>) -> Vec<Error<GrammarRule, I>> {
-    fn check_expr<I: Input>(
-        node: &ParserNode<I>,
-        rules: &HashMap<Ident, &ParserNode<I>>,
+fn left_recursion<'i, I: Input<'i>>(rules: HashMap<Ident, &ParserNode<'i, I>>) -> Vec<Error<'i, GrammarRule, I>> {
+    fn check_expr<'i, I: Input<'i>>(
+        node: &ParserNode<'i, I>,
+        rules: &HashMap<Ident, &ParserNode<'i, I>>,
         trace: &mut Vec<Ident>
-    ) -> Option<Error<GrammarRule, I>> {
+    ) -> Option<Error<'i, GrammarRule, I>> {
         match node.expr {
             ParserExpr::Ident(ref other)  => {
                 if trace[0] == other {

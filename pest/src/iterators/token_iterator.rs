@@ -16,31 +16,33 @@ use super::super::token::Token;
 /// [`Pair::into_iter`](struct.Pair.html#method.into_iter) or
 /// [`Pairs::into_iter`](struct.Pairs.html#method.into_iter)
 #[derive(Clone, Debug)]
-pub struct TokenIterator<R, I: Input> {
+pub struct TokenIterator<'i, R, I: Input<'i>> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
     index: usize,
     start: usize,
-    end: usize
+    end: usize,
+    __phantom: ::std::marker::PhantomData<&'i str>
 }
 
-pub fn new<R: RuleType, I: Input>(
+pub fn new<'i, R: RuleType, I: Input<'i>>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
     start: usize,
     end: usize
-) -> TokenIterator<R, I> {
+) -> TokenIterator<'i, R, I> {
     TokenIterator {
         queue,
         input,
         index: 0,
         start,
-        end
+        end,
+        __phantom: ::std::marker::PhantomData
     }
 }
 
-impl<R: RuleType, I: Input> Iterator for TokenIterator<R, I> {
-    type Item = Token<R, I>;
+impl<'i, R: RuleType, I: Input<'i>> Iterator for TokenIterator<'i, R, I> {
+    type Item = Token<'i, R, I>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index == self.end {

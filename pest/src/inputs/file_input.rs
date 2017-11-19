@@ -42,7 +42,7 @@ impl FileInput {
     }
 }
 
-impl Input for FileInput {
+impl<'i> Input<'i> for FileInput {
     #[inline]
     fn len(&self) -> usize {
         self.input.len()
@@ -59,7 +59,7 @@ impl Input for FileInput {
     }
 
     #[inline]
-    unsafe fn slice(&self, start: usize, end: usize) -> &str {
+    unsafe fn slice(&self, start: usize, end: usize) -> &'i str {
         self.input.slice(start, end)
     }
 
@@ -69,7 +69,7 @@ impl Input for FileInput {
     }
 
     #[inline]
-    unsafe fn line_of(&self, pos: usize) -> &str {
+    unsafe fn line_of(&self, pos: usize) -> &'i str {
         self.input.line_of(pos)
     }
 

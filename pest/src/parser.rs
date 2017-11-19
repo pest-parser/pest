@@ -15,7 +15,7 @@ use RuleType;
 /// A `trait` that defines a `Parser`.
 pub trait Parser<R: RuleType> {
     /// Parses an `Input` starting from `rule`.
-    fn parse<I: Input>(rule: R, input: Rc<I>) -> Result<Pairs<R, I>, Error<R, I>>;
+    fn parse<'i, I: Input<'i>>(rule: R, input: Rc<I>) -> Result<Pairs<'i, R, I>, Error<'i, R, I>>;
     /// Parses an `&str` starting from `rule`.
     fn parse_str(rule: R, input: &str) -> Result<Pairs<R, StrInput>, Error<R, StrInput>> {
         Self::parse(rule, Rc::new(StrInput::new(input)))

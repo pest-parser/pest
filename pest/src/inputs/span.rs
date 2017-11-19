@@ -16,18 +16,19 @@ use super::position;
 /// A `struct` of a span over an `Input`. It is created from either
 /// [two `Position`s](struct.Position.html#method.span) or from a
 /// [`Pair`](../iterators/struct.Pair.html#method.span).
-pub struct Span<I: Input> {
+pub struct Span<'i, I: Input<'i>> {
     input: Rc<I>,
     start: usize,
-    end: usize
+    end: usize,
+    __phantom: ::std::marker::PhantomData<&'i str>,
 }
 
 #[inline]
-pub fn new<I: Input>(input: Rc<I>, start: usize, end: usize) -> Span<I> {
-    Span { input, start, end }
+pub fn new<'i, I: Input<'i>>(input: Rc<I>, start: usize, end: usize) -> Span<'i, I> {
+    Span { input, start, end, __phantom: ::std::marker::PhantomData }
 }
 
-impl<I: Input> Span<I> {
+impl<'i, I: Input<'i>> Span<'i, I> {
     /// Returns the `Span`'s start byte position as a `usize`.
     ///
     /// # Examples
@@ -81,7 +82,7 @@ impl<I: Input> Span<I> {
     /// assert_eq!(span.start_pos(), start);
     /// ```
     #[inline]
-    pub fn start_pos(&self) -> position::Position<I> {
+    pub fn start_pos(&self) -> position::Position<'i, I> {
         // Span start position is a UTF-8 border and is safe.
         unsafe { position::new(self.input.clone(), self.start) }
     }
@@ -101,7 +102,7 @@ impl<I: Input> Span<I> {
     /// assert_eq!(span.end_pos(), end);
     /// ```
     #[inline]
-    pub fn end_pos(&self) -> position::Position<I> {
+    pub fn end_pos(&self) -> position::Position<'i, I> {
         // Span end position is a UTF-8 border and is safe.
         unsafe { position::new(self.input.clone(), self.end) }
     }
@@ -121,7 +122,7 @@ impl<I: Input> Span<I> {
     /// assert_eq!(span.split(), (start, end));
     /// ```
     #[inline]
-    pub fn split(self) -> (position::Position<I>, position::Position<I>) {
+    pub fn split(self) -> (position::Position<'i, I>, position::Position<'i, I>) {
         // Span start and end positions are UTF-8 borders and safe.
         let pos1 = unsafe { position::new(self.input.clone(), self.start) };
         let pos2 = unsafe { position::new(self.input, self.end) };
@@ -144,35 +145,35 @@ impl<I: Input> Span<I> {
     /// assert_eq!(span.as_str(), "b");
     /// ```
     #[inline]
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &'i str {
         unsafe { self.input.slice(self.start, self.end) }
     }
 }
 
 // We don't want to enforce derivable traits on the Input which forces to implement them manually.
 
-impl<I: Input> fmt::Debug for Span<I> {
+impl<'i, I: Input<'i>> fmt::Debug for Span<'i, I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Span {{ start: {}, end: {} }}", self.start, self.end)
     }
 }
 
-impl<I: Input> Clone for Span<I> {
-    fn clone(&self) -> Span<I> {
+impl<'i, I: Input<'i>> Clone for Span<'i, I> {
+    fn clone(&self) -> Span<'i, I> {
         new(self.input.clone(), self.start, self.end)
     }
 }
 
-impl<I: Input> PartialEq for Span<I> {
-    fn eq(&self, other: &Span<I>) -> bool {
+impl<'i, I: Input<'i>> PartialEq for Span<'i, I> {
+    fn eq(&self, other: &Span<'i, I>) -> bool {
         Rc::ptr_eq(&self.input, &other.input) && self.start == other.start && self.end == other.end
     }
 }
 
-impl<I: Input> Eq for Span<I> {}
+impl<'i, I: Input<'i>> Eq for Span<'i, I> {}
 
-impl<I: Input> PartialOrd for Span<I> {
-    fn partial_cmp(&self, other: &Span<I>) -> Option<Ordering> {
+impl<'i, I: Input<'i>> PartialOrd for Span<'i, I> {
+    fn partial_cmp(&self, other: &Span<'i, I>) -> Option<Ordering> {
         if Rc::ptr_eq(&self.input, &other.input) {
             match self.start.partial_cmp(&other.start) {
                 Some(Ordering::Equal) => self.end.partial_cmp(&other.end),
@@ -184,8 +185,8 @@ impl<I: Input> PartialOrd for Span<I> {
     }
 }
 
-impl<I: Input> Ord for Span<I> {
-    fn cmp(&self, other: &Span<I>) -> Ordering {
+impl<'i, I: Input<'i>> Ord for Span<'i, I> {
+    fn cmp(&self, other: &Span<'i, I>) -> Ordering {
         self.partial_cmp(other).expect(
             "cannot compare spans from \
              different inputs"
@@ -193,7 +194,7 @@ impl<I: Input> Ord for Span<I> {
     }
 }
 
-impl<I: Input> Hash for Span<I> {
+impl<'i, I: Input<'i>> Hash for Span<'i, I> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&*self.input as *const I).hash(state);
         self.start.hash(state);

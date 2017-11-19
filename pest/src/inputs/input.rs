@@ -26,7 +26,7 @@ use std::ops::Range;
 /// Implementors should **NOT** introduce undefined behavior in these methods. Undefined behavior is
 /// acceptable **ONLY** when the positions are either out of bounds or don't match UTF-8 indices,
 /// since these cases are avoided by using the [`Position`](struct.Position.html) API.
-pub trait Input: Clone + Debug + Eq + Hash {
+pub trait Input<'i>: Clone + Debug + Eq + Hash {
     /// Returns length of the input.
     fn len(&self) -> usize;
 
@@ -42,7 +42,7 @@ pub trait Input: Clone + Debug + Eq + Hash {
     ///
     /// This method can cause undefined behavior when `start` or `end` are either out of bounds or
     /// don't match UTF-8 indices.
-    unsafe fn slice(&self, start: usize, end: usize) -> &str;
+    unsafe fn slice(&self, start: usize, end: usize) -> &'i str;
 
     /// Returns the line - and column number of the input at `pos`.
     ///
@@ -58,7 +58,7 @@ pub trait Input: Clone + Debug + Eq + Hash {
     ///
     /// This method can cause undefined behavior when `pos` is either out of bounds or doesn't match
     /// UTF-8 indices.
-    unsafe fn line_of(&self, pos: usize) -> &str;
+    unsafe fn line_of(&self, pos: usize) -> &'i str;
 
     /// Tries to skip `n` `char`s at `pos`. Returns `Some(len)` with the UTF-8 length of the skipped
     /// `char`s position or `None` if there are not enough `char`s left to skip.

@@ -16,28 +16,30 @@ use super::super::RuleType;
 
 /// A `struct` containing `Pairs`. It is created by
 /// [`Pairs::flatten`](struct.Pairs.html#method.flatten).
-pub struct FlatPairs<R, I: Input> {
+pub struct FlatPairs<'i, R, I: Input<'i>> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
     start: usize,
-    end: usize
+    end: usize,
+    __phantom: ::std::marker::PhantomData<&'i str>
 }
 
-pub fn new<R: RuleType, I: Input>(
+pub fn new<'i, R: RuleType, I: Input<'i>>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: Rc<I>,
     start: usize,
     end: usize
-) -> FlatPairs<R, I> {
+) -> FlatPairs<'i, R, I> {
     FlatPairs {
         queue,
         input,
         start,
-        end
+        end,
+        __phantom: ::std::marker::PhantomData
     }
 }
 
-impl<R: RuleType, I: Input> FlatPairs<R, I> {
+impl<'i, R: RuleType, I: Input<'i>> FlatPairs<'i, R, I> {
     /// Converts the `FlatPairs` into a `TokenIterator`.
     ///
     /// # Examples
@@ -62,7 +64,7 @@ impl<R: RuleType, I: Input> FlatPairs<R, I> {
     /// assert_eq!(tokens.len(), 2);
     /// ```
     #[inline]
-    pub fn into_iter(self) -> TokenIterator<R, I> {
+    pub fn into_iter(self) -> TokenIterator<'i, R, I> {
         token_iterator::new(
             self.queue,
             self.input,
@@ -87,8 +89,8 @@ impl<R: RuleType, I: Input> FlatPairs<R, I> {
     }
 }
 
-impl<R: RuleType, I: Input> Iterator for FlatPairs<R, I> {
-    type Item = Pair<R, I>;
+impl<'i, R: RuleType, I: Input<'i>> Iterator for FlatPairs<'i, R, I> {
+    type Item = Pair<'i, R, I>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.start >= self.end {
@@ -107,19 +109,20 @@ impl<R: RuleType, I: Input> Iterator for FlatPairs<R, I> {
     }
 }
 
-impl<R: RuleType, I: Input> fmt::Debug for FlatPairs<R, I> {
+impl<'i, R: RuleType, I: Input<'i>> fmt::Debug for FlatPairs<'i, R, I> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "FlatPairs {{ pairs: {:?} }}", self.clone().collect::<Vec<_>>())
     }
 }
 
-impl<R: Clone, I: Input> Clone for FlatPairs<R, I> {
-    fn clone(&self) -> FlatPairs<R, I> {
+impl<'i, R: Clone, I: Input<'i>> Clone for FlatPairs<'i, R, I> {
+    fn clone(&self) -> FlatPairs<'i, R, I> {
         FlatPairs {
             queue: self.queue.clone(),
             input: self.input.clone(),
             start: self.start,
-            end: self.end
+            end: self.end,
+            __phantom: ::std::marker::PhantomData,
         }
     }
 }

@@ -60,14 +60,14 @@ pub enum GrammarRule {
 pub struct GrammarParser;
 
 impl Parser<GrammarRule> for GrammarParser {
-    fn parse<I: Input>(
+    fn parse<'i, I: Input<'i>>(
         rule: GrammarRule,
         input: Rc<I>
-    ) -> Result<Pairs<GrammarRule, I>, Error<GrammarRule, I>> {
-        fn grammar_rules<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+    ) -> Result<Pairs<'i, GrammarRule, I>, Error<'i, GrammarRule, I>> {
+        fn grammar_rules<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             pos.sequence(|pos| {
                 soi(pos, state).and_then(|pos| {
                     skip(pos, state)
@@ -91,24 +91,24 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn soi<I: Input>(
-            pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn soi<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            _: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             pos.at_start()
         }
 
-        fn eoi<I: Input>(
-            pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn eoi<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            _: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             pos.at_end()
         }
 
-        fn grammar_rule<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn grammar_rule<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::grammar_rule, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
@@ -140,19 +140,19 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn assignment_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn assignment_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::assignment_operator, pos, |_, pos| {
                 pos.match_string("=")
             })
         }
 
-        fn modifier<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn modifier<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             silent_modifier(pos, state).or_else(|pos| {
                 atomic_modifier(pos, state)
             }).or_else(|pos| {
@@ -162,82 +162,82 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn silent_modifier<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn silent_modifier<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::silent_modifier, pos, |_, pos| {
                 pos.match_string("_")
             })
         }
 
-        fn atomic_modifier<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn atomic_modifier<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::atomic_modifier, pos, |_, pos| {
                 pos.match_string("@")
             })
         }
 
-        fn compound_atomic_modifier<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn compound_atomic_modifier<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::compound_atomic_modifier, pos, |_, pos| {
                 pos.match_string("$")
             })
         }
 
-        fn non_atomic_modifier<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn non_atomic_modifier<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::non_atomic_modifier, pos, |_, pos| {
                 pos.match_string("!")
             })
         }
 
-        fn opening_brace<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn opening_brace<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::opening_brace, pos, |_, pos| {
                 pos.match_string("{")
             })
         }
 
-        fn closing_brace<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn closing_brace<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::closing_brace, pos, |_, pos| {
                 pos.match_string("}")
             })
         }
 
-        fn opening_paren<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn opening_paren<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::opening_paren, pos, |_, pos| {
                 pos.match_string("(")
             })
         }
 
-        fn closing_paren<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn closing_paren<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::closing_paren, pos, |_, pos| {
                 pos.match_string(")")
             })
         }
 
-        fn expression<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn expression<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::expression, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
@@ -261,10 +261,10 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn term<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn term<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::term, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
@@ -304,10 +304,10 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn terminal<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn terminal<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             push(pos, state).or_else(|pos| {
                 identifier(pos, state)
             }).or_else(|pos| {
@@ -319,28 +319,28 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn prefix_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn prefix_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             positive_predicate_operator(pos, state).or_else(|pos| {
                 negative_predicate_operator(pos, state)
             })
         }
 
-        fn infix_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn infix_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             sequence_operator(pos, state).or_else(|pos| {
                 choice_operator(pos, state)
             })
         }
 
-        fn postfix_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn postfix_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             optional_operator(pos, state).or_else(|pos| {
                 repeat_operator(pos, state)
             }).or_else(|pos| {
@@ -350,73 +350,73 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn positive_predicate_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn positive_predicate_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::positive_predicate_operator, pos, |_, pos| {
                 pos.match_string("&")
             })
         }
 
-        fn negative_predicate_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn negative_predicate_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::negative_predicate_operator, pos, |_, pos| {
                 pos.match_string("!")
             })
         }
 
-        fn sequence_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn sequence_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::sequence_operator, pos, |_, pos| {
                 pos.match_string("~")
             })
         }
 
-        fn choice_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn choice_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::choice_operator, pos, |_, pos| {
                 pos.match_string("|")
             })
         }
 
-        fn optional_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn optional_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::optional_operator, pos, |_, pos| {
                 pos.match_string("?")
             })
         }
 
-        fn repeat_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn repeat_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::repeat_operator, pos, |_, pos| {
                 pos.match_string("*")
             })
         }
 
-        fn repeat_once_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn repeat_once_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::repeat_once_operator, pos, |_, pos| {
                 pos.match_string("+")
             })
         }
 
-        fn repeat_min_max<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn repeat_min_max<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::repeat_min_max, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
@@ -446,19 +446,19 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn comma<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn comma<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::comma, pos, |_, pos| {
                 pos.match_string(",")
             })
         }
 
-        fn push<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn push<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::push, pos, |state, pos| {
                 pos.sequence(|pos| {
                     pos.match_string("push").and_then(|pos| {
@@ -478,10 +478,10 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn identifier<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn identifier<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::identifier, pos, |state, pos| {
                 pos.sequence(|pos| {
                     pos.lookahead(false, |pos| {
@@ -501,28 +501,28 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn alpha<I: Input>(
-            pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn alpha<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            _: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             pos.match_range('a'..'z').or_else(|pos| {
                 pos.match_range('A'..'Z')
             })
         }
 
-        fn alpha_num<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn alpha_num<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             alpha(pos, state).or_else(|pos| {
                 pos.match_range('0'..'9')
             })
         }
 
-        fn string<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn string<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::string, pos, |state, pos| {
                 pos.sequence(|pos| {
                     quote(pos, state).and_then(|pos| {
@@ -546,19 +546,19 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn quote<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn quote<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::quote, pos, |_, pos| {
                 pos.match_string("\"")
             })
         }
 
-        fn insensitive_string<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn insensitive_string<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::insensitive_string, pos, |state, pos| {
                 pos.sequence(|pos| {
                     pos.match_string("^").and_then(|pos| {
@@ -570,10 +570,10 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn range<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn range<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::range, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
@@ -591,19 +591,19 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn range_operator<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn range_operator<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::range_operator, pos, |_, pos| {
                 pos.match_string("..")
             })
         }
 
-        fn character<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn character<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::character, pos, |state, pos| {
                 pos.sequence(|pos| {
                     single_quote(pos, state).and_then(|pos| {
@@ -625,10 +625,10 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn number<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn number<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::number, pos, |_, pos| {
                 pos.sequence(|pos| {
                     pos.match_range('0'..'9').and_then(|pos| {
@@ -640,19 +640,19 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn single_quote<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn single_quote<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             state.rule(GrammarRule::single_quote, pos, |_, pos| {
                 pos.match_string("'")
             })
         }
 
-        fn escape<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn escape<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             pos.sequence(|pos| {
                 pos.match_string("\\").and_then(|pos| {
                     pos.match_string("n").or_else(|pos| {
@@ -676,10 +676,10 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn unicode<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn unicode<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             pos.sequence(|pos| {
                 pos.match_string("u").and_then(|pos| {
                     pos.match_string("{")
@@ -709,10 +709,10 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn code<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn code<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             pos.sequence(|pos| {
                 pos.match_string("x").and_then(|pos| {
                     hex_digit(pos, state)
@@ -722,10 +722,10 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn hex_digit<I: Input>(
-            pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn hex_digit<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            _: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             pos.match_range('0'..'9').or_else(|pos| {
                 pos.match_range('a'..'f')
             }).or_else(|pos| {
@@ -733,10 +733,10 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn skip<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn skip<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            state: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             pos.sequence(|pos| {
                 pos.repeat(|pos| {
                     whitespace(pos, state)
@@ -760,10 +760,10 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn whitespace<I: Input>(
-            pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn whitespace<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            _: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             pos.match_string(" ").or_else(|pos| {
                 pos.match_string("\t")
             }).or_else(|pos| {
@@ -773,10 +773,10 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        fn comment<I: Input>(
-            pos: Position<I>,
-            _: &mut ParserState<GrammarRule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn comment<'i, I: Input<'i>>(
+            pos: Position<'i, I>,
+            _: &mut ParserState<'i, GrammarRule, I>
+        ) -> Result<Position<'i, I>, Position<'i, I>> {
             pos.sequence(|pos| {
                 pos.match_string("//").and_then(|pos| {
                     pos.repeat(|pos| {
@@ -792,7 +792,7 @@ impl Parser<GrammarRule> for GrammarParser {
             })
         }
 
-        pest::state(input, move |mut state, pos| {
+        pest::state(input, move |mut state, pos: Position<'i, I>| {
             match rule {
                 GrammarRule::grammar_rules => grammar_rules(pos, &mut state),
                 GrammarRule::soi => soi(pos, &mut state),
@@ -838,37 +838,37 @@ impl Parser<GrammarRule> for GrammarParser {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ParserRule<I: Input> {
+pub struct ParserRule<'i, I: Input<'i>> {
     pub name: Ident,
-    pub span: Span<I>,
+    pub span: Span<'i, I>,
     pub ty: RuleType,
-    pub node: ParserNode<I>
+    pub node: ParserNode<'i, I>
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ParserNode<I: Input> {
-    pub expr: ParserExpr<I>,
-    pub span: Span<I>
+pub struct ParserNode<'i, I: Input<'i>> {
+    pub expr: ParserExpr<'i, I>,
+    pub span: Span<'i, I>
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ParserExpr<I: Input> {
+pub enum ParserExpr<'i, I: Input<'i>> {
     Str(String),
     Insens(String),
     Range(String, String),
     Ident(Ident),
-    PosPred(Box<ParserNode<I>>),
-    NegPred(Box<ParserNode<I>>),
-    Seq(Box<ParserNode<I>>, Box<ParserNode<I>>),
-    Choice(Box<ParserNode<I>>, Box<ParserNode<I>>),
-    Opt(Box<ParserNode<I>>),
-    Rep(Box<ParserNode<I>>),
-    RepOnce(Box<ParserNode<I>>),
-    RepMinMax(Box<ParserNode<I>>, u32, u32),
-    Push(Box<ParserNode<I>>)
+    PosPred(Box<ParserNode<'i, I>>),
+    NegPred(Box<ParserNode<'i, I>>),
+    Seq(Box<ParserNode<'i, I>>, Box<ParserNode<'i, I>>),
+    Choice(Box<ParserNode<'i, I>>, Box<ParserNode<'i, I>>),
+    Opt(Box<ParserNode<'i, I>>),
+    Rep(Box<ParserNode<'i, I>>),
+    RepOnce(Box<ParserNode<'i, I>>),
+    RepMinMax(Box<ParserNode<'i, I>>, u32, u32),
+    Push(Box<ParserNode<'i, I>>)
 }
 
-fn convert_rule<I: Input>(rule: ParserRule<I>) -> Rule {
+fn convert_rule<'i, I: Input<'i>>(rule: ParserRule<'i, I>) -> Rule {
     match rule {
         ParserRule { name, ty, node, .. } => {
             let expr = convert_node(node);
@@ -878,7 +878,7 @@ fn convert_rule<I: Input>(rule: ParserRule<I>) -> Rule {
     }
 }
 
-fn convert_node<I: Input>(node: ParserNode<I>) -> Expr {
+fn convert_node<'i, I: Input<'i>>(node: ParserNode<'i, I>) -> Expr {
     match node.expr {
         ParserExpr::Str(string) => Expr::Str(string),
         ParserExpr::Insens(string) => Expr::Insens(string),
@@ -906,7 +906,7 @@ fn convert_node<I: Input>(node: ParserNode<I>) -> Expr {
     }
 }
 
-pub fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> (Vec<Rule>, Vec<Ident>) {
+pub fn consume_rules<'i, I: Input<'i>>(pairs: Pairs<'i, GrammarRule, I>) -> (Vec<Rule>, Vec<Ident>) {
     let defaults = validator::validate_pairs(pairs.clone());
     let rules = consume_rules_with_spans(pairs);
 
@@ -915,7 +915,7 @@ pub fn consume_rules<I: Input>(pairs: Pairs<GrammarRule, I>) -> (Vec<Rule>, Vec<
     (rules.into_iter().map(|rule| convert_rule(rule)).collect(), defaults)
 }
 
-fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<ParserRule<I>> {
+fn consume_rules_with_spans<'i, I: Input<'i>>(pairs: Pairs<'i, GrammarRule, I>) -> Vec<ParserRule<I>> {
     let climber = PrecClimber::new(vec![
         Operator::new(GrammarRule::choice_operator, Assoc::Left),
         Operator::new(GrammarRule::sequence_operator, Assoc::Left)
@@ -954,14 +954,14 @@ fn consume_rules_with_spans<I: Input>(pairs: Pairs<GrammarRule, I>) -> Vec<Parse
     }).collect()
 }
 
-fn consume_expr<I: Input>(
-    pairs: Peekable<Pairs<GrammarRule, I>>,
+fn consume_expr<'i, I: Input<'i>>(
+    pairs: Peekable<Pairs<'i, GrammarRule, I>>,
     climber: &PrecClimber<GrammarRule>
-) -> ParserNode<I> {
-    fn unaries<I: Input>(
-        mut pairs: Peekable<Pairs<GrammarRule, I>>,
+) -> ParserNode<'i, I> {
+    fn unaries<'i, I: Input<'i>>(
+        mut pairs: Peekable<Pairs<'i, GrammarRule, I>>,
         climber: &PrecClimber<GrammarRule>
-    ) -> ParserNode<I> {
+    ) -> ParserNode<'i, I> {
         let pair = pairs.next().unwrap();
 
         match pair.as_rule() {
@@ -1129,10 +1129,10 @@ fn consume_expr<I: Input>(
         }
     }
 
-    let term = |pair: Pair<GrammarRule, I>| {
+    let term = |pair: Pair<'i, GrammarRule, I>| {
         unaries(pair.into_inner().peekable(), climber)
     };
-    let infix = |lhs: ParserNode<I>, op: Pair<GrammarRule, I>, rhs: ParserNode<I>| {
+    let infix = |lhs: ParserNode<'i, I>, op: Pair<'i, GrammarRule, I>, rhs: ParserNode<'i, I>| {
         match op.as_rule() {
             GrammarRule::sequence_operator => {
                 let start = lhs.span.start_pos();
