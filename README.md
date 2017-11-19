@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://cdn.rawgit.com/pest-parser/pest/ac70b5c4/pest-logo.svg" width="80%"/>
+  <img src="pest-logo.svg" width="80%"/>
 </p>
 
 # pest. The Elegant Parser <sup>(beta)</sup>
@@ -125,7 +125,7 @@ the file to a fully-processed JSON object. The second one does, but since it has
 intermediate representation of the object, it repeats some work.
 
 <p align="center">
-  <img src="https://cdn.rawgit.com/pest-parser/pest/ac70b5c4/results.svg"/>
+  <img src="results.svg"/>
 </p>
 
 The [benchmark](https://github.com/Geal/pestvsnom) uses
