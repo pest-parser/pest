@@ -8,7 +8,7 @@
 use std::rc::Rc;
 
 use error::Error;
-use inputs::{Input, Position, Span};
+use inputs::{StrInput, Position, Span};
 use inputs::position;
 use iterators::{pairs, QueueableToken};
 use RuleType;
@@ -31,7 +31,7 @@ pub enum Atomicity {
 
 /// A `struct` which contains the complete state of a `Parser`.
 #[derive(Debug)]
-pub struct ParserState<'i, R: RuleType, I: Input<'i>> {
+pub struct ParserState<'i, R: RuleType> {
     queue: Vec<QueueableToken<R>>,
     lookahead: Lookahead,
     pos_attempts: Vec<R>,
@@ -40,7 +40,7 @@ pub struct ParserState<'i, R: RuleType, I: Input<'i>> {
     /// Specifies current atomicity
     pub atomicity: Atomicity,
     /// Stack of `Span`s
-    pub stack: Vec<Span<'i, I>>
+    pub stack: Vec<Span<'i>>
 }
 
 /// Creates a `ParserState` from an `Input`, supplying it to a closure `f`.
@@ -53,16 +53,16 @@ pub struct ParserState<'i, R: RuleType, I: Input<'i>> {
 /// # use pest::inputs::StrInput;
 ///
 /// let input = Rc::new(StrInput::new(""));
-/// pest::state::<(), _, _>(input, |_, pos| {
+/// pest::state::<(), _>(input, |_, pos| {
 ///     Ok(pos)
 /// }).unwrap();
 /// ```
-pub fn state<'i, R: RuleType, I: Input<'i>, F>(
-    input: Rc<I>,
+pub fn state<'i, R: RuleType, F>(
+    input: Rc<StrInput<'i>>,
     f: F
-) -> Result<pairs::Pairs<'i, R, I>, Error<'i, R, I>>
+) -> Result<pairs::Pairs<'i, R>, Error<'i, R>>
 where
-    F: FnOnce(&mut ParserState<'i, R, I>, Position<'i, I>) -> Result<Position<'i, I>, Position<'i, I>>
+    F: FnOnce(&mut ParserState<'i, R>, Position<'i>) -> Result<Position<'i>, Position<'i>>
 {
     let mut state = ParserState {
         queue: vec![],
@@ -92,7 +92,7 @@ where
     }
 }
 
-impl<'i, R: RuleType, I: Input<'i>> ParserState<'i, R, I> {
+impl<'i, R: RuleType> ParserState<'i, R> {
     /// Wrapper needed to generate tokens.
     ///
     /// # Examples
@@ -115,9 +115,9 @@ impl<'i, R: RuleType, I: Input<'i>> ParserState<'i, R, I> {
     /// assert_eq!(pairs.len(), 1);
     /// ```
     #[inline]
-    pub fn rule<F>(&mut self, rule: R, pos: Position<'i, I>, f: F) -> Result<Position<'i, I>, Position<'i, I>>
+    pub fn rule<F>(&mut self, rule: R, pos: Position<'i>, f: F) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnOnce(&mut ParserState<'i, R, I>, Position<'i, I>) -> Result<Position<'i, I>, Position<'i, I>>
+        F: FnOnce(&mut ParserState<'i, R>, Position<'i>) -> Result<Position<'i>, Position<'i>>
     {
         let actual_pos = pos.pos();
         let index = self.queue.len();
@@ -235,9 +235,9 @@ impl<'i, R: RuleType, I: Input<'i>> ParserState<'i, R, I> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn sequence<F>(&mut self, f: F) -> Result<Position<'i, I>, Position<'i, I>>
+    pub fn sequence<F>(&mut self, f: F) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnOnce(&mut ParserState<'i, R, I>) -> Result<Position<'i, I>, Position<'i, I>>
+        F: FnOnce(&mut ParserState<'i, R>) -> Result<Position<'i>, Position<'i>>
     {
         let index = self.queue.len();
 
@@ -278,9 +278,9 @@ impl<'i, R: RuleType, I: Input<'i>> ParserState<'i, R, I> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn lookahead<F>(&mut self, is_positive: bool, f: F) -> Result<Position<'i, I>, Position<'i, I>>
+    pub fn lookahead<F>(&mut self, is_positive: bool, f: F) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnOnce(&mut ParserState<'i, R, I>) -> Result<Position<'i, I>, Position<'i, I>>
+        F: FnOnce(&mut ParserState<'i, R>) -> Result<Position<'i>, Position<'i>>
     {
         let initial_lookahead = self.lookahead;
 
@@ -327,9 +327,9 @@ impl<'i, R: RuleType, I: Input<'i>> ParserState<'i, R, I> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn atomic<F>(&mut self, atomicity: Atomicity, f: F) -> Result<Position<'i, I>, Position<'i, I>>
+    pub fn atomic<F>(&mut self, atomicity: Atomicity, f: F) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnOnce(&mut ParserState<'i, R, I>) -> Result<Position<'i, I>, Position<'i, I>>
+        F: FnOnce(&mut ParserState<'i, R>) -> Result<Position<'i>, Position<'i>>
     {
         let initial_atomicity = self.atomicity;
         let should_toggle = self.atomicity != atomicity;

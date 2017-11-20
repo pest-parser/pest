@@ -10,7 +10,7 @@ extern crate pest;
 
 use std::rc::Rc;
 
-use pest::inputs::{Input, Position, StrInput};
+use pest::inputs::{Position, StrInput};
 use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
@@ -32,11 +32,11 @@ enum Rule {
 struct CalculatorParser;
 
 impl Parser<Rule> for CalculatorParser {
-    fn parse<'i, I: Input<'i>>(rule: Rule, input: Rc<I>) -> Result<Pairs<'i, Rule, I>, Error<'i, Rule, I>> {
-        fn expression<'i, I: Input<'i>>(
-            pos: Position<'i, I>,
-            state: &mut ParserState<'i, Rule, I>
-        ) -> Result<Position<'i, I>, Position<'i, I>> {
+    fn parse<'i>(rule: Rule, input: Rc<StrInput<'i>>) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
+        fn expression<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::expression, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
@@ -66,10 +66,10 @@ impl Parser<Rule> for CalculatorParser {
             })
         }
 
-        fn primary<'i, I: Input<'i>>(
-            pos: Position<'i, I>,
-            state: &mut ParserState<'i, Rule, I>
-        ) -> Result<Position<'i, I>, Position<'i, I>> {
+        fn primary<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.sequence(move |state| {
                 pos.sequence(|pos| {
                     pos.match_string("(").and_then(|pos| {
@@ -83,10 +83,10 @@ impl Parser<Rule> for CalculatorParser {
             })
         }
 
-        fn number<'i, I: Input<'i>>(
-            pos: Position<'i, I>,
-            state: &mut ParserState<'i, Rule, I>
-        ) -> Result<Position<'i, I>, Position<'i, I>> {
+        fn number<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::number, pos, |state, pos| {
                 state.sequence(move |_| {
                     pos.sequence(|pos| {
@@ -108,55 +108,55 @@ impl Parser<Rule> for CalculatorParser {
             })
         }
 
-        fn plus<'i, I: Input<'i>>(
-            pos: Position<'i, I>,
-            state: &mut ParserState<'i, Rule, I>
-        ) -> Result<Position<'i, I>, Position<'i, I>> {
+        fn plus<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::plus, pos, |_, pos| {
                 pos.match_string("+")
             })
         }
 
-        fn minus<'i, I: Input<'i>>(
-            pos: Position<'i, I>,
-            state: &mut ParserState<'i, Rule, I>
-        ) -> Result<Position<'i, I>, Position<'i, I>> {
+        fn minus<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::minus, pos, |_, pos| {
                 pos.match_string("-")
             })
         }
 
-        fn times<'i, I: Input<'i>>(
-            pos: Position<'i, I>,
-            state: &mut ParserState<'i, Rule, I>
-        ) -> Result<Position<'i, I>, Position<'i, I>> {
+        fn times<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::times, pos, |_, pos| {
                 pos.match_string("*")
             })
         }
 
-        fn divide<'i, I: Input<'i>>(
-            pos: Position<'i, I>,
-            state: &mut ParserState<'i, Rule, I>
-        ) -> Result<Position<'i, I>, Position<'i, I>> {
+        fn divide<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::divide, pos, |_, pos| {
                 pos.match_string("/")
             })
         }
 
-        fn modulus<'i, I: Input<'i>>(
-            pos: Position<'i, I>,
-            state: &mut ParserState<'i, Rule, I>
-        ) -> Result<Position<'i, I>, Position<'i, I>> {
+        fn modulus<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::modulus, pos, |_, pos| {
                 pos.match_string("%")
             })
         }
 
-        fn power<'i, I: Input<'i>>(
-            pos: Position<'i, I>,
-            state: &mut ParserState<'i, Rule, I>
-        ) -> Result<Position<'i, I>, Position<'i, I>> {
+        fn power<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::power, pos, |_, pos| {
                 pos.match_string("^")
             })
@@ -178,11 +178,11 @@ impl Parser<Rule> for CalculatorParser {
     }
 }
 
-fn consume<'i>(pair: Pair<'i, Rule, StrInput<'i>>, climber: &PrecClimber<Rule>) -> i32 {
+fn consume<'i>(pair: Pair<'i, Rule>, climber: &PrecClimber<Rule>) -> i32 {
     let primary = |pair| {
         consume(pair, climber)
     };
-    let infix = |lhs: i32, op: Pair<Rule, StrInput>, rhs: i32| {
+    let infix = |lhs: i32, op: Pair<Rule>, rhs: i32| {
         match op.as_rule() {
             Rule::plus => lhs + rhs,
             Rule::minus => lhs - rhs,

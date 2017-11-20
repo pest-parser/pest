@@ -8,7 +8,7 @@
 use std::rc::Rc;
 
 use super::queueable_token::QueueableToken;
-use super::super::inputs::{Input, position};
+use super::super::inputs::{StrInput, position};
 use super::super::RuleType;
 use super::super::token::Token;
 
@@ -16,21 +16,21 @@ use super::super::token::Token;
 /// [`Pair::into_iter`](struct.Pair.html#method.into_iter) or
 /// [`Pairs::into_iter`](struct.Pairs.html#method.into_iter)
 #[derive(Clone, Debug)]
-pub struct TokenIterator<'i, R, I: Input<'i>> {
+pub struct TokenIterator<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: Rc<StrInput<'i>>,
     index: usize,
     start: usize,
     end: usize,
     __phantom: ::std::marker::PhantomData<&'i str>
 }
 
-pub fn new<'i, R: RuleType, I: Input<'i>>(
+pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: Rc<StrInput<'i>>,
     start: usize,
     end: usize
-) -> TokenIterator<'i, R, I> {
+) -> TokenIterator<'i, R> {
     TokenIterator {
         queue,
         input,
@@ -41,8 +41,8 @@ pub fn new<'i, R: RuleType, I: Input<'i>>(
     }
 }
 
-impl<'i, R: RuleType, I: Input<'i>> Iterator for TokenIterator<'i, R, I> {
-    type Item = Token<'i, R, I>;
+impl<'i, R: RuleType> Iterator for TokenIterator<'i, R> {
+    type Item = Token<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index == self.end {

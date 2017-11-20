@@ -5,33 +5,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-use std::ascii::AsciiExt;
 use std::ffi::OsString;
 use std::ops::Range;
 use std::str;
-
-use super::Input;
 
 /// A `struct` useful for matching borrowed `str`s.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct StrInput<'a> {
     str_ref: &'a str
-}
-
-impl<'a> StrInput<'a> {
-    /// Creates a new `StrInput` from a `&str`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::inputs::{Input, StrInput};
-    /// let input = StrInput::new("asd");
-    ///
-    /// assert_eq!(input.len(), 3);
-    /// ```
-    pub fn new(source: &'a str) -> StrInput<'a> {
-        StrInput { str_ref: source }
-    }
 }
 
 #[inline]
@@ -185,52 +166,66 @@ unsafe fn match_range(source: &str, range: Range<char>, pos: usize) -> Option<us
     }
 }
 
-impl<'a> Input<'a> for StrInput<'a> {
+impl<'a> StrInput<'a> {
+    /// Creates a new `StrInput` from a `&str`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::inputs::{StrInput};
+    /// let input = StrInput::new("asd");
+    ///
+    /// assert_eq!(input.len(), 3);
+    /// ```
+    pub fn new(source: &'a str) -> StrInput<'a> {
+        StrInput { str_ref: source }
+    }
+
     #[inline]
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.str_ref.len()
     }
 
     #[inline]
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.str_ref.is_empty()
     }
 
     #[inline]
-    fn file_name(&self) -> Option<OsString> {
+    pub fn file_name(&self) -> Option<OsString> {
         None
     }
 
     #[inline]
-    unsafe fn slice(&self, start: usize, end: usize) -> &'a str {
+    pub unsafe fn slice(&self, start: usize, end: usize) -> &'a str {
         self.str_ref.slice_unchecked(start, end)
     }
 
-    unsafe fn line_col(&self, pos: usize) -> (usize, usize) {
+    pub unsafe fn line_col(&self, pos: usize) -> (usize, usize) {
         line_col(self.str_ref, pos)
     }
 
-    unsafe fn line_of(&self, pos: usize) -> &'a str {
+    pub unsafe fn line_of(&self, pos: usize) -> &'a str {
         line_of(self.str_ref, pos)
     }
 
     #[inline]
-    unsafe fn skip(&self, n: usize, pos: usize) -> Option<usize> {
+    pub unsafe fn skip(&self, n: usize, pos: usize) -> Option<usize> {
         skip(self.str_ref, n, pos)
     }
 
     #[inline]
-    unsafe fn match_string(&self, string: &str, pos: usize) -> bool {
+    pub unsafe fn match_string(&self, string: &str, pos: usize) -> bool {
         match_string(self.str_ref, string, pos)
     }
 
     #[inline]
-    unsafe fn match_insensitive(&self, string: &str, pos: usize) -> bool {
+    pub unsafe fn match_insensitive(&self, string: &str, pos: usize) -> bool {
         match_insensitive(self.str_ref, string, pos)
     }
 
     #[inline]
-    unsafe fn match_range(&self, range: Range<char>, pos: usize) -> Option<usize> {
+    pub unsafe fn match_range(&self, range: Range<char>, pos: usize) -> Option<usize> {
         match_range(self.str_ref, range, pos)
     }
 }

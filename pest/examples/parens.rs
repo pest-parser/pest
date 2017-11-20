@@ -3,7 +3,7 @@ extern crate pest;
 use std::io::{self, Write};
 use std::rc::Rc;
 
-use pest::inputs::{Input, Position};
+use pest::inputs::{StrInput, Position};
 use pest::iterators::Pairs;
 use pest::{Error, Parser, ParserState, state};
 
@@ -18,11 +18,11 @@ enum Rule {
 struct ParenParser;
 
 impl Parser<Rule> for ParenParser {
-    fn parse<'i, I: Input<'i>>(rule: Rule, input: Rc<I>) -> Result<Pairs<'i, Rule, I>, Error<'i, Rule, I>> {
-        fn expr<'i, I: Input<'i>>(
-            pos: Position<'i, I>,
-            state: &mut ParserState<'i, Rule, I>
-        ) -> Result<Position<'i, I>, Position<'i, I>> {
+    fn parse<'i>(rule: Rule, input: Rc<StrInput<'i>>) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
+        fn expr<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.sequence(move |state| {
                 pos.sequence(|p| {
                     p.repeat(|p| {
@@ -34,10 +34,10 @@ impl Parser<Rule> for ParenParser {
             })
         }
 
-        fn paren<'i, I: Input<'i>>(
-            pos: Position<'i, I>,
-            state: &mut ParserState<'i, Rule, I>
-        ) -> Result<Position<'i, I>, Position<'i, I>> {
+        fn paren<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::paren, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|p| {
@@ -80,7 +80,7 @@ impl Parser<Rule> for ParenParser {
 #[derive(Debug)]
 struct Paren(Vec<Paren>);
 
-fn expr<'i, I: Input<'i>>(pairs: Pairs<'i, Rule, I>) -> Vec<Paren> {
+fn expr<'i>(pairs: Pairs<'i, Rule>) -> Vec<Paren> {
     pairs.filter(|p| p.as_rule() == Rule::paren).map(|p| Paren(expr(p.into_inner()))).collect()
 }
 

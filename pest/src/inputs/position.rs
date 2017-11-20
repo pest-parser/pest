@@ -11,18 +11,18 @@ use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::rc::Rc;
 
-use super::input::Input;
+use super::str_input::StrInput;
 use super::span;
 
 /// A `struct` containing a position that is tied to an `Input` which provides useful methods to
 /// manually parse it. This leads to an API largely based on the standard `Result`.
-pub struct Position<'i, I: Input<'i>> {
-    input: Rc<I>,
+pub struct Position<'i> {
+    input: Rc<StrInput<'i>>,
     pos: usize,
     __phantom: ::std::marker::PhantomData<&'i str>,
 }
 
-pub unsafe fn new<'i, I: Input<'i>>(input: Rc<I>, pos: usize) -> Position<'i, I> {
+pub unsafe fn new<'i>(input: Rc<StrInput<'i>>, pos: usize) -> Position<'i> {
     Position {
         input,
         pos,
@@ -30,11 +30,11 @@ pub unsafe fn new<'i, I: Input<'i>>(input: Rc<I>, pos: usize) -> Position<'i, I>
     }
 }
 
-pub fn into_input<'i, I: Input<'i>>(pos: &Position<'i, I>) -> Rc<I> {
+pub fn into_input<'i>(pos: &Position<'i>) -> Rc<StrInput<'i>> {
     pos.input.clone()
 }
 
-impl<'i, I: Input<'i>> Position<'i, I> {
+impl<'i> Position<'i> {
     /// Creates starting `Position` from an `Rc<Input>`.
     ///
     /// # Examples
@@ -47,7 +47,7 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// Position::from_start(input);
     /// ```
     #[inline]
-    pub fn from_start(input: Rc<I>) -> Position<'i, I> {
+    pub fn from_start(input: Rc<StrInput<'i>>) -> Position<'i> {
         // Position 0 is always safe because it's always a valid UTF-8 border.
         unsafe { new(input, 0) }
     }
@@ -90,7 +90,7 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// assert_eq!(span.end(), 2);
     /// ```
     #[inline]
-    pub fn span(self, other: Position<'i, I>) -> span::Span<'i, I> {
+    pub fn span(self, other: Position<'i>) -> span::Span<'i> {
         if Rc::ptr_eq(&self.input, &other.input) {
             span::new(self.input, self.pos, other.pos)
         } else {
@@ -150,7 +150,7 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// assert_eq!(end.clone().at_start(), Err(end));
     /// ```
     #[inline]
-    pub fn at_start(self) -> Result<Position<'i, I>, Position<'i, I>> {
+    pub fn at_start(self) -> Result<Position<'i>, Position<'i>> {
         if self.pos == 0 {
             Ok(self)
         } else {
@@ -174,7 +174,7 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// assert_eq!(end.clone().at_end(), Ok(end));
     /// ```
     #[inline]
-    pub fn at_end(self) -> Result<Position<'i, I>, Position<'i, I>> {
+    pub fn at_end(self) -> Result<Position<'i>, Position<'i>> {
         if self.pos == self.input.len() {
             Ok(self)
         } else {
@@ -197,7 +197,7 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// assert_eq!(start.clone().skip(3), Err(start));
     /// ```
     #[inline]
-    pub fn skip(mut self, n: usize) -> Result<Position<'i, I>, Position<'i, I>> {
+    pub fn skip(mut self, n: usize) -> Result<Position<'i>, Position<'i>> {
         let skipped = unsafe { self.input.skip(n, self.pos) };
 
         match skipped {
@@ -224,7 +224,7 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// assert_eq!(start.clone().match_string("ac"), Err(start));
     /// ```
     #[inline]
-    pub fn match_string(mut self, string: &'i str) -> Result<Position<'i, I>, Position<'i, I>> {
+    pub fn match_string(mut self, string: &'i str) -> Result<Position<'i>, Position<'i>> {
         // Matching is safe since, even if the string does not fall on UTF-8 borders, that
         // particular slice is only used for comparison which will be handled correctly.
         if unsafe { self.input.match_string(string, self.pos) } {
@@ -250,7 +250,7 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// assert_eq!(start.clone().match_insensitive("AC"), Err(start));
     /// ```
     #[inline]
-    pub fn match_insensitive(mut self, string: &'i str) -> Result<Position<'i, I>, Position<'i, I>> {
+    pub fn match_insensitive(mut self, string: &'i str) -> Result<Position<'i>, Position<'i>> {
         // Matching is safe since, even if the string does not fall on UTF-8 borders, that
         // particular slice is only used for comparison which will be handled correctly.
         if unsafe { self.input.match_insensitive(string, self.pos) } {
@@ -276,7 +276,7 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// assert_eq!(start.clone().match_range('A'..'Z'), Err(start));
     /// ```
     #[inline]
-    pub fn match_range(mut self, range: Range<char>) -> Result<Position<'i, I>, Position<'i, I>> {
+    pub fn match_range(mut self, range: Range<char>) -> Result<Position<'i>, Position<'i>> {
         // Cannot actually cause undefined behavior.
         let len = unsafe { self.input.match_range(range, self.pos) };
 
@@ -326,9 +326,9 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// );
     /// ```
     #[inline]
-    pub fn sequence<F>(self, f: F) -> Result<Position<'i, I>, Position<'i, I>>
+    pub fn sequence<F>(self, f: F) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnOnce(Position<'i, I>) -> Result<Position<'i, I>, Position<'i, I>>
+        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
     {
         let initial_pos = self.pos;
         let result = f(self);
@@ -379,9 +379,9 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// );
     /// ```
     #[inline]
-    pub fn lookahead<F>(self, is_positive: bool, f: F) -> Result<Position<'i, I>, Position<'i, I>>
+    pub fn lookahead<F>(self, is_positive: bool, f: F) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnOnce(Position<'i, I>) -> Result<Position<'i, I>, Position<'i, I>>
+        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
     {
         let initial_pos = self.pos;
         let result = f(self);
@@ -436,9 +436,9 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// );
     /// ```
     #[inline]
-    pub fn optional<F>(self, f: F) -> Result<Position<'i, I>, Position<'i, I>>
+    pub fn optional<F>(self, f: F) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnOnce(Position<'i, I>) -> Result<Position<'i, I>, Position<'i, I>>
+        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
     {
         let result = f(self);
 
@@ -472,9 +472,9 @@ impl<'i, I: Input<'i>> Position<'i, I> {
     /// );
     /// ```
     #[inline]
-    pub fn repeat<F>(self, mut f: F) -> Result<Position<'i, I>, Position<'i, I>>
+    pub fn repeat<F>(self, mut f: F) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnMut(Position<'i, I>) -> Result<Position<'i, I>, Position<'i, I>>
+        F: FnMut(Position<'i>) -> Result<Position<'i>, Position<'i>>
     {
         let mut result = f(self);
 
@@ -489,29 +489,29 @@ impl<'i, I: Input<'i>> Position<'i, I> {
 
 // We don't want to enforce derivable traits on the Input which forces to implement them manually.
 
-impl<'i, I: Input<'i>> fmt::Debug for Position<'i, I> {
+impl<'i> fmt::Debug for Position<'i> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Position {{ pos: {} }}", self.pos)
     }
 }
 
-impl<'i, I: Input<'i>> Clone for Position<'i, I> {
-    fn clone(&self) -> Position<'i, I> {
+impl<'i> Clone for Position<'i> {
+    fn clone(&self) -> Position<'i> {
         // Cloning a safe position is safe.
         unsafe { new(self.input.clone(), self.pos) }
     }
 }
 
-impl<'i, I: Input<'i>> PartialEq for Position<'i, I> {
-    fn eq(&self, other: &Position<'i, I>) -> bool {
+impl<'i> PartialEq for Position<'i> {
+    fn eq(&self, other: &Position<'i>) -> bool {
         Rc::ptr_eq(&self.input, &other.input) && self.pos == other.pos
     }
 }
 
-impl<'i, I: Input<'i>> Eq for Position<'i, I> {}
+impl<'i> Eq for Position<'i> {}
 
-impl<'i, I: Input<'i>> PartialOrd for Position<'i, I> {
-    fn partial_cmp(&self, other: &Position<'i, I>) -> Option<Ordering> {
+impl<'i> PartialOrd for Position<'i> {
+    fn partial_cmp(&self, other: &Position<'i>) -> Option<Ordering> {
         if Rc::ptr_eq(&self.input, &other.input) {
             self.pos.partial_cmp(&other.pos)
         } else {
@@ -520,15 +520,15 @@ impl<'i, I: Input<'i>> PartialOrd for Position<'i, I> {
     }
 }
 
-impl<'i, I: Input<'i>> Ord for Position<'i, I> {
-    fn cmp(&self, other: &Position<'i, I>) -> Ordering {
+impl<'i> Ord for Position<'i> {
+    fn cmp(&self, other: &Position<'i>) -> Ordering {
         self.partial_cmp(other).expect("cannot compare positions from different inputs")
     }
 }
 
-impl<'i, I: Input<'i>> Hash for Position<'i, I> {
+impl<'i> Hash for Position<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (&*self.input as *const I).hash(state);
+        (&*self.input as *const StrInput<'i>).hash(state);
         self.pos.hash(state);
     }
 }

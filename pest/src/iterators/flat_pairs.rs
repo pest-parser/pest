@@ -11,25 +11,25 @@ use std::rc::Rc;
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::token_iterator::{self, TokenIterator};
-use super::super::inputs::Input;
+use super::super::inputs::StrInput;
 use super::super::RuleType;
 
 /// A `struct` containing `Pairs`. It is created by
 /// [`Pairs::flatten`](struct.Pairs.html#method.flatten).
-pub struct FlatPairs<'i, R, I: Input<'i>> {
+pub struct FlatPairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: Rc<StrInput<'i>>,
     start: usize,
     end: usize,
     __phantom: ::std::marker::PhantomData<&'i str>
 }
 
-pub fn new<'i, R: RuleType, I: Input<'i>>(
+pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: Rc<StrInput<'i>>,
     start: usize,
     end: usize
-) -> FlatPairs<'i, R, I> {
+) -> FlatPairs<'i, R> {
     FlatPairs {
         queue,
         input,
@@ -39,7 +39,7 @@ pub fn new<'i, R: RuleType, I: Input<'i>>(
     }
 }
 
-impl<'i, R: RuleType, I: Input<'i>> FlatPairs<'i, R, I> {
+impl<'i, R: RuleType> FlatPairs<'i, R> {
     /// Converts the `FlatPairs` into a `TokenIterator`.
     ///
     /// # Examples
@@ -64,7 +64,7 @@ impl<'i, R: RuleType, I: Input<'i>> FlatPairs<'i, R, I> {
     /// assert_eq!(tokens.len(), 2);
     /// ```
     #[inline]
-    pub fn into_iter(self) -> TokenIterator<'i, R, I> {
+    pub fn into_iter(self) -> TokenIterator<'i, R> {
         token_iterator::new(
             self.queue,
             self.input,
@@ -89,8 +89,8 @@ impl<'i, R: RuleType, I: Input<'i>> FlatPairs<'i, R, I> {
     }
 }
 
-impl<'i, R: RuleType, I: Input<'i>> Iterator for FlatPairs<'i, R, I> {
-    type Item = Pair<'i, R, I>;
+impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
+    type Item = Pair<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.start >= self.end {
@@ -109,14 +109,14 @@ impl<'i, R: RuleType, I: Input<'i>> Iterator for FlatPairs<'i, R, I> {
     }
 }
 
-impl<'i, R: RuleType, I: Input<'i>> fmt::Debug for FlatPairs<'i, R, I> {
+impl<'i, R: RuleType> fmt::Debug for FlatPairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "FlatPairs {{ pairs: {:?} }}", self.clone().collect::<Vec<_>>())
     }
 }
 
-impl<'i, R: Clone, I: Input<'i>> Clone for FlatPairs<'i, R, I> {
-    fn clone(&self) -> FlatPairs<'i, R, I> {
+impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
+    fn clone(&self) -> FlatPairs<'i, R> {
         FlatPairs {
             queue: self.queue.clone(),
             input: self.input.clone(),

@@ -13,26 +13,26 @@ use super::flat_pairs::{self, FlatPairs};
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::token_iterator::{self, TokenIterator};
-use super::super::inputs::Input;
+use super::super::inputs::StrInput;
 use super::super::RuleType;
 
 /// A `struct` containing `Pairs`. It is created by [`pest::state`](../fn.state.html) and
 /// [`Pair::into_inner`](struct.Pair.html#method.into_inner).
 #[derive(Clone)]
-pub struct Pairs<'i, R, I: Input<'i>> {
+pub struct Pairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: Rc<StrInput<'i>>,
     start: usize,
     end: usize,
     __phantom: ::std::marker::PhantomData<&'i str>
 }
 
-pub fn new<'i, R: RuleType, I: Input<'i>>(
+pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: Rc<StrInput<'i>>,
     start: usize,
     end: usize
-) -> Pairs<'i, R, I> {
+) -> Pairs<'i, R> {
     Pairs {
         queue,
         input,
@@ -42,7 +42,7 @@ pub fn new<'i, R: RuleType, I: Input<'i>>(
     }
 }
 
-impl<'i, R: RuleType, I: Input<'i>> Pairs<'i, R, I> {
+impl<'i, R: RuleType> Pairs<'i, R> {
     /// Flattens the `Pairs`.
     ///
     /// # Examples
@@ -70,7 +70,7 @@ impl<'i, R: RuleType, I: Input<'i>> Pairs<'i, R, I> {
     /// assert_eq!(tokens.len(), 4);
     /// ```
     #[inline]
-    pub fn flatten(self) -> FlatPairs<'i, R, I> {
+    pub fn flatten(self) -> FlatPairs<'i, R> {
         flat_pairs::new(
             self.queue,
             self.input,
@@ -103,7 +103,7 @@ impl<'i, R: RuleType, I: Input<'i>> Pairs<'i, R, I> {
     /// assert_eq!(tokens.len(), 2);
     /// ```
     #[inline]
-    pub fn tokens(self) -> TokenIterator<'i, R, I> {
+    pub fn tokens(self) -> TokenIterator<'i, R> {
         token_iterator::new(
             self.queue,
             self.input,
@@ -120,8 +120,8 @@ impl<'i, R: RuleType, I: Input<'i>> Pairs<'i, R, I> {
     }
 }
 
-impl<'i, R: RuleType, I: Input<'i>> Iterator for Pairs<'i, R, I> {
-    type Item = Pair<'i, R, I>;
+impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
+    type Item = Pair<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.start >= self.end {
@@ -140,13 +140,13 @@ impl<'i, R: RuleType, I: Input<'i>> Iterator for Pairs<'i, R, I> {
     }
 }
 
-impl<'i, R: RuleType, I: Input<'i>> fmt::Debug for Pairs<'i, R, I> {
+impl<'i, R: RuleType> fmt::Debug for Pairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Pairs {{ pairs: {:?} }}", self.clone().collect::<Vec<_>>())
     }
 }
 
-impl<'i, R: RuleType, I: Input<'i>> fmt::Display for Pairs<'i, R, I> {
+impl<'i, R: RuleType> fmt::Display for Pairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[{}]", self.clone()
                               .map(|pair| format!("{}", pair))
@@ -155,19 +155,19 @@ impl<'i, R: RuleType, I: Input<'i>> fmt::Display for Pairs<'i, R, I> {
     }
 }
 
-impl<'i, R: PartialEq, I: Input<'i>> PartialEq for Pairs<'i, R, I> {
-    fn eq(&self, other: &Pairs<'i, R, I>) -> bool {
+impl<'i, R: PartialEq> PartialEq for Pairs<'i, R> {
+    fn eq(&self, other: &Pairs<'i, R>) -> bool {
         Rc::ptr_eq(&self.queue, &other.queue) && Rc::ptr_eq(&self.input, &other.input) &&
         self.start == other.start && self.end == other.end
     }
 }
 
-impl<'i, R: Eq, I: Input<'i>> Eq for Pairs<'i, R, I> {}
+impl<'i, R: Eq> Eq for Pairs<'i, R> {}
 
-impl<'i, R: Hash, I: Input<'i>> Hash for Pairs<'i, R, I> {
+impl<'i, R: Hash> Hash for Pairs<'i, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
-        (&*self.input as *const I).hash(state);
+        (&*self.input as *const StrInput<'i>).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }

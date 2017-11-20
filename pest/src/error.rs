@@ -8,12 +8,12 @@
 use std::error;
 use std::fmt;
 
-use inputs::{Input, position, Position, Span};
+use inputs::{position, Position, Span};
 use RuleType;
 
 /// An `enum` which defines possible errors.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum Error<'i, R, I: Input<'i>> {
+pub enum Error<'i, R> {
     /// Generated parsing error with expected and unexpected `Rule`s and a position
     ParsingError {
         /// Positive attempts
@@ -21,25 +21,25 @@ pub enum Error<'i, R, I: Input<'i>> {
         /// Negative attempts
         negatives: Vec<R>,
         /// Deepest position of attempts
-        pos: Position<'i, I>
+        pos: Position<'i>
     },
     /// Custom error with a message and a position
     CustomErrorPos {
         /// Short explanation
         message: String,
         /// Error `Position` for formatting
-        pos: Position<'i, I>
+        pos: Position<'i>
     },
     /// Custom error with a message and a span defined by a start and end position
     CustomErrorSpan {
         /// Short explanation
         message: String,
         /// Error `Span` for formatting
-        span: Span<'i, I>
+        span: Span<'i>
     }
 }
 
-impl <'i, R: RuleType, I: Input<'i>> Error<'i, R, I> {
+impl <'i, R: RuleType> Error<'i, R> {
     /// Renames all `Rule`s from a `ParsingError` variant returning a `CustomErrorPos`. It does
     /// nothing when called on `CustomErrorPos` and `CustomErrorSpan` variants.
     ///
@@ -71,7 +71,7 @@ impl <'i, R: RuleType, I: Input<'i>> Error<'i, R, I> {
     ///     }
     /// });
     /// ```
-    pub fn renamed_rules<F>(self, f: F) -> Error<'i, R, I>
+    pub fn renamed_rules<F>(self, f: F) -> Error<'i, R>
     where
         F: FnMut(&R) -> String
     {
@@ -88,7 +88,7 @@ impl <'i, R: RuleType, I: Input<'i>> Error<'i, R, I> {
     }
 }
 
-fn message<'i, R: fmt::Debug, I: Input<'i>>(error: &Error<'i, R, I>) -> String {
+fn message<'i, R: fmt::Debug>(error: &Error<'i, R>) -> String {
     match *error {
         Error::ParsingError { ref positives, ref negatives, .. } => {
             parsing_error_message(positives, negatives, |r| format!("{:?}", r))
@@ -139,7 +139,7 @@ where
     }
 }
 
-fn underline<'i, R: fmt::Debug, I: Input<'i>>(error: &Error<'i, R, I>, offset: usize) -> String {
+fn underline<'i, R: fmt::Debug>(error: &Error<'i, R>, offset: usize) -> String {
     let mut underline = String::new();
 
     for _ in 0..offset { underline.push(' '); }
@@ -160,7 +160,7 @@ fn underline<'i, R: fmt::Debug, I: Input<'i>>(error: &Error<'i, R, I>, offset: u
     underline
 }
 
-fn format<'i, R: fmt::Debug, I: Input<'i>>(error: &Error<'i, R, I>) -> String {
+fn format<'i, R: fmt::Debug>(error: &Error<'i, R>) -> String {
     let pos = match *error {
         Error::ParsingError { ref pos, .. } | Error::CustomErrorPos { ref pos, .. } => pos.clone(),
         Error::CustomErrorSpan { ref span, .. } => span.clone().split().0.clone()
@@ -191,13 +191,13 @@ fn format<'i, R: fmt::Debug, I: Input<'i>>(error: &Error<'i, R, I>) -> String {
     result
 }
 
-impl<'i, R: fmt::Debug, I: Input<'i>> fmt::Display for Error<'i, R, I> {
+impl<'i, R: fmt::Debug> fmt::Display for Error<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format(self))
     }
 }
 
-impl<'i, R: fmt::Debug, I: Input<'i>> error::Error for Error<'i, R, I> {
+impl<'i, R: fmt::Debug> error::Error for Error<'i, R> {
     fn description(&self) -> &str {
         match *self {
             Error::ParsingError { .. } => {
@@ -221,7 +221,7 @@ mod tests {
     fn display_parsing_error_mixed() {
         let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<u32, _> = Error::ParsingError {
+        let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2, 3],
             negatives: vec![4, 5, 6],
             pos: pos
@@ -241,7 +241,7 @@ mod tests {
     fn display_parsing_error_positives() {
         let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<u32, _> = Error::ParsingError {
+        let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2],
             negatives: vec![],
             pos: pos
@@ -261,7 +261,7 @@ mod tests {
     fn display_parsing_error_negatives() {
         let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<u32, _> = Error::ParsingError {
+        let error: Error<u32> = Error::ParsingError {
             positives: vec![],
             negatives: vec![4, 5, 6],
             pos: pos
@@ -281,7 +281,7 @@ mod tests {
     fn display_parsing_error_unknown() {
         let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<u32, _> = Error::ParsingError {
+        let error: Error<u32> = Error::ParsingError {
             positives: vec![],
             negatives: vec![],
             pos: pos
@@ -301,7 +301,7 @@ mod tests {
     fn display_custom() {
         let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<&str, _> = Error::CustomErrorPos {
+        let error: Error<&str> = Error::CustomErrorPos {
             message: "error: big one".to_owned(),
             pos: pos
         };
@@ -320,7 +320,7 @@ mod tests {
     fn mapped_parsing_error() {
         let input = StrInput::new("ab\ncd\nef");
         let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<u32, _> = Error::ParsingError {
+        let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2, 3],
             negatives: vec![4, 5, 6],
             pos: pos

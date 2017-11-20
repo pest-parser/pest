@@ -8,16 +8,17 @@
 use std::rc::Rc;
 
 use error::Error;
-use inputs::{Input, StrInput};
+use inputs::StrInput;
 use iterators::Pairs;
 use RuleType;
 
 /// A `trait` that defines a `Parser`.
 pub trait Parser<R: RuleType> {
-    /// Parses an `Input` starting from `rule`.
-    fn parse<'i, I: Input<'i>>(rule: R, input: Rc<I>) -> Result<Pairs<'i, R, I>, Error<'i, R, I>>;
+    /// Parses an `StrInput` starting from `rule`.
+    fn parse<'i>(rule: R, input: Rc<StrInput<'i>>) -> Result<Pairs<'i, R>, Error<'i, R>>;
+
     /// Parses an `&str` starting from `rule`.
-    fn parse_str(rule: R, input: &str) -> Result<Pairs<R, StrInput>, Error<R, StrInput>> {
+    fn parse_str<'i>(rule: R, input: &'i str) -> Result<Pairs<'i, R>, Error<'i, R>> {
         Self::parse(rule, Rc::new(StrInput::new(input)))
     }
 }

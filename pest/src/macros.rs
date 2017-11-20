@@ -159,7 +159,7 @@ macro_rules! consumes_to {
 /// # extern crate pest;
 /// # use std::rc::Rc;
 /// # use pest::{Error, Parser};
-/// # use pest::inputs::Input;
+/// # use pest::inputs::StrInput;
 /// # use pest::iterators::Pairs;
 /// # fn main() {
 /// # #[allow(non_camel_case_types)]
@@ -173,7 +173,7 @@ macro_rules! consumes_to {
 /// # struct AbcParser;
 /// #
 /// # impl Parser<Rule> for AbcParser {
-/// #     fn parse<'i, I: Input<'i>>(_: Rule, input: Rc<I>) -> Result<Pairs<'i, Rule, I>, Error<'i, Rule, I>> {
+/// #     fn parse<'i>(_: Rule, input: Rc<StrInput<'i>>) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
 /// #         pest::state(input, |state, pos| {
 /// #             state.rule(Rule::a, pos, |state, pos| {
 /// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
@@ -238,7 +238,7 @@ macro_rules! parses_to {
 /// # extern crate pest;
 /// # use std::rc::Rc;
 /// # use pest::{Error, Parser};
-/// # use pest::inputs::Input;
+/// # use pest::inputs::StrInput;
 /// # use pest::iterators::Pairs;
 /// # fn main() {
 /// # #[allow(non_camel_case_types)]
@@ -252,7 +252,7 @@ macro_rules! parses_to {
 /// # struct AbcParser;
 /// #
 /// # impl Parser<Rule> for AbcParser {
-/// #     fn parse<'i, I: Input<'i>>(_: Rule, input: Rc<I>) -> Result<Pairs<'i, Rule, I>, Error<'i, Rule, I>> {
+/// #     fn parse<'i>(_: Rule, input: Rc<StrInput<'i>>) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
 /// #         pest::state(input, |state, pos| {
 /// #             state.rule(Rule::a, pos, |state, pos| {
 /// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
@@ -304,7 +304,7 @@ pub mod tests {
     use std::rc::Rc;
 
     use super::super::error::Error;
-    use super::super::inputs::Input;
+    use super::super::inputs::StrInput;
     use super::super::{Parser, state};
     use super::super::iterators::Pairs;
 
@@ -319,7 +319,7 @@ pub mod tests {
     pub struct AbcParser;
 
     impl Parser<Rule> for AbcParser {
-        fn parse<'i, I: Input<'i>>(_: Rule, input: Rc<I>) -> Result<Pairs<'i, Rule, I>, Error<'i, Rule, I>> {
+        fn parse<'i>(_: Rule, input: Rc<StrInput<'i>>) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
             state(input, |state, pos| {
                 state.rule(Rule::a, pos, |state, pos| {
                     state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
