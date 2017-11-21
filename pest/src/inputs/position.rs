@@ -476,13 +476,11 @@ impl<I: Input> Position<I> {
     {
         let mut result = f(self);
 
-        while let Ok(pos) = result {
-            result = f(pos);
-        }
-
-        match result {
-            Err(pos) => Ok(pos),
-            _ => unreachable!()
+        loop {
+            match result {
+                Ok(pos) => result = f(pos),
+                Err(pos) => return Ok(pos)
+            };
         }
     }
 }
