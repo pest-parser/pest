@@ -1,9 +1,8 @@
 extern crate pest;
 
 use std::io::{self, Write};
-use std::rc::Rc;
 
-use pest::inputs::{StrInput, Position};
+use pest::inputs::Position;
 use pest::iterators::Pairs;
 use pest::{Error, Parser, ParserState, state};
 
@@ -18,7 +17,7 @@ enum Rule {
 struct ParenParser;
 
 impl Parser<Rule> for ParenParser {
-    fn parse<'i>(rule: Rule, input: Rc<StrInput<'i>>) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
+    fn parse<'i>(rule: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
         fn expr<'i>(
             pos: Position<'i>,
             state: &mut ParserState<'i, Rule>
@@ -94,7 +93,7 @@ fn main() {
         io::stdin().read_line(&mut line).unwrap();
         line.pop();
 
-        match ParenParser::parse_str(Rule::expr, &line) {
+        match ParenParser::parse(Rule::expr, &line) {
             Ok(pairs) => println!("{:?}", expr(pairs)),
             Err(e) => println!("\n{}", e)
         };

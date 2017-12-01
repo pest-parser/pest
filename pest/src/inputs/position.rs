@@ -9,20 +9,19 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Range;
-use std::rc::Rc;
+use std::ptr;
 
-use super::str_input::StrInput;
 use super::span;
 
 /// A `struct` containing a position that is tied to an `Input` which provides useful methods to
 /// manually parse it. This leads to an API largely based on the standard `Result`.
 pub struct Position<'i> {
-    input: Rc<StrInput<'i>>,
+    input: &'i str,
     pos: usize,
     __phantom: ::std::marker::PhantomData<&'i str>,
 }
 
-pub unsafe fn new<'i>(input: Rc<StrInput<'i>>, pos: usize) -> Position<'i> {
+pub unsafe fn new<'i>(input: &'i str, pos: usize) -> Position<'i> {
     Position {
         input,
         pos,
@@ -30,24 +29,18 @@ pub unsafe fn new<'i>(input: Rc<StrInput<'i>>, pos: usize) -> Position<'i> {
     }
 }
 
-pub fn into_input<'i>(pos: &Position<'i>) -> Rc<StrInput<'i>> {
-    pos.input.clone()
-}
-
 impl<'i> Position<'i> {
-    /// Creates starting `Position` from an `Rc<Input>`.
+    /// Creates starting `Position` from an `&str`.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new(""));
+    /// # use pest::inputs::{Position};
     ///
-    /// Position::from_start(input);
+    /// Position::from_start("");
     /// ```
     #[inline]
-    pub fn from_start(input: Rc<StrInput<'i>>) -> Position<'i> {
+    pub fn from_start(input: &'i str) -> Position<'i> {
         // Position 0 is always safe because it's always a valid UTF-8 border.
         unsafe { new(input, 0) }
     }
@@ -57,9 +50,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(start.pos(), 0);
@@ -79,9 +71,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.span(end);
@@ -91,7 +82,7 @@ impl<'i> Position<'i> {
     /// ```
     #[inline]
     pub fn span(self, other: Position<'i>) -> span::Span<'i> {
-        if Rc::ptr_eq(&self.input, &other.input) {
+        if ptr::eq(self.input, other.input) {
             span::new(self.input, self.pos, other.pos)
         } else {
             panic!("span created from positions from different inputs")
@@ -103,9 +94,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("\na"));
+    /// # use pest::inputs::Position;
+    /// let input = "\na";
     /// let start = Position::from_start(input);
     /// let pos = start.match_string("\na").unwrap();
     ///
@@ -113,7 +103,47 @@ impl<'i> Position<'i> {
     /// ```
     #[inline]
     pub fn line_col(&self) -> (usize, usize) {
-        unsafe { self.input.line_col(self.pos) }
+        if self.pos > self.input.len() {
+            panic!("position out of bounds");
+        }
+
+        let mut pos = self.pos;
+        let slice = &self.input[..pos];
+        let mut chars = slice.chars().peekable();
+
+        let mut line_col = (1, 1);
+
+        while pos != 0 {
+            match chars.next() {
+                Some('\r') => {
+                    if let Some(&'\n') = chars.peek() {
+                        chars.next();
+
+                        if pos == 1 {
+                            pos -= 1;
+                        } else {
+                            pos -= 2;
+                        }
+
+                        line_col = (line_col.0 + 1, 1);
+                    } else {
+                        pos -= 1;
+                        line_col = (line_col.0, line_col.1 + 1);
+                    }
+                }
+                Some('\n') => {
+                    pos -= 1;
+                    line_col = (line_col.0 + 1, 1);
+                }
+                Some(c) => {
+                    pos -= c.len_utf8();
+                    line_col = (line_col.0, line_col.1 + 1);
+                }
+                None => unreachable!()
+            }
+        }
+
+        line_col
     }
 
     /// Returns the actual line of the current `Position`.
@@ -121,9 +151,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("\na"));
+    /// # use pest::inputs::Position;
+    /// let input = "\na";
     /// let start = Position::from_start(input);
     /// let pos = start.match_string("\na").unwrap();
     ///
@@ -131,7 +160,55 @@ impl<'i> Position<'i> {
     /// ```
     #[inline]
     pub fn line_of(&self) -> &str {
-        unsafe { self.input.line_of(self.pos) }
+        if self.pos > self.input.len() {
+            panic!("position out of bounds");
+        }
+
+        unsafe {
+            let start = if self.pos == 0 {
+                0
+            } else {
+                let start = self.input.char_indices()
+                    .rev()
+                    .skip_while(|&(i, _)| i >= self.pos)
+                    .find(|&(_, c)| c == '\n');
+                match start {
+                    Some((i, _)) => i + 1,
+                    None => 0
+                }
+            };
+
+            let end = if self.input.len() == 0 {
+                0
+            } else if self.pos == self.input.len() - 1 {
+                let mut end = self.input.len();
+
+                if end > 0 && self.input.slice_unchecked(end - 1, end) == "\n" {
+                    end -= 1;
+                }
+                if end > 0 && self.input.slice_unchecked(end - 1, end) == "\r" {
+                    end -= 1;
+                }
+
+                end
+            } else {
+                let end = self.input.char_indices()
+                    .skip_while(|&(i, _)| i < self.pos)
+                    .find(|&(_, c)| c == '\n');
+                let mut end = match end {
+                    Some((i, _)) => i,
+                    None => self.input.len()
+                };
+
+                if end > 0 && self.input.slice_unchecked(end - 1, end) == "\r" {
+                    end -= 1;
+                }
+
+                end
+            };
+
+            self.input.slice_unchecked(start, end)
+        }
     }
 
     /// Returns `Ok` with the current `Position` if it is at the start of its `Input` or `Err` of
@@ -140,9 +217,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     ///
@@ -164,9 +240,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     ///
@@ -188,9 +263,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(start.clone().skip(2).unwrap().pos(), 2);
@@ -198,15 +272,23 @@ impl<'i> Position<'i> {
     /// ```
     #[inline]
     pub fn skip(mut self, n: usize) -> Result<Position<'i>, Position<'i>> {
-        let skipped = unsafe { self.input.skip(n, self.pos) };
+        let skipped = unsafe {
+            let mut len = 0;
+            let mut chars = self.input.slice_unchecked(self.pos, self.input.len()).chars();
 
-        match skipped {
-            Some(len) => {
-                self.pos += len;
-                Ok(self)
+            for _ in 0..n {
+                if let Some(c) = chars.next() {
+                    len += c.len_utf8();
+                } else {
+                    return Err(self);
+                }
             }
-            None => Err(self)
-        }
+
+            len
+        };
+
+        self.pos += skipped;
+        Ok(self)
     }
 
     /// Matches `string` from the `Position` and returns `Ok` with the new `Position` if a match was
@@ -215,9 +297,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(start.clone().match_string("ab").unwrap().pos(), 2);
@@ -227,7 +308,18 @@ impl<'i> Position<'i> {
     pub fn match_string(mut self, string: &'i str) -> Result<Position<'i>, Position<'i>> {
         // Matching is safe since, even if the string does not fall on UTF-8 borders, that
         // particular slice is only used for comparison which will be handled correctly.
-        if unsafe { self.input.match_string(string, self.pos) } {
+        let matched = unsafe {
+            let to = self.pos + string.len();
+
+            if to <= self.input.len() {
+                let slice = self.input.slice_unchecked(self.pos, to);
+                slice == string
+            } else {
+                false
+            }
+        };
+
+        if matched {
             self.pos += string.len();
             Ok(self)
         } else {
@@ -241,9 +333,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(start.clone().match_insensitive("AB").unwrap().pos(), 2);
@@ -253,7 +344,19 @@ impl<'i> Position<'i> {
     pub fn match_insensitive(mut self, string: &'i str) -> Result<Position<'i>, Position<'i>> {
         // Matching is safe since, even if the string does not fall on UTF-8 borders, that
         // particular slice is only used for comparison which will be handled correctly.
-        if unsafe { self.input.match_insensitive(string, self.pos) } {
+
+        let matched = unsafe {
+            let slice = self.input.slice_unchecked(self.pos, self.input.len());
+
+            if slice.is_char_boundary(string.len()) {
+                let slice = slice.slice_unchecked(0, string.len());
+                slice.eq_ignore_ascii_case(string)
+            } else {
+                false
+            }
+        };
+
+        if matched {
             self.pos += string.len();
             Ok(self)
         } else {
@@ -267,9 +370,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(start.clone().match_range('a'..'z').unwrap().pos(), 1);
@@ -278,7 +380,19 @@ impl<'i> Position<'i> {
     #[inline]
     pub fn match_range(mut self, range: Range<char>) -> Result<Position<'i>, Position<'i>> {
         // Cannot actually cause undefined behavior.
-        let len = unsafe { self.input.match_range(range, self.pos) };
+        let len = unsafe {
+            let slice = self.input.slice_unchecked(self.pos, self.input.len());
+
+            if let Some(char) = slice.chars().next() {
+                if range.start <= char && char <= range.end {
+                    Some(char.len_utf8())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        };
 
         match len {
             Some(len) => {
@@ -303,9 +417,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(
@@ -354,9 +467,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(
@@ -413,9 +525,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(
@@ -453,9 +564,8 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
     /// assert_eq!(
@@ -504,7 +614,7 @@ impl<'i> Clone for Position<'i> {
 
 impl<'i> PartialEq for Position<'i> {
     fn eq(&self, other: &Position<'i>) -> bool {
-        Rc::ptr_eq(&self.input, &other.input) && self.pos == other.pos
+        ptr::eq(self.input, other.input) && self.pos == other.pos
     }
 }
 
@@ -512,7 +622,7 @@ impl<'i> Eq for Position<'i> {}
 
 impl<'i> PartialOrd for Position<'i> {
     fn partial_cmp(&self, other: &Position<'i>) -> Option<Ordering> {
-        if Rc::ptr_eq(&self.input, &other.input) {
+        if ptr::eq(self.input, other.input) {
             self.pos.partial_cmp(&other.pos)
         } else {
             None
@@ -528,7 +638,126 @@ impl<'i> Ord for Position<'i> {
 
 impl<'i> Hash for Position<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (&*self.input as *const StrInput<'i>).hash(state);
+        (&*self.input as *const str).hash(state);
         self.pos.hash(state);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty() {
+        let input = "";
+        assert!(unsafe { new(input, 0) }.match_string("").is_ok());
+        assert!(!unsafe { new(input, 0) }.match_string("a").is_ok());
+    }
+
+    #[test]
+    fn parts() {
+        let input = "asdasdf";
+
+        assert!(unsafe { new(input, 0) }.match_string("asd").is_ok());
+        assert!(unsafe { new(input, 3) }.match_string("asdf").is_ok());
+    }
+
+
+    #[test]
+    fn line_col() {
+        let input = "a\rb\nc\r\nd嗨";
+
+        assert_eq!(unsafe { new(input, 0) }.line_col(), (1, 1));
+        assert_eq!(unsafe { new(input, 1) }.line_col(), (1, 2));
+        assert_eq!(unsafe { new(input, 2) }.line_col(), (1, 3));
+        assert_eq!(unsafe { new(input, 3) }.line_col(), (1, 4));
+        assert_eq!(unsafe { new(input, 4) }.line_col(), (2, 1));
+        assert_eq!(unsafe { new(input, 5) }.line_col(), (2, 2));
+        assert_eq!(unsafe { new(input, 6) }.line_col(), (2, 3));
+        assert_eq!(unsafe { new(input, 7) }.line_col(), (3, 1));
+        assert_eq!(unsafe { new(input, 8) }.line_col(), (3, 2));
+        assert_eq!(unsafe { new(input, 11) }.line_col(), (3, 3));
+    }
+
+    #[test]
+    fn line_of() {
+        let input = "a\rb\nc\r\nd嗨";
+
+        assert_eq!(unsafe { new(input, 0) }.line_of(), "a\rb");
+        assert_eq!(unsafe { new(input, 1) }.line_of(), "a\rb");
+        assert_eq!(unsafe { new(input, 2) }.line_of(), "a\rb");
+        assert_eq!(unsafe { new(input, 3) }.line_of(), "a\rb");
+        assert_eq!(unsafe { new(input, 4) }.line_of(), "c");
+        assert_eq!(unsafe { new(input, 5) }.line_of(), "c");
+        assert_eq!(unsafe { new(input, 6) }.line_of(), "c");
+        assert_eq!(unsafe { new(input, 7) }.line_of(), "d嗨");
+        assert_eq!(unsafe { new(input, 8) }.line_of(), "d嗨");
+        assert_eq!(unsafe { new(input, 11) }.line_of(), "d嗨");
+    }
+
+    #[test]
+    fn line_of_empty() {
+        let input = "";
+
+        assert_eq!(unsafe { new(input, 0) }.line_of(), "");
+    }
+
+    #[test]
+    fn line_of_new_line() {
+        let input = "\n";
+
+        assert_eq!(unsafe { new(input, 0) }.line_of(), "");
+    }
+
+    #[test]
+    fn line_of_between_new_line() {
+        let input = "\n\n";
+
+        assert_eq!(unsafe { new(input, 1) }.line_of(), "");
+    }
+
+    fn measure_skip<'i>(input: &'i str, pos: usize, n: usize) -> Option<usize> {
+        let p = unsafe { new(input, pos) };
+        if let Ok(p) = p.skip(n) {
+            Some(p.pos - pos)
+        } else {
+            None
+        }
+    }
+
+    #[test]
+    fn skip_empty() {
+        let input = "";
+
+        assert_eq!(measure_skip(input, 0, 0), Some(0));
+        assert_eq!(measure_skip(input, 0, 1), None);
+    }
+
+    #[test]
+    fn skip() {
+        let input = "d嗨";
+
+        assert_eq!(measure_skip(input, 0, 0), Some(0));
+        assert_eq!(measure_skip(input, 0, 1), Some(1));
+        assert_eq!(measure_skip(input, 1, 1), Some(3));
+    }
+
+    #[test]
+    fn match_range() {
+        let input = "b";
+
+        assert!(unsafe { new(input, 0) }.match_range('a'..'c').is_ok());
+        assert!(unsafe { new(input, 0) }.match_range('b'..'b').is_ok());
+        assert!(!unsafe { new(input, 0) }.match_range('a'..'a').is_ok());
+        assert!(!unsafe { new(input, 0) }.match_range('c'..'c').is_ok());
+        assert!(unsafe { new(input, 0) }.match_range('a'..'嗨').is_ok());
+    }
+
+    #[test]
+    fn match_insensitive() {
+        let input = "AsdASdF";
+
+        assert!(unsafe { new(input, 0) }.match_insensitive("asd").is_ok());
+        assert!(unsafe { new(input, 3) }.match_insensitive("asdf").is_ok());
     }
 }

@@ -9,8 +9,6 @@
 
 pub(super) mod position;
 pub(super) mod span;
-mod str_input;
 
 pub use self::position::Position;
-pub use self::str_input::StrInput;
 pub use self::span::Span;

@@ -6,9 +6,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 use std::iter::Peekable;
-use std::rc::Rc;
 
-use pest::inputs::{StrInput, Position, Span};
+use pest::inputs::{Position, Span};
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 use pest::{self, Error, Parser, ParserState};
@@ -62,7 +61,7 @@ pub struct GrammarParser;
 impl Parser<GrammarRule> for GrammarParser {
     fn parse<'i>(
         rule: GrammarRule,
-        input: Rc<StrInput<'i>>
+        input: &'i str,
     ) -> Result<Pairs<'i, GrammarRule>, Error<'i, GrammarRule>> {
         fn grammar_rules<'i>(
             pos: Position<'i>,
@@ -1657,7 +1656,7 @@ mod tests {
     fn ast() {
         let input = "rule = _{ a{1} ~ \"b\"{1, 2} | !(^\"c\" | push('d'..'e'))?* }";
 
-        let pairs = GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap();
+        let pairs = GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs);
         let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule)).collect();
 

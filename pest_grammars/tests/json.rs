@@ -167,5 +167,5 @@ fn examples() {
 
     file.read_to_string(&mut data).unwrap();
 
-    JsonParser::parse_str(Rule::json, &data).unwrap();
+    JsonParser::parse(Rule::json, &data).unwrap();
 }

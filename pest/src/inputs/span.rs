@@ -8,23 +8,22 @@
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::rc::Rc;
+use std::ptr;
 
-use super::str_input::StrInput;
 use super::position;
 
 /// A `struct` of a span over an `Input`. It is created from either
 /// [two `Position`s](struct.Position.html#method.span) or from a
 /// [`Pair`](../iterators/struct.Pair.html#method.span).
 pub struct Span<'i> {
-    input: Rc<StrInput<'i>>,
+    input: &'i str,
     start: usize,
     end: usize,
     __phantom: ::std::marker::PhantomData<&'i str>,
 }
 
 #[inline]
-pub fn new<'i>(input: Rc<StrInput<'i>>, start: usize, end: usize) -> Span<'i> {
+pub fn new<'i>(input: &'i str, start: usize, end: usize) -> Span<'i> {
     Span { input, start, end, __phantom: ::std::marker::PhantomData }
 }
 
@@ -34,9 +33,8 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.span(end);
@@ -53,9 +51,8 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.span(end);
@@ -72,9 +69,8 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.clone().span(end);
@@ -92,9 +88,8 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.span(end.clone());
@@ -112,9 +107,8 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("ab"));
+    /// # use pest::inputs::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.clone().span(end.clone());
@@ -135,9 +129,8 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StrInput};
-    /// let input = Rc::new(StrInput::new("abc"));
+    /// # use pest::inputs::Position;
+    /// let input = "abc";
     /// let start = Position::from_start(input).skip(1).unwrap();
     /// let end = start.clone().match_string("b").unwrap();
     /// let span = start.span(end);
@@ -146,7 +139,7 @@ impl<'i> Span<'i> {
     /// ```
     #[inline]
     pub fn as_str(&self) -> &'i str {
-        unsafe { self.input.slice(self.start, self.end) }
+        unsafe { self.input.slice_unchecked(self.start, self.end) }
     }
 }
 
@@ -166,7 +159,7 @@ impl<'i> Clone for Span<'i> {
 
 impl<'i> PartialEq for Span<'i> {
     fn eq(&self, other: &Span<'i>) -> bool {
-        Rc::ptr_eq(&self.input, &other.input) && self.start == other.start && self.end == other.end
+        ptr::eq(self.input, other.input) && self.start == other.start && self.end == other.end
     }
 }
 
@@ -174,7 +167,7 @@ impl<'i> Eq for Span<'i> {}
 
 impl<'i> PartialOrd for Span<'i> {
     fn partial_cmp(&self, other: &Span<'i>) -> Option<Ordering> {
-        if Rc::ptr_eq(&self.input, &other.input) {
+        if ptr::eq(self.input, other.input) {
             match self.start.partial_cmp(&other.start) {
                 Some(Ordering::Equal) => self.end.partial_cmp(&other.end),
                 ordering => ordering
@@ -196,7 +189,7 @@ impl<'i> Ord for Span<'i> {
 
 impl<'i> Hash for Span<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (&*self.input as *const StrInput<'i>).hash(state);
+        (&*self.input as *const str).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }

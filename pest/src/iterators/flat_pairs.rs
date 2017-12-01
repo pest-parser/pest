@@ -11,14 +11,13 @@ use std::rc::Rc;
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::token_iterator::{self, TokenIterator};
-use super::super::inputs::StrInput;
 use super::super::RuleType;
 
 /// A `struct` containing `Pairs`. It is created by
 /// [`Pairs::flatten`](struct.Pairs.html#method.flatten).
 pub struct FlatPairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<StrInput<'i>>,
+    input: &'i str,
     start: usize,
     end: usize,
     __phantom: ::std::marker::PhantomData<&'i str>
@@ -26,7 +25,7 @@ pub struct FlatPairs<'i, R> {
 
 pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<StrInput<'i>>,
+    input: &'i str,
     start: usize,
     end: usize
 ) -> FlatPairs<'i, R> {
@@ -47,14 +46,13 @@ impl<'i, R: RuleType> FlatPairs<'i, R> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StrInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StrInput::new(""));
+    /// let input = "";
     /// let pairs = pest::state(input, |state, pos| {
     ///     // generating Token pair with Rule::a ...
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))

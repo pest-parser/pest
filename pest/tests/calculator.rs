@@ -8,9 +8,7 @@
 #[macro_use]
 extern crate pest;
 
-use std::rc::Rc;
-
-use pest::inputs::{Position, StrInput};
+use pest::inputs::Position;
 use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
@@ -32,7 +30,7 @@ enum Rule {
 struct CalculatorParser;
 
 impl Parser<Rule> for CalculatorParser {
-    fn parse<'i>(rule: Rule, input: Rc<StrInput<'i>>) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
+    fn parse<'i>(rule: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
         fn expression<'i>(
             pos: Position<'i>,
             state: &mut ParserState<'i, Rule>
@@ -268,6 +266,6 @@ fn prec_climb() {
         Operator::new(Rule::power, Assoc::Right)
     ]);
 
-    let pairs = CalculatorParser::parse_str(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
+    let pairs = CalculatorParser::parse(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
     assert_eq!(-1_525, consume(pairs.unwrap().next().unwrap(), &climber));
 }

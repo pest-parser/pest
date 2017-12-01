@@ -8,7 +8,7 @@
 use std::rc::Rc;
 
 use super::queueable_token::QueueableToken;
-use super::super::inputs::{StrInput, position};
+use super::super::inputs::position;
 use super::super::RuleType;
 use super::super::token::Token;
 
@@ -18,7 +18,7 @@ use super::super::token::Token;
 #[derive(Clone, Debug)]
 pub struct TokenIterator<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<StrInput<'i>>,
+    input: &'i str,
     index: usize,
     start: usize,
     end: usize,
@@ -27,7 +27,7 @@ pub struct TokenIterator<'i, R> {
 
 pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<StrInput<'i>>,
+    input: &'i str,
     start: usize,
     end: usize
 ) -> TokenIterator<'i, R> {

@@ -237,9 +237,7 @@ use std::env;
 use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
-use std::rc::Rc;
 
-use pest::inputs::StrInput;
 use pest::Parser;
 use proc_macro::TokenStream;
 use quote::Ident;
@@ -271,7 +269,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         Err(error) => panic!("error opening {:?}: {}", file_name, error),
     };
 
-    let input = Rc::new(StrInput::new(&data));
+    let input = &data;
     let pairs = match GrammarParser::parse(GrammarRule::grammar_rules, input) {
         Ok(pairs) => pairs,
         Err(error) => panic!("error parsing {:?}\n\n{}", file_name, error.renamed_rules(|rule| {

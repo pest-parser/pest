@@ -9,9 +9,8 @@
 extern crate pest;
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
-use pest::inputs::{Position, Span, StrInput};
+use pest::inputs::{Position, Span};
 use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
 
@@ -37,7 +36,7 @@ enum Rule {
 struct JsonParser;
 
 impl Parser<Rule> for JsonParser {
-    fn parse<'i>(rule: Rule, input: Rc<StrInput<'i>>) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
+    fn parse<'i>(rule: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
         fn json<'i>(
             pos: Position<'i>,
             state: &mut ParserState<'i, Rule>
@@ -577,7 +576,7 @@ fn object() {
 
 #[test]
 fn ast() {
-    let input = Rc::new(StrInput::new("{\"a\": [null, true, 3.4]}"));
+    let input = "{\"a\": [null, true, 3.4]}";
     let start = Position::from_start(input.clone()).skip(1).unwrap();
     let end = start.clone().skip(3).unwrap();
     let span = start.span(end);

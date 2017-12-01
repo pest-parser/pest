@@ -77,7 +77,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
         impl ::pest::Parser<Rule> for #name {
             fn parse<'i>(
                 rule: Rule,
-                input: ::std::rc::Rc<::pest::inputs::StrInput<'i>>
+                input: &'i str
             ) -> ::std::result::Result<::pest::iterators::Pairs<'i, Rule>, ::pest::Error<'i, Rule>> {
                 mod rules {
                     use super::Rule;
@@ -920,7 +920,7 @@ mod tests {
             impl ::pest::Parser<Rule> for MyParser {
                 fn parse<'i>(
                     rule: Rule,
-                    input: ::std::rc::Rc<::pest::inputs::StrInput<'i>>
+                    input: &'i str
                 ) -> ::std::result::Result<::pest::iterators::Pairs<'i, Rule>, ::pest::Error<'i, Rule>> {
                     mod rules {
                         use super::Rule;

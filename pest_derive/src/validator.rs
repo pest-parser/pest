@@ -411,7 +411,7 @@ mod tests {
   = let is a rust keyword")]
     fn rust_keyword() {
         let input = "let = { \"a\" }";
-        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        validate_pairs(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -425,7 +425,7 @@ mod tests {
   = any is a pest keyword")]
     fn pest_keyword() {
         let input = "any = { \"a\" }";
-        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        validate_pairs(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -439,7 +439,7 @@ mod tests {
   = rule a already defined")]
     fn already_defined() {
         let input = "a = { \"a\" } a = { \"a\" }";
-        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        validate_pairs(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -453,13 +453,13 @@ mod tests {
   = rule b is undefined")]
     fn undefined() {
         let input = "a = { b }";
-        validate_pairs(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        validate_pairs(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
     fn valid_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"b\") ~ a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -473,7 +473,7 @@ mod tests {
   = whitespace is non-failing and will repeat infinitely")]
     fn non_failing_whitespace() {
         let input = "whitespace = { \"\" }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -487,7 +487,7 @@ mod tests {
   = comment is non-progressing and will repeat infinitely")]
     fn non_progressing_comment() {
         let input = "comment = { soi }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -501,7 +501,7 @@ mod tests {
   = expression inside repetition is non-failing and will repeat infinitely")]
     fn non_failing_repetition() {
         let input = "a = { (\"\")* }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -515,7 +515,7 @@ mod tests {
   = expression inside repetition is non-progressing and will repeat infinitely")]
     fn non_progressing_repetition() {
         let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -529,7 +529,7 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn simple_left_recursion() {
         let input = "a = { a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -550,7 +550,7 @@ mod tests {
   = rule a is left-recursive (a -> b -> a); pest::prec_climber might be useful in this case")]
     fn indirect_left_recursion() {
         let input = "a = { b } b = { a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -564,7 +564,7 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn non_failing_left_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 
     #[test]
@@ -578,6 +578,6 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn non_primary_choice_left_recursion() {
         let input = "a = { \"a\" | a }";
-        consume_rules(GrammarParser::parse_str(GrammarRule::grammar_rules, input).unwrap());
+        consume_rules(GrammarParser::parse(GrammarRule::grammar_rules, input).unwrap());
     }
 }
