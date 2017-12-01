@@ -15,6 +15,7 @@ use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::token_iterator::{self, TokenIterator};
 use super::super::RuleType;
+use super::super::util::hash_str;
 
 /// A `struct` containing `Pairs`. It is created by [`pest::state`](../fn.state.html) and
 /// [`Pair::into_inner`](struct.Pair.html#method.into_inner).
@@ -165,7 +166,7 @@ impl<'i, R: Eq> Eq for Pairs<'i, R> {}
 impl<'i, R: Hash> Hash for Pairs<'i, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
-        (&*self.input as *const str).hash(state);
+        hash_str(self.input, state);
         self.start.hash(state);
         self.end.hash(state);
     }

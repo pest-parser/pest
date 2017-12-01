@@ -4,7 +4,7 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
+#[allow(unused_imports)] use std::ascii::AsciiExt;
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -12,6 +12,7 @@ use std::ops::Range;
 use std::ptr;
 
 use super::span;
+use super::super::util::hash_str;
 
 /// A `struct` containing a position that is tied to an `Input` which provides useful methods to
 /// manually parse it. This leads to an API largely based on the standard `Result`.
@@ -638,7 +639,7 @@ impl<'i> Ord for Position<'i> {
 
 impl<'i> Hash for Position<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (&*self.input as *const str).hash(state);
+        hash_str(self.input, state);
         self.pos.hash(state);
     }
 }
