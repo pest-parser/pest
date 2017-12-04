@@ -8,8 +8,8 @@
 use std::rc::Rc;
 
 use error::Error;
-use inputs::{Position, Span};
-use inputs::position;
+use position::{self, Position};
+use span::Span;
 use iterators::{pairs, QueueableToken};
 use RuleType;
 
@@ -43,7 +43,7 @@ pub struct ParserState<'i, R: RuleType> {
     pub stack: Vec<Span<'i>>
 }
 
-/// Creates a `ParserState` from an `Input`, supplying it to a closure `f`.
+/// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
 ///
 /// # Examples
 ///
@@ -203,7 +203,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// Wrapper which removes `Tokens` in case of a sequence's failure.
     ///
     /// Usually used in conjunction with
-    /// [`Position::sequence`](inputs/struct.Position.html#method.sequence).
+    /// [`Position::sequence`](struct.Position.html#method.sequence).
     ///
     /// # Examples
     ///
@@ -251,7 +251,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// Wrapper which stops `Token`s from being generated.
     ///
     /// Usually used in conjunction with
-    /// [`Position::lookahead`](inputs/struct.Position.html#method.lookahead).
+    /// [`Position::lookahead`](struct.Position.html#method.lookahead).
     ///
     /// # Examples
     ///

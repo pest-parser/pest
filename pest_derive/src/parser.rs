@@ -7,7 +7,8 @@
 
 use std::iter::Peekable;
 
-use pest::inputs::{Position, Span};
+use pest::position::Position;
+use pest::span::Span;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 use pest::{self, Error, Parser, ParserState};

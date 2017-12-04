@@ -10,7 +10,8 @@ extern crate pest;
 
 use std::collections::HashMap;
 
-use pest::inputs::{Position, Span};
+use pest::position::Position;
+use pest::span::Span;
 use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
 

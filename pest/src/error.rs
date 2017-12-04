@@ -8,7 +8,8 @@
 use std::error;
 use std::fmt;
 
-use inputs::{Position, Span};
+use position::Position;
+use span::Span;
 use RuleType;
 
 /// An `enum` which defines possible errors.
@@ -49,7 +50,7 @@ impl <'i, R: RuleType> Error<'i, R> {
     ///
     /// ```
     /// # use pest::Error;
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// # #[allow(non_camel_case_types)]
     /// # #[allow(dead_code)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -205,7 +206,7 @@ impl<'i, R: fmt::Debug> error::Error for Error<'i, R> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::inputs::position;
+    use super::super::position;
 
     #[test]
     fn display_parsing_error_mixed() {

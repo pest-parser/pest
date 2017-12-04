@@ -8,7 +8,7 @@
 use std::rc::Rc;
 
 use super::queueable_token::QueueableToken;
-use super::super::inputs::position;
+use super::super::position;
 use super::super::RuleType;
 use super::super::token::Token;
 

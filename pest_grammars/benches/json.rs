@@ -17,7 +17,7 @@ use std::io::Read;
 
 use test::Bencher;
 
-use pest::inputs::Span;
+use pest::span::Span;
 use pest::iterators::Pair;
 use pest::Parser;
 

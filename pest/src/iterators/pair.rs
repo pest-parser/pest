@@ -13,7 +13,7 @@ use std::rc::Rc;
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::token_iterator::{self, TokenIterator};
-use super::super::inputs::{span, Span};
+use super::super::span::{self, Span};
 use super::super::RuleType;
 use super::super::util::hash_str;
 
@@ -72,7 +72,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
         }
     }
 
-    /// Captures a `&str` slice from the `Input` defined by the token `Pair`.
+    /// Captures a slice from the `&str` defined by the token `Pair`.
     ///
     /// # Examples
     ///

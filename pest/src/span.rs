@@ -10,10 +10,10 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ptr;
 
-use super::position;
-use super::super::util::hash_str;
+use position;
+use super::util::hash_str;
 
-/// A `struct` of a span over an `Input`. It is created from either
+/// A `struct` of a span over a `&str`. It is created from either
 /// [two `Position`s](struct.Position.html#method.span) or from a
 /// [`Pair`](../iterators/struct.Pair.html#method.span).
 pub struct Span<'i> {
@@ -33,7 +33,7 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
@@ -51,7 +51,7 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
@@ -69,7 +69,7 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
@@ -88,7 +88,7 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
@@ -107,7 +107,7 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
@@ -124,12 +124,12 @@ impl<'i> Span<'i> {
         (pos1, pos2)
     }
 
-    /// Captures a `&str` slice from the `Input` defined by the `Span`.
+    /// Captures a slice from the `&str` defined by the `Span`.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "abc";
     /// let start = Position::from_start(input).skip(1).unwrap();
     /// let end = start.clone().match_string("b").unwrap();
@@ -142,8 +142,6 @@ impl<'i> Span<'i> {
         unsafe { self.input.slice_unchecked(self.start, self.end) }
     }
 }
-
-// We don't want to enforce derivable traits on the Input which forces to implement them manually.
 
 impl<'i> fmt::Debug for Span<'i> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

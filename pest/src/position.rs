@@ -4,17 +4,17 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
-#[allow(unused_imports)] use std::ascii::AsciiExt;
+use std::ascii::AsciiExt;
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::ptr;
 
-use super::span;
-use super::super::util::hash_str;
+use span;
+use super::util::hash_str;
 
-/// A `struct` containing a position that is tied to an `Input` which provides useful methods to
+/// A `struct` containing a position that is tied to a `&str` which provides useful methods to
 /// manually parse it. This leads to an API largely based on the standard `Result`.
 pub struct Position<'i> {
     input: &'i str,
@@ -34,7 +34,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::{Position};
+    /// # use pest::position::Position;
     ///
     /// Position::from_start("");
     /// ```
@@ -49,7 +49,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -70,7 +70,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
@@ -93,7 +93,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "\na";
     /// let start = Position::from_start(input);
     /// let pos = start.match_string("\na").unwrap();
@@ -150,7 +150,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "\na";
     /// let start = Position::from_start(input);
     /// let pos = start.match_string("\na").unwrap();
@@ -210,13 +210,13 @@ impl<'i> Position<'i> {
         }
     }
 
-    /// Returns `Ok` with the current `Position` if it is at the start of its `Input` or `Err` of
+    /// Returns `Ok` with the current `Position` if it is at the start of its `&str` or `Err` of
     /// the same `Position` otherwise.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
@@ -233,13 +233,13 @@ impl<'i> Position<'i> {
         }
     }
 
-    /// Returns `Ok` with the current `Position` if it is at the end of its `Input` or `Err` of the
+    /// Returns `Ok` with the current `Position` if it is at the end of its `&str` or `Err` of the
     /// same `Position` otherwise.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
@@ -262,7 +262,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -296,7 +296,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -332,7 +332,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -369,7 +369,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -416,7 +416,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -466,7 +466,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -524,7 +524,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -563,7 +563,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::inputs::Position;
+    /// # use pest::position::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -595,8 +595,6 @@ impl<'i> Position<'i> {
         }
     }
 }
-
-// We don't want to enforce derivable traits on the Input which forces to implement them manually.
 
 impl<'i> fmt::Debug for Position<'i> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -631,7 +629,7 @@ impl<'i> PartialOrd for Position<'i> {
 
 impl<'i> Ord for Position<'i> {
     fn cmp(&self, other: &Position<'i>) -> Ordering {
-        self.partial_cmp(other).expect("cannot compare positions from different inputs")
+        self.partial_cmp(other).expect("cannot compare positions from different strs")
     }
 }
 

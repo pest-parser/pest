@@ -8,7 +8,7 @@
 #[macro_use]
 extern crate pest;
 
-use pest::inputs::Position;
+use pest::position::Position;
 use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};

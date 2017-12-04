@@ -8,7 +8,7 @@
 use std::collections::{HashMap, HashSet};
 
 use pest::Error;
-use pest::inputs::Span;
+use pest::span::Span;
 use pest::iterators::Pairs;
 
 use quote::Ident;

@@ -145,7 +145,7 @@ impl<R: RuleType> PrecClimber<R> {
     /// let primary = |pair| {
     ///     consume(pair, climber)
     /// };
-    /// let infix = |lhs: i32, op: Pair<Rule, StrInput>, rhs: i32| {
+    /// let infix = |lhs: i32, op: Pair<Rule>, rhs: i32| {
     ///     match op.rule() {
     ///         Rule::plus => lhs + rhs,
     ///         Rule::minus => lhs - rhs,

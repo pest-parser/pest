@@ -2,7 +2,7 @@ extern crate pest;
 
 use std::io::{self, Write};
 
-use pest::inputs::Position;
+use pest::position::Position;
 use pest::iterators::Pairs;
 use pest::{Error, Parser, ParserState, state};
 
