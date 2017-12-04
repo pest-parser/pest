@@ -22,7 +22,6 @@ pub struct TokenIterator<'i, R> {
     index: usize,
     start: usize,
     end: usize,
-    __phantom: ::std::marker::PhantomData<&'i str>
 }
 
 pub fn new<'i, R: RuleType>(
@@ -37,7 +36,6 @@ pub fn new<'i, R: RuleType>(
         index: 0,
         start,
         end,
-        __phantom: ::std::marker::PhantomData
     }
 }
 

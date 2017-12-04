@@ -20,7 +20,6 @@ pub struct FlatPairs<'i, R> {
     input: &'i str,
     start: usize,
     end: usize,
-    __phantom: ::std::marker::PhantomData<&'i str>
 }
 
 pub fn new<'i, R: RuleType>(
@@ -34,7 +33,6 @@ pub fn new<'i, R: RuleType>(
         input,
         start,
         end,
-        __phantom: ::std::marker::PhantomData
     }
 }
 
@@ -120,7 +118,6 @@ impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
             input: self.input.clone(),
             start: self.start,
             end: self.end,
-            __phantom: ::std::marker::PhantomData,
         }
     }
 }

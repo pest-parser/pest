@@ -28,7 +28,6 @@ pub struct Pair<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
     start: usize,
-    __phantom: ::std::marker::PhantomData<&'i str>
 }
 
 pub fn new<'i, R: RuleType>(
@@ -40,7 +39,6 @@ pub fn new<'i, R: RuleType>(
         queue,
         input,
         start,
-        __phantom: ::std::marker::PhantomData
     }
 }
 

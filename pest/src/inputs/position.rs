@@ -19,14 +19,12 @@ use super::super::util::hash_str;
 pub struct Position<'i> {
     input: &'i str,
     pos: usize,
-    __phantom: ::std::marker::PhantomData<&'i str>,
 }
 
 pub unsafe fn new<'i>(input: &'i str, pos: usize) -> Position<'i> {
     Position {
         input,
         pos,
-        __phantom: ::std::marker::PhantomData
     }
 }
 

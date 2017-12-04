@@ -25,7 +25,6 @@ pub struct Pairs<'i, R> {
     input: &'i str,
     start: usize,
     end: usize,
-    __phantom: ::std::marker::PhantomData<&'i str>
 }
 
 pub fn new<'i, R: RuleType>(
@@ -39,7 +38,6 @@ pub fn new<'i, R: RuleType>(
         input,
         start,
         end,
-        __phantom: ::std::marker::PhantomData
     }
 }
 

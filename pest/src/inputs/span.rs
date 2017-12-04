@@ -20,12 +20,11 @@ pub struct Span<'i> {
     input: &'i str,
     start: usize,
     end: usize,
-    __phantom: ::std::marker::PhantomData<&'i str>,
 }
 
 #[inline]
 pub fn new<'i>(input: &'i str, start: usize, end: usize) -> Span<'i> {
-    Span { input, start, end, __phantom: ::std::marker::PhantomData }
+    Span { input, start, end }
 }
 
 impl<'i> Span<'i> {
