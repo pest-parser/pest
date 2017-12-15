@@ -484,16 +484,12 @@ impl Parser<GrammarRule> for GrammarParser {
         ) -> Result<Position<I>, Position<I>> {
             state.rule(GrammarRule::identifier, pos, |state, pos| {
                 pos.sequence(|pos| {
-                    pos.lookahead(false, |pos| {
-                        pos.match_string("push")
+                    pos.match_string("_").or_else(|pos| {
+                        alpha(pos, state)
                     }).and_then(|pos| {
-                        pos.match_string("_").or_else(|pos| {
-                            alpha(pos, state)
-                        }).and_then(|pos| {
-                            pos.repeat(|pos| {
-                                pos.match_string("_").or_else(|pos| {
-                                    alpha_num(pos, state)
-                                })
+                        pos.repeat(|pos| {
+                            pos.match_string("_").or_else(|pos| {
+                                alpha_num(pos, state)
                             })
                         })
                     })
