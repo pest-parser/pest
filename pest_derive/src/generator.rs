@@ -132,13 +132,21 @@ fn generate_rule(rule: Rule) -> Tokens {
     let name = rule.name;
     let expr = if {
         rule.ty == RuleType::Atomic ||
-        rule.ty == RuleType::CompoundAtomic ||
-        &name == "whitespace" ||
-        &name == "comment"
+        rule.ty == RuleType::CompoundAtomic
     } {
         generate_expr_atomic(rule.expr)
     } else {
-        generate_expr(rule.expr)
+        if &name == "whitespace" || &name == "comment" {
+            let atomic = generate_expr_atomic(rule.expr);
+
+            quote! {
+                state.atomic(::pest::Atomicity::Atomic, move |state| {
+                    #atomic
+                })
+            }
+        } else {
+            generate_expr(rule.expr)
+        }
     };
 
     match rule.ty {
