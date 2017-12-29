@@ -200,6 +200,32 @@ impl<R: RuleType, I: Input> Pair<R, I> {
         )
     }
 
+    /// Return the line and column number of the token in the input stream.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # use pest::inputs::StringInput;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     a
+    /// }
+    ///
+    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let pair = pest::state(input, |state, pos| {
+    ///     // generating Token pair with Rule::a ...
+    /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
+    /// }).unwrap().next().unwrap();
+    ///
+    /// assert_eq!(unsafe { pair.line_col() }, (1,1));
+    /// ```
+    pub unsafe fn line_col(&self) -> (usize, usize) {
+        self.input.line_col(self.pos(0))
+    }
+
     fn pair(&self) -> usize {
         match self.queue[self.start] {
             QueueableToken::Start { pair, .. } => pair,
