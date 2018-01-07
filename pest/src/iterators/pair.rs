@@ -200,7 +200,8 @@ impl<R: RuleType, I: Input> Pair<R, I> {
         )
     }
 
-    /// Return the line and column number of the token in the input stream.
+    /// Returns the line and column numbers for the beginning and the end of
+    /// this pair.
     ///
     /// # Example
     ///
@@ -211,19 +212,24 @@ impl<R: RuleType, I: Input> Pair<R, I> {
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
-    ///     a
+    ///     ab
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let input = Rc::new(StringInput::new("ab".to_owned()));
     /// let pair = pest::state(input, |state, pos| {
-    ///     // generating Token pair with Rule::a ...
-    /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
+    ///     // generating a Token pair with Rule::ab
+    /// #     state.rule(Rule::ab, pos, |_, p| p.match_string("ab"))
     /// }).unwrap().next().unwrap();
     ///
-    /// assert_eq!(unsafe { pair.line_col() }, (1,1));
+    /// assert_eq!(unsafe { pair.input_range() }, ((1,1), (1,2)));
     /// ```
-    pub unsafe fn line_col(&self) -> (usize, usize) {
-        self.input.line_col(self.pos(0))
+    #[inline]
+    pub unsafe fn input_range(&self) -> ((usize, usize), (usize, usize)) {
+        let start_token_pos = self.pos(self.start);
+        let mut end_token_pos = self.pos(self.pair());
+        if end_token_pos > 0 { end_token_pos -= 1; }
+
+        (self.input.line_col(start_token_pos), self.input.line_col(end_token_pos))
     }
 
     fn pair(&self) -> usize {
