@@ -7,8 +7,8 @@
 
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::rc::Rc;
 use std::ptr;
+use std::rc::Rc;
 
 use super::flat_pairs::{self, FlatPairs};
 use super::pair::{self, Pair};
@@ -23,7 +23,7 @@ pub struct Pairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
     start: usize,
-    end: usize,
+    end: usize
 }
 
 pub fn new<R: RuleType>(
@@ -36,7 +36,7 @@ pub fn new<R: RuleType>(
         queue,
         input,
         start,
-        end,
+        end
     }
 }
 
@@ -68,12 +68,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     #[inline]
     pub fn flatten(self) -> FlatPairs<'i, R> {
-        flat_pairs::new(
-            self.queue,
-            self.input,
-            self.start,
-            self.end
-        )
+        flat_pairs::new(self.queue, self.input, self.start, self.end)
     }
 
     /// Converts the `Pairs` into a `TokenIterator`.
@@ -83,7 +78,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-        /// # #[allow(non_camel_case_types)]
+    /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
@@ -100,12 +95,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     #[inline]
     pub fn tokens(self) -> Tokens<'i, R> {
-        tokens::new(
-            self.queue,
-            self.input,
-            self.start,
-            self.end
-        )
+        tokens::new(self.queue, self.input, self.start, self.end)
     }
 
     fn pair(&self) -> usize {
@@ -124,11 +114,7 @@ impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
             return None;
         }
 
-        let pair = pair::new(
-            Rc::clone(&self.queue),
-            self.input,
-            self.start
-        );
+        let pair = pair::new(Rc::clone(&self.queue), self.input, self.start);
 
         self.start = self.pair() + 1;
 
@@ -138,23 +124,31 @@ impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
 
 impl<'i, R: RuleType> fmt::Debug for Pairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Pairs {{ pairs: {:?} }}", self.clone().collect::<Vec<_>>())
+        write!(
+            f,
+            "Pairs {{ pairs: {:?} }}",
+            self.clone().collect::<Vec<_>>()
+        )
     }
 }
 
 impl<'i, R: RuleType> fmt::Display for Pairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[{}]", self.clone()
-                              .map(|pair| format!("{}", pair))
-                              .collect::<Vec<_>>()
-                              .join(", "))
+        write!(
+            f,
+            "[{}]",
+            self.clone()
+                .map(|pair| format!("{}", pair))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }
 
 impl<'i, R: PartialEq> PartialEq for Pairs<'i, R> {
     fn eq(&self, other: &Pairs<'i, R>) -> bool {
-        Rc::ptr_eq(&self.queue, &other.queue) && ptr::eq(self.input, other.input) &&
-        self.start == other.start && self.end == other.end
+        Rc::ptr_eq(&self.queue, &other.queue) && ptr::eq(self.input, other.input)
+            && self.start == other.start && self.end == other.end
     }
 }
 
@@ -171,8 +165,8 @@ impl<'i, R: Hash> Hash for Pairs<'i, R> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::macros::tests::*;
     use super::super::super::Parser;
+    use super::super::super::macros::tests::*;
 
     #[test]
     fn pairs_debug() {
@@ -181,11 +175,12 @@ mod tests {
         assert_eq!(
             format!("{:?}", pairs),
             "Pairs { pairs: [\
-                Pair { rule: a, span: Span { start: 0, end: 3 }, inner: Pairs { pairs: [\
-                    Pair { rule: b, span: Span { start: 1, end: 2 }, \
-                        inner: Pairs { pairs: [] } }] } }, \
-                    Pair { rule: c, span: Span { start: 4, end: 5 }, \
-                        inner: Pairs { pairs: [] } }] }".to_owned()
+             Pair { rule: a, span: Span { start: 0, end: 3 }, inner: Pairs { pairs: [\
+             Pair { rule: b, span: Span { start: 1, end: 2 }, \
+             inner: Pairs { pairs: [] } }] } }, \
+             Pair { rule: c, span: Span { start: 4, end: 5 }, \
+             inner: Pairs { pairs: [] } }] }"
+                .to_owned()
         );
     }
 
@@ -193,6 +188,9 @@ mod tests {
     fn pairs_display() {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
-        assert_eq!(format!("{}", pairs), "[a(0, 3, [b(1, 2)]), c(4, 5)]".to_owned());
+        assert_eq!(
+            format!("{}", pairs),
+            "[a(0, 3, [b(1, 2)]), c(4, 5)]".to_owned()
+        );
     }
 }

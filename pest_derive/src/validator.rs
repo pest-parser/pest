@@ -8,8 +8,8 @@
 use std::collections::{HashMap, HashSet};
 
 use pest::Error;
-use pest::span::Span;
 use pest::iterators::Pairs;
+use pest::span::Span;
 
 use quote::Ident;
 
@@ -85,23 +85,22 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, GrammarRule>) -> Vec<Ident> {
     predefined.insert("pop");
     predefined.insert("soi");
 
-    let definitions: Vec<_> = pairs.clone()
-                                   .filter(|pair| pair.as_rule() == GrammarRule::grammar_rule)
-                                   .map(|pair| {
-                                       pair.into_inner()
-                                           .next()
-                                           .unwrap()
-                                           .into_span()
-                                   }).collect();
-    let called_rules: Vec<_> = pairs.clone()
-                                    .filter(|pair| pair.as_rule() == GrammarRule::grammar_rule)
-                                    .flat_map(|pair| {
-                                        pair.into_inner().flatten().skip(1).filter(|pair| {
-                                            pair.as_rule() == GrammarRule::identifier
-                                        }).map(|pair| {
-                                            pair.into_span()
-                                        })
-                                    }).collect();
+    let definitions: Vec<_> = pairs
+        .clone()
+        .filter(|pair| pair.as_rule() == GrammarRule::grammar_rule)
+        .map(|pair| pair.into_inner().next().unwrap().into_span())
+        .collect();
+    let called_rules: Vec<_> = pairs
+        .clone()
+        .filter(|pair| pair.as_rule() == GrammarRule::grammar_rule)
+        .flat_map(|pair| {
+            pair.into_inner()
+                .flatten()
+                .skip(1)
+                .filter(|pair| pair.as_rule() == GrammarRule::identifier)
+                .map(|pair| pair.into_span())
+        })
+        .collect();
 
     let mut errors = vec![];
 
@@ -110,9 +109,11 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, GrammarRule>) -> Vec<Ident> {
     errors.extend(validate_already_defined(&definitions));
     errors.extend(validate_undefined(&definitions, &called_rules, &predefined));
 
-    let errors = errors.into_iter().map(|error| {
-        format!("grammar error\n\n{}", error)
-    }).collect::<Vec<_>>().join("\n\n");
+    let errors = errors
+        .into_iter()
+        .map(|error| format!("grammar error\n\n{}", error))
+        .collect::<Vec<_>>()
+        .join("\n\n");
 
     if errors.len() > 0 {
         panic!("{}", errors);
@@ -123,7 +124,10 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, GrammarRule>) -> Vec<Ident> {
 
     let defaults = called_rules.difference(&definitions);
 
-    defaults.into_iter().map(|string| Ident::new(*string)).collect()
+    defaults
+        .into_iter()
+        .map(|string| Ident::new(*string))
+        .collect()
 }
 
 pub fn validate_rust_keywords<'i>(
@@ -166,9 +170,7 @@ pub fn validate_pest_keywords<'i>(
     errors
 }
 
-pub fn validate_already_defined<'i>(
-    definitions: &Vec<Span<'i>>
-) -> Vec<Error<'i, GrammarRule>> {
+pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<'i, GrammarRule>> {
     let mut errors = vec![];
     let mut defined = HashSet::new();
 
@@ -217,16 +219,16 @@ pub fn validate_ast<'i>(rules: &Vec<ParserRule<'i>>) {
     errors.extend(validate_whitespace_comment(rules));
     errors.extend(validate_left_recursion(rules));
 
-    errors.sort_by_key(|error| {
-        match *error {
-            Error::CustomErrorSpan { ref span, .. } => span.clone(),
-            _ => unreachable!()
-        }
+    errors.sort_by_key(|error| match *error {
+        Error::CustomErrorSpan { ref span, .. } => span.clone(),
+        _ => unreachable!()
     });
 
-    let errors = errors.into_iter().map(|error| {
-        format!("{}", error)
-    }).collect::<Vec<_>>().join("\n\n");
+    let errors = errors
+        .into_iter()
+        .map(|error| format!("{}", error))
+        .collect::<Vec<_>>()
+        .join("\n\n");
 
     if errors.len() > 0 {
         panic!("grammar error\n\n{}", errors);
@@ -254,9 +256,7 @@ fn is_non_failing<'i>(expr: &ParserExpr<'i>) -> bool {
         ParserExpr::Str(ref string) => string == "",
         ParserExpr::Opt(_) => true,
         ParserExpr::Rep(_) => true,
-        ParserExpr::Seq(ref lhs, ref rhs) => {
-            is_non_failing(&lhs.expr) && is_non_failing(&rhs.expr)
-        }
+        ParserExpr::Seq(ref lhs, ref rhs) => is_non_failing(&lhs.expr) && is_non_failing(&rhs.expr),
         ParserExpr::Choice(ref lhs, ref rhs) => {
             is_non_failing(&lhs.expr) || is_non_failing(&rhs.expr)
         }
@@ -265,20 +265,24 @@ fn is_non_failing<'i>(expr: &ParserExpr<'i>) -> bool {
 }
 
 fn validate_repetition<'i>(rules: &Vec<ParserRule<'i>>) -> Vec<Error<'i, GrammarRule>> {
-    rules.into_iter().filter_map(|rule| {
-        match rule.node.expr {
-            ParserExpr::Rep(ref other) | ParserExpr::RepOnce(ref other) |
-            ParserExpr::RepMin(ref other, _) => {
+    rules
+        .into_iter()
+        .filter_map(|rule| match rule.node.expr {
+            ParserExpr::Rep(ref other)
+            | ParserExpr::RepOnce(ref other)
+            | ParserExpr::RepMin(ref other, _) => {
                 if is_non_failing(&other.expr) {
                     Some(Error::CustomErrorSpan {
                         message: "expression inside repetition is non-failing and will repeat \
-                                  infinitely".to_owned(),
+                                  infinitely"
+                            .to_owned(),
                         span: rule.node.span.clone()
                     })
                 } else if is_non_progressing(&other.expr) {
                     Some(Error::CustomErrorSpan {
                         message: "expression inside repetition is non-progressing and will repeat \
-                                  infinitely".to_owned(),
+                                  infinitely"
+                            .to_owned(),
                         span: rule.node.span.clone()
                     })
                 } else {
@@ -286,31 +290,39 @@ fn validate_repetition<'i>(rules: &Vec<ParserRule<'i>>) -> Vec<Error<'i, Grammar
                 }
             }
             _ => None
-        }
-    }).collect()
+        })
+        .collect()
 }
 
 fn validate_whitespace_comment<'i>(rules: &Vec<ParserRule<'i>>) -> Vec<Error<'i, GrammarRule>> {
-    rules.into_iter().filter_map(|rule| {
-        if &rule.name == "whitespace" || &rule.name == "comment" {
-            if is_non_failing(&rule.node.expr) {
-                Some(Error::CustomErrorSpan {
-                    message: format!("{} is non-failing and will repeat infinitely", &rule.name),
-                    span: rule.node.span.clone()
-                })
-            } else if is_non_progressing(&rule.node.expr) {
-                Some(Error::CustomErrorSpan {
-                    message: format!("{} is non-progressing and will repeat infinitely",
-                                     &rule.name),
-                    span: rule.node.span.clone()
-                })
+    rules
+        .into_iter()
+        .filter_map(|rule| {
+            if &rule.name == "whitespace" || &rule.name == "comment" {
+                if is_non_failing(&rule.node.expr) {
+                    Some(Error::CustomErrorSpan {
+                        message: format!(
+                            "{} is non-failing and will repeat infinitely",
+                            &rule.name
+                        ),
+                        span: rule.node.span.clone()
+                    })
+                } else if is_non_progressing(&rule.node.expr) {
+                    Some(Error::CustomErrorSpan {
+                        message: format!(
+                            "{} is non-progressing and will repeat infinitely",
+                            &rule.name
+                        ),
+                        span: rule.node.span.clone()
+                    })
+                } else {
+                    None
+                }
             } else {
                 None
             }
-        } else {
-            None
-        }
-    }).collect()
+        })
+        .collect()
 }
 
 fn validate_left_recursion<'i>(rules: &Vec<ParserRule<'i>>) -> Vec<Error<'i, GrammarRule>> {
@@ -334,17 +346,22 @@ fn left_recursion<'i>(rules: HashMap<Ident, &ParserNode<'i>>) -> Vec<Error<'i, G
         trace: &mut Vec<Ident>
     ) -> Option<Error<'i, GrammarRule>> {
         match node.expr {
-            ParserExpr::Ident(ref other)  => {
+            ParserExpr::Ident(ref other) => {
                 if trace[0] == other {
                     trace.push(other.clone());
-                    let chain = trace.iter()
-                                     .map(|ident| ident.as_ref())
-                                     .collect::<Vec<_>>()
-                                     .join(" -> ");
+                    let chain = trace
+                        .iter()
+                        .map(|ident| ident.as_ref())
+                        .collect::<Vec<_>>()
+                        .join(" -> ");
 
                     return Some(Error::CustomErrorSpan {
-                        message: format!("rule {} is left-recursive ({}); pest::prec_climber might \
-                                          be useful in this case", node.span.as_str(), chain),
+                        message: format!(
+                            "rule {} is left-recursive ({}); pest::prec_climber might \
+                             be useful in this case",
+                            node.span.as_str(),
+                            chain
+                        ),
                         span: node.span.clone()
                     });
                 }
@@ -360,7 +377,7 @@ fn left_recursion<'i>(rules: HashMap<Ident, &ParserNode<'i>>) -> Vec<Error<'i, G
                 }
 
                 None
-            },
+            }
             ParserExpr::Seq(ref lhs, ref rhs) => {
                 if is_non_failing(&lhs.expr) {
                     check_expr(rhs, rules, trace)
@@ -399,7 +416,7 @@ mod tests {
     use pest::Parser;
 
     use super::*;
-    use super::super::parser::{GrammarParser, consume_rules};
+    use super::super::parser::{consume_rules, GrammarParser};
 
     #[test]
     #[should_panic(expected = "grammar error

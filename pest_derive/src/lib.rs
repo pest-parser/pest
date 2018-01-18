@@ -226,7 +226,7 @@
 //! implements `pest`'s `RuleType` and can be used throughout the API.
 
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 
 #[cfg(test)]
 #[macro_use]
@@ -272,14 +272,16 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
 
     let data = match read_file(&path) {
         Ok(data) => data,
-        Err(error) => panic!("error opening {:?}: {}", file_name, error),
+        Err(error) => panic!("error opening {:?}: {}", file_name, error)
     };
 
     let input = &data;
     let pairs = match GrammarParser::parse(GrammarRule::grammar_rules, input) {
         Ok(pairs) => pairs,
-        Err(error) => panic!("error parsing {:?}\n\n{}", file_name, error.renamed_rules(|rule| {
-            match *rule {
+        Err(error) => panic!(
+            "error parsing {:?}\n\n{}",
+            file_name,
+            error.renamed_rules(|rule| match *rule {
                 GrammarRule::grammar_rule => "rule".to_owned(),
                 GrammarRule::eoi => "end-of-input".to_owned(),
                 GrammarRule::assignment_operator => "`=`".to_owned(),
@@ -304,8 +306,8 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
                 GrammarRule::range_operator => "`..`".to_owned(),
                 GrammarRule::single_quote => "`'`".to_owned(),
                 other_rule => format!("{:?}", other_rule)
-            }
-        }))
+            })
+        )
     };
 
     let (ast, defaults) = parser::consume_rules(pairs);
@@ -326,12 +328,13 @@ fn parse_derive(source: String) -> (Ident, String) {
     let ast = syn::parse_macro_input(&source).unwrap();
     let name = Ident::new(ast.ident.as_ref());
 
-    let grammar: Vec<_> = ast.attrs.iter().filter(|attr| {
-        match attr.value {
+    let grammar: Vec<_> = ast.attrs
+        .iter()
+        .filter(|attr| match attr.value {
             MetaItem::NameValue(ref ident, _) => format!("{}", ident) == "grammar",
             _ => false
-        }
-    }).collect();
+        })
+        .collect();
 
     let filename = match grammar.len() {
         0 => panic!("a grammar file needs to be provided with the #[grammar(\"...\")] attribute"),
@@ -360,11 +363,12 @@ mod tests {
 
     #[test]
     fn derive_ok() {
-        let (_, filename) = parse_derive("
+        let definition = "
             #[other_attr]
             #[grammar = \"myfile.pest\"]
             pub struct MyParser<'a, T>;
-        ".to_owned());
+        ";
+        let (_, filename) = parse_derive(definition.to_owned());
 
         assert_eq!(filename, "myfile.pest");
     }
@@ -372,21 +376,23 @@ mod tests {
     #[test]
     #[should_panic(expected = "only 1 grammar file can be provided")]
     fn derive_multiple_grammars() {
-        parse_derive("
+        let definition = "
             #[other_attr]
             #[grammar = \"myfile1.pest\"]
             #[grammar = \"myfile2.pest\"]
             pub struct MyParser<'a, T>;
-        ".to_owned());
+        ";
+        parse_derive(definition.to_owned());
     }
 
     #[test]
     #[should_panic(expected = "grammar attribute must be a string")]
     fn derive_wrong_arg() {
-        parse_derive("
+        let definition = "
             #[other_attr]
             #[grammar = 1]
             pub struct MyParser<'a, T>;
-        ".to_owned());
+        ";
+        parse_derive(definition.to_owned());
     }
 }

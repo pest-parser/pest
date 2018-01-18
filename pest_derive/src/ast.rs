@@ -44,8 +44,14 @@ pub enum Expr {
 }
 
 impl Expr {
-    pub fn map_top_down<F>(self, mut f: F) -> Expr where F: FnMut(Expr) -> Expr {
-        pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr where F: FnMut(Expr) -> Expr {
+    pub fn map_top_down<F>(self, mut f: F) -> Expr
+    where
+        F: FnMut(Expr) -> Expr
+    {
+        pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
+        where
+            F: FnMut(Expr) -> Expr
+        {
             let expr = f(expr);
 
             match expr {
@@ -107,8 +113,14 @@ impl Expr {
         map_internal(self, &mut f)
     }
 
-    pub fn map_bottom_up<F>(self, mut f: F) -> Expr where F: FnMut(Expr) -> Expr {
-        pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr where F: FnMut(Expr) -> Expr {
+    pub fn map_bottom_up<F>(self, mut f: F) -> Expr
+    where
+        F: FnMut(Expr) -> Expr
+    {
+        pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
+        where
+            F: FnMut(Expr) -> Expr
+        {
             let mapped = match expr {
                 Expr::PosPred(expr) => {
                     // TODO: Use box syntax when it gets stabilized.
@@ -182,24 +194,24 @@ mod tests {
                 Box::new(Expr::Ident(Ident::new("a"))),
                 Box::new(Expr::Str("b".to_owned()))
             )),
-            Box::new(Expr::PosPred(
-                Box::new(Expr::NegPred(
-                    Box::new(Expr::Rep(
-                        Box::new(Expr::RepOnce(
-                            Box::new(Expr::Opt(
-                                Box::new(Expr::Choice(
-                                    Box::new(Expr::Insens("c".to_owned())),
-                                    Box::new(Expr::Push(
-                                        Box::new(Expr::Range("'d'".to_owned(), "'e'".to_owned()))
-                                    ))
-                                ))
-                            ))
-                        ))
-                    ))
-                ))
-            ))
+            Box::new(Expr::PosPred(Box::new(Expr::NegPred(Box::new(
+                Expr::Rep(Box::new(Expr::RepOnce(Box::new(Expr::Opt(Box::new(
+                    Expr::Choice(
+                        Box::new(Expr::Insens("c".to_owned())),
+                        Box::new(Expr::Push(Box::new(Expr::Range(
+                            "'d'".to_owned(),
+                            "'e'".to_owned()
+                        ))))
+                    )
+                ))))))
+            )))))
         );
 
-        assert_eq!(expr.clone().map_bottom_up(|expr| expr).map_top_down(|expr| expr), expr);
+        assert_eq!(
+            expr.clone()
+                .map_bottom_up(|expr| expr)
+                .map_top_down(|expr| expr),
+            expr
+        );
     }
 }

@@ -13,77 +13,114 @@ use ast::*;
 
 pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
     let mut predefined = HashMap::new();
-    predefined.insert("any", quote! {
-        #[inline]
-        fn any<'i>(
-            pos: ::pest::position::Position<'i>,
-            _: &mut ::pest::ParserState<'i, Rule>
-        ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
-            pos.skip(1)
-        }
-    });
-    predefined.insert("eoi", quote! {
-        #[inline]
-        fn eoi<'i>(
-            pos: ::pest::position::Position<'i>,
-            _: &mut ::pest::ParserState<'i, Rule>
-        ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
-            pos.at_end()
-        }
-    });
-    predefined.insert("soi", quote! {
-        #[inline]
-        fn soi<'i>(
-            pos: ::pest::position::Position<'i>,
-            _: &mut ::pest::ParserState<'i, Rule>
-        ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
-            pos.at_start()
-        }
-    });
-    predefined.insert("peek", quote! {
-        #[inline]
-        fn peek<'i>(
-            pos: ::pest::position::Position<'i>,
-            state: &mut ::pest::ParserState<'i, Rule>
-        ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
-            let string = state.stack.last().expect("peek was called on empty stack").as_str();
-            pos.match_string(string)
-        }
-    });
-    predefined.insert("pop", quote! {
-        #[inline]
-        fn pop<'i>(
-            pos: ::pest::position::Position<'i>,
-            state: &mut ::pest::ParserState<'i, Rule>
-        ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
-            let pos = {
-                let string = state.stack.last().expect("pop was called on empty stack").as_str();
-
-                pos.match_string(string)
-            };
-
-            if pos.is_ok() {
-                state.stack.pop().unwrap();
+    predefined.insert(
+        "any",
+        quote! {
+            #[inline]
+            fn any<'i>(
+                pos: ::pest::position::Position<'i>,
+                _: &mut ::pest::ParserState<'i, Rule>
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
+                pos.skip(1)
             }
-
-            pos
         }
-    });
+    );
+    predefined.insert(
+        "eoi",
+        quote! {
+            #[inline]
+            fn eoi<'i>(
+                pos: ::pest::position::Position<'i>,
+                _: &mut ::pest::ParserState<'i, Rule>
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
+                pos.at_end()
+            }
+        }
+    );
+    predefined.insert(
+        "soi",
+        quote! {
+            #[inline]
+            fn soi<'i>(
+                pos: ::pest::position::Position<'i>,
+                _: &mut ::pest::ParserState<'i, Rule>
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
+                pos.at_start()
+            }
+        }
+    );
+    predefined.insert(
+        "peek",
+        quote! {
+            #[inline]
+            fn peek<'i>(
+                pos: ::pest::position::Position<'i>,
+                state: &mut ::pest::ParserState<'i, Rule>
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
+                let string = state.stack.last().expect("peek was called on empty stack").as_str();
+                pos.match_string(string)
+            }
+        }
+    );
+    predefined.insert(
+        "pop",
+        quote! {
+            #[inline]
+            fn pop<'i>(
+                pos: ::pest::position::Position<'i>,
+                state: &mut ::pest::ParserState<'i, Rule>
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
+                let pos = {
+                    let string = state.stack.last()
+                                      .expect("pop was called on empty stack").as_str();
+
+                    pos.match_string(string)
+                };
+
+                if pos.is_ok() {
+                    state.stack.pop().unwrap();
+                }
+
+                pos
+            }
+        }
+    );
 
     let rule_enum = generate_enum(&rules);
     let patterns = generate_patterns(&rules);
     let skip = generate_skip(&rules);
 
     let mut rules: Vec<_> = rules.into_iter().map(|rule| generate_rule(rule)).collect();
-    rules.extend(defaults.into_iter().map(|name| predefined.get(name.as_ref()).unwrap().clone()));
-
+    rules.extend(
+        defaults
+            .into_iter()
+            .map(|name| predefined.get(name.as_ref()).unwrap().clone())
+    );
 
     let parser_impl = quote! {
         impl ::pest::Parser<Rule> for #name {
             fn parse<'i>(
                 rule: Rule,
                 input: &'i str
-            ) -> ::std::result::Result<::pest::iterators::Pairs<'i, Rule>, ::pest::Error<'i, Rule>> {
+            ) -> ::std::result::Result<
+                ::pest::iterators::Pairs<'i, Rule>,
+                ::pest::Error<'i, Rule>
+            > {
                 mod rules {
                     use super::Rule;
 
@@ -135,10 +172,7 @@ fn generate_patterns(rules: &Vec<Rule>) -> Tokens {
 
 fn generate_rule(rule: Rule) -> Tokens {
     let name = rule.name;
-    let expr = if {
-        rule.ty == RuleType::Atomic ||
-        rule.ty == RuleType::CompoundAtomic
-    } {
+    let expr = if { rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic } {
         generate_expr_atomic(rule.expr)
     } else {
         if &name == "whitespace" || &name == "comment" {
@@ -161,7 +195,10 @@ fn generate_rule(rule: Rule) -> Tokens {
             pub fn #name<'i>(
                 pos: ::pest::position::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
                 state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
                     #expr
                 })
@@ -173,7 +210,10 @@ fn generate_rule(rule: Rule) -> Tokens {
             pub fn #name<'i>(
                 pos: ::pest::position::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
                 #expr
             }
         },
@@ -183,7 +223,10 @@ fn generate_rule(rule: Rule) -> Tokens {
             pub fn #name<'i>(
                 pos: ::pest::position::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
                 state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
                     state.atomic(::pest::Atomicity::Atomic, #[inline(always)] move |state| {
                         #expr
@@ -197,7 +240,10 @@ fn generate_rule(rule: Rule) -> Tokens {
             pub fn #name<'i>(
                 pos: ::pest::position::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
                 state.atomic(::pest::Atomicity::CompoundAtomic, #[inline(always)] move |state| {
                     state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
                         #expr
@@ -211,7 +257,10 @@ fn generate_rule(rule: Rule) -> Tokens {
             pub fn #name<'i>(
                 pos: ::pest::position::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
                 state.atomic(::pest::Atomicity::NonAtomic, #[inline(always)] move |state| {
                     state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
                         #expr
@@ -233,7 +282,10 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             fn skip<'i>(
                 pos: ::pest::position::Position<'i>,
                 _: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
                 Ok(pos)
             }
         },
@@ -243,7 +295,10 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             fn skip<'i>(
                 pos: ::pest::position::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
                     pos.repeat(#[inline(always)] |pos| {
                         whitespace(pos, state)
@@ -259,7 +314,10 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             fn skip<'i>(
                 pos: ::pest::position::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
                     pos.repeat(#[inline(always)] |pos| {
                         comment(pos, state)
@@ -275,7 +333,10 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             fn skip<'i>(
                 pos: ::pest::position::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::position::Position<'i>, ::pest::position::Position<'i>> {
+            ) -> ::std::result::Result<
+                ::pest::position::Position<'i>,
+                ::pest::position::Position<'i>
+            > {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
                     state.sequence(#[inline(always)] move |state| {
                         pos.sequence(#[inline(always)] |pos| {
@@ -340,7 +401,7 @@ fn generate_expr(expr: Expr) -> Tokens {
             tokens.append(")");
 
             tokens
-        },
+        }
         Expr::Ident(ident) => quote! {
             self::#ident(pos, state)
         },
@@ -515,7 +576,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             tokens.append(")");
 
             tokens
-        },
+        }
         Expr::Ident(ident) => quote! {
             self::#ident(pos, state)
         },
@@ -649,16 +710,19 @@ mod tests {
                 name: Ident::new("f"),
                 ty: RuleType::Normal,
                 expr: Expr::Ident(Ident::new("g"))
-            }
+            },
         ];
 
-        assert_eq!(generate_enum(&rules), quote! {
-            #[allow(dead_code, non_camel_case_types)]
-            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-            pub enum Rule {
-                f
+        assert_eq!(
+            generate_enum(&rules),
+            quote! {
+                #[allow(dead_code, non_camel_case_types)]
+                #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+                pub enum Rule {
+                    f
+                }
             }
-        });
+        );
     }
 
     #[test]
@@ -674,25 +738,28 @@ mod tests {
             ))
         );
 
-        assert_eq!(generate_expr(expr), quote! {
-            state.sequence(#[inline(always)] move |state| {
-                pos.sequence(#[inline(always)] |pos| {
-                    pos.match_string("a").and_then(#[inline(always)] |pos| {
-                        self::skip(pos, state)
-                    }).and_then(#[inline(always)] |pos| {
-                        pos.match_string("b")
-                    }).and_then(#[inline(always)] |pos| {
-                        self::skip(pos, state)
-                    }).and_then(#[inline(always)] |pos| {
-                        pos.match_string("c")
-                    }).and_then(#[inline(always)] |pos| {
-                        self::skip(pos, state)
-                    }).and_then(#[inline(always)] |pos| {
-                        pos.match_string("d")
+        assert_eq!(
+            generate_expr(expr),
+            quote! {
+                state.sequence(#[inline(always)] move |state| {
+                    pos.sequence(#[inline(always)] |pos| {
+                        pos.match_string("a").and_then(#[inline(always)] |pos| {
+                            self::skip(pos, state)
+                        }).and_then(#[inline(always)] |pos| {
+                            pos.match_string("b")
+                        }).and_then(#[inline(always)] |pos| {
+                            self::skip(pos, state)
+                        }).and_then(#[inline(always)] |pos| {
+                            pos.match_string("c")
+                        }).and_then(#[inline(always)] |pos| {
+                            self::skip(pos, state)
+                        }).and_then(#[inline(always)] |pos| {
+                            pos.match_string("d")
+                        })
                     })
                 })
-            })
-        });
+            }
+        );
     }
 
     #[test]
@@ -708,19 +775,22 @@ mod tests {
             ))
         );
 
-        assert_eq!(generate_expr_atomic(expr), quote! {
-            state.sequence(#[inline(always)] move |state| {
-                pos.sequence(#[inline(always)] |pos| {
-                    pos.match_string("a").and_then(#[inline(always)] |pos| {
-                        pos.match_string("b")
-                    }).and_then(#[inline(always)] |pos| {
-                        pos.match_string("c")
-                    }).and_then(#[inline(always)] |pos| {
-                        pos.match_string("d")
+        assert_eq!(
+            generate_expr_atomic(expr),
+            quote! {
+                state.sequence(#[inline(always)] move |state| {
+                    pos.sequence(#[inline(always)] |pos| {
+                        pos.match_string("a").and_then(#[inline(always)] |pos| {
+                            pos.match_string("b")
+                        }).and_then(#[inline(always)] |pos| {
+                            pos.match_string("c")
+                        }).and_then(#[inline(always)] |pos| {
+                            pos.match_string("d")
+                        })
                     })
                 })
-            })
-        });
+            }
+        );
     }
 
     #[test]
@@ -736,15 +806,18 @@ mod tests {
             ))
         );
 
-        assert_eq!(generate_expr(expr), quote! {
-            pos.match_string("a").or_else(#[inline(always)] |pos| {
-                pos.match_string("b")
-            }).or_else(#[inline(always)] |pos| {
-                pos.match_string("c")
-            }).or_else(#[inline(always)] |pos| {
-                pos.match_string("d")
-            })
-        });
+        assert_eq!(
+            generate_expr(expr),
+            quote! {
+                pos.match_string("a").or_else(#[inline(always)] |pos| {
+                    pos.match_string("b")
+                }).or_else(#[inline(always)] |pos| {
+                    pos.match_string("c")
+                }).or_else(#[inline(always)] |pos| {
+                    pos.match_string("d")
+                })
+            }
+        );
     }
 
     #[test]
@@ -760,15 +833,18 @@ mod tests {
             ))
         );
 
-        assert_eq!(generate_expr_atomic(expr), quote! {
-            pos.match_string("a").or_else(#[inline(always)] |pos| {
-                pos.match_string("b")
-            }).or_else(#[inline(always)] |pos| {
-                pos.match_string("c")
-            }).or_else(#[inline(always)] |pos| {
-                pos.match_string("d")
-            })
-        });
+        assert_eq!(
+            generate_expr_atomic(expr),
+            quote! {
+                pos.match_string("a").or_else(#[inline(always)] |pos| {
+                    pos.match_string("b")
+                }).or_else(#[inline(always)] |pos| {
+                    pos.match_string("c")
+                }).or_else(#[inline(always)] |pos| {
+                    pos.match_string("d")
+                })
+            }
+        );
     }
 
     #[test]
@@ -778,25 +854,30 @@ mod tests {
             Box::new(Expr::Seq(
                 Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
                 Box::new(Expr::Seq(
-                    Box::new(Expr::NegPred(
-                        Box::new(Expr::Rep(
-                            Box::new(Expr::Insens("b".to_owned()))
+                    Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Insens(
+                        "b".to_owned()
+                    )))))),
+                    Box::new(Expr::PosPred(Box::new(Expr::Opt(Box::new(Expr::Rep(
+                        Box::new(Expr::Choice(
+                            Box::new(Expr::Str("c".to_owned())),
+                            Box::new(Expr::Str("d".to_owned()))
                         ))
-                    )),
-                    Box::new(Expr::PosPred(
-                        Box::new(Expr::Opt(
-                            Box::new(Expr::Rep(
-                                Box::new(Expr::Choice(
-                                    Box::new(Expr::Str("c".to_owned())),
-                                    Box::new(Expr::Str("d".to_owned()))
-                                ))
-                            ))
-                        ))
-                    ))
+                    ))))))
                 ))
             ))
         );
 
+        let sequence = quote! {
+            state.sequence(#[inline(always)] move |state| {
+                pos.sequence(#[inline(always)] |pos| {
+                    self::skip(pos, state).and_then(
+                        #[inline(always)] |pos| {
+                            pos.match_insensitive("b")
+                        }
+                    )
+                })
+            })
+        };
         let repeat = quote! {
             pos.repeat(#[inline(always)] |pos| {
                 state.sequence(#[inline(always)] move |state| {
@@ -810,52 +891,47 @@ mod tests {
                 })
             })
         };
-        assert_eq!(generate_expr(expr), quote! {
-            self::a(pos, state).or_else(#[inline(always)] |pos| {
-                state.sequence(#[inline(always)] move |state| {
-                    pos.sequence(#[inline(always)] |pos| {
-                        pos.match_range( 'a' .. 'b' ).and_then(#[inline(always)] |pos| {
-                            self::skip(pos, state)
-                        }).and_then(#[inline(always)] |pos| {
-                            state.lookahead(false, #[inline(always)] move |state| {
-                                pos.lookahead(false, #[inline(always)] |pos| {
-                                    state.sequence(#[inline(always)] move |state| {
-                                        pos.sequence(#[inline(always)] |pos| {
-                                            pos.optional(#[inline(always)] |pos| {
-                                                pos.match_insensitive("b")
-                                            }).and_then(#[inline(always)] |pos| {
-                                                pos.repeat(#[inline(always)] |pos| {
-                                                    state.sequence(#[inline(always)] move |state| {
-                                                        pos.sequence(#[inline(always)] |pos| {
-                                                            self::skip(pos, state).and_then(
-                                                                #[inline(always)] |pos| {
-                                                                    pos.match_insensitive("b")
-                                                                }
-                                                            )
-                                                        })
+        assert_eq!(
+            generate_expr(expr),
+            quote! {
+                self::a(pos, state).or_else(#[inline(always)] |pos| {
+                    state.sequence(#[inline(always)] move |state| {
+                        pos.sequence(#[inline(always)] |pos| {
+                            pos.match_range( 'a' .. 'b' ).and_then(#[inline(always)] |pos| {
+                                self::skip(pos, state)
+                            }).and_then(#[inline(always)] |pos| {
+                                state.lookahead(false, #[inline(always)] move |state| {
+                                    pos.lookahead(false, #[inline(always)] |pos| {
+                                        state.sequence(#[inline(always)] move |state| {
+                                            pos.sequence(#[inline(always)] |pos| {
+                                                pos.optional(#[inline(always)] |pos| {
+                                                    pos.match_insensitive("b")
+                                                }).and_then(#[inline(always)] |pos| {
+                                                    pos.repeat(#[inline(always)] |pos| {
+                                                        #sequence
                                                     })
                                                 })
                                             })
                                         })
                                     })
                                 })
-                            })
-                        }).and_then(#[inline(always)] |pos| {
-                            self::skip(pos, state)
-                        }).and_then(#[inline(always)] |pos| {
-                            state.lookahead(true, #[inline(always)] move |state| {
-                                pos.lookahead(true, #[inline(always)] |pos| {
-                                    pos.optional(#[inline(always)] |pos| {
-                                        state.sequence(#[inline(always)] move |state| {
-                                            pos.sequence(#[inline(always)] |pos| {
-                                                pos.optional(#[inline(always)] |pos| {
-                                                    pos.match_string("c").or_else(
-                                                        #[inline(always)] |pos| {
-                                                            pos.match_string("d")
-                                                        }
-                                                    )
-                                                }).and_then(#[inline(always)] |pos| {
-                                                    #repeat
+                            }).and_then(#[inline(always)] |pos| {
+                                self::skip(pos, state)
+                            }).and_then(#[inline(always)] |pos| {
+                                state.lookahead(true, #[inline(always)] move |state| {
+                                    pos.lookahead(true, #[inline(always)] |pos| {
+                                        pos.optional(#[inline(always)] |pos| {
+                                            state.sequence(#[inline(always)] move |state| {
+                                                pos.sequence(#[inline(always)] |pos| {
+                                                    pos.optional(#[inline(always)] |pos| {
+                                                        pos.match_string("c").or_else(
+                                                            #[inline(always)] |pos| {
+                                                                pos.match_string("d")
+                                                            }
+                                                        )
+                                                    }).and_then(#[inline(always)] |pos| {
+                                                        #repeat
+                                                    })
                                                 })
                                             })
                                         })
@@ -865,8 +941,8 @@ mod tests {
                         })
                     })
                 })
-            })
-        });
+            }
+        );
     }
 
     #[test]
@@ -876,44 +952,42 @@ mod tests {
             Box::new(Expr::Seq(
                 Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
                 Box::new(Expr::Seq(
-                    Box::new(Expr::NegPred(
-                        Box::new(Expr::Rep(
-                            Box::new(Expr::Insens("b".to_owned()))
+                    Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Insens(
+                        "b".to_owned()
+                    )))))),
+                    Box::new(Expr::PosPred(Box::new(Expr::Opt(Box::new(Expr::Rep(
+                        Box::new(Expr::Choice(
+                            Box::new(Expr::Str("c".to_owned())),
+                            Box::new(Expr::Str("d".to_owned()))
                         ))
-                    )),
-                    Box::new(Expr::PosPred(
-                        Box::new(Expr::Opt(
-                            Box::new(Expr::Rep(
-                                Box::new(Expr::Choice(
-                                    Box::new(Expr::Str("c".to_owned())),
-                                    Box::new(Expr::Str("d".to_owned()))
-                                ))
-                            ))
-                        ))
-                    ))
+                    ))))))
                 ))
             ))
         );
 
-        assert_eq!(generate_expr_atomic(expr), quote! {
-            self::a(pos, state).or_else(#[inline(always)] |pos| {
-                state.sequence(#[inline(always)] move |state| {
-                    pos.sequence(#[inline(always)] |pos| {
-                        pos.match_range('a'..'b').and_then(#[inline(always)] |pos| {
-                            state.lookahead(false, #[inline(always)] move |state| {
-                                pos.lookahead(false, #[inline(always)] |pos| {
-                                    pos.repeat(#[inline(always)] |pos| {
-                                        pos.match_insensitive("b")
+        assert_eq!(
+            generate_expr_atomic(expr),
+            quote! {
+                self::a(pos, state).or_else(#[inline(always)] |pos| {
+                    state.sequence(#[inline(always)] move |state| {
+                        pos.sequence(#[inline(always)] |pos| {
+                            pos.match_range('a'..'b').and_then(#[inline(always)] |pos| {
+                                state.lookahead(false, #[inline(always)] move |state| {
+                                    pos.lookahead(false, #[inline(always)] |pos| {
+                                        pos.repeat(#[inline(always)] |pos| {
+                                            pos.match_insensitive("b")
+                                        })
                                     })
                                 })
-                            })
-                        }).and_then(#[inline(always)] |pos| {
-                            state.lookahead(true, #[inline(always)] move |state| {
-                                pos.lookahead(true, #[inline(always)] |pos| {
-                                    pos.optional(#[inline(always)] |pos| {
-                                        pos.repeat(#[inline(always)] |pos| {
-                                            pos.match_string("c").or_else(#[inline(always)] |pos| {
-                                                pos.match_string("d")
+                            }).and_then(#[inline(always)] |pos| {
+                                state.lookahead(true, #[inline(always)] move |state| {
+                                    pos.lookahead(true, #[inline(always)] |pos| {
+                                        pos.optional(#[inline(always)] |pos| {
+                                            pos.repeat(#[inline(always)] |pos| {
+                                                pos.match_string("c")
+                                                   .or_else(#[inline(always)] |pos| {
+                                                    pos.match_string("d")
+                                                })
                                             })
                                         })
                                     })
@@ -922,73 +996,86 @@ mod tests {
                         })
                     })
                 })
-            })
-        });
+            }
+        );
     }
 
     #[test]
     fn generate_complete() {
         let name = Ident::new("MyParser");
-        let rules = vec![Rule {
-            name: Ident::new("a"),
-            ty: RuleType::Silent,
-            expr: Expr::Str("b".to_owned())
-        }];
+        let rules = vec![
+            Rule {
+                name: Ident::new("a"),
+                ty: RuleType::Silent,
+                expr: Expr::Str("b".to_owned())
+            },
+        ];
         let defaults = vec![Ident::new("any")];
 
-        assert_eq!(generate(name, rules, defaults), quote! {
-            #[allow(dead_code, non_camel_case_types)]
-            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-            pub enum Rule {
-                a
-            }
+        assert_eq!(
+            generate(name, rules, defaults),
+            quote! {
+                #[allow(dead_code, non_camel_case_types)]
+                #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+                pub enum Rule {
+                    a
+                }
 
             impl ::pest::Parser<Rule> for MyParser {
                 fn parse<'i>(
                     rule: Rule,
                     input: &'i str
-                ) -> ::std::result::Result<::pest::iterators::Pairs<'i, Rule>,
-                                           ::pest::Error<'i, Rule>> {
+                ) -> ::std::result::Result<
+                    ::pest::iterators::Pairs<'i, Rule>,
+                    ::pest::Error<'i, Rule>
+                > {
                     mod rules {
                         use super::Rule;
 
-                        #[inline]
-                        #[allow(unused_variables)]
-                        pub fn a<'i>(
-                            pos: ::pest::position::Position<'i>,
-                            state: &mut ::pest::ParserState<'i, Rule>
-                        ) -> ::std::result::Result<::pest::position::Position<'i>,
-                                                   ::pest::position::Position<'i>> {
-                            pos.match_string("b")
+                            #[inline]
+                            #[allow(unused_variables)]
+                            pub fn a<'i>(
+                                pos: ::pest::position::Position<'i>,
+                                state: &mut ::pest::ParserState<'i, Rule>
+                            ) -> ::std::result::Result<
+                                ::pest::position::Position<'i>,
+                                ::pest::position::Position<'i>
+                            > {
+                                pos.match_string("b")
+                            }
+
+                            #[inline]
+                            fn any<'i>(
+                                pos: ::pest::position::Position<'i>,
+                                _: &mut ::pest::ParserState<'i, Rule>
+                            ) -> ::std::result::Result<
+                                ::pest::position::Position<'i>,
+                                ::pest::position::Position<'i>
+                            > {
+                                pos.skip(1)
+                            }
+
+                            #[inline]
+                            #[allow(dead_code)]
+                            fn skip<'i>(
+                                pos: ::pest::position::Position<'i>,
+                                _: &mut ::pest::ParserState<'i, Rule>
+                            ) -> ::std::result::Result<
+                                ::pest::position::Position<'i>,
+                                ::pest::position::Position<'i>
+                            > {
+                                Ok(pos)
+                            }
                         }
 
-                        #[inline]
-                        fn any<'i>(
-                            pos: ::pest::position::Position<'i>,
-                            _: &mut ::pest::ParserState<'i, Rule>
-                        ) -> ::std::result::Result<::pest::position::Position<'i>,
-                                                   ::pest::position::Position<'i>> {
-                            pos.skip(1)
-                        }
-
-                        #[inline]
-                        #[allow(dead_code)]
-                        fn skip<'i>(
-                            pos: ::pest::position::Position<'i>,
-                            _: &mut ::pest::ParserState<'i, Rule>
-                        ) -> ::std::result::Result<::pest::position::Position<'i>,
-                                                   ::pest::position::Position<'i>> {
-                            Ok(pos)
-                        }
+                        ::pest::state(input, move |mut state, pos| {
+                            match rule {
+                                Rule::a => rules::a(pos, &mut state)
+                            }
+                        })
                     }
-
-                    ::pest::state(input, move |mut state, pos| {
-                        match rule {
-                            Rule::a => rules::a(pos, &mut state)
-                        }
-                    })
                 }
             }
-        });
+        );
     }
 }

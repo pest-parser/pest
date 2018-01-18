@@ -11,13 +11,7 @@ use position::Position;
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Token<'i, R> {
     /// The starting bit of the `Token`
-    Start {
-        rule: R,
-        pos: Position<'i>
-    },
+    Start { rule: R, pos: Position<'i> },
     /// The ending bit of the `Token`
-    End {
-        rule: R,
-        pos: Position<'i>
-    }
+    End { rule: R, pos: Position<'i> }
 }

@@ -5,9 +5,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+use RuleType;
 use error::Error;
 use iterators::Pairs;
-use RuleType;
 
 /// A `trait` that defines a `Parser`.
 pub trait Parser<R: RuleType> {

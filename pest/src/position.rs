@@ -17,14 +17,11 @@ use span;
 /// manually parse it. This leads to an API largely based on the standard `Result`.
 pub struct Position<'i> {
     input: &'i str,
-    pos: usize,
+    pos: usize
 }
 
 pub unsafe fn new(input: &str, pos: usize) -> Position {
-    Position {
-        input,
-        pos,
-    }
+    Position { input, pos }
 }
 
 impl<'i> Position<'i> {
@@ -166,7 +163,8 @@ impl<'i> Position<'i> {
             let start = if self.pos == 0 {
                 0
             } else {
-                let start = self.input.char_indices()
+                let start = self.input
+                    .char_indices()
                     .rev()
                     .skip_while(|&(i, _)| i >= self.pos)
                     .find(|&(_, c)| c == '\n');
@@ -190,7 +188,8 @@ impl<'i> Position<'i> {
 
                 end
             } else {
-                let end = self.input.char_indices()
+                let end = self.input
+                    .char_indices()
                     .skip_while(|&(i, _)| i < self.pos)
                     .find(|&(_, c)| c == '\n');
                 let mut end = match end {
@@ -272,7 +271,9 @@ impl<'i> Position<'i> {
     pub fn skip(mut self, n: usize) -> Result<Position<'i>, Position<'i>> {
         let skipped = unsafe {
             let mut len = 0;
-            let mut chars = self.input.slice_unchecked(self.pos, self.input.len()).chars();
+            let mut chars = self.input
+                .slice_unchecked(self.pos, self.input.len())
+                .chars();
 
             for _ in 0..n {
                 if let Some(c) = chars.next() {
@@ -628,7 +629,8 @@ impl<'i> PartialOrd for Position<'i> {
 
 impl<'i> Ord for Position<'i> {
     fn cmp(&self, other: &Position<'i>) -> Ordering {
-        self.partial_cmp(other).expect("cannot compare positions from different strs")
+        self.partial_cmp(other)
+            .expect("cannot compare positions from different strs")
     }
 }
 
@@ -657,7 +659,6 @@ mod tests {
         assert!(unsafe { new(input, 0) }.match_string("asd").is_ok());
         assert!(unsafe { new(input, 3) }.match_string("asdf").is_ok());
     }
-
 
     #[test]
     fn line_col() {

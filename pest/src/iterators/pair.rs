@@ -13,8 +13,8 @@ use std::rc::Rc;
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
-use span::{self, Span};
 use RuleType;
+use span::{self, Span};
 
 /// A `struct` containing a matching pair of `Token`s and everything between them.
 ///
@@ -26,18 +26,14 @@ use RuleType;
 pub struct Pair<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
-    start: usize,
+    start: usize
 }
 
-pub fn new<R: RuleType>(
-    queue: Rc<Vec<QueueableToken<R>>>,
-    input: &str,
-    start: usize
-) -> Pair<R> {
+pub fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &str, start: usize) -> Pair<R> {
     Pair {
         queue,
         input,
-        start,
+        start
     }
 }
 
@@ -154,12 +150,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
     pub fn into_inner(self) -> Pairs<'i, R> {
         let pair = self.pair();
 
-        pairs::new(
-            self.queue,
-            self.input,
-            self.start + 1,
-            pair - 1
-        )
+        pairs::new(self.queue, self.input, self.start + 1, pair - 1)
     }
 
     /// Converts the `Pair` into a `TokenIterator`.
@@ -188,12 +179,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
     pub fn tokens(self) -> Tokens<'i, R> {
         let end = self.pair();
 
-        tokens::new(
-            self.queue,
-            self.input,
-            self.start,
-            end + 1
-        )
+        tokens::new(self.queue, self.input, self.start, end + 1)
     }
 
     fn pair(&self) -> usize {
@@ -212,8 +198,13 @@ impl<'i, R: RuleType> Pair<'i, R> {
 
 impl<'i, R: RuleType> fmt::Debug for Pair<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Pair {{ rule: {:?}, span: {:?}, inner: {:?} }}",
-               self.as_rule(), self.clone().into_span(), self.clone().into_inner())
+        write!(
+            f,
+            "Pair {{ rule: {:?}, span: {:?}, inner: {:?} }}",
+            self.as_rule(),
+            self.clone().into_span(),
+            self.clone().into_inner()
+        )
     }
 }
 
@@ -227,18 +218,25 @@ impl<'i, R: RuleType> fmt::Display for Pair<'i, R> {
         if pairs.peek().is_none() {
             write!(f, "{:?}({}, {})", rule, start, end)
         } else {
-            write!(f, "{:?}({}, {}, [{}])", rule, start, end,
-                   pairs.map(|pair| format!("{}", pair))
-                        .collect::<Vec<_>>()
-                        .join(", "))
+            write!(
+                f,
+                "{:?}({}, {}, [{}])",
+                rule,
+                start,
+                end,
+                pairs
+                    .map(|pair| format!("{}", pair))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
         }
     }
 }
 
 impl<'i, R: PartialEq> PartialEq for Pair<'i, R> {
     fn eq(&self, other: &Pair<'i, R>) -> bool {
-        Rc::ptr_eq(&self.queue, &other.queue) && ptr::eq(self.input, other.input) &&
-        self.start == other.start
+        Rc::ptr_eq(&self.queue, &other.queue) && ptr::eq(self.input, other.input)
+            && self.start == other.start
     }
 }
 

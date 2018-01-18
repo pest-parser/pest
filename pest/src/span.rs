@@ -18,7 +18,7 @@ use position;
 pub struct Span<'i> {
     input: &'i str,
     start: usize,
-    end: usize,
+    end: usize
 }
 
 #[inline]

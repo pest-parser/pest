@@ -7,11 +7,11 @@
 
 use std::rc::Rc;
 
+use RuleType;
 use error::Error;
+use iterators::{pairs, QueueableToken};
 use position::{self, Position};
 use span::Span;
-use iterators::{pairs, QueueableToken};
-use RuleType;
 
 /// An `enum` specifying the current lookahead status of a `ParserState`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -56,10 +56,7 @@ pub struct ParserState<'i, R: RuleType> {
 ///     Ok(pos)
 /// }).unwrap();
 /// ```
-pub fn state<'i, R: RuleType, F>(
-    input: &'i str,
-    f: F
-) -> Result<pairs::Pairs<'i, R>, Error<'i, R>>
+pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<'i, R>>
 where
     F: FnOnce(&mut ParserState<'i, R>, Position<'i>) -> Result<Position<'i>, Position<'i>>
 {
@@ -113,7 +110,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(pairs.len(), 1);
     /// ```
     #[inline]
-    pub fn rule<F>(&mut self, rule: R, pos: Position<'i>, f: F) -> Result<Position<'i>, Position<'i>>
+    pub fn rule<F>(
+        &mut self,
+        rule: R,
+        pos: Position<'i>,
+        f: F
+    ) -> Result<Position<'i>, Position<'i>>
     where
         F: FnOnce(&mut ParserState<'i, R>, Position<'i>) -> Result<Position<'i>, Position<'i>>
     {
@@ -122,13 +124,17 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         let (pos_attempts_index, neg_attempts_index) = if actual_pos == self.attempt_pos {
             (self.pos_attempts.len(), self.neg_attempts.len())
-        } else { // Attempts have not been cleared yet since the attempt_pos is older.
+        } else {
+            // Attempts have not been cleared yet since the attempt_pos is older.
             (0, 0)
         };
 
         if self.lookahead == Lookahead::None && self.atomicity != Atomicity::Atomic {
             // Pair's position will only be known after running the closure.
-            self.queue.push(QueueableToken::Start { pair: 0, pos: actual_pos });
+            self.queue.push(QueueableToken::Start {
+                pair: 0,
+                pos: actual_pos
+            });
         }
 
         let attempts = self.pos_attempts.len() + self.neg_attempts.len();
@@ -136,7 +142,13 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         let result = f(self, pos);
 
         if result.is_err() ^ (self.lookahead == Lookahead::Negative) {
-            self.track(rule, actual_pos, pos_attempts_index, neg_attempts_index, attempts);
+            self.track(
+                rule,
+                actual_pos,
+                pos_attempts_index,
+                neg_attempts_index,
+                attempts
+            );
         }
 
         if self.lookahead == Lookahead::None && self.atomicity != Atomicity::Atomic {
@@ -149,7 +161,10 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     _ => unreachable!()
                 };
 
-                self.queue.push(QueueableToken::End { rule, pos: pos.pos() });
+                self.queue.push(QueueableToken::End {
+                    rule,
+                    pos: pos.pos()
+                });
             } else {
                 self.queue.truncate(index);
             }
@@ -246,7 +261,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         result
     }
-
 
     /// Wrapper which stops `Token`s from being generated.
     ///

@@ -331,7 +331,6 @@ fn repeat_atomic_space() {
     };
 }
 
-
 #[test]
 #[should_panic]
 fn repeat_once_empty() {

@@ -8,9 +8,9 @@
 use std::error;
 use std::fmt;
 
+use RuleType;
 use position::Position;
 use span::Span;
-use RuleType;
 
 /// An `enum` which defines possible errors.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -40,7 +40,7 @@ pub enum Error<'i, R> {
     }
 }
 
-impl <'i, R: RuleType> Error<'i, R> {
+impl<'i, R: RuleType> Error<'i, R> {
     /// Renames all `Rule`s from a `ParsingError` variant returning a `CustomErrorPos`. It does
     /// nothing when called on `CustomErrorPos` and `CustomErrorSpan` variants.
     ///
@@ -76,12 +76,13 @@ impl <'i, R: RuleType> Error<'i, R> {
         F: FnMut(&R) -> String
     {
         match self {
-            Error::ParsingError { positives, negatives, pos } => {
+            Error::ParsingError {
+                positives,
+                negatives,
+                pos
+            } => {
                 let message = parsing_error_message(&positives, &negatives, f);
-                Error::CustomErrorPos {
-                    message,
-                    pos
-                }
+                Error::CustomErrorPos { message, pos }
             }
             error => error
         }
@@ -90,31 +91,27 @@ impl <'i, R: RuleType> Error<'i, R> {
 
 fn message<'i, R: fmt::Debug>(error: &Error<'i, R>) -> String {
     match *error {
-        Error::ParsingError { ref positives, ref negatives, .. } => {
-            parsing_error_message(positives, negatives, |r| format!("{:?}", r))
-        }
+        Error::ParsingError {
+            ref positives,
+            ref negatives,
+            ..
+        } => parsing_error_message(positives, negatives, |r| format!("{:?}", r)),
         Error::CustomErrorPos { ref message, .. } | Error::CustomErrorSpan { ref message, .. } => {
             message.to_owned()
         }
     }
 }
 
-fn parsing_error_message<R: fmt::Debug, F>(
-    positives: &[R],
-    negatives: &[R],
-    mut f: F
-) -> String
+fn parsing_error_message<R: fmt::Debug, F>(positives: &[R], negatives: &[R], mut f: F) -> String
 where
     F: FnMut(&R) -> String
 {
     match (negatives.is_empty(), positives.is_empty()) {
-        (false, false) => {
-            format!(
-                "unexpected {}; expected {}",
-                enumerate(negatives, &mut f),
-                enumerate(positives, &mut f)
-            )
-        }
+        (false, false) => format!(
+            "unexpected {}; expected {}",
+            enumerate(negatives, &mut f),
+            enumerate(positives, &mut f)
+        ),
         (false, true) => format!("unexpected {}", enumerate(negatives, &mut f)),
         (true, false) => format!("expected {}", enumerate(positives, &mut f)),
         (true, true) => "unknown parsing error".to_owned()
@@ -129,11 +126,12 @@ where
         1 => f(&rules[0]),
         2 => format!("{} or {}", f(&rules[0]), f(&rules[1])),
         l => {
-            let separated = rules.iter()
-                                 .take(l - 1)
-                                 .map(|r| f(r))
-                                 .collect::<Vec<_>>()
-                                 .join(", ");
+            let separated = rules
+                .iter()
+                .take(l - 1)
+                .map(|r| f(r))
+                .collect::<Vec<_>>()
+                .join(", ");
             format!("{}, or {}", separated, f(&rules[l - 1]))
         }
     }
@@ -142,13 +140,17 @@ where
 fn underline<'i, R: fmt::Debug>(error: &Error<'i, R>, offset: usize) -> String {
     let mut underline = String::new();
 
-    for _ in 0..offset { underline.push(' '); }
+    for _ in 0..offset {
+        underline.push(' ');
+    }
 
     match *error {
         Error::CustomErrorSpan { ref span, .. } => {
             if span.end() - span.start() > 1 {
                 underline.push('^');
-                for _ in 2..(span.end() - span.start()) { underline.push('-'); }
+                for _ in 2..(span.end() - span.start()) {
+                    underline.push('-');
+                }
                 underline.push('^');
             } else {
                 underline.push('^');
@@ -169,7 +171,9 @@ fn format<'i, R: fmt::Debug>(error: &Error<'i, R>) -> String {
     let line_str_len = format!("{}", line).len();
 
     let mut spacing = String::new();
-    for _ in 0..line_str_len { spacing.push(' '); }
+    for _ in 0..line_str_len {
+        spacing.push(' ');
+    }
 
     let mut result = format!("{}--> {}:{}\n", spacing, line, col);
     result.push_str(&format!("{} |\n", spacing));
@@ -193,12 +197,9 @@ impl<'i, R: fmt::Debug> fmt::Display for Error<'i, R> {
 impl<'i, R: fmt::Debug> error::Error for Error<'i, R> {
     fn description(&self) -> &str {
         match *self {
-            Error::ParsingError { .. } => {
-                "parsing error"
-            }
-            Error::CustomErrorPos { ref message, .. } | Error::CustomErrorSpan { ref message, .. } => {
-                message
-            }
+            Error::ParsingError { .. } => "parsing error",
+            Error::CustomErrorPos { ref message, .. }
+            | Error::CustomErrorSpan { ref message, .. } => message
         }
     }
 }
@@ -218,14 +219,17 @@ mod tests {
             pos: pos
         };
 
-        assert_eq!(format!("{}", error), vec![
-            " --> 2:2",
-            "  |",
-            "2 | cd",
-            "  |  ^---",
-            "  |",
-            "  = unexpected 4, 5, or 6; expected 1, 2, or 3"
-        ].join("\n"));
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 2:2",
+                "  |",
+                "2 | cd",
+                "  |  ^---",
+                "  |",
+                "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
+            ].join("\n")
+        );
     }
 
     #[test]
@@ -238,14 +242,17 @@ mod tests {
             pos: pos
         };
 
-        assert_eq!(format!("{}", error), vec![
-            " --> 2:2",
-            "  |",
-            "2 | cd",
-            "  |  ^---",
-            "  |",
-            "  = expected 1 or 2"
-        ].join("\n"));
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 2:2",
+                "  |",
+                "2 | cd",
+                "  |  ^---",
+                "  |",
+                "  = expected 1 or 2",
+            ].join("\n")
+        );
     }
 
     #[test]
@@ -258,14 +265,17 @@ mod tests {
             pos: pos
         };
 
-        assert_eq!(format!("{}", error), vec![
-            " --> 2:2",
-            "  |",
-            "2 | cd",
-            "  |  ^---",
-            "  |",
-            "  = unexpected 4, 5, or 6"
-        ].join("\n"));
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 2:2",
+                "  |",
+                "2 | cd",
+                "  |  ^---",
+                "  |",
+                "  = unexpected 4, 5, or 6",
+            ].join("\n")
+        );
     }
 
     #[test]
@@ -278,14 +288,17 @@ mod tests {
             pos: pos
         };
 
-        assert_eq!(format!("{}", error), vec![
-            " --> 2:2",
-            "  |",
-            "2 | cd",
-            "  |  ^---",
-            "  |",
-            "  = unknown parsing error"
-        ].join("\n"));
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 2:2",
+                "  |",
+                "2 | cd",
+                "  |  ^---",
+                "  |",
+                "  = unknown parsing error",
+            ].join("\n")
+        );
     }
 
     #[test]
@@ -297,14 +310,17 @@ mod tests {
             pos: pos
         };
 
-        assert_eq!(format!("{}", error), vec![
-            " --> 2:2",
-            "  |",
-            "2 | cd",
-            "  |  ^---",
-            "  |",
-            "  = error: big one"
-        ].join("\n"));
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 2:2",
+                "  |",
+                "2 | cd",
+                "  |  ^---",
+                "  |",
+                "  = error: big one",
+            ].join("\n")
+        );
     }
 
     #[test]
@@ -317,13 +333,16 @@ mod tests {
             pos: pos
         }.renamed_rules(|n| format!("{}", n + 1));
 
-        assert_eq!(format!("{}", error), vec![
-            " --> 2:2",
-            "  |",
-            "2 | cd",
-            "  |  ^---",
-            "  |",
-            "  = unexpected 5, 6, or 7; expected 2, 3, or 4"
-        ].join("\n"));
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 2:2",
+                "  |",
+                "2 | cd",
+                "  |  ^---",
+                "  |",
+                "  = unexpected 5, 6, or 7; expected 2, 3, or 4",
+            ].join("\n")
+        );
     }
 }

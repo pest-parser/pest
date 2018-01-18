@@ -12,8 +12,8 @@ use std::collections::HashMap;
 use std::iter::Peekable;
 use std::ops::BitOr;
 
-use iterators::Pair;
 use RuleType;
+use iterators::Pair;
 
 /// An `enum` describing an `Operator`'s associativity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -110,24 +110,28 @@ impl<R: RuleType> PrecClimber<R> {
     /// ]);
     /// ```
     pub fn new(ops: Vec<Operator<R>>) -> PrecClimber<R> {
-        let ops = ops.into_iter().zip(1..).fold(HashMap::new(), |mut map, (op, prec)| {
-            let mut next = Some(op);
+        let ops = ops.into_iter()
+            .zip(1..)
+            .fold(HashMap::new(), |mut map, (op, prec)| {
+                let mut next = Some(op);
 
-            while let Some(op) = next.take() {
-                match op {
-                    Operator { rule, assoc, next: op_next } => {
-                        map.insert(rule, (prec, assoc));
-                        next = op_next.map(|op| *op);
+                while let Some(op) = next.take() {
+                    match op {
+                        Operator {
+                            rule,
+                            assoc,
+                            next: op_next
+                        } => {
+                            map.insert(rule, (prec, assoc));
+                            next = op_next.map(|op| *op);
+                        }
                     }
                 }
-            }
 
-            map
-        });
+                map
+            });
 
-        PrecClimber {
-            ops
-        }
+        PrecClimber { ops }
     }
 
     /// Performs the precedence climbing algorithm on the `pairs` in a similar manner to map-reduce.
@@ -158,18 +162,17 @@ impl<R: RuleType> PrecClimber<R> {
     ///
     /// let result = climber.climb(pairs, primary, infix);
     /// ```
-    pub fn climb<'i, P, F, G, T>(
-        &self,
-        mut pairs: P,
-        mut primary: F,
-        mut infix: G
-    ) -> T
+    pub fn climb<'i, P, F, G, T>(&self, mut pairs: P, mut primary: F, mut infix: G) -> T
     where
-        P: Iterator<Item=Pair<'i, R>>,
+        P: Iterator<Item = Pair<'i, R>>,
         F: FnMut(Pair<'i, R>) -> T,
         G: FnMut(T, Pair<'i, R>, T) -> T
     {
-        let lhs = primary(pairs.next().expect("precedence climbing requires a non-empty Pairs"));
+        let lhs = primary(
+            pairs
+                .next()
+                .expect("precedence climbing requires a non-empty Pairs")
+        );
         self.climb_rec(lhs, 0, &mut pairs.peekable(), &mut primary, &mut infix)
     }
 
@@ -182,7 +185,7 @@ impl<R: RuleType> PrecClimber<R> {
         infix: &mut G
     ) -> T
     where
-        P: Iterator<Item=Pair<'i, R>>,
+        P: Iterator<Item = Pair<'i, R>>,
         F: FnMut(Pair<'i, R>) -> T,
         G: FnMut(T, Pair<'i, R>, T) -> T
     {
@@ -191,8 +194,10 @@ impl<R: RuleType> PrecClimber<R> {
             if let Some(&(prec, _)) = self.ops.get(&rule) {
                 if prec >= min_prec {
                     let op = pairs.next().unwrap();
-                    let mut rhs = primary(pairs.next().expect("infix operator must be followed by \
-                                                               a primary expression"));
+                    let mut rhs = primary(pairs.next().expect(
+                        "infix operator must be followed by \
+                         a primary expression"
+                    ));
 
                     while pairs.peek().is_some() {
                         let rule = pairs.peek().unwrap().as_rule();

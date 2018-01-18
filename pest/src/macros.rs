@@ -104,7 +104,8 @@ macro_rules! consumes_to {
         };
     };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr,
-                                                  [ $( $nested_names:ident $nested_calls:tt ),* $(,)* ] ),
+                                                  [ $( $nested_names:ident $nested_calls:tt ),*
+                                                  $(,)* ] ),
                                     $( $names:ident $calls:tt ),* ] ) => {
 
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
@@ -297,8 +298,8 @@ macro_rules! fails_with {
 
 #[cfg(test)]
 pub mod tests {
+    use super::super::{state, Parser};
     use super::super::error::Error;
-    use super::super::{Parser, state};
     use super::super::iterators::Pairs;
 
     #[allow(non_camel_case_types)]
@@ -314,15 +315,16 @@ pub mod tests {
     impl Parser<Rule> for AbcParser {
         fn parse<'i>(_: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
             state(input, |state, pos| {
-                state.rule(Rule::a, pos, |state, pos| {
-                    state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
-                        pos.skip(1)
-                    }).unwrap().skip(1)
-                }).and_then(|p| {
-                    state.rule(Rule::c, p.skip(1).unwrap(), |_, pos| {
-                        pos.match_string("e")
+                state
+                    .rule(Rule::a, pos, |state, pos| {
+                        state
+                            .rule(Rule::b, pos.skip(1).unwrap(), |_, pos| pos.skip(1))
+                            .unwrap()
+                            .skip(1)
                     })
-                })
+                    .and_then(|p| {
+                        state.rule(Rule::c, p.skip(1).unwrap(), |_, pos| pos.match_string("e"))
+                    })
             })
         }
     }

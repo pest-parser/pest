@@ -8,8 +8,8 @@
 use std::rc::Rc;
 
 use super::queueable_token::QueueableToken;
-use position;
 use RuleType;
+use position;
 use token::Token;
 
 /// A `struct` containing `Token`s. It is returned by either
@@ -21,7 +21,7 @@ pub struct Tokens<'i, R> {
     input: &'i str,
     index: usize,
     start: usize,
-    end: usize,
+    end: usize
 }
 
 pub fn new<R: RuleType>(
@@ -35,7 +35,7 @@ pub fn new<R: RuleType>(
         input,
         index: 0,
         start,
-        end,
+        end
     }
 }
 

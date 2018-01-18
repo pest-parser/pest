@@ -19,7 +19,7 @@ pub struct FlatPairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
     start: usize,
-    end: usize,
+    end: usize
 }
 
 pub fn new<R: RuleType>(
@@ -32,7 +32,7 @@ pub fn new<R: RuleType>(
         queue,
         input,
         start,
-        end,
+        end
     }
 }
 
@@ -61,12 +61,7 @@ impl<'i, R: RuleType> FlatPairs<'i, R> {
     /// ```
     #[inline]
     pub fn tokens(self) -> Tokens<'i, R> {
-        tokens::new(
-            self.queue,
-            self.input,
-            self.start,
-            self.end
-        )
+        tokens::new(self.queue, self.input, self.start, self.end)
     }
 
     fn next_start(&mut self) {
@@ -93,11 +88,7 @@ impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
             return None;
         }
 
-        let pair = pair::new(
-            Rc::clone(&self.queue),
-            self.input,
-            self.start
-        );
+        let pair = pair::new(Rc::clone(&self.queue), self.input, self.start);
 
         self.next_start();
 
@@ -107,7 +98,11 @@ impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
 
 impl<'i, R: RuleType> fmt::Debug for FlatPairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "FlatPairs {{ pairs: {:?} }}", self.clone().collect::<Vec<_>>())
+        write!(
+            f,
+            "FlatPairs {{ pairs: {:?} }}",
+            self.clone().collect::<Vec<_>>()
+        )
     }
 }
 
@@ -117,7 +112,7 @@ impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
             queue: Rc::clone(&self.queue),
             input: self.input,
             start: self.start,
-            end: self.end,
+            end: self.end
         }
     }
 }
