@@ -157,9 +157,7 @@ macro_rules! consumes_to {
 /// ```
 /// # #[macro_use]
 /// # extern crate pest;
-/// # use std::rc::Rc;
 /// # use pest::{Error, Parser};
-/// # use pest::inputs::Input;
 /// # use pest::iterators::Pairs;
 /// # fn main() {
 /// # #[allow(non_camel_case_types)]
@@ -173,7 +171,7 @@ macro_rules! consumes_to {
 /// # struct AbcParser;
 /// #
 /// # impl Parser<Rule> for AbcParser {
-/// #     fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+/// #     fn parse<'i>(_: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
 /// #         pest::state(input, |state, pos| {
 /// #             state.rule(Rule::a, pos, |state, pos| {
 /// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
@@ -209,7 +207,7 @@ macro_rules! parses_to {
         {
             use $crate::Parser;
 
-            let mut tokens = $parser::parse_str($rules::$rule, $string).unwrap().tokens();
+            let mut tokens = $parser::parse($rules::$rule, $string).unwrap().tokens();
 
             consumes_to!($rules, &mut tokens, [ $( $names $calls ),* ]);
 
@@ -236,9 +234,7 @@ macro_rules! parses_to {
 /// ```
 /// # #[macro_use]
 /// # extern crate pest;
-/// # use std::rc::Rc;
 /// # use pest::{Error, Parser};
-/// # use pest::inputs::Input;
 /// # use pest::iterators::Pairs;
 /// # fn main() {
 /// # #[allow(non_camel_case_types)]
@@ -252,7 +248,7 @@ macro_rules! parses_to {
 /// # struct AbcParser;
 /// #
 /// # impl Parser<Rule> for AbcParser {
-/// #     fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+/// #     fn parse<'i>(_: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
 /// #         pest::state(input, |state, pos| {
 /// #             state.rule(Rule::a, pos, |state, pos| {
 /// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
@@ -285,7 +281,7 @@ macro_rules! fails_with {
         {
             use $crate::Parser;
 
-            let error = $parser::parse_str($rules::$rule, $string).unwrap_err();
+            let error = $parser::parse($rules::$rule, $string).unwrap_err();
 
             match error {
                 $crate::Error::ParsingError { positives, negatives, pos } => {
@@ -301,10 +297,7 @@ macro_rules! fails_with {
 
 #[cfg(test)]
 pub mod tests {
-    use std::rc::Rc;
-
     use super::super::error::Error;
-    use super::super::inputs::Input;
     use super::super::{Parser, state};
     use super::super::iterators::Pairs;
 
@@ -319,7 +312,7 @@ pub mod tests {
     pub struct AbcParser;
 
     impl Parser<Rule> for AbcParser {
-        fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+        fn parse<'i>(_: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
             state(input, |state, pos| {
                 state.rule(Rule::a, pos, |state, pos| {
                     state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {

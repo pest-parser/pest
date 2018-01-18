@@ -1,9 +1,8 @@
 extern crate pest;
 
 use std::io::{self, Write};
-use std::rc::Rc;
 
-use pest::inputs::{Input, Position};
+use pest::position::Position;
 use pest::iterators::Pairs;
 use pest::{Error, Parser, ParserState, state};
 
@@ -18,11 +17,11 @@ enum Rule {
 struct ParenParser;
 
 impl Parser<Rule> for ParenParser {
-    fn parse<I: Input>(rule: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
-        fn expr<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+    fn parse<'i>(rule: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
+        fn expr<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.sequence(move |state| {
                 pos.sequence(|p| {
                     p.repeat(|p| {
@@ -34,10 +33,10 @@ impl Parser<Rule> for ParenParser {
             })
         }
 
-        fn paren<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn paren<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::paren, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|p| {
@@ -80,7 +79,7 @@ impl Parser<Rule> for ParenParser {
 #[derive(Debug)]
 struct Paren(Vec<Paren>);
 
-fn expr<I: Input>(pairs: Pairs<Rule, I>) -> Vec<Paren> {
+fn expr<'i>(pairs: Pairs<'i, Rule>) -> Vec<Paren> {
     pairs.filter(|p| p.as_rule() == Rule::paren).map(|p| Paren(expr(p.into_inner()))).collect()
 }
 
@@ -94,7 +93,7 @@ fn main() {
         io::stdin().read_line(&mut line).unwrap();
         line.pop();
 
-        match ParenParser::parse_str(Rule::expr, &line) {
+        match ParenParser::parse(Rule::expr, &line) {
             Ok(pairs) => println!("{:?}", expr(pairs)),
             Err(e) => println!("\n{}", e)
         };

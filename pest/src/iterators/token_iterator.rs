@@ -8,7 +8,7 @@
 use std::rc::Rc;
 
 use super::queueable_token::QueueableToken;
-use super::super::inputs::{Input, position};
+use super::super::position;
 use super::super::RuleType;
 use super::super::token::Token;
 
@@ -16,31 +16,31 @@ use super::super::token::Token;
 /// [`Pair::into_iter`](struct.Pair.html#method.into_iter) or
 /// [`Pairs::into_iter`](struct.Pairs.html#method.into_iter)
 #[derive(Clone, Debug)]
-pub struct TokenIterator<R, I: Input> {
+pub struct TokenIterator<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: &'i str,
     index: usize,
     start: usize,
-    end: usize
+    end: usize,
 }
 
-pub fn new<R: RuleType, I: Input>(
+pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: &'i str,
     start: usize,
     end: usize
-) -> TokenIterator<R, I> {
+) -> TokenIterator<'i, R> {
     TokenIterator {
         queue,
         input,
         index: 0,
         start,
-        end
+        end,
     }
 }
 
-impl<R: RuleType, I: Input> Iterator for TokenIterator<R, I> {
-    type Item = Token<R, I>;
+impl<'i, R: RuleType> Iterator for TokenIterator<'i, R> {
+    type Item = Token<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index == self.end {

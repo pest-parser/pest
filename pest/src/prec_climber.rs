@@ -12,7 +12,6 @@ use std::collections::HashMap;
 use std::iter::Peekable;
 use std::ops::BitOr;
 
-use inputs::Input;
 use iterators::Pair;
 use RuleType;
 
@@ -146,7 +145,7 @@ impl<R: RuleType> PrecClimber<R> {
     /// let primary = |pair| {
     ///     consume(pair, climber)
     /// };
-    /// let infix = |lhs: i32, op: Pair<Rule, StringInput>, rhs: i32| {
+    /// let infix = |lhs: i32, op: Pair<Rule>, rhs: i32| {
     ///     match op.rule() {
     ///         Rule::plus => lhs + rhs,
     ///         Rule::minus => lhs - rhs,
@@ -159,22 +158,22 @@ impl<R: RuleType> PrecClimber<R> {
     ///
     /// let result = climber.climb(pairs, primary, infix);
     /// ```
-    pub fn climb<I: Input, P, F, G, T>(
+    pub fn climb<'i, P, F, G, T>(
         &self,
         mut pairs: P,
         mut primary: F,
         mut infix: G
     ) -> T
     where
-        P: Iterator<Item=Pair<R, I>>,
-        F: FnMut(Pair<R, I>) -> T,
-        G: FnMut(T, Pair<R, I>, T) -> T
+        P: Iterator<Item=Pair<'i, R>>,
+        F: FnMut(Pair<'i, R>) -> T,
+        G: FnMut(T, Pair<'i, R>, T) -> T
     {
         let lhs = primary(pairs.next().expect("precedence climbing requires a non-empty Pairs"));
         self.climb_rec(lhs, 0, &mut pairs.peekable(), &mut primary, &mut infix)
     }
 
-    fn climb_rec<I: Input, P, F, G, T>(
+    fn climb_rec<'i, P, F, G, T>(
         &self,
         mut lhs: T,
         min_prec: u32,
@@ -183,9 +182,9 @@ impl<R: RuleType> PrecClimber<R> {
         infix: &mut G
     ) -> T
     where
-        P: Iterator<Item=Pair<R, I>>,
-        F: FnMut(Pair<R, I>) -> T,
-        G: FnMut(T, Pair<R, I>, T) -> T
+        P: Iterator<Item=Pair<'i, R>>,
+        F: FnMut(Pair<'i, R>) -> T,
+        G: FnMut(T, Pair<'i, R>, T) -> T
     {
         while pairs.peek().is_some() {
             let rule = pairs.peek().unwrap().as_rule();

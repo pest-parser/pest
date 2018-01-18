@@ -278,5 +278,5 @@ fn examples() {
 
     file.read_to_string(&mut data).unwrap();
 
-    TomlParser::parse_str(Rule::toml, &data).unwrap();
+    TomlParser::parse(Rule::toml, &data).unwrap();
 }

@@ -8,39 +8,40 @@
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
+use std::ptr;
 
 use super::flat_pairs::{self, FlatPairs};
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::token_iterator::{self, TokenIterator};
-use super::super::inputs::Input;
 use super::super::RuleType;
+use super::super::util::hash_str;
 
 /// A `struct` containing `Pairs`. It is created by [`pest::state`](../fn.state.html) and
 /// [`Pair::into_inner`](struct.Pair.html#method.into_inner).
 #[derive(Clone)]
-pub struct Pairs<R, I: Input> {
+pub struct Pairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: &'i str,
     start: usize,
-    end: usize
+    end: usize,
 }
 
-pub fn new<R: RuleType, I: Input>(
+pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: &'i str,
     start: usize,
     end: usize
-) -> Pairs<R, I> {
+) -> Pairs<'i, R> {
     Pairs {
         queue,
         input,
         start,
-        end
+        end,
     }
 }
 
-impl<R: RuleType, I: Input> Pairs<R, I> {
+impl<'i, R: RuleType> Pairs<'i, R> {
     /// Flattens the `Pairs`.
     ///
     /// # Examples
@@ -48,7 +49,6 @@ impl<R: RuleType, I: Input> Pairs<R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
@@ -56,7 +56,7 @@ impl<R: RuleType, I: Input> Pairs<R, I> {
     ///     b
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("".to_owned()));
+    /// let input = "";
     /// let pairs = pest::state(input, |state, pos| {
     ///     // generating nested Token pair with Rule::b inside Rule::a
     /// #     state.rule(Rule::a, pos, |state, pos| {
@@ -68,7 +68,7 @@ impl<R: RuleType, I: Input> Pairs<R, I> {
     /// assert_eq!(tokens.len(), 4);
     /// ```
     #[inline]
-    pub fn flatten(self) -> FlatPairs<R, I> {
+    pub fn flatten(self) -> FlatPairs<'i, R> {
         flat_pairs::new(
             self.queue,
             self.input,
@@ -84,14 +84,13 @@ impl<R: RuleType, I: Input> Pairs<R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
-    /// # #[allow(non_camel_case_types)]
+        /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("".to_owned()));
+    /// let input = "";
     /// let pairs = pest::state(input, |state, pos| {
     ///     // generating Token pair with Rule::a ...
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
@@ -101,7 +100,7 @@ impl<R: RuleType, I: Input> Pairs<R, I> {
     /// assert_eq!(tokens.len(), 2);
     /// ```
     #[inline]
-    pub fn tokens(self) -> TokenIterator<R, I> {
+    pub fn tokens(self) -> TokenIterator<'i, R> {
         token_iterator::new(
             self.queue,
             self.input,
@@ -118,8 +117,8 @@ impl<R: RuleType, I: Input> Pairs<R, I> {
     }
 }
 
-impl<R: RuleType, I: Input> Iterator for Pairs<R, I> {
-    type Item = Pair<R, I>;
+impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
+    type Item = Pair<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.start >= self.end {
@@ -138,13 +137,13 @@ impl<R: RuleType, I: Input> Iterator for Pairs<R, I> {
     }
 }
 
-impl<R: RuleType, I: Input> fmt::Debug for Pairs<R, I> {
+impl<'i, R: RuleType> fmt::Debug for Pairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Pairs {{ pairs: {:?} }}", self.clone().collect::<Vec<_>>())
     }
 }
 
-impl<R: RuleType, I: Input> fmt::Display for Pairs<R, I> {
+impl<'i, R: RuleType> fmt::Display for Pairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[{}]", self.clone()
                               .map(|pair| format!("{}", pair))
@@ -153,19 +152,19 @@ impl<R: RuleType, I: Input> fmt::Display for Pairs<R, I> {
     }
 }
 
-impl<R: PartialEq, I: Input> PartialEq for Pairs<R, I> {
-    fn eq(&self, other: &Pairs<R, I>) -> bool {
-        Rc::ptr_eq(&self.queue, &other.queue) && Rc::ptr_eq(&self.input, &other.input) &&
+impl<'i, R: PartialEq> PartialEq for Pairs<'i, R> {
+    fn eq(&self, other: &Pairs<'i, R>) -> bool {
+        Rc::ptr_eq(&self.queue, &other.queue) && ptr::eq(self.input, other.input) &&
         self.start == other.start && self.end == other.end
     }
 }
 
-impl<R: Eq, I: Input> Eq for Pairs<R, I> {}
+impl<'i, R: Eq> Eq for Pairs<'i, R> {}
 
-impl<R: Hash, I: Input> Hash for Pairs<R, I> {
+impl<'i, R: Hash> Hash for Pairs<'i, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
-        (&*self.input as *const I).hash(state);
+        hash_str(self.input, state);
         self.start.hash(state);
         self.end.hash(state);
     }
@@ -178,7 +177,7 @@ mod tests {
 
     #[test]
     fn pairs_debug() {
-        let pairs = AbcParser::parse_str(Rule::a, "abcde").unwrap();
+        let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
         assert_eq!(
             format!("{:?}", pairs),
@@ -193,7 +192,7 @@ mod tests {
 
     #[test]
     fn pairs_display() {
-        let pairs = AbcParser::parse_str(Rule::a, "abcde").unwrap();
+        let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
         assert_eq!(format!("{}", pairs), "[a(0, 3, [b(1, 2)]), c(4, 5)]".to_owned());
     }

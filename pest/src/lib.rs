@@ -10,15 +10,14 @@
 //! pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser built with
 //! *simplicity* and *speed* in mind.
 //!
-//! ## Input & Parser
+//! ## Parser
 //!
-//! pest works mainly through two `trait`s: `Input` & `Parser`. `Input` defines the capabilities of
-//! an input source, while `Parser` provides an interface to the parsing functionality. Since
-//! `Parser` is a `trait`, parsing needs to be defined either though the `#[derive(Parser)]`
-//! attribute, or manually through the [`Position API`](inputs/struct.Position.html). The use of the
-//! `derive` is highly encouraged since this is the only way you can make use of pest's PEG
-//! grammar, while manual parser definition can be used where highly specific or efficient parsing
-//! is required.
+//! pest works mainly through a `trait`, `Parser`, which provides an interface to the parsing
+//! functionality. Since `Parser` is a `trait`, parsing needs to be defined either though the
+//! `#[derive(Parser)]` attribute, or manually through the [`Position API`](struct.Position.html).
+//! The use of the //! `derive` is highly encouraged since this is the only way you can make
+//! use of pest's PEG grammar, while manual parser definition can be used where highly specific
+//! or efficient parsing is required.
 //!
 //! ## `#[derive(Parser)]`
 //!
@@ -59,13 +58,15 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 mod error;
-pub mod inputs;
 pub mod iterators;
 mod macros;
 mod parser;
 mod parser_state;
+pub mod position;
 pub mod prec_climber;
+pub mod span;
 mod token;
+mod util;
 
 /// A `trait` which parser rules must implement.
 ///

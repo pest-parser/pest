@@ -11,33 +11,32 @@ use std::rc::Rc;
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::token_iterator::{self, TokenIterator};
-use super::super::inputs::Input;
 use super::super::RuleType;
 
 /// A `struct` containing `Pairs`. It is created by
 /// [`Pairs::flatten`](struct.Pairs.html#method.flatten).
-pub struct FlatPairs<R, I: Input> {
+pub struct FlatPairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: &'i str,
     start: usize,
-    end: usize
+    end: usize,
 }
 
-pub fn new<R: RuleType, I: Input>(
+pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: &'i str,
     start: usize,
     end: usize
-) -> FlatPairs<R, I> {
+) -> FlatPairs<'i, R> {
     FlatPairs {
         queue,
         input,
         start,
-        end
+        end,
     }
 }
 
-impl<R: RuleType, I: Input> FlatPairs<R, I> {
+impl<'i, R: RuleType> FlatPairs<'i, R> {
     /// Converts the `FlatPairs` into a `TokenIterator`.
     ///
     /// # Examples
@@ -45,14 +44,13 @@ impl<R: RuleType, I: Input> FlatPairs<R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("".to_owned()));
+    /// let input = "";
     /// let pairs = pest::state(input, |state, pos| {
     ///     // generating Token pair with Rule::a ...
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
@@ -62,7 +60,7 @@ impl<R: RuleType, I: Input> FlatPairs<R, I> {
     /// assert_eq!(tokens.len(), 2);
     /// ```
     #[inline]
-    pub fn into_iter(self) -> TokenIterator<R, I> {
+    pub fn into_iter(self) -> TokenIterator<'i, R> {
         token_iterator::new(
             self.queue,
             self.input,
@@ -87,8 +85,8 @@ impl<R: RuleType, I: Input> FlatPairs<R, I> {
     }
 }
 
-impl<R: RuleType, I: Input> Iterator for FlatPairs<R, I> {
-    type Item = Pair<R, I>;
+impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
+    type Item = Pair<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.start >= self.end {
@@ -107,19 +105,19 @@ impl<R: RuleType, I: Input> Iterator for FlatPairs<R, I> {
     }
 }
 
-impl<R: RuleType, I: Input> fmt::Debug for FlatPairs<R, I> {
+impl<'i, R: RuleType> fmt::Debug for FlatPairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "FlatPairs {{ pairs: {:?} }}", self.clone().collect::<Vec<_>>())
     }
 }
 
-impl<R: Clone, I: Input> Clone for FlatPairs<R, I> {
-    fn clone(&self) -> FlatPairs<R, I> {
+impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
+    fn clone(&self) -> FlatPairs<'i, R> {
         FlatPairs {
             queue: self.queue.clone(),
             input: self.input.clone(),
             start: self.start,
-            end: self.end
+            end: self.end,
         }
     }
 }

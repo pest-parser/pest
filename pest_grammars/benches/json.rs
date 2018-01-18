@@ -17,23 +17,23 @@ use std::io::Read;
 
 use test::Bencher;
 
-use pest::inputs::{Input, Span};
+use pest::span::Span;
 use pest::iterators::Pair;
 use pest::Parser;
 
 use pest_grammars::json::*;
 
-enum Json<I: Input> {
+enum Json<'i> {
     Null,
     Bool(bool),
     Number(f64),
-    String(Span<I>),
-    Array(Vec<Json<I>>),
-    Object(HashMap<Span<I>, Json<I>>)
+    String(Span<'i>),
+    Array(Vec<Json<'i>>),
+    Object(HashMap<Span<'i>, Json<'i>>)
 }
 
-fn consume<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
-    fn value<I: Input>(pair: Pair<Rule, I>) -> Json<I> {
+fn consume<'i>(pair: Pair<'i, Rule>) -> Json<'i> {
+    fn value<'i>(pair: Pair<'i, Rule>) -> Json<'i> {
         let pair = pair.into_inner().next().unwrap();
 
         match pair.as_rule() {
@@ -81,6 +81,6 @@ fn data(b: &mut Bencher) {
     file.read_to_string(&mut data).unwrap();
 
     b.iter(|| {
-        consume(JsonParser::parse_str(Rule::json, &data).unwrap().next().unwrap())
+        consume(JsonParser::parse(Rule::json, &data).unwrap().next().unwrap())
     });
 }

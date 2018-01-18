@@ -8,34 +8,33 @@
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
-use std::rc::Rc;
+use std::ptr;
 
-use super::input::Input;
-use super::position;
+use position;
+use super::util::hash_str;
 
-/// A `struct` of a span over an `Input`. It is created from either
+/// A `struct` of a span over a `&str`. It is created from either
 /// [two `Position`s](struct.Position.html#method.span) or from a
 /// [`Pair`](../iterators/struct.Pair.html#method.span).
-pub struct Span<I: Input> {
-    input: Rc<I>,
+pub struct Span<'i> {
+    input: &'i str,
     start: usize,
-    end: usize
+    end: usize,
 }
 
 #[inline]
-pub fn new<I: Input>(input: Rc<I>, start: usize, end: usize) -> Span<I> {
+pub fn new<'i>(input: &'i str, start: usize, end: usize) -> Span<'i> {
     Span { input, start, end }
 }
 
-impl<I: Input> Span<I> {
+impl<'i> Span<'i> {
     /// Returns the `Span`'s start byte position as a `usize`.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::position::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.span(end);
@@ -52,9 +51,8 @@ impl<I: Input> Span<I> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::position::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.span(end);
@@ -71,9 +69,8 @@ impl<I: Input> Span<I> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::position::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.clone().span(end);
@@ -81,7 +78,7 @@ impl<I: Input> Span<I> {
     /// assert_eq!(span.start_pos(), start);
     /// ```
     #[inline]
-    pub fn start_pos(&self) -> position::Position<I> {
+    pub fn start_pos(&self) -> position::Position<'i> {
         // Span start position is a UTF-8 border and is safe.
         unsafe { position::new(self.input.clone(), self.start) }
     }
@@ -91,9 +88,8 @@ impl<I: Input> Span<I> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::position::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.span(end.clone());
@@ -101,7 +97,7 @@ impl<I: Input> Span<I> {
     /// assert_eq!(span.end_pos(), end);
     /// ```
     #[inline]
-    pub fn end_pos(&self) -> position::Position<I> {
+    pub fn end_pos(&self) -> position::Position<'i> {
         // Span end position is a UTF-8 border and is safe.
         unsafe { position::new(self.input.clone(), self.end) }
     }
@@ -111,9 +107,8 @@ impl<I: Input> Span<I> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("ab".to_owned()));
+    /// # use pest::position::Position;
+    /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
     /// let span = start.clone().span(end.clone());
@@ -121,7 +116,7 @@ impl<I: Input> Span<I> {
     /// assert_eq!(span.split(), (start, end));
     /// ```
     #[inline]
-    pub fn split(self) -> (position::Position<I>, position::Position<I>) {
+    pub fn split(self) -> (position::Position<'i>, position::Position<'i>) {
         // Span start and end positions are UTF-8 borders and safe.
         let pos1 = unsafe { position::new(self.input.clone(), self.start) };
         let pos2 = unsafe { position::new(self.input, self.end) };
@@ -129,14 +124,13 @@ impl<I: Input> Span<I> {
         (pos1, pos2)
     }
 
-    /// Captures a `&str` slice from the `Input` defined by the `Span`.
+    /// Captures a slice from the `&str` defined by the `Span`.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
-    /// # use pest::inputs::{Position, StringInput};
-    /// let input = Rc::new(StringInput::new("abc".to_owned()));
+    /// # use pest::position::Position;
+    /// let input = "abc";
     /// let start = Position::from_start(input).skip(1).unwrap();
     /// let end = start.clone().match_string("b").unwrap();
     /// let span = start.span(end);
@@ -144,36 +138,34 @@ impl<I: Input> Span<I> {
     /// assert_eq!(span.as_str(), "b");
     /// ```
     #[inline]
-    pub fn as_str(&self) -> &str {
-        unsafe { self.input.slice(self.start, self.end) }
+    pub fn as_str(&self) -> &'i str {
+        unsafe { self.input.slice_unchecked(self.start, self.end) }
     }
 }
 
-// We don't want to enforce derivable traits on the Input which forces to implement them manually.
-
-impl<I: Input> fmt::Debug for Span<I> {
+impl<'i> fmt::Debug for Span<'i> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Span {{ start: {}, end: {} }}", self.start, self.end)
     }
 }
 
-impl<I: Input> Clone for Span<I> {
-    fn clone(&self) -> Span<I> {
+impl<'i> Clone for Span<'i> {
+    fn clone(&self) -> Span<'i> {
         new(self.input.clone(), self.start, self.end)
     }
 }
 
-impl<I: Input> PartialEq for Span<I> {
-    fn eq(&self, other: &Span<I>) -> bool {
-        Rc::ptr_eq(&self.input, &other.input) && self.start == other.start && self.end == other.end
+impl<'i> PartialEq for Span<'i> {
+    fn eq(&self, other: &Span<'i>) -> bool {
+        ptr::eq(self.input, other.input) && self.start == other.start && self.end == other.end
     }
 }
 
-impl<I: Input> Eq for Span<I> {}
+impl<'i> Eq for Span<'i> {}
 
-impl<I: Input> PartialOrd for Span<I> {
-    fn partial_cmp(&self, other: &Span<I>) -> Option<Ordering> {
-        if Rc::ptr_eq(&self.input, &other.input) {
+impl<'i> PartialOrd for Span<'i> {
+    fn partial_cmp(&self, other: &Span<'i>) -> Option<Ordering> {
+        if ptr::eq(self.input, other.input) {
             match self.start.partial_cmp(&other.start) {
                 Some(Ordering::Equal) => self.end.partial_cmp(&other.end),
                 ordering => ordering
@@ -184,8 +176,8 @@ impl<I: Input> PartialOrd for Span<I> {
     }
 }
 
-impl<I: Input> Ord for Span<I> {
-    fn cmp(&self, other: &Span<I>) -> Ordering {
+impl<'i> Ord for Span<'i> {
+    fn cmp(&self, other: &Span<'i>) -> Ordering {
         self.partial_cmp(other).expect(
             "cannot compare spans from \
              different inputs"
@@ -193,9 +185,9 @@ impl<I: Input> Ord for Span<I> {
     }
 }
 
-impl<I: Input> Hash for Span<I> {
+impl<'i> Hash for Span<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (&*self.input as *const I).hash(state);
+        hash_str(self.input, state);
         self.start.hash(state);
         self.end.hash(state);
     }

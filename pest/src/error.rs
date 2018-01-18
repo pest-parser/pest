@@ -8,12 +8,13 @@
 use std::error;
 use std::fmt;
 
-use inputs::{Input, position, Position, Span};
+use position::Position;
+use span::Span;
 use RuleType;
 
 /// An `enum` which defines possible errors.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum Error<R, I: Input> {
+pub enum Error<'i, R> {
     /// Generated parsing error with expected and unexpected `Rule`s and a position
     ParsingError {
         /// Positive attempts
@@ -21,25 +22,25 @@ pub enum Error<R, I: Input> {
         /// Negative attempts
         negatives: Vec<R>,
         /// Deepest position of attempts
-        pos: Position<I>
+        pos: Position<'i>
     },
     /// Custom error with a message and a position
     CustomErrorPos {
         /// Short explanation
         message: String,
         /// Error `Position` for formatting
-        pos: Position<I>
+        pos: Position<'i>
     },
     /// Custom error with a message and a span defined by a start and end position
     CustomErrorSpan {
         /// Short explanation
         message: String,
         /// Error `Span` for formatting
-        span: Span<I>
+        span: Span<'i>
     }
 }
 
-impl <R: RuleType, I: Input> Error<R, I> {
+impl <'i, R: RuleType> Error<'i, R> {
     /// Renames all `Rule`s from a `ParsingError` variant returning a `CustomErrorPos`. It does
     /// nothing when called on `CustomErrorPos` and `CustomErrorSpan` variants.
     ///
@@ -48,9 +49,8 @@ impl <R: RuleType, I: Input> Error<R, I> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
     /// # use pest::Error;
-    /// # use pest::inputs::{Position, StringInput};
+    /// # use pest::position::Position;
     /// # #[allow(non_camel_case_types)]
     /// # #[allow(dead_code)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -58,7 +58,7 @@ impl <R: RuleType, I: Input> Error<R, I> {
     /// #     open_paren,
     /// #     closed_paren
     /// # }
-    /// # let input = Rc::new(StringInput::new("".to_owned()));
+    /// # let input = "";
     /// # let pos = Position::from_start(input);
     /// Error::ParsingError {
     ///     positives: vec![Rule::open_paren],
@@ -71,7 +71,7 @@ impl <R: RuleType, I: Input> Error<R, I> {
     ///     }
     /// });
     /// ```
-    pub fn renamed_rules<F>(self, f: F) -> Error<R, I>
+    pub fn renamed_rules<F>(self, f: F) -> Error<'i, R>
     where
         F: FnMut(&R) -> String
     {
@@ -88,7 +88,7 @@ impl <R: RuleType, I: Input> Error<R, I> {
     }
 }
 
-fn message<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
+fn message<'i, R: fmt::Debug>(error: &Error<'i, R>) -> String {
     match *error {
         Error::ParsingError { ref positives, ref negatives, .. } => {
             parsing_error_message(positives, negatives, |r| format!("{:?}", r))
@@ -139,7 +139,7 @@ where
     }
 }
 
-fn underline<R: fmt::Debug, I: Input>(error: &Error<R, I>, offset: usize) -> String {
+fn underline<'i, R: fmt::Debug>(error: &Error<'i, R>, offset: usize) -> String {
     let mut underline = String::new();
 
     for _ in 0..offset { underline.push(' '); }
@@ -160,7 +160,7 @@ fn underline<R: fmt::Debug, I: Input>(error: &Error<R, I>, offset: usize) -> Str
     underline
 }
 
-fn format<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
+fn format<'i, R: fmt::Debug>(error: &Error<'i, R>) -> String {
     let pos = match *error {
         Error::ParsingError { ref pos, .. } | Error::CustomErrorPos { ref pos, .. } => pos.clone(),
         Error::CustomErrorSpan { ref span, .. } => span.clone().split().0.clone()
@@ -171,14 +171,7 @@ fn format<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
     let mut spacing = String::new();
     for _ in 0..line_str_len { spacing.push(' '); }
 
-    let filename = position::into_input(&pos).file_name();
-
-    let mut result = match filename {
-        Some(filename) => format!("{}--> {}:{}:{}\n", spacing, filename.to_string_lossy(), line,
-                                  col),
-        None => format!("{}--> {}:{}\n", spacing, line, col)
-    };
-
+    let mut result = format!("{}--> {}:{}\n", spacing, line, col);
     result.push_str(&format!("{} |\n", spacing));
     result.push_str(&format!("{} | ", line));
 
@@ -191,13 +184,13 @@ fn format<R: fmt::Debug, I: Input>(error: &Error<R, I>) -> String {
     result
 }
 
-impl<R: fmt::Debug, I: Input> fmt::Display for Error<R, I> {
+impl<'i, R: fmt::Debug> fmt::Display for Error<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", format(self))
     }
 }
 
-impl<R: fmt::Debug, I: Input> error::Error for Error<R, I> {
+impl<'i, R: fmt::Debug> error::Error for Error<'i, R> {
     fn description(&self) -> &str {
         match *self {
             Error::ParsingError { .. } => {
@@ -212,16 +205,14 @@ impl<R: fmt::Debug, I: Input> error::Error for Error<R, I> {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
     use super::*;
-    use super::super::inputs::{position, StringInput};
+    use super::super::position;
 
     #[test]
     fn display_parsing_error_mixed() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
-        let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<u32, _> = Error::ParsingError {
+        let input = "ab\ncd\nef";
+        let pos = unsafe { position::new(input, 4) };
+        let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2, 3],
             negatives: vec![4, 5, 6],
             pos: pos
@@ -239,9 +230,9 @@ mod tests {
 
     #[test]
     fn display_parsing_error_positives() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
-        let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<u32, _> = Error::ParsingError {
+        let input = "ab\ncd\nef";
+        let pos = unsafe { position::new(input, 4) };
+        let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2],
             negatives: vec![],
             pos: pos
@@ -259,9 +250,9 @@ mod tests {
 
     #[test]
     fn display_parsing_error_negatives() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
-        let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<u32, _> = Error::ParsingError {
+        let input = "ab\ncd\nef";
+        let pos = unsafe { position::new(input, 4) };
+        let error: Error<u32> = Error::ParsingError {
             positives: vec![],
             negatives: vec![4, 5, 6],
             pos: pos
@@ -279,9 +270,9 @@ mod tests {
 
     #[test]
     fn display_parsing_error_unknown() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
-        let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<u32, _> = Error::ParsingError {
+        let input = "ab\ncd\nef";
+        let pos = unsafe { position::new(input, 4) };
+        let error: Error<u32> = Error::ParsingError {
             positives: vec![],
             negatives: vec![],
             pos: pos
@@ -299,9 +290,9 @@ mod tests {
 
     #[test]
     fn display_custom() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
-        let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<&str, _> = Error::CustomErrorPos {
+        let input = "ab\ncd\nef";
+        let pos = unsafe { position::new(input, 4) };
+        let error: Error<&str> = Error::CustomErrorPos {
             message: "error: big one".to_owned(),
             pos: pos
         };
@@ -318,9 +309,9 @@ mod tests {
 
     #[test]
     fn mapped_parsing_error() {
-        let input = StringInput::new("ab\ncd\nef".to_owned());
-        let pos = unsafe { position::new(Rc::new(input), 4) };
-        let error: Error<u32, _> = Error::ParsingError {
+        let input = "ab\ncd\nef";
+        let pos = unsafe { position::new(input, 4) };
+        let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2, 3],
             negatives: vec![4, 5, 6],
             pos: pos

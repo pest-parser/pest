@@ -9,9 +9,9 @@
 extern crate pest;
 
 use std::collections::HashMap;
-use std::rc::Rc;
 
-use pest::inputs::{Input, Position, Span, StringInput};
+use pest::position::Position;
+use pest::span::Span;
 use pest::iterators::{Pair, Pairs};
 use pest::{Error, Parser, ParserState, state};
 
@@ -37,18 +37,18 @@ enum Rule {
 struct JsonParser;
 
 impl Parser<Rule> for JsonParser {
-    fn parse<I: Input>(rule: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
-        fn json<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+    fn parse<'i>(rule: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
+        fn json<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             value(pos, state)
         }
 
-        fn object<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn object<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::object, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
@@ -90,10 +90,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn pair<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn pair<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::pair, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
@@ -111,10 +111,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn array<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn array<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::array, pos, |state, pos| {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
@@ -156,10 +156,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn value<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn value<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::value, pos, |state, pos| {
                 string(pos, state).or_else(|pos| {
                     number(pos, state)
@@ -175,10 +175,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn string<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn string<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::string, pos, |state, pos| {
                 pos.sequence(|pos| {
                     pos.match_string("\"").and_then(|pos| {
@@ -204,10 +204,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn escape<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn escape<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             pos.sequence(|pos| {
                 pos.match_string("\\").and_then(|pos| {
                     pos.match_string("\"").or_else(|pos| {
@@ -231,10 +231,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn unicode<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn unicode<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             pos.sequence(|pos| {
                 pos.match_string("u").and_then(|pos| {
                     hex(pos, state)
@@ -246,10 +246,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn hex<I: Input>(
-            pos: Position<I>,
-            _: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn hex<'i>(
+            pos: Position<'i>,
+            _: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             pos.match_range('0'..'9').or_else(|pos| {
                 pos.match_range('a'..'f')
             }).or_else(|pos| {
@@ -257,10 +257,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn number<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn number<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::number, pos, |state, pos| {
                 pos.sequence(|pos| {
                     pos.optional(|pos| {
@@ -290,10 +290,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn int<I: Input>(
-            pos: Position<I>,
-            _: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn int<'i>(
+            pos: Position<'i>,
+            _: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             pos.match_string("0").or_else(|pos| {
                 pos.sequence(|pos| {
                     pos.match_range('1'..'9').and_then(|pos| {
@@ -305,10 +305,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn exp<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn exp<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             pos.sequence(|pos| {
                 pos.match_string("E").or_else(|pos| {
                     pos.match_string("e")
@@ -324,10 +324,10 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn bool<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn bool<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::bool, pos, |_, pos| {
                 pos.match_string("true").or_else(|pos| {
                     pos.match_string("false")
@@ -335,19 +335,19 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn null<I: Input>(
-            pos: Position<I>,
-            state: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn null<'i>(
+            pos: Position<'i>,
+            state: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::null, pos, |_, pos| {
                 pos.match_string("null")
             })
         }
 
-        fn skip<I: Input>(
-            pos: Position<I>,
-            _: &mut ParserState<Rule, I>
-        ) -> Result<Position<I>, Position<I>> {
+        fn skip<'i>(
+            pos: Position<'i>,
+            _: &mut ParserState<'i, Rule>
+        ) -> Result<Position<'i>, Position<'i>> {
             pos.repeat(|pos| {
                 pos.match_string(" ").or_else(|pos| {
                     pos.match_string("\t")
@@ -381,17 +381,17 @@ impl Parser<Rule> for JsonParser {
 }
 
 #[derive(Debug, PartialEq)]
-enum Json {
+enum Json<'i> {
     Null,
     Bool(bool),
     Number(f64),
-    String(Span<StringInput>),
-    Array(Vec<Json>),
-    Object(HashMap<Span<StringInput>, Json>)
+    String(Span<'i>),
+    Array(Vec<Json<'i>>),
+    Object(HashMap<Span<'i>, Json<'i>>)
 }
 
-fn consume(pair: Pair<Rule, StringInput>) -> Json {
-    fn value(pair: Pair<Rule, StringInput>) -> Json {
+fn consume<'i>(pair: Pair<'i, Rule>) -> Json<'i> {
+    fn value<'i>(pair: Pair<'i, Rule>) -> Json<'i> {
         let pair = pair.into_inner().next().unwrap();
 
         match pair.as_rule() {
@@ -577,7 +577,7 @@ fn object() {
 
 #[test]
 fn ast() {
-    let input = Rc::new(StringInput::new("{\"a\": [null, true, 3.4]}".to_owned()));
+    let input = "{\"a\": [null, true, 3.4]}";
     let start = Position::from_start(input.clone()).skip(1).unwrap();
     let end = start.clone().skip(3).unwrap();
     let span = start.span(end);
