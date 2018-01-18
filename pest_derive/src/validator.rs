@@ -267,7 +267,8 @@ fn is_non_failing<'i>(expr: &ParserExpr<'i>) -> bool {
 fn validate_repetition<'i>(rules: &Vec<ParserRule<'i>>) -> Vec<Error<'i, GrammarRule>> {
     rules.into_iter().filter_map(|rule| {
         match rule.node.expr {
-            ParserExpr::Rep(ref other) | ParserExpr::RepOnce(ref other)=> {
+            ParserExpr::Rep(ref other) | ParserExpr::RepOnce(ref other) |
+            ParserExpr::RepMin(ref other, _) => {
                 if is_non_failing(&other.expr) {
                     Some(Error::CustomErrorSpan {
                         message: "expression inside repetition is non-failing and will repeat \
