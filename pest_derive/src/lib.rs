@@ -152,6 +152,8 @@
 //!     | `e*`         | matches `e` zero or more times                             |
 //!     | `e+`         | matches `e` one or more times                              |
 //!     | `e{n}`       | matches `e` exactly `n` times                              |
+//!     | `e{, n}`     | matches `e` at most `n` times                              |
+//!     | `e{n,} `     | matches `e` at least `n` times                             |
 //!     | `e{m, n}`    | matches `e` between `m` and `n` times inclusively          |
 //!     | `e?`         | optionally matches `e`                                     |
 //!     | `&e`         | matches `e` without making progress                        |
@@ -226,8 +228,12 @@
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
 #![recursion_limit="256"]
 
-#[cfg_attr(test, macro_use)]
+#[cfg(test)]
+#[macro_use]
 extern crate pest;
+#[cfg(not(test))]
+extern crate pest;
+
 extern crate proc_macro;
 #[macro_use]
 extern crate quote;

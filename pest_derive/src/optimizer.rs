@@ -48,6 +48,70 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
                         Box::new(Expr::Rep(expr))
                     )
                 }
+                Expr::RepExact(expr, num) => {
+                    (1..num + 1).map(|_| {
+                                    *expr.clone()
+                                })
+                                .rev()
+                                .fold(None, |rep, expr| {
+                                    match rep {
+                                        None => Some(expr),
+                                        Some(rep) => {
+                                            Some(
+                                                Expr::Seq(
+                                                    Box::new(expr),
+                                                    Box::new(rep)
+                                                )
+                                            )
+                                        }
+                                    }
+                                })
+                                .unwrap()
+                }
+                Expr::RepMin(expr, min) => {
+                    (1..min + 2).map(|i| {
+                                    if i <= min {
+                                        *expr.clone()
+                                    } else {
+                                        Expr::Rep(expr.clone())
+                                    }
+                                })
+                                .rev()
+                                .fold(None, |rep, expr| {
+                                    match rep {
+                                        None => Some(expr),
+                                        Some(rep) => {
+                                            Some(
+                                                Expr::Seq(
+                                                    Box::new(expr),
+                                                    Box::new(rep)
+                                                )
+                                            )
+                                        }
+                                    }
+                                })
+                                .unwrap()
+                }
+                Expr::RepMax(expr, max) => {
+                    (1..max + 1).map(|_| {
+                                    Expr::Opt(expr.clone())
+                                })
+                                .rev()
+                                .fold(None, |rep, expr| {
+                                    match rep {
+                                        None => Some(expr),
+                                        Some(rep) => {
+                                            Some(
+                                                Expr::Seq(
+                                                    Box::new(expr),
+                                                    Box::new(rep)
+                                                )
+                                            )
+                                        }
+                                    }
+                                })
+                                .unwrap()
+                }
                 Expr::RepMinMax(expr, min, max) => {
                     (1..max + 1).map(|i| {
                                     if i <= min {
@@ -169,6 +233,144 @@ mod tests {
 
         assert_eq!(optimize(rules), concatenated);
     }
+
+    #[test]
+    fn unroll_loop_exact() {
+        let rules = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty: RuleType::Atomic,
+                expr: Expr::RepExact(
+                    Box::new(Expr::Ident(Ident::new("a"))),
+                    3
+                )
+            }
+        ];
+        let unrolled = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty: RuleType::Atomic,
+                expr: Expr::Seq(
+                    Box::new(Expr::Ident(Ident::new("a"))),
+                    Box::new(Expr::Seq(
+                        Box::new(Expr::Ident(Ident::new("a"))),
+                        Box::new(Expr::Ident(Ident::new("a")))
+                    ))
+                )
+            }
+        ];
+
+        assert_eq!(optimize(rules), unrolled);
+    }
+
+
+    #[test]
+    fn unroll_loop_max() {
+        let rules = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty: RuleType::Atomic,
+                expr: Expr::RepMax(
+                    Box::new(Expr::Str("a".to_owned())),
+                    3
+                )
+            }
+        ];
+        let unrolled = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty: RuleType::Atomic,
+                expr: Expr::Seq(
+                    Box::new(Expr::Opt(
+                        Box::new(Expr::Str("a".to_owned()))
+                    )),
+                    Box::new(Expr::Seq(
+                        Box::new(Expr::Opt(
+                            Box::new(Expr::Str("a".to_owned()))
+                        )),
+                        Box::new(Expr::Opt(
+                            Box::new(Expr::Str("a".to_owned()))
+                        ))
+                    ))
+                )
+            }
+        ];
+
+        assert_eq!(optimize(rules), unrolled);
+    }
+
+    #[test]
+    fn unroll_loop_min() {
+        let rules = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty: RuleType::Atomic,
+                expr: Expr::RepMin(
+                    Box::new(Expr::Str("a".to_owned())),
+                    2
+                )
+            }
+        ];
+        let unrolled = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty: RuleType::Atomic,
+                expr: Expr::Seq(
+                    Box::new(Expr::Str("a".to_owned())),
+                    Box::new(Expr::Seq(
+                        Box::new(Expr::Str("a".to_owned())),
+                        Box::new(Expr::Rep(
+                            Box::new(Expr::Str("a".to_owned()))
+                        ))
+                    ))
+                )
+            }
+        ];
+
+        assert_eq!(optimize(rules), unrolled);
+    }
+
+    #[test]
+    fn unroll_loop_min_max() {
+        let rules = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty: RuleType::Atomic,
+                expr: Expr::RepMinMax(
+                    Box::new(Expr::Str("a".to_owned())),
+                    2,
+                    3
+                )
+            }
+        ];
+        let unrolled = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty: RuleType::Atomic,
+                expr: Expr::Seq(
+                    /* TODO possible room for improvement here:
+                     * if the sequences were rolled out in the opposite
+                     * order, we could further optimize the strings
+                     * in cases like this.
+                    Box::new(Expr::Str("aa".to_owned())),
+                    Box::new(Expr::Opt(
+                        Box::new(Expr::Str("a".to_owned()))
+                    ))
+                    */
+                    Box::new(Expr::Str("a".to_owned())),
+                    Box::new(Expr::Seq(
+                        Box::new(Expr::Str("a".to_owned())),
+                        Box::new(Expr::Opt(
+                            Box::new(Expr::Str("a".to_owned())),
+                        ))
+                    ))
+                )
+            }
+        ];
+
+        assert_eq!(optimize(rules), unrolled);
+    }
+
 
     #[test]
     fn concat_insensitive_strings() {
