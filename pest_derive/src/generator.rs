@@ -14,7 +14,7 @@ use ast::*;
 pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
     let mut predefined = HashMap::new();
     predefined.insert("any", quote! {
-        #[inline(always)]
+        #[inline]
         fn any<'i>(
             pos: ::pest::position::Position<'i>,
             _: &mut ::pest::ParserState<'i, Rule>
@@ -23,7 +23,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
         }
     });
     predefined.insert("eoi", quote! {
-        #[inline(always)]
+        #[inline]
         fn eoi<'i>(
             pos: ::pest::position::Position<'i>,
             _: &mut ::pest::ParserState<'i, Rule>
@@ -32,7 +32,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
         }
     });
     predefined.insert("soi", quote! {
-        #[inline(always)]
+        #[inline]
         fn soi<'i>(
             pos: ::pest::position::Position<'i>,
             _: &mut ::pest::ParserState<'i, Rule>
@@ -41,7 +41,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
         }
     });
     predefined.insert("peek", quote! {
-        #[inline(always)]
+        #[inline]
         fn peek<'i>(
             pos: ::pest::position::Position<'i>,
             state: &mut ::pest::ParserState<'i, Rule>
@@ -51,7 +51,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
         }
     });
     predefined.insert("pop", quote! {
-        #[inline(always)]
+        #[inline]
         fn pop<'i>(
             pos: ::pest::position::Position<'i>,
             state: &mut ::pest::ParserState<'i, Rule>
@@ -156,7 +156,7 @@ fn generate_rule(rule: Rule) -> Tokens {
 
     match rule.ty {
         RuleType::Normal => quote! {
-            #[inline(always)]
+            #[inline]
             #[allow(unused_variables)]
             pub fn #name<'i>(
                 pos: ::pest::position::Position<'i>,
@@ -168,7 +168,7 @@ fn generate_rule(rule: Rule) -> Tokens {
             }
         },
         RuleType::Silent => quote! {
-            #[inline(always)]
+            #[inline]
             #[allow(unused_variables)]
             pub fn #name<'i>(
                 pos: ::pest::position::Position<'i>,
@@ -178,7 +178,7 @@ fn generate_rule(rule: Rule) -> Tokens {
             }
         },
         RuleType::Atomic => quote! {
-            #[inline(always)]
+            #[inline]
             #[allow(unused_variables)]
             pub fn #name<'i>(
                 pos: ::pest::position::Position<'i>,
@@ -192,7 +192,7 @@ fn generate_rule(rule: Rule) -> Tokens {
             }
         },
         RuleType::CompoundAtomic => quote! {
-            #[inline(always)]
+            #[inline]
             #[allow(unused_variables)]
             pub fn #name<'i>(
                 pos: ::pest::position::Position<'i>,
@@ -206,7 +206,7 @@ fn generate_rule(rule: Rule) -> Tokens {
             }
         },
         RuleType::NonAtomic => quote! {
-            #[inline(always)]
+            #[inline]
             #[allow(unused_variables)]
             pub fn #name<'i>(
                 pos: ::pest::position::Position<'i>,
@@ -228,7 +228,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
 
     match (whitespace, comment) {
         (false, false) => quote! {
-            #[inline(always)]
+            #[inline]
             #[allow(dead_code)]
             fn skip<'i>(
                 pos: ::pest::position::Position<'i>,
@@ -238,7 +238,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             }
         },
         (true, false) => quote! {
-            #[inline(always)]
+            #[inline]
             #[allow(dead_code)]
             fn skip<'i>(
                 pos: ::pest::position::Position<'i>,
@@ -254,7 +254,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             }
         },
         (false, true) => quote! {
-            #[inline(always)]
+            #[inline]
             #[allow(dead_code)]
             fn skip<'i>(
                 pos: ::pest::position::Position<'i>,
@@ -270,7 +270,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             }
         },
         (true, true) => quote! {
-            #[inline(always)]
+            #[inline]
             #[allow(dead_code)]
             fn skip<'i>(
                 pos: ::pest::position::Position<'i>,
@@ -952,7 +952,7 @@ mod tests {
                     mod rules {
                         use super::Rule;
 
-                        #[inline(always)]
+                        #[inline]
                         #[allow(unused_variables)]
                         pub fn a<'i>(
                             pos: ::pest::position::Position<'i>,
@@ -962,7 +962,7 @@ mod tests {
                             pos.match_string("b")
                         }
 
-                        #[inline(always)]
+                        #[inline]
                         fn any<'i>(
                             pos: ::pest::position::Position<'i>,
                             _: &mut ::pest::ParserState<'i, Rule>
@@ -971,7 +971,7 @@ mod tests {
                             pos.skip(1)
                         }
 
-                        #[inline(always)]
+                        #[inline]
                         #[allow(dead_code)]
                         fn skip<'i>(
                             pos: ::pest::position::Position<'i>,
