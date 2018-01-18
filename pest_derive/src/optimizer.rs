@@ -40,7 +40,7 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
             }
         };
 
-        let unpack_repetitions = |expr| {
+        let unroll_loops = |expr| {
             match expr {
                 Expr::RepOnce(expr) => {
                     Expr::Seq(
@@ -145,7 +145,7 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
                 name,
                 ty,
                 expr: expr.map_bottom_up(rotate_right)
-                          .map_bottom_up(unpack_repetitions)
+                          .map_bottom_up(unroll_loops)
                           .map_bottom_up(|expr| {
                               if ty == RuleType::Atomic {
                                   // TODO: Use box syntax when it gets stabilized.
