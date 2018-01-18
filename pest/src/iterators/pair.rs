@@ -12,9 +12,9 @@ use std::rc::Rc;
 
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
-use super::token_iterator::{self, TokenIterator};
-use super::super::span::{self, Span};
-use super::super::RuleType;
+use super::tokens::{self, Tokens};
+use span::{self, Span};
+use RuleType;
 
 /// A `struct` containing a matching pair of `Token`s and everything between them.
 ///
@@ -29,11 +29,11 @@ pub struct Pair<'i, R> {
     start: usize,
 }
 
-pub fn new<'i, R: RuleType>(
+pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i str,
+    input: &str,
     start: usize
-) -> Pair<'i, R> {
+) -> Pair<R> {
     Pair {
         queue,
         input,
@@ -185,10 +185,10 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// assert_eq!(tokens.len(), 2);
     /// ```
     #[inline]
-    pub fn tokens(self) -> TokenIterator<'i, R> {
+    pub fn tokens(self) -> Tokens<'i, R> {
         let end = self.pair();
 
-        token_iterator::new(
+        tokens::new(
             self.queue,
             self.input,
             self.start,

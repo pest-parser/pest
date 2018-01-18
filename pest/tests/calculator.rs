@@ -30,7 +30,7 @@ enum Rule {
 struct CalculatorParser;
 
 impl Parser<Rule> for CalculatorParser {
-    fn parse<'i>(rule: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
+    fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
         fn expression<'i>(
             pos: Position<'i>,
             state: &mut ParserState<'i, Rule>

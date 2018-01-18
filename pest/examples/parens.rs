@@ -17,7 +17,7 @@ enum Rule {
 struct ParenParser;
 
 impl Parser<Rule> for ParenParser {
-    fn parse<'i>(rule: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
+    fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
         fn expr<'i>(
             pos: Position<'i>,
             state: &mut ParserState<'i, Rule>
@@ -79,7 +79,7 @@ impl Parser<Rule> for ParenParser {
 #[derive(Debug)]
 struct Paren(Vec<Paren>);
 
-fn expr<'i>(pairs: Pairs<'i, Rule>) -> Vec<Paren> {
+fn expr(pairs: Pairs<Rule>) -> Vec<Paren> {
     pairs.filter(|p| p.as_rule() == Rule::paren).map(|p| Paren(expr(p.into_inner()))).collect()
 }
 

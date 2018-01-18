@@ -32,8 +32,8 @@ enum Json<'i> {
     Object(HashMap<Span<'i>, Json<'i>>)
 }
 
-fn consume<'i>(pair: Pair<'i, Rule>) -> Json<'i> {
-    fn value<'i>(pair: Pair<'i, Rule>) -> Json<'i> {
+fn consume(pair: Pair<Rule>) -> Json {
+    fn value(pair: Pair<Rule>) -> Json {
         let pair = pair.into_inner().next().unwrap();
 
         match pair.as_rule() {

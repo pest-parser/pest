@@ -8,15 +8,15 @@
 use std::rc::Rc;
 
 use super::queueable_token::QueueableToken;
-use super::super::position;
-use super::super::RuleType;
-use super::super::token::Token;
+use position;
+use RuleType;
+use token::Token;
 
 /// A `struct` containing `Token`s. It is returned by either
 /// [`Pair::into_iter`](struct.Pair.html#method.into_iter) or
 /// [`Pairs::into_iter`](struct.Pairs.html#method.into_iter)
 #[derive(Clone, Debug)]
-pub struct TokenIterator<'i, R> {
+pub struct Tokens<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
     index: usize,
@@ -24,13 +24,13 @@ pub struct TokenIterator<'i, R> {
     end: usize,
 }
 
-pub fn new<'i, R: RuleType>(
+pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i str,
+    input: &str,
     start: usize,
     end: usize
-) -> TokenIterator<'i, R> {
-    TokenIterator {
+) -> Tokens<R> {
+    Tokens {
         queue,
         input,
         index: 0,
@@ -39,7 +39,7 @@ pub fn new<'i, R: RuleType>(
     }
 }
 
-impl<'i, R: RuleType> Iterator for TokenIterator<'i, R> {
+impl<'i, R: RuleType> Iterator for Tokens<'i, R> {
     type Item = Token<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -57,14 +57,14 @@ impl<'i, R: RuleType> Iterator for TokenIterator<'i, R> {
                 Token::Start {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::new(self.input.clone(), pos) }
+                    pos: unsafe { position::new(self.input, pos) }
                 }
             }
             QueueableToken::End { rule, pos } => {
                 Token::End {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::new(self.input.clone(), pos) }
+                    pos: unsafe { position::new(self.input, pos) }
                 }
             }
         };

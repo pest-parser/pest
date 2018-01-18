@@ -10,8 +10,8 @@ use std::rc::Rc;
 
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
-use super::token_iterator::{self, TokenIterator};
-use super::super::RuleType;
+use super::tokens::{self, Tokens};
+use RuleType;
 
 /// A `struct` containing `Pairs`. It is created by
 /// [`Pairs::flatten`](struct.Pairs.html#method.flatten).
@@ -22,12 +22,12 @@ pub struct FlatPairs<'i, R> {
     end: usize,
 }
 
-pub fn new<'i, R: RuleType>(
+pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i str,
+    input: &str,
     start: usize,
     end: usize
-) -> FlatPairs<'i, R> {
+) -> FlatPairs<R> {
     FlatPairs {
         queue,
         input,
@@ -55,13 +55,13 @@ impl<'i, R: RuleType> FlatPairs<'i, R> {
     ///     // generating Token pair with Rule::a ...
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
     /// }).unwrap();
-    /// let tokens: Vec<_> = pairs.flatten().into_iter().collect();
+    /// let tokens: Vec<_> = pairs.flatten().tokens().collect();
     ///
     /// assert_eq!(tokens.len(), 2);
     /// ```
     #[inline]
-    pub fn into_iter(self) -> TokenIterator<'i, R> {
-        token_iterator::new(
+    pub fn tokens(self) -> Tokens<'i, R> {
+        tokens::new(
             self.queue,
             self.input,
             self.start,
@@ -94,8 +94,8 @@ impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
         }
 
         let pair = pair::new(
-            self.queue.clone(),
-            self.input.clone(),
+            Rc::clone(&self.queue),
+            self.input,
             self.start
         );
 
@@ -114,8 +114,8 @@ impl<'i, R: RuleType> fmt::Debug for FlatPairs<'i, R> {
 impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
     fn clone(&self) -> FlatPairs<'i, R> {
         FlatPairs {
-            queue: self.queue.clone(),
-            input: self.input.clone(),
+            queue: Rc::clone(&self.queue),
+            input: self.input,
             start: self.start,
             end: self.end,
         }

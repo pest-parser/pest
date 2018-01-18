@@ -22,7 +22,7 @@ pub struct Span<'i> {
 }
 
 #[inline]
-pub fn new<'i>(input: &'i str, start: usize, end: usize) -> Span<'i> {
+pub fn new(input: &str, start: usize, end: usize) -> Span {
     Span { input, start, end }
 }
 
@@ -36,7 +36,7 @@ impl<'i> Span<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
-    /// let span = start.span(end);
+    /// let span = start.span(&end);
     ///
     /// assert_eq!(span.start(), 0);
     /// ```
@@ -54,7 +54,7 @@ impl<'i> Span<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
-    /// let span = start.span(end);
+    /// let span = start.span(&end);
     ///
     /// assert_eq!(span.end(), 2);
     /// ```
@@ -72,14 +72,14 @@ impl<'i> Span<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
-    /// let span = start.clone().span(end);
+    /// let span = start.clone().span(&end);
     ///
     /// assert_eq!(span.start_pos(), start);
     /// ```
     #[inline]
     pub fn start_pos(&self) -> position::Position<'i> {
         // Span start position is a UTF-8 border and is safe.
-        unsafe { position::new(self.input.clone(), self.start) }
+        unsafe { position::new(self.input, self.start) }
     }
 
     /// Returns the `Span`'s end `Position`.
@@ -91,14 +91,14 @@ impl<'i> Span<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
-    /// let span = start.span(end.clone());
+    /// let span = start.span(&end);
     ///
     /// assert_eq!(span.end_pos(), end);
     /// ```
     #[inline]
     pub fn end_pos(&self) -> position::Position<'i> {
         // Span end position is a UTF-8 border and is safe.
-        unsafe { position::new(self.input.clone(), self.end) }
+        unsafe { position::new(self.input, self.end) }
     }
 
     /// Splits the `Span` into a pair of `Position`s.
@@ -110,14 +110,14 @@ impl<'i> Span<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
-    /// let span = start.clone().span(end.clone());
+    /// let span = start.clone().span(&end);
     ///
     /// assert_eq!(span.split(), (start, end));
     /// ```
     #[inline]
     pub fn split(self) -> (position::Position<'i>, position::Position<'i>) {
         // Span start and end positions are UTF-8 borders and safe.
-        let pos1 = unsafe { position::new(self.input.clone(), self.start) };
+        let pos1 = unsafe { position::new(self.input, self.start) };
         let pos2 = unsafe { position::new(self.input, self.end) };
 
         (pos1, pos2)
@@ -132,7 +132,7 @@ impl<'i> Span<'i> {
     /// let input = "abc";
     /// let start = Position::from_start(input).skip(1).unwrap();
     /// let end = start.clone().match_string("b").unwrap();
-    /// let span = start.span(end);
+    /// let span = start.span(&end);
     ///
     /// assert_eq!(span.as_str(), "b");
     /// ```
@@ -150,7 +150,7 @@ impl<'i> fmt::Debug for Span<'i> {
 
 impl<'i> Clone for Span<'i> {
     fn clone(&self) -> Span<'i> {
-        new(self.input.clone(), self.start, self.end)
+        new(self.input, self.start, self.end)
     }
 }
 

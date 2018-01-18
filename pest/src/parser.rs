@@ -12,5 +12,5 @@ use RuleType;
 /// A `trait` that defines a `Parser`.
 pub trait Parser<R: RuleType> {
     /// Parses an `&str` starting from `rule`.
-    fn parse<'i>(rule: R, input: &'i str) -> Result<Pairs<'i, R>, Error<'i, R>>;
+    fn parse(rule: R, input: &str) -> Result<Pairs<R>, Error<R>>;
 }

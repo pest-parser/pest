@@ -9,12 +9,12 @@
 
 mod flat_pairs;
 mod pair;
-pub(super) mod pairs;
+pub(crate) mod pairs;
 mod queueable_token;
-mod token_iterator;
+mod tokens;
 
 pub use self::flat_pairs::FlatPairs;
 pub use self::pair::Pair;
 pub use self::pairs::Pairs;
-pub(super) use self::queueable_token::QueueableToken;
-pub use self::token_iterator::TokenIterator;
+pub(crate) use self::queueable_token::QueueableToken;
+pub use self::tokens::Tokens;

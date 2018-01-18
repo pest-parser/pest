@@ -467,7 +467,7 @@ fn generate_expr(expr: Expr) -> Tokens {
 
                     match #expr {
                         Ok(end) => {
-                            state.stack.push(start.span(end.clone()));
+                            state.stack.push(start.span(&end));
                             Ok(end)
                         }
                         Err(pos) => Err(pos)
@@ -626,7 +626,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
 
                     match #expr {
                         Ok(end) => {
-                            state.stack.push(start.span(end.clone()));
+                            state.stack.push(start.span(&end));
                             Ok(end)
                         }
                         Err(pos) => Err(pos)

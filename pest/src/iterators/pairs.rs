@@ -13,8 +13,8 @@ use std::ptr;
 use super::flat_pairs::{self, FlatPairs};
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
-use super::token_iterator::{self, TokenIterator};
-use super::super::RuleType;
+use super::tokens::{self, Tokens};
+use RuleType;
 
 /// A `struct` containing `Pairs`. It is created by [`pest::state`](../fn.state.html) and
 /// [`Pair::into_inner`](struct.Pair.html#method.into_inner).
@@ -26,12 +26,12 @@ pub struct Pairs<'i, R> {
     end: usize,
 }
 
-pub fn new<'i, R: RuleType>(
+pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i str,
+    input: &str,
     start: usize,
     end: usize
-) -> Pairs<'i, R> {
+) -> Pairs<R> {
     Pairs {
         queue,
         input,
@@ -62,7 +62,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// #         state.rule(Rule::b, pos, |_, p| Ok(p))
     /// #     })
     /// }).unwrap();
-    /// let tokens: Vec<_> = pairs.flatten().into_iter().collect();
+    /// let tokens: Vec<_> = pairs.flatten().tokens().collect();
     ///
     /// assert_eq!(tokens.len(), 4);
     /// ```
@@ -99,8 +99,8 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// assert_eq!(tokens.len(), 2);
     /// ```
     #[inline]
-    pub fn tokens(self) -> TokenIterator<'i, R> {
-        token_iterator::new(
+    pub fn tokens(self) -> Tokens<'i, R> {
+        tokens::new(
             self.queue,
             self.input,
             self.start,
@@ -125,8 +125,8 @@ impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
         }
 
         let pair = pair::new(
-            self.queue.clone(),
-            self.input.clone(),
+            Rc::clone(&self.queue),
+            self.input,
             self.start
         );
 

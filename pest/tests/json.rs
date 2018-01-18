@@ -37,7 +37,7 @@ enum Rule {
 struct JsonParser;
 
 impl Parser<Rule> for JsonParser {
-    fn parse<'i>(rule: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
+    fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
         fn json<'i>(
             pos: Position<'i>,
             state: &mut ParserState<'i, Rule>
@@ -390,8 +390,8 @@ enum Json<'i> {
     Object(HashMap<Span<'i>, Json<'i>>)
 }
 
-fn consume<'i>(pair: Pair<'i, Rule>) -> Json<'i> {
-    fn value<'i>(pair: Pair<'i, Rule>) -> Json<'i> {
+fn consume(pair: Pair<Rule>) -> Json {
+    fn value(pair: Pair<Rule>) -> Json {
         let pair = pair.into_inner().next().unwrap();
 
         match pair.as_rule() {
@@ -578,9 +578,9 @@ fn object() {
 #[test]
 fn ast() {
     let input = "{\"a\": [null, true, 3.4]}";
-    let start = Position::from_start(input.clone()).skip(1).unwrap();
+    let start = Position::from_start(input).skip(1).unwrap();
     let end = start.clone().skip(3).unwrap();
-    let span = start.span(end);
+    let span = start.span(&end);
 
     let mut pairs = HashMap::new();
     pairs.insert(span, Json::Array(vec![
@@ -589,7 +589,7 @@ fn ast() {
         Json::Number(3.4)
     ]));
 
-    let ast = consume(JsonParser::parse(Rule::json, input.clone()).unwrap().next().unwrap());
+    let ast = consume(JsonParser::parse(Rule::json, input).unwrap().next().unwrap());
 
     assert_eq!(ast, Json::Object(pairs));
 }

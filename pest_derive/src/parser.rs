@@ -1061,7 +1061,7 @@ fn consume_expr<'i>(
 
                 ParserNode {
                     expr: node.expr,
-                    span: pair.into_span().start_pos().span(end)
+                    span: pair.into_span().start_pos().span(&end)
                 }
             }
             GrammarRule::positive_predicate_operator => {
@@ -1070,7 +1070,7 @@ fn consume_expr<'i>(
 
                 ParserNode {
                     expr: ParserExpr::PosPred(Box::new(node)),
-                    span: pair.into_span().start_pos().span(end)
+                    span: pair.into_span().start_pos().span(&end)
                 }
             }
             GrammarRule::negative_predicate_operator => {
@@ -1079,7 +1079,7 @@ fn consume_expr<'i>(
 
                 ParserNode {
                     expr: ParserExpr::NegPred(Box::new(node)),
-                    span: pair.into_span().start_pos().span(end)
+                    span: pair.into_span().start_pos().span(&end)
                 }
             }
             other_rule => {
@@ -1096,7 +1096,7 @@ fn consume_expr<'i>(
 
                         ParserNode {
                             expr: ParserExpr::Push(Box::new(node)),
-                            span: start.span(end)
+                            span: start.span(&end)
                         }
 
                     }
@@ -1132,7 +1132,7 @@ fn consume_expr<'i>(
 
                         ParserNode {
                             expr: ParserExpr::Range(start.to_owned(), end.to_owned()),
-                            span: start_pos.span(end_pos)
+                            span: start_pos.span(&end_pos)
                         }
                     }
                     _ => unreachable!()
@@ -1144,21 +1144,21 @@ fn consume_expr<'i>(
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::Opt(Box::new(node)),
-                                span: start.span(pair.into_span().end_pos())
+                                span: start.span(&pair.into_span().end_pos())
                             }
                         }
                         GrammarRule::repeat_operator => {
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::Rep(Box::new(node)),
-                                span: start.span(pair.into_span().end_pos())
+                                span: start.span(&pair.into_span().end_pos())
                             }
                         }
                         GrammarRule::repeat_once_operator => {
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::RepOnce(Box::new(node)),
-                                span: start.span(pair.into_span().end_pos())
+                                span: start.span(&pair.into_span().end_pos())
                             }
                         }
                         GrammarRule::repeat_exact => {
@@ -1183,7 +1183,7 @@ fn consume_expr<'i>(
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::RepExact(Box::new(node), num),
-                                span: start.span(pair.into_span().end_pos())
+                                span: start.span(&pair.into_span().end_pos())
                             }
                         }
                         GrammarRule::repeat_min => {
@@ -1208,7 +1208,7 @@ fn consume_expr<'i>(
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::RepMin(Box::new(node), min),
-                                span: start.span(pair.into_span().end_pos())
+                                span: start.span(&pair.into_span().end_pos())
                             }
                         }
                         GrammarRule::repeat_max => {
@@ -1234,7 +1234,7 @@ fn consume_expr<'i>(
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::RepMax(Box::new(node), max),
-                                span: start.span(pair.into_span().end_pos())
+                                span: start.span(&pair.into_span().end_pos())
                             }
                         }
                         GrammarRule::repeat_min_max => {
@@ -1266,7 +1266,7 @@ fn consume_expr<'i>(
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::RepMinMax(Box::new(node), min, max),
-                                span: start.span(pair.into_span().end_pos())
+                                span: start.span(&pair.into_span().end_pos())
                             }
                         }
                         GrammarRule::closing_paren => {
@@ -1274,7 +1274,7 @@ fn consume_expr<'i>(
 
                             ParserNode {
                                 expr: node.expr,
-                                span: start.span(pair.into_span().end_pos())
+                                span: start.span(&pair.into_span().end_pos())
                             }
                         },
                         _ => unreachable!()
@@ -1296,7 +1296,7 @@ fn consume_expr<'i>(
 
                 ParserNode {
                     expr: ParserExpr::Seq(Box::new(lhs), Box::new(rhs)),
-                    span: start.span(end)
+                    span: start.span(&end)
                 }
             },
             GrammarRule::choice_operator => {
@@ -1305,7 +1305,7 @@ fn consume_expr<'i>(
 
                 ParserNode {
                     expr: ParserExpr::Choice(Box::new(lhs), Box::new(rhs)),
-                    span: start.span(end)
+                    span: start.span(&end)
                 }
             },
             _ => unreachable!()

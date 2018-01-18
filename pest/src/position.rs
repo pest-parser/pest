@@ -20,7 +20,7 @@ pub struct Position<'i> {
     pos: usize,
 }
 
-pub unsafe fn new<'i>(input: &'i str, pos: usize) -> Position<'i> {
+pub unsafe fn new(input: &str, pos: usize) -> Position {
     Position {
         input,
         pos,
@@ -73,13 +73,13 @@ impl<'i> Position<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
-    /// let span = start.span(end);
+    /// let span = start.span(&end);
     ///
     /// assert_eq!(span.start(), 0);
     /// assert_eq!(span.end(), 2);
     /// ```
     #[inline]
-    pub fn span(self, other: Position<'i>) -> span::Span<'i> {
+    pub fn span(&self, other: &Position<'i>) -> span::Span<'i> {
         if ptr::eq(self.input, other.input) {
             span::new(self.input, self.pos, other.pos)
         } else {
@@ -176,7 +176,7 @@ impl<'i> Position<'i> {
                 }
             };
 
-            let end = if self.input.len() == 0 {
+            let end = if self.input.is_empty() {
                 0
             } else if self.pos == self.input.len() - 1 {
                 let mut end = self.input.len();
@@ -604,7 +604,7 @@ impl<'i> fmt::Debug for Position<'i> {
 impl<'i> Clone for Position<'i> {
     fn clone(&self) -> Position<'i> {
         // Cloning a safe position is safe.
-        unsafe { new(self.input.clone(), self.pos) }
+        unsafe { new(self.input, self.pos) }
     }
 }
 
