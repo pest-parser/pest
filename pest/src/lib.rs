@@ -66,7 +66,6 @@ pub mod position;
 pub mod prec_climber;
 pub mod span;
 mod token;
-mod util;
 
 /// A `trait` which parser rules must implement.
 ///

@@ -73,7 +73,7 @@ where
         stack: vec![]
     };
 
-    if f(&mut state, Position::from_start(input.clone())).is_ok() {
+    if f(&mut state, Position::from_start(input)).is_ok() {
         let len = state.queue.len();
         Ok(pairs::new(Rc::new(state.queue), input, 0, len))
     } else {

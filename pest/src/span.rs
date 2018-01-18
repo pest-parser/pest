@@ -11,7 +11,6 @@ use std::hash::{Hash, Hasher};
 use std::ptr;
 
 use position;
-use super::util::hash_str;
 
 /// A `struct` of a span over a `&str`. It is created from either
 /// [two `Position`s](struct.Position.html#method.span) or from a
@@ -187,7 +186,7 @@ impl<'i> Ord for Span<'i> {
 
 impl<'i> Hash for Span<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        hash_str(self.input, state);
+        (self.input as *const str).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }
