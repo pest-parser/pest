@@ -8,8 +8,8 @@
 use std::collections::{HashMap, HashSet};
 
 use pest::Error;
+use pest::Span;
 use pest::iterators::Pairs;
-use pest::span::Span;
 
 use quote::Ident;
 

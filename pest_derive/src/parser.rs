@@ -8,10 +8,10 @@
 use std::iter::Peekable;
 
 use pest::{self, Error, Parser, ParserState};
+use pest::Position;
+use pest::Span;
 use pest::iterators::{Pair, Pairs};
-use pest::position::Position;
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
-use pest::span::Span;
 
 use quote::Ident;
 

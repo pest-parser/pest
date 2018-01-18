@@ -62,9 +62,9 @@ pub mod iterators;
 mod macros;
 mod parser;
 mod parser_state;
-pub mod position;
+mod position;
 pub mod prec_climber;
-pub mod span;
+mod span;
 mod token;
 
 /// A `trait` which parser rules must implement.
@@ -80,4 +80,6 @@ impl<T: Copy + Debug + Eq + Hash + Ord> RuleType for T {}
 pub use error::Error;
 pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, ParserState};
+pub use position::Position;
+pub use span::Span;
 pub use token::Token;

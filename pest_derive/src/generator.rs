@@ -18,12 +18,9 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
         quote! {
             #[inline]
             fn any<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 _: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 pos.skip(1)
             }
         }
@@ -33,12 +30,9 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
         quote! {
             #[inline]
             fn eoi<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 _: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 pos.at_end()
             }
         }
@@ -48,12 +42,9 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
         quote! {
             #[inline]
             fn soi<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 _: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 pos.at_start()
             }
         }
@@ -63,12 +54,9 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
         quote! {
             #[inline]
             fn peek<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 let string = state.stack.last().expect("peek was called on empty stack").as_str();
                 pos.match_string(string)
             }
@@ -79,12 +67,9 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
         quote! {
             #[inline]
             fn pop<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 let pos = {
                     let string = state.stack.last()
                                       .expect("pop was called on empty stack").as_str();
@@ -193,12 +178,9 @@ fn generate_rule(rule: Rule) -> Tokens {
             #[inline]
             #[allow(unused_variables)]
             pub fn #name<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
                     #expr
                 })
@@ -208,12 +190,9 @@ fn generate_rule(rule: Rule) -> Tokens {
             #[inline]
             #[allow(unused_variables)]
             pub fn #name<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 #expr
             }
         },
@@ -221,12 +200,9 @@ fn generate_rule(rule: Rule) -> Tokens {
             #[inline]
             #[allow(unused_variables)]
             pub fn #name<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
                     state.atomic(::pest::Atomicity::Atomic, #[inline(always)] move |state| {
                         #expr
@@ -238,12 +214,9 @@ fn generate_rule(rule: Rule) -> Tokens {
             #[inline]
             #[allow(unused_variables)]
             pub fn #name<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 state.atomic(::pest::Atomicity::CompoundAtomic, #[inline(always)] move |state| {
                     state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
                         #expr
@@ -255,12 +228,9 @@ fn generate_rule(rule: Rule) -> Tokens {
             #[inline]
             #[allow(unused_variables)]
             pub fn #name<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 state.atomic(::pest::Atomicity::NonAtomic, #[inline(always)] move |state| {
                     state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
                         #expr
@@ -280,12 +250,9 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             #[inline]
             #[allow(dead_code)]
             fn skip<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 _: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 Ok(pos)
             }
         },
@@ -293,12 +260,9 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             #[inline]
             #[allow(dead_code)]
             fn skip<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
                     pos.repeat(#[inline(always)] |pos| {
                         whitespace(pos, state)
@@ -312,12 +276,9 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             #[inline]
             #[allow(dead_code)]
             fn skip<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
                     pos.repeat(#[inline(always)] |pos| {
                         comment(pos, state)
@@ -331,12 +292,9 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             #[inline]
             #[allow(dead_code)]
             fn skip<'i>(
-                pos: ::pest::position::Position<'i>,
+                pos: ::pest::Position<'i>,
                 state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<
-                ::pest::position::Position<'i>,
-                ::pest::position::Position<'i>
-            > {
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
                     state.sequence(#[inline(always)] move |state| {
                         pos.sequence(#[inline(always)] |pos| {
@@ -1035,35 +993,26 @@ mod tests {
                             #[inline]
                             #[allow(unused_variables)]
                             pub fn a<'i>(
-                                pos: ::pest::position::Position<'i>,
+                                pos: ::pest::Position<'i>,
                                 state: &mut ::pest::ParserState<'i, Rule>
-                            ) -> ::std::result::Result<
-                                ::pest::position::Position<'i>,
-                                ::pest::position::Position<'i>
-                            > {
+                            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                                 pos.match_string("b")
                             }
 
                             #[inline]
                             fn any<'i>(
-                                pos: ::pest::position::Position<'i>,
+                                pos: ::pest::Position<'i>,
                                 _: &mut ::pest::ParserState<'i, Rule>
-                            ) -> ::std::result::Result<
-                                ::pest::position::Position<'i>,
-                                ::pest::position::Position<'i>
-                            > {
+                            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                                 pos.skip(1)
                             }
 
                             #[inline]
                             #[allow(dead_code)]
                             fn skip<'i>(
-                                pos: ::pest::position::Position<'i>,
+                                pos: ::pest::Position<'i>,
                                 _: &mut ::pest::ParserState<'i, Rule>
-                            ) -> ::std::result::Result<
-                                ::pest::position::Position<'i>,
-                                ::pest::position::Position<'i>
-                            > {
+                            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                                 Ok(pos)
                             }
                         }

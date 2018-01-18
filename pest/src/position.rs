@@ -30,7 +30,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     ///
     /// Position::from_start("");
     /// ```
@@ -45,7 +45,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -66,7 +66,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
@@ -89,7 +89,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "\na";
     /// let start = Position::from_start(input);
     /// let pos = start.match_string("\na").unwrap();
@@ -146,7 +146,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "\na";
     /// let start = Position::from_start(input);
     /// let pos = start.match_string("\na").unwrap();
@@ -214,7 +214,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
@@ -237,7 +237,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     /// let end = start.clone().match_string("ab").unwrap();
@@ -260,7 +260,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -296,7 +296,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -332,7 +332,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -369,7 +369,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -416,7 +416,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -466,7 +466,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -524,7 +524,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
@@ -563,7 +563,7 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///

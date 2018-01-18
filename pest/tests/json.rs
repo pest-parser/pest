@@ -11,9 +11,9 @@ extern crate pest;
 use std::collections::HashMap;
 
 use pest::{state, Error, Parser, ParserState};
+use pest::Position;
+use pest::Span;
 use pest::iterators::{Pair, Pairs};
-use pest::position::Position;
-use pest::span::Span;
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

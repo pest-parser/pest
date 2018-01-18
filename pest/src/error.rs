@@ -50,7 +50,7 @@ impl<'i, R: RuleType> Error<'i, R> {
     ///
     /// ```
     /// # use pest::Error;
-    /// # use pest::position::Position;
+    /// # use pest::Position;
     /// # #[allow(non_camel_case_types)]
     /// # #[allow(dead_code)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

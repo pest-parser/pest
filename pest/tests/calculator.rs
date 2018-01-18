@@ -9,8 +9,8 @@
 extern crate pest;
 
 use pest::{state, Error, Parser, ParserState};
+use pest::Position;
 use pest::iterators::{Pair, Pairs};
-use pest::position::Position;
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 
 #[allow(dead_code, non_camel_case_types)]
