@@ -1,7 +1,7 @@
 [package]
 name = "pest_derive"
 description = "pest's derive macro"
-version = "1.0.0-beta.17"
+version = "1.0.0-rc.0"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
@@ -17,7 +17,7 @@ proc-macro = true
 [dependencies]
 quote = "^0.3"
 syn = "^0.10"
-pest = { path = "../pest", version = "^1.0.0-beta" }
+pest = { path = "../pest", version = "^1.0.0-rc" }
 
 [badges]
 travis-ci = { repository = "pest-parser/pest" }
