@@ -2,7 +2,7 @@
   <img src="pest-logo.svg" width="80%"/>
 </p>
 
-# pest. The Elegant Parser <sup>(beta)</sup>
+# pest. The Elegant Parser
 
 [![Join the chat at https://gitter.im/dragostis/pest](https://badges.gitter.im/dragostis/pest.svg)](https://gitter.im/dragostis/pest?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Book](https://img.shields.io/badge/book-WIP-4d76ae.svg)](https://pest-parser.github.io/book)
