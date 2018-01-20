@@ -20,4 +20,6 @@ syn = "^0.10"
 pest = { path = "../pest", version = "^1.0.0-rc" }
 
 [badges]
+codecov = { repository = "pest-parser/pest" }
+maintenance = { status = "actively-developed" }
 travis-ci = { repository = "pest-parser/pest" }

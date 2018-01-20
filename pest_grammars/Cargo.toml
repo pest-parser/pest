@@ -15,4 +15,6 @@ pest = { path = "../pest", version = "^1.0.0-rc" }
 pest_derive = { path = "../pest_derive", version = "^1.0.0-rc" }
 
 [badges]
+codecov = { repository = "pest-parser/pest" }
+maintenance = { status = "actively-developed" }
 travis-ci = { repository = "pest-parser/pest" }
