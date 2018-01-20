@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="pest-logo.svg" width="80%"/>
+  <img src="https://raw.github.com/pest-parser/pest/master/pest-logo.svg?sanitize=true" width="80%"/>
 </p>
 
 # pest. The Elegant Parser
@@ -125,7 +125,7 @@ the file to a fully-processed JSON object. The second one does, but since it has
 intermediate representation of the object, it repeats some work.
 
 <p align="center">
-  <img src="results.svg"/>
+  <img src="https://raw.github.com/pest-parser/pest/master/results.svg?sanitize=true"/>
 </p>
 
 The [benchmark](https://github.com/Geal/pestvsnom) uses
@@ -160,6 +160,7 @@ extern crate pest_derive;
 ## Projects using pest
 
 * [brain](https://github.com/brain-lang/brain)
+* [comrak](https://github.com/kivikakk/comrak)
 * [graphql-parser](https://github.com/Keats/graphql-parser)
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
 * [pest](https://github.com/pest-parser/pest/blob/master/pest_derive/src/parser.rs) (bootstrapped)
