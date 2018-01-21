@@ -327,7 +327,7 @@ fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
 }
 
 fn parse_derive(source: String) -> (Ident, String) {
-    let ast = syn::parse_macro_input(&source).unwrap();
+    let ast = syn::parse_derive_input(&source).unwrap();
     let name = Ident::new(ast.ident.as_ref());
 
     let grammar: Vec<_> = ast.attrs
