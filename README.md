@@ -141,7 +141,7 @@ Tested on a 2.6GHz Intel® Core™ i5 running macOS.
 * runs on stable Rust
 
 ## Usage
-pest requires [Cargo and Rust](https://www.rust-lang.org/en-US/downloads.html).
+pest requires [Cargo and Rust 1.23](https://www.rust-lang.org/en-US/downloads.html).
 
 Add the following to `Cargo.toml`:
 
