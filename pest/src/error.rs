@@ -9,6 +9,7 @@
 
 use std::error;
 use std::fmt;
+use std::mem;
 
 use RuleType;
 use position::Position;
@@ -139,27 +140,26 @@ where
     }
 }
 
-fn underline<'i, R: fmt::Debug>(error: &Error<'i, R>, offset: usize) -> String {
+fn underline(start: usize, end: Option<usize>, offset: usize) -> String {
     let mut underline = String::new();
 
     for _ in 0..offset {
         underline.push(' ');
     }
 
-    match *error {
-        Error::CustomErrorSpan { ref span, .. } => {
-            if span.end() - span.start() > 1 {
-                underline.push('^');
-                for _ in 2..(span.end() - span.start()) {
-                    underline.push('-');
-                }
-                underline.push('^');
-            } else {
-                underline.push('^');
+    if let Some(end) = end {
+        if end - start > 1 {
+            underline.push('^');
+            for _ in 2..(end - start) {
+                underline.push('-');
             }
+            underline.push('^');
+        } else {
+            underline.push('^');
         }
-        _ => underline.push_str("^---")
-    };
+    } else {
+        underline.push_str("^---")
+    }
 
     underline
 }
@@ -179,11 +179,54 @@ fn format<'i, R: fmt::Debug>(error: &Error<'i, R>) -> String {
 
     let mut result = format!("{}--> {}:{}\n", spacing, line, col);
     result.push_str(&format!("{} |\n", spacing));
+
+    let underlined;
+
+    if let Error::CustomErrorSpan { ref span, .. } = *error {
+        let mut start = span.start_pos().line_col();
+        let mut end = span.end_pos().line_col();
+
+        if start.1 > end.1 {
+            mem::swap(&mut start.1, &mut end.1);
+            start.1 -= 1;
+            end.1 += 1;
+        }
+
+        underlined = underline(start.1, Some(end.1), start.1 - 1);
+
+        if start.0 != end.0 {
+            result.push_str(&format!("{} | ", start.0));
+
+            let pos = span.start_pos();
+            let line = pos.line_of();
+            result.push_str(&format!("{}\n", line));
+
+            if end.0 - start.0 > 1 {
+                result.push_str(&format!("{} | ...\n", spacing));
+            }
+
+            result.push_str(&format!("{} | ", end.0));
+
+            let pos = span.end_pos();
+            let line = pos.line_of();
+            result.push_str(&format!("{}\n", line));
+            result.push_str(&format!("{} | {}\n", spacing, underlined));
+
+            result.push_str(&format!("{} |\n", spacing));
+            result.push_str(&format!("{} = {}", spacing, message(error)));
+
+            return result;
+        }
+    } else {
+        underlined = underline(pos.pos(), None, col - 1);
+    }
+
     result.push_str(&format!("{} | ", line));
 
     let line = pos.line_of();
     result.push_str(&format!("{}\n", line));
-    result.push_str(&format!("{} | {}\n", spacing, underline(error, col - 1)));
+    result.push_str(&format!("{} | {}\n", spacing, underlined));
+
     result.push_str(&format!("{} |\n", spacing));
     result.push_str(&format!("{} = {}", spacing, message(error)));
 
@@ -218,7 +261,7 @@ mod tests {
         let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2, 3],
             negatives: vec![4, 5, 6],
-            pos: pos
+            pos
         };
 
         assert_eq!(
@@ -241,7 +284,7 @@ mod tests {
         let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2],
             negatives: vec![],
-            pos: pos
+            pos
         };
 
         assert_eq!(
@@ -264,7 +307,7 @@ mod tests {
         let error: Error<u32> = Error::ParsingError {
             positives: vec![],
             negatives: vec![4, 5, 6],
-            pos: pos
+            pos
         };
 
         assert_eq!(
@@ -287,7 +330,7 @@ mod tests {
         let error: Error<u32> = Error::ParsingError {
             positives: vec![],
             negatives: vec![],
-            pos: pos
+            pos
         };
 
         assert_eq!(
@@ -304,12 +347,12 @@ mod tests {
     }
 
     #[test]
-    fn display_custom() {
+    fn display_custom_pos() {
         let input = "ab\ncd\nef";
         let pos = unsafe { position::new(input, 4) };
         let error: Error<&str> = Error::CustomErrorPos {
             message: "error: big one".to_owned(),
-            pos: pos
+            pos
         };
 
         assert_eq!(
@@ -326,13 +369,86 @@ mod tests {
     }
 
     #[test]
+    fn display_custom_span_two_lines() {
+        let input = "ab\ncd\nefgh";
+        let start = unsafe { position::new(input, 4) };
+        let end = unsafe { position::new(input, 9) };
+        let error: Error<&str> = Error::CustomErrorSpan {
+            message: "error: big one".to_owned(),
+            span: start.span(&end)
+        };
+
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 2:2",
+                "  |",
+                "2 | cd",
+                "3 | efgh",
+                "  |  ^^",
+                "  |",
+                "  = error: big one",
+            ].join("\n")
+        );
+    }
+
+    #[test]
+    fn display_custom_span_three_lines() {
+        let input = "ab\ncd\nefgh";
+        let start = unsafe { position::new(input, 1) };
+        let end = unsafe { position::new(input, 9) };
+        let error: Error<&str> = Error::CustomErrorSpan {
+            message: "error: big one".to_owned(),
+            span: start.span(&end)
+        };
+
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 1:2",
+                "  |",
+                "1 | ab",
+                "  | ...",
+                "3 | efgh",
+                "  |  ^^",
+                "  |",
+                "  = error: big one",
+            ].join("\n")
+        );
+    }
+
+    #[test]
+    fn display_custom_span_two_lines_inverted() {
+        let input = "abcdef\ngh";
+        let start = unsafe { position::new(input, 5) };
+        let end = unsafe { position::new(input, 8) };
+        let error: Error<&str> = Error::CustomErrorSpan {
+            message: "error: big one".to_owned(),
+            span: start.span(&end)
+        };
+
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 1:6",
+                "  |",
+                "1 | abcdef",
+                "2 | gh",
+                "  | ^----^",
+                "  |",
+                "  = error: big one",
+            ].join("\n")
+        );
+    }
+
+    #[test]
     fn mapped_parsing_error() {
         let input = "ab\ncd\nef";
         let pos = unsafe { position::new(input, 4) };
         let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2, 3],
             negatives: vec![4, 5, 6],
-            pos: pos
+            pos
         }.renamed_rules(|n| format!("{}", n + 1));
 
         assert_eq!(
