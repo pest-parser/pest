@@ -1,9 +1,11 @@
 // pest. The Elegant Parser
-// Copyright (C) 2017  Dragoș Tiselice
+// Copyright (c) 2018 Dragoș Tiselice
 //
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
 
 #[macro_use]
 extern crate pest;
@@ -87,6 +89,18 @@ fn negative() {
 }
 
 #[test]
+fn negative_match() {
+    fails_with! {
+        parser: ReportingParser,
+        input: "x",
+        rule: Rule::negative_match,
+        positives: vec![Rule::b],
+        negatives: vec![],
+        pos: 0
+    };
+}
+
+#[test]
 fn mixed() {
     fails_with! {
         parser: ReportingParser,
@@ -95,5 +109,17 @@ fn mixed() {
         positives: vec![Rule::a],
         negatives: vec![Rule::d],
         pos: 0
+    };
+}
+
+#[test]
+fn mixed_progress() {
+    fails_with! {
+        parser: ReportingParser,
+        input: "b",
+        rule: Rule::mixed_progress,
+        positives: vec![Rule::a],
+        negatives: vec![],
+        pos: 1
     };
 }

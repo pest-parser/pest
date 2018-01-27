@@ -1,9 +1,11 @@
 // pest. The Elegant Parser
-// Copyright (C) 2017  Dragoș Tiselice
+// Copyright (c) 2018 Dragoș Tiselice
 //
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
 
 //! A `mod` containing constructs useful in infix operator parsing with the precedence climbing
 //! method.
@@ -12,9 +14,8 @@ use std::collections::HashMap;
 use std::iter::Peekable;
 use std::ops::BitOr;
 
-use super::inputs::Input;
-use super::iterators::Pair;
-use super::RuleType;
+use RuleType;
+use iterators::Pair;
 
 /// An `enum` describing an `Operator`'s associativity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -111,24 +112,28 @@ impl<R: RuleType> PrecClimber<R> {
     /// ]);
     /// ```
     pub fn new(ops: Vec<Operator<R>>) -> PrecClimber<R> {
-        let ops = ops.into_iter().zip(1..).fold(HashMap::new(), |mut map, (op, prec)| {
-            let mut next = Some(op);
+        let ops = ops.into_iter()
+            .zip(1..)
+            .fold(HashMap::new(), |mut map, (op, prec)| {
+                let mut next = Some(op);
 
-            while let Some(op) = next.take() {
-                match op {
-                    Operator { rule, assoc, next: op_next } => {
-                        map.insert(rule, (prec, assoc));
-                        next = op_next.map(|op| *op);
+                while let Some(op) = next.take() {
+                    match op {
+                        Operator {
+                            rule,
+                            assoc,
+                            next: op_next
+                        } => {
+                            map.insert(rule, (prec, assoc));
+                            next = op_next.map(|op| *op);
+                        }
                     }
                 }
-            }
 
-            map
-        });
+                map
+            });
 
-        PrecClimber {
-            ops
-        }
+        PrecClimber { ops }
     }
 
     /// Performs the precedence climbing algorithm on the `pairs` in a similar manner to map-reduce.
@@ -146,7 +151,7 @@ impl<R: RuleType> PrecClimber<R> {
     /// let primary = |pair| {
     ///     consume(pair, climber)
     /// };
-    /// let infix = |lhs: i32, op: Pair<Rule, StringInput>, rhs: i32| {
+    /// let infix = |lhs: i32, op: Pair<Rule>, rhs: i32| {
     ///     match op.rule() {
     ///         Rule::plus => lhs + rhs,
     ///         Rule::minus => lhs - rhs,
@@ -159,22 +164,21 @@ impl<R: RuleType> PrecClimber<R> {
     ///
     /// let result = climber.climb(pairs, primary, infix);
     /// ```
-    pub fn climb<I: Input, P, F, G, T>(
-        &self,
-        mut pairs: P,
-        mut primary: F,
-        mut infix: G
-    ) -> T
+    pub fn climb<'i, P, F, G, T>(&self, mut pairs: P, mut primary: F, mut infix: G) -> T
     where
-        P: Iterator<Item=Pair<R, I>>,
-        F: FnMut(Pair<R, I>) -> T,
-        G: FnMut(T, Pair<R, I>, T) -> T
+        P: Iterator<Item = Pair<'i, R>>,
+        F: FnMut(Pair<'i, R>) -> T,
+        G: FnMut(T, Pair<'i, R>, T) -> T
     {
-        let lhs = primary(pairs.next().expect("precedence climbing requires a non-empty Pairs"));
+        let lhs = primary(
+            pairs
+                .next()
+                .expect("precedence climbing requires a non-empty Pairs")
+        );
         self.climb_rec(lhs, 0, &mut pairs.peekable(), &mut primary, &mut infix)
     }
 
-    fn climb_rec<I: Input, P, F, G, T>(
+    fn climb_rec<'i, P, F, G, T>(
         &self,
         mut lhs: T,
         min_prec: u32,
@@ -183,17 +187,19 @@ impl<R: RuleType> PrecClimber<R> {
         infix: &mut G
     ) -> T
     where
-        P: Iterator<Item=Pair<R, I>>,
-        F: FnMut(Pair<R, I>) -> T,
-        G: FnMut(T, Pair<R, I>, T) -> T
+        P: Iterator<Item = Pair<'i, R>>,
+        F: FnMut(Pair<'i, R>) -> T,
+        G: FnMut(T, Pair<'i, R>, T) -> T
     {
         while pairs.peek().is_some() {
             let rule = pairs.peek().unwrap().as_rule();
             if let Some(&(prec, _)) = self.ops.get(&rule) {
                 if prec >= min_prec {
                     let op = pairs.next().unwrap();
-                    let mut rhs = primary(pairs.next().expect("infix operator must be followed by \
-                                                               a primary expression"));
+                    let mut rhs = primary(pairs.next().expect(
+                        "infix operator must be followed by \
+                         a primary expression"
+                    ));
 
                     while pairs.peek().is_some() {
                         let rule = pairs.peek().unwrap().as_rule();

@@ -1,6 +1,6 @@
 [package]
 name = "pest_meta"
-version = "1.0.0-beta.15"
+version = "0.1.0"
 authors = ["Victor-Nicolae Savu <victor.nicolae.savu@gmail.com>"]
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
@@ -11,7 +11,7 @@ readme = "_README.md"
 
 [dependencies]
 maplit = "^0.1.5"
-pest = { path = "../pest", version = "^1.0.0-beta" }
+pest = { path = "../pest", version = "^1.0" }
 
 [dev_dependencies]
 colored = "1.5"

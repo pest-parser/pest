@@ -1,9 +1,11 @@
 // pest. The Elegant Parser
-// Copyright (C) 2017  Dragoș Tiselice
+// Copyright (c) 2018 Dragoș Tiselice
 //
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
 
 //! # pest. The Elegant Parser
 //!
@@ -148,10 +150,12 @@
 //!     |--------------|------------------------------------------------------------|
 //!     | `(e)`        | matches `e`                                                |
 //!     | `e1 ~ e2`    | matches the sequence `e1` `e2`                             |
-//!     | `e1 | e2`    | matches either `e1` or `e1`                                |
+//!     | `e1 | e2`    | matches either `e1` or `e2`                                |
 //!     | `e*`         | matches `e` zero or more times                             |
 //!     | `e+`         | matches `e` one or more times                              |
 //!     | `e{n}`       | matches `e` exactly `n` times                              |
+//!     | `e{, n}`     | matches `e` at most `n` times                              |
+//!     | `e{n,} `     | matches `e` at least `n` times                             |
 //!     | `e{m, n}`    | matches `e` between `m` and `n` times inclusively          |
 //!     | `e?`         | optionally matches `e`                                     |
 //!     | `&e`         | matches `e` without making progress                        |
@@ -193,7 +197,7 @@
 //! is effectively transformed into this one behind the scenes:
 //!
 //! ```ignore
-//! a = { b ~ whitespace* ~ (comment? ~ whitespace+)* ~ c }
+//! a = { b ~ whitespace* ~ (comment ~ whitespace*)* ~ c }
 //! ```
 //!
 //! ## `push`, `pop`, and `peek`
@@ -224,21 +228,21 @@
 //! implements `pest`'s `RuleType` and can be used throughout the API.
 
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 
 extern crate pest;
 extern crate pest_meta;
+
 extern crate proc_macro;
 #[macro_use]
 extern crate quote;
 extern crate syn;
 
 use std::env;
-use std::fmt::Display;
+use std::fs::File;
+use std::io::{self, Read};
 use std::path::Path;
-use std::rc::Rc;
 
-use pest::inputs::FileInput;
 use pest::Parser;
 use proc_macro::TokenStream;
 use quote::Ident;
@@ -248,7 +252,8 @@ mod generator;
 mod optimizer;
 
 use pest_meta::parser::{self, PestParser, PestRule};
-use pest_meta::{ast, validator};
+use pest_meta::{ast, validator, unwrap_or_report};
+
 
 #[proc_macro_derive(Parser, attributes(grammar))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
@@ -263,14 +268,17 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         None => panic!("grammar attribute should point to a file")
     };
 
-    let input = match FileInput::new(&path) {
-        Ok(input) => Rc::new(input),
+    let data = match read_file(&path) {
+        Ok(data) => data,
         Err(error) => panic!("error opening {:?}: {}", file_name, error)
     };
-    let pairs = match PestParser::parse(PestRule::grammar_rules, input) {
+
+    let pairs = match PestParser::parse(PestRule::grammar_rules, &data) {
         Ok(pairs) => pairs,
-        Err(error) => panic!("error parsing {:?}\n\n{}", file_name, error.renamed_rules(|rule| {
-            match *rule {
+        Err(error) => panic!(
+            "error parsing {:?}\n\n{}",
+            file_name,
+            error.renamed_rules(|rule| { match *rule {
                 PestRule::grammar_rule => "rule".to_owned(),
                 PestRule::assignment_operator => "`=`".to_owned(),
                 PestRule::silent_modifier => "`_`".to_owned(),
@@ -298,31 +306,33 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         }))
     };
 
-    fn format_errors<Errors: IntoIterator>(errors: Errors) -> String where Errors::Item: Display {
-        errors.into_iter()
-              .map(|error| { format!("{}", error) })
-              .collect::<Vec<_>>()
-              .join("\n\n")
-    }
 
-    let defaults = validator::validate_pairs(pairs.clone()).unwrap_or_else(|e| panic!(format_errors(e)));
-    let ast = parser::consume_rules(pairs).unwrap_or_else(|e| panic!(format_errors(e)));
+    let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
+    let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
     let generated = generator::generate(name, optimized, defaults);
 
     generated.as_ref().parse().unwrap()
 }
 
+fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
+    let mut file = File::open(path.as_ref())?;
+    let mut string = String::new();
+    file.read_to_string(&mut string)?;
+    Ok(string)
+}
+
 fn parse_derive(source: String) -> (Ident, String) {
-    let ast = syn::parse_macro_input(&source).unwrap();
+    let ast = syn::parse_derive_input(&source).unwrap();
     let name = Ident::new(ast.ident.as_ref());
 
-    let grammar: Vec<_> = ast.attrs.iter().filter(|attr| {
-        match attr.value {
+    let grammar: Vec<_> = ast.attrs
+        .iter()
+        .filter(|attr| match attr.value {
             MetaItem::NameValue(ref ident, _) => format!("{}", ident) == "grammar",
             _ => false
-        }
-    }).collect();
+        })
+        .collect();
 
     let filename = match grammar.len() {
         0 => panic!("a grammar file needs to be provided with the #[grammar(\"...\")] attribute"),
@@ -351,11 +361,12 @@ mod tests {
 
     #[test]
     fn derive_ok() {
-        let (_, filename) = parse_derive("
+        let definition = "
             #[other_attr]
             #[grammar = \"myfile.pest\"]
             pub struct MyParser<'a, T>;
-        ".to_owned());
+        ";
+        let (_, filename) = parse_derive(definition.to_owned());
 
         assert_eq!(filename, "myfile.pest");
     }
@@ -363,21 +374,23 @@ mod tests {
     #[test]
     #[should_panic(expected = "only 1 grammar file can be provided")]
     fn derive_multiple_grammars() {
-        parse_derive("
+        let definition = "
             #[other_attr]
             #[grammar = \"myfile1.pest\"]
             #[grammar = \"myfile2.pest\"]
             pub struct MyParser<'a, T>;
-        ".to_owned());
+        ";
+        parse_derive(definition.to_owned());
     }
 
     #[test]
     #[should_panic(expected = "grammar attribute must be a string")]
     fn derive_wrong_arg() {
-        parse_derive("
+        let definition = "
             #[other_attr]
             #[grammar = 1]
             pub struct MyParser<'a, T>;
-        ".to_owned());
+        ";
+        parse_derive(definition.to_owned());
     }
 }

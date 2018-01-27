@@ -4,28 +4,25 @@ extern crate pest_meta;
 extern crate colored;
 
 use std::io::{self, Read};
-use std::rc::Rc;
 
 use colored::Colorize;
 use pest::Parser;
-use pest::inputs::StringInput;
-use pest::inputs::Input;
 use pest_meta::parser::{PestParser, PestRule};
 
 fn main() {
     // Read a pest grammar definition from stdin
-    let input = Rc::new(StringInput::new({
+    let input: String = {
         let input = io::stdin();
         let mut code = String::new();
         input.lock().read_to_string(&mut code).unwrap();
         code
-    }));
+    };
 
     // Parse the input into a flattened Abstract Syntax Tree (AST). A flattened AST tree is the
     // list of all subtrees of an AST tree in depth-first pre-order of their root nodes (parents
     // occur before children and siblings occur in the same order that their spans occur in the
     // input).
-    let ast = match PestParser::parse(PestRule::grammar_rules, input.clone()) {
+    let ast = match PestParser::parse(PestRule::grammar_rules, &input) {
         Ok(pairs) => pairs,
         Err(err) => {
             println!("{}:\n\n{}", "Parsing error".red(), err);
@@ -43,7 +40,6 @@ fn main() {
     // - skip sub-trees which overlap with already styled ones to avoid duplicating the text
     // - print the input spans between the styled sub-trees
     let mut processed = 0;
-    let input = input.as_ref();
     // We traverse the flattened AST tree,
     for sub_tree in ast {
         let span = sub_tree.clone().into_span();
@@ -66,10 +62,10 @@ fn main() {
         // Now, we print everything between the last processed code point and the beginning of the
         // current sub-tree span using the default text output style. Then we print the span of the
         // sub-tree itself using the selected style.
-        print!("{}{}", unsafe { input.slice(processed, span.start()) }, style(span.as_str()));
+        print!("{}{}", input.get(processed..span.start()).unwrap(), style(span.as_str()));
         // We update the record of the last code point we processed.
         processed = span.end();
     }
     // To finish up, we print whatever is left from the input using the default style.
-    println!("{}", unsafe { input.slice(processed, input.len()) });
+    println!("{}", input.get(processed..input.len()).unwrap() );
 }

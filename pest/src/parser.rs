@@ -1,23 +1,18 @@
 // pest. The Elegant Parser
-// Copyright (C) 2017  Dragoș Tiselice
+// Copyright (c) 2018 Dragoș Tiselice
 //
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
 
-use std::rc::Rc;
-
-use super::error::Error;
-use super::inputs::{Input, StrInput};
-use super::iterators::Pairs;
-use super::RuleType;
+use RuleType;
+use error::Error;
+use iterators::Pairs;
 
 /// A `trait` that defines a `Parser`.
 pub trait Parser<R: RuleType> {
-    /// Parses an `Input` starting from `rule`.
-    fn parse<I: Input>(rule: R, input: Rc<I>) -> Result<Pairs<R, I>, Error<R, I>>;
     /// Parses an `&str` starting from `rule`.
-    fn parse_str(rule: R, input: &str) -> Result<Pairs<R, StrInput>, Error<R, StrInput>> {
-        Self::parse(rule, Rc::new(StrInput::new(input)))
-    }
+    fn parse(rule: R, input: &str) -> Result<Pairs<R>, Error<R>>;
 }

@@ -1,46 +1,48 @@
 // pest. The Elegant Parser
-// Copyright (C) 2017  Dragoș Tiselice
+// Copyright (c) 2018 Dragoș Tiselice
 //
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
 
 use std::rc::Rc;
 
 use super::queueable_token::QueueableToken;
-use super::super::inputs::{Input, position};
-use super::super::RuleType;
-use super::super::token::Token;
+use RuleType;
+use position;
+use token::Token;
 
 /// A `struct` containing `Token`s. It is returned by either
 /// [`Pair::into_iter`](struct.Pair.html#method.into_iter) or
 /// [`Pairs::into_iter`](struct.Pairs.html#method.into_iter)
 #[derive(Clone, Debug)]
-pub struct TokenIterator<R, I: Input> {
+pub struct Tokens<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: &'i str,
     index: usize,
     start: usize,
     end: usize
 }
 
-pub fn new<R: RuleType, I: Input>(
+pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: &str,
     start: usize,
     end: usize
-) -> TokenIterator<R, I> {
-    TokenIterator {
-        queue: queue,
-        input: input,
+) -> Tokens<R> {
+    Tokens {
+        queue,
+        input,
         index: 0,
-        start: start,
-        end: end
+        start,
+        end
     }
 }
 
-impl<R: RuleType, I: Input> Iterator for TokenIterator<R, I> {
-    type Item = Token<R, I>;
+impl<'i, R: RuleType> Iterator for Tokens<'i, R> {
+    type Item = Token<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index == self.end {
@@ -55,16 +57,16 @@ impl<R: RuleType, I: Input> Iterator for TokenIterator<R, I> {
                 };
 
                 Token::Start {
-                    rule: rule,
+                    rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::new(self.input.clone(), pos) }
+                    pos: unsafe { position::new(self.input, pos) }
                 }
             }
             QueueableToken::End { rule, pos } => {
                 Token::End {
-                    rule: rule,
+                    rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::new(self.input.clone(), pos) }
+                    pos: unsafe { position::new(self.input, pos) }
                 }
             }
         };

@@ -1,12 +1,13 @@
 <p align="center">
-  <img src="https://cdn.rawgit.com/pest-parser/pest/ac70b5c4/pest-logo.svg" width="80%"/>
+  <img src="https://raw.github.com/pest-parser/pest/master/pest-logo.svg?sanitize=true" width="80%"/>
 </p>
 
-# pest. The Elegant Parser <sup>(beta)</sup>
+# pest. The Elegant Parser
 
 [![Join the chat at https://gitter.im/dragostis/pest](https://badges.gitter.im/dragostis/pest.svg)](https://gitter.im/dragostis/pest?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Book](https://img.shields.io/badge/book-WIP-4d76ae.svg)](https://pest-parser.github.io/book)
 [![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)
+(docs are currently [broken on docs.rs](https://github.com/onur/docs.rs/issues/23#issuecomment-359179441); build them locally with `cargo doc`)
 
 [![Build Status](https://travis-ci.org/pest-parser/pest.svg?branch=master)](https://travis-ci.org/pest-parser/pest)
 [![codecov](https://codecov.io/gh/pest-parser/pest/branch/master/graph/badge.svg)](https://codecov.io/gh/pest-parser/pest)
@@ -125,7 +126,7 @@ the file to a fully-processed JSON object. The second one does, but since it has
 intermediate representation of the object, it repeats some work.
 
 <p align="center">
-  <img src="https://cdn.rawgit.com/pest-parser/pest/ac70b5c4/results.svg"/>
+  <img src="https://raw.github.com/pest-parser/pest/master/results.svg?sanitize=true"/>
 </p>
 
 The [benchmark](https://github.com/Geal/pestvsnom) uses
@@ -145,8 +146,8 @@ pest requires [Cargo and Rust](https://www.rust-lang.org/en-US/downloads.html).
 Add the following to `Cargo.toml`:
 
 ```toml
-pest = "^1.0.0-beta"
-pest_derive = "^1.0.0-beta"
+pest = "^1.0"
+pest_derive = "^1.0"
 ```
 
 and in your Rust `lib.rs` or `main.rs`:
@@ -160,14 +161,17 @@ extern crate pest_derive;
 ## Projects using pest
 
 * [brain](https://github.com/brain-lang/brain)
+* [comrak](https://github.com/kivikakk/comrak)
 * [graphql-parser](https://github.com/Keats/graphql-parser)
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
 * [pest](https://github.com/pest-parser/pest/blob/master/pest_derive/src/parser.rs) (bootstrapped)
+* [Huia](https://gitlab.com/huia-lang/huia-parser)
 * [rouler](https://github.com/jarcane/rouler)
 * [RuSh](https://github.com/lwandrebeck/RuSh)
 * [rs_pbrt](https://github.com/wahn/rs_pbrt)
 * [stache](https://github.com/dgraham/stache)
 * [tera](https://github.com/Keats/tera)
+* [ui_gen](https://github.com/emoon/ui_gen)
 * [ukhasnet-parser](https://github.com/adamgreig/ukhasnet-parser)
 
 ## Special thanks

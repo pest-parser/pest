@@ -1,24 +1,25 @@
 // pest. The Elegant Parser
-// Copyright (C) 2017  Dragoș Tiselice
+// Copyright (c) 2018 Dragoș Tiselice
 //
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
 
 //! # pest. The Elegant Parser
 //!
 //! pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser built with
 //! *simplicity* and *speed* in mind.
 //!
-//! ## Input & Parser
+//! ## Parser
 //!
-//! pest works mainly through two `trait`s: `Input` & `Parser`. `Input` defines the capabilities of
-//! an input source, while `Parser` provides an interface to the parsing functionality. Since
-//! `Parser` is a `trait`, parsing needs to be defined either though the `#[derive(Parser)]`
-//! attribute, or manually through the [`Position API`](inputs/struct.Position.html). The use of the
-//! `derive` is highly encouraged since this is the only way you can make use of pest's PEG
-//! grammar, while manual parser definition can be used where highly specific or efficient parsing
-//! is required.
+//! pest works mainly through a `trait`, `Parser`, which provides an interface to the parsing
+//! functionality. Since `Parser` is a `trait`, parsing needs to be defined either though the
+//! `#[derive(Parser)]` attribute, or manually through the [`Position API`](struct.Position.html).
+//! The use of the `derive` is highly encouraged since this is the only way you can make use of
+//! pest's PEG grammar, while manual parser definition can be used where highly specific or
+//! efficient parsing is required.
 //!
 //! ## `#[derive(Parser)]`
 //!
@@ -59,12 +60,13 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 mod error;
-pub mod inputs;
 pub mod iterators;
 mod macros;
 mod parser;
 mod parser_state;
+mod position;
 pub mod prec_climber;
+mod span;
 mod token;
 
 /// A `trait` which parser rules must implement.
@@ -79,5 +81,7 @@ impl<T: Copy + Debug + Eq + Hash + Ord> RuleType for T {}
 
 pub use error::Error;
 pub use parser::Parser;
-pub use parser_state::{Atomicity, Lookahead, ParserState, state};
+pub use parser_state::{state, Atomicity, Lookahead, ParserState};
+pub use position::Position;
+pub use span::Span;
 pub use token::Token;

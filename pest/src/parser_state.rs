@@ -1,17 +1,19 @@
 // pest. The Elegant Parser
-// Copyright (C) 2017  Dragoș Tiselice
+// Copyright (c) 2018 Dragoș Tiselice
 //
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
 
 use std::rc::Rc;
 
-use super::error::Error;
-use super::inputs::{Input, Position, Span};
-use super::inputs::position;
-use super::iterators::{pairs, QueueableToken};
-use super::RuleType;
+use RuleType;
+use error::Error;
+use iterators::{pairs, QueueableToken};
+use position::{self, Position};
+use span::Span;
 
 /// An `enum` specifying the current lookahead status of a `ParserState`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -31,7 +33,7 @@ pub enum Atomicity {
 
 /// A `struct` which contains the complete state of a `Parser`.
 #[derive(Debug)]
-pub struct ParserState<R: RuleType, I: Input> {
+pub struct ParserState<'i, R: RuleType> {
     queue: Vec<QueueableToken<R>>,
     lookahead: Lookahead,
     pos_attempts: Vec<R>,
@@ -40,29 +42,25 @@ pub struct ParserState<R: RuleType, I: Input> {
     /// Specifies current atomicity
     pub atomicity: Atomicity,
     /// Stack of `Span`s
-    pub stack: Vec<Span<I>>
+    pub stack: Vec<Span<'i>>
 }
 
-/// Creates a `ParserState` from an `Input`, supplying it to a closure `f`.
+/// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
 ///
 /// # Examples
 ///
 /// ```
 /// # use std::rc::Rc;
 /// # use pest;
-/// # use pest::inputs::StringInput;
 ///
-/// let input = Rc::new(StringInput::new("".to_owned()));
-/// pest::state::<(), _, _>(input, |_, pos| {
+/// let input = "";
+/// pest::state::<(), _>(input, |_, pos| {
 ///     Ok(pos)
 /// }).unwrap();
 /// ```
-pub fn state<R: RuleType, I: Input, F>(
-    input: Rc<I>,
-    f: F
-) -> Result<pairs::Pairs<R, I>, Error<R, I>>
+pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<'i, R>>
 where
-    F: FnOnce(&mut ParserState<R, I>, Position<I>) -> Result<Position<I>, Position<I>>
+    F: FnOnce(&mut ParserState<'i, R>, Position<'i>) -> Result<Position<'i>, Position<'i>>
 {
     let mut state = ParserState {
         queue: vec![],
@@ -74,7 +72,7 @@ where
         stack: vec![]
     };
 
-    if f(&mut state, Position::from_start(input.clone())).is_ok() {
+    if f(&mut state, Position::from_start(input)).is_ok() {
         let len = state.queue.len();
         Ok(pairs::new(Rc::new(state.queue), input, 0, len))
     } else {
@@ -92,7 +90,7 @@ where
     }
 }
 
-impl<R: RuleType, I: Input> ParserState<R, I> {
+impl<'i, R: RuleType> ParserState<'i, R> {
     /// Wrapper needed to generate tokens.
     ///
     /// # Examples
@@ -100,14 +98,13 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let input = "a";
     /// let pairs: Vec<_> = pest::state(input, |state, pos| {
     ///     state.rule(Rule::a, pos, |_, p| Ok(p))
     /// }).unwrap().collect();
@@ -115,30 +112,45 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     /// assert_eq!(pairs.len(), 1);
     /// ```
     #[inline]
-    pub fn rule<F>(&mut self, rule: R, pos: Position<I>, f: F) -> Result<Position<I>, Position<I>>
+    pub fn rule<F>(
+        &mut self,
+        rule: R,
+        pos: Position<'i>,
+        f: F
+    ) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnOnce(&mut ParserState<R, I>, Position<I>) -> Result<Position<I>, Position<I>>
+        F: FnOnce(&mut ParserState<'i, R>, Position<'i>) -> Result<Position<'i>, Position<'i>>
     {
         let actual_pos = pos.pos();
         let index = self.queue.len();
 
         let (pos_attempts_index, neg_attempts_index) = if actual_pos == self.attempt_pos {
             (self.pos_attempts.len(), self.neg_attempts.len())
-        } else { // Attempts have not been cleared yet since the attempt_pos is older.
+        } else {
+            // Attempts have not been cleared yet since the attempt_pos is older.
             (0, 0)
         };
 
         if self.lookahead == Lookahead::None && self.atomicity != Atomicity::Atomic {
             // Pair's position will only be known after running the closure.
-            self.queue.push(QueueableToken::Start { pair: 0, pos: actual_pos });
+            self.queue.push(QueueableToken::Start {
+                pair: 0,
+                pos: actual_pos
+            });
         }
 
         let attempts = self.pos_attempts.len() + self.neg_attempts.len();
 
         let result = f(self, pos);
 
-        if result.is_err() || self.lookahead == Lookahead::Negative {
-            self.track(rule, actual_pos, pos_attempts_index, neg_attempts_index, attempts);
+        if result.is_err() ^ (self.lookahead == Lookahead::Negative) {
+            self.track(
+                rule,
+                actual_pos,
+                pos_attempts_index,
+                neg_attempts_index,
+                attempts
+            );
         }
 
         if self.lookahead == Lookahead::None && self.atomicity != Atomicity::Atomic {
@@ -151,7 +163,10 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
                     _ => unreachable!()
                 };
 
-                self.queue.push(QueueableToken::End { rule: rule, pos: pos.pos() });
+                self.queue.push(QueueableToken::End {
+                    rule,
+                    pos: pos.pos()
+                });
             } else {
                 self.queue.truncate(index);
             }
@@ -185,16 +200,17 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
             self.neg_attempts.truncate(neg_attempts_index);
         }
 
+        if pos > self.attempt_pos {
+            self.pos_attempts.clear();
+            self.neg_attempts.clear();
+            self.attempt_pos = pos;
+        }
+
         let attempts = if self.lookahead != Lookahead::Negative {
             &mut self.pos_attempts
         } else {
             &mut self.neg_attempts
         };
-
-        if pos > self.attempt_pos {
-            attempts.clear();
-            self.attempt_pos = pos;
-        }
 
         if pos == self.attempt_pos {
             attempts.push(rule);
@@ -204,21 +220,20 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     /// Wrapper which removes `Tokens` in case of a sequence's failure.
     ///
     /// Usually used in conjunction with
-    /// [`Position::sequence`](inputs/struct.Position.html#method.sequence).
+    /// [`Position::sequence`](struct.Position.html#method.sequence).
     ///
     /// # Examples
     ///
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let input = "a";
     /// let pairs: Vec<_> = pest::state(input, |state, pos| {
     ///     state.sequence(move |state| {
     ///         pos.sequence(|p| {
@@ -234,9 +249,9 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn sequence<F>(&mut self, f: F) -> Result<Position<I>, Position<I>>
+    pub fn sequence<F>(&mut self, f: F) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnOnce(&mut ParserState<R, I>) -> Result<Position<I>, Position<I>>
+        F: FnOnce(&mut ParserState<'i, R>) -> Result<Position<'i>, Position<'i>>
     {
         let index = self.queue.len();
 
@@ -249,25 +264,23 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
         result
     }
 
-
     /// Wrapper which stops `Token`s from being generated.
     ///
     /// Usually used in conjunction with
-    /// [`Position::lookahead`](inputs/struct.Position.html#method.lookahead).
+    /// [`Position::lookahead`](struct.Position.html#method.lookahead).
     ///
     /// # Examples
     ///
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let input = "a";
     /// let pairs: Vec<_> = pest::state(input, |state, pos| {
     ///     state.lookahead(true, move |state| {
     ///         state.rule(Rule::a, pos, |_, p| Ok(p))
@@ -277,9 +290,9 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn lookahead<F>(&mut self, is_positive: bool, f: F) -> Result<Position<I>, Position<I>>
+    pub fn lookahead<F>(&mut self, is_positive: bool, f: F) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnOnce(&mut ParserState<R, I>) -> Result<Position<I>, Position<I>>
+        F: FnOnce(&mut ParserState<'i, R>) -> Result<Position<'i>, Position<'i>>
     {
         let initial_lookahead = self.lookahead;
 
@@ -309,14 +322,13 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest::{self, Atomicity};
-    /// # use pest::inputs::StringInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("a".to_owned()));
+    /// let input = "a";
     /// let pairs: Vec<_> = pest::state(input, |state, pos| {
     ///     state.atomic(Atomicity::Atomic, move |state| {
     ///         state.rule(Rule::a, pos, |_, p| Ok(p))
@@ -326,9 +338,9 @@ impl<R: RuleType, I: Input> ParserState<R, I> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn atomic<F>(&mut self, atomicity: Atomicity, f: F) -> Result<Position<I>, Position<I>>
+    pub fn atomic<F>(&mut self, atomicity: Atomicity, f: F) -> Result<Position<'i>, Position<'i>>
     where
-        F: FnOnce(&mut ParserState<R, I>) -> Result<Position<I>, Position<I>>
+        F: FnOnce(&mut ParserState<'i, R>) -> Result<Position<'i>, Position<'i>>
     {
         let initial_atomicity = self.atomicity;
         let should_toggle = self.atomicity != atomicity;

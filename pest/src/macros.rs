@@ -1,9 +1,11 @@
 // pest. The Elegant Parser
-// Copyright (C) 2017  Dragoș Tiselice
+// Copyright (c) 2018 Dragoș Tiselice
 //
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
 
 #[doc(hidden)]
 #[macro_export]
@@ -39,7 +41,7 @@ macro_rules! consumes_to {
         };
     };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr ),
-                                    $( $names:ident $calls:tt ),* ] ) => {
+                                    $( $names:ident $calls:tt ),* $(,)* ] ) => {
 
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
@@ -72,7 +74,7 @@ macro_rules! consumes_to {
         consumes_to!($rules, $tokens, [ $( $names $calls ),* ]);
     };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr,
-                                                  [ $( $names:ident $calls:tt ),* ] ) ] ) => {
+                                                  [ $( $names:ident $calls:tt ),* $(,)* ] ) ] ) => {
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
@@ -104,7 +106,8 @@ macro_rules! consumes_to {
         };
     };
     ( $rules:ident, $tokens:expr, [ $name:ident ( $start:expr, $end:expr,
-                                                  [ $( $nested_names:ident $nested_calls:tt ),* ] ),
+                                                  [ $( $nested_names:ident $nested_calls:tt ),*
+                                                  $(,)* ] ),
                                     $( $names:ident $calls:tt ),* ] ) => {
 
         let expected = format!("expected Start {{ rule: {:?}, pos: Position {{ pos: {} }} }}",
@@ -157,9 +160,7 @@ macro_rules! consumes_to {
 /// ```
 /// # #[macro_use]
 /// # extern crate pest;
-/// # use std::rc::Rc;
 /// # use pest::{Error, Parser};
-/// # use pest::inputs::Input;
 /// # use pest::iterators::Pairs;
 /// # fn main() {
 /// # #[allow(non_camel_case_types)]
@@ -173,7 +174,7 @@ macro_rules! consumes_to {
 /// # struct AbcParser;
 /// #
 /// # impl Parser<Rule> for AbcParser {
-/// #     fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+/// #     fn parse<'i>(_: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
 /// #         pest::state(input, |state, pos| {
 /// #             state.rule(Rule::a, pos, |state, pos| {
 /// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
@@ -203,13 +204,13 @@ macro_rules! consumes_to {
 #[macro_export]
 macro_rules! parses_to {
     ( parser: $parser:ident, input: $string:expr, rule: $rules:tt :: $rule:tt,
-      tokens: [ $( $names:ident $calls:tt ),* ] ) => {
+      tokens: [ $( $names:ident $calls:tt ),* $(,)* ] ) => {
 
         #[allow(unused_mut)]
         {
             use $crate::Parser;
 
-            let mut tokens = $parser::parse_str($rules::$rule, $string).unwrap().tokens();
+            let mut tokens = $parser::parse($rules::$rule, $string).unwrap().tokens();
 
             consumes_to!($rules, &mut tokens, [ $( $names $calls ),* ]);
 
@@ -236,9 +237,7 @@ macro_rules! parses_to {
 /// ```
 /// # #[macro_use]
 /// # extern crate pest;
-/// # use std::rc::Rc;
 /// # use pest::{Error, Parser};
-/// # use pest::inputs::Input;
 /// # use pest::iterators::Pairs;
 /// # fn main() {
 /// # #[allow(non_camel_case_types)]
@@ -252,7 +251,7 @@ macro_rules! parses_to {
 /// # struct AbcParser;
 /// #
 /// # impl Parser<Rule> for AbcParser {
-/// #     fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+/// #     fn parse<'i>(_: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
 /// #         pest::state(input, |state, pos| {
 /// #             state.rule(Rule::a, pos, |state, pos| {
 /// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
@@ -285,7 +284,7 @@ macro_rules! fails_with {
         {
             use $crate::Parser;
 
-            let error = $parser::parse_str($rules::$rule, $string).unwrap_err();
+            let error = $parser::parse($rules::$rule, $string).unwrap_err();
 
             match error {
                 $crate::Error::ParsingError { positives, negatives, pos } => {
@@ -301,11 +300,8 @@ macro_rules! fails_with {
 
 #[cfg(test)]
 pub mod tests {
-    use std::rc::Rc;
-
+    use super::super::{state, Parser};
     use super::super::error::Error;
-    use super::super::inputs::Input;
-    use super::super::{Parser, state};
     use super::super::iterators::Pairs;
 
     #[allow(non_camel_case_types)]
@@ -319,17 +315,18 @@ pub mod tests {
     pub struct AbcParser;
 
     impl Parser<Rule> for AbcParser {
-        fn parse<I: Input>(_: Rule, input: Rc<I>) -> Result<Pairs<Rule, I>, Error<Rule, I>> {
+        fn parse<'i>(_: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
             state(input, |state, pos| {
-                state.rule(Rule::a, pos, |state, pos| {
-                    state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
-                        pos.skip(1)
-                    }).unwrap().skip(1)
-                }).and_then(|p| {
-                    state.rule(Rule::c, p.skip(1).unwrap(), |_, pos| {
-                        pos.match_string("e")
+                state
+                    .rule(Rule::a, pos, |state, pos| {
+                        state
+                            .rule(Rule::b, pos.skip(1).unwrap(), |_, pos| pos.skip(1))
+                            .unwrap()
+                            .skip(1)
                     })
-                })
+                    .and_then(|p| {
+                        state.rule(Rule::c, p.skip(1).unwrap(), |_, pos| pos.match_string("e"))
+                    })
             })
         }
     }
@@ -342,7 +339,7 @@ pub mod tests {
             rule: Rule::a,
             tokens: [
                 a(0, 3, [
-                    b(1, 2)
+                    b(1, 2),
                 ]),
                 c(4, 5)
             ]

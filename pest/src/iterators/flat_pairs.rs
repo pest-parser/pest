@@ -1,34 +1,35 @@
 // pest. The Elegant Parser
-// Copyright (C) 2017  Dragoș Tiselice
+// Copyright (c) 2018 Dragoș Tiselice
 //
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
 
 use std::fmt;
 use std::rc::Rc;
 
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
-use super::token_iterator::{self, TokenIterator};
-use super::super::inputs::Input;
-use super::super::RuleType;
+use super::tokens::{self, Tokens};
+use RuleType;
 
 /// A `struct` containing `Pairs`. It is created by
 /// [`Pairs::flatten`](struct.Pairs.html#method.flatten).
-pub struct FlatPairs<R, I: Input> {
+pub struct FlatPairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: &'i str,
     start: usize,
     end: usize
 }
 
-pub fn new<R: RuleType, I: Input>(
+pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: Rc<I>,
+    input: &str,
     start: usize,
     end: usize
-) -> FlatPairs<R, I> {
+) -> FlatPairs<R> {
     FlatPairs {
         queue,
         input,
@@ -37,7 +38,7 @@ pub fn new<R: RuleType, I: Input>(
     }
 }
 
-impl<R: RuleType, I: Input> FlatPairs<R, I> {
+impl<'i, R: RuleType> FlatPairs<'i, R> {
     /// Converts the `FlatPairs` into a `TokenIterator`.
     ///
     /// # Examples
@@ -45,30 +46,24 @@ impl<R: RuleType, I: Input> FlatPairs<R, I> {
     /// ```
     /// # use std::rc::Rc;
     /// # use pest;
-    /// # use pest::inputs::StringInput;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
     ///     a
     /// }
     ///
-    /// let input = Rc::new(StringInput::new("".to_owned()));
+    /// let input = "";
     /// let pairs = pest::state(input, |state, pos| {
     ///     // generating Token pair with Rule::a ...
     /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
     /// }).unwrap();
-    /// let tokens: Vec<_> = pairs.flatten().into_iter().collect();
+    /// let tokens: Vec<_> = pairs.flatten().tokens().collect();
     ///
     /// assert_eq!(tokens.len(), 2);
     /// ```
     #[inline]
-    pub fn into_iter(self) -> TokenIterator<R, I> {
-        token_iterator::new(
-            self.queue,
-            self.input,
-            self.start,
-            self.end
-        )
+    pub fn tokens(self) -> Tokens<'i, R> {
+        tokens::new(self.queue, self.input, self.start, self.end)
     }
 
     fn next_start(&mut self) {
@@ -87,19 +82,15 @@ impl<R: RuleType, I: Input> FlatPairs<R, I> {
     }
 }
 
-impl<R: RuleType, I: Input> Iterator for FlatPairs<R, I> {
-    type Item = Pair<R, I>;
+impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
+    type Item = Pair<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.start >= self.end {
             return None;
         }
 
-        let pair = pair::new(
-            self.queue.clone(),
-            self.input.clone(),
-            self.start
-        );
+        let pair = pair::new(Rc::clone(&self.queue), self.input, self.start);
 
         self.next_start();
 
@@ -107,17 +98,21 @@ impl<R: RuleType, I: Input> Iterator for FlatPairs<R, I> {
     }
 }
 
-impl<R: RuleType, I: Input> fmt::Debug for FlatPairs<R, I> {
+impl<'i, R: RuleType> fmt::Debug for FlatPairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "FlatPairs {{ pairs: {:?} }}", self.clone().collect::<Vec<_>>())
+        write!(
+            f,
+            "FlatPairs {{ pairs: {:?} }}",
+            self.clone().collect::<Vec<_>>()
+        )
     }
 }
 
-impl<R: Clone, I: Input> Clone for FlatPairs<R, I> {
-    fn clone(&self) -> FlatPairs<R, I> {
+impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
+    fn clone(&self) -> FlatPairs<'i, R> {
         FlatPairs {
-            queue: self.queue.clone(),
-            input: self.input.clone(),
+            queue: Rc::clone(&self.queue),
+            input: self.input,
             start: self.start,
             end: self.end
         }
