@@ -1,0 +1,90 @@
+grammar_rules = { soi ~ grammar_rule* ~ eoi }
+
+grammar_rule = { identifier ~ assignment_operator ~ modifier? ~ opening_brace ~ expression ~ closing_brace }
+
+assignment_operator = { "=" }
+
+modifier = _{ silent_modifier | atomic_modifier | compound_atomic_modifier | non_atomic_modifier }
+
+silent_modifier = { "_" }
+
+atomic_modifier = { "@" }
+
+compound_atomic_modifier = { "$" }
+
+non_atomic_modifier = { "!" }
+
+opening_brace = { "{" }
+
+closing_brace = { "}" }
+
+opening_paren = { "(" }
+
+closing_paren = { ")" }
+
+expression = { term ~ (infix_operator ~ term)* }
+
+term = { prefix_operator* ~ (opening_paren ~ expression ~ closing_paren | terminal) ~ postfix_operator* }
+
+terminal = _{ identifier | string | insensitive_string | range }
+
+prefix_operator = _{ positive_predicate_operator | negative_predicate_operator }
+
+infix_operator = _{ sequence_operator | choice_operator }
+
+postfix_operator = @{ optional_operator | repeat_operator | repeat_once_operator | repeat_exact | repeat_min | repeat_max | repeat_min_max }
+
+positive_predicate_operator = { "&" }
+
+negative_predicate_operator = { "!" }
+
+sequence_operator = { "~" }
+
+choice_operator = { "|" }
+
+optional_operator = { "?" }
+
+repeat_operator = { "*" }
+
+repeat_once_operator = { "+" }
+
+repeat_exact = { opening_brace ~ number ~ closing_brace }
+
+repeat_min = { number ~ comma ~ closing_brace }
+
+repeat_max = { comma ~ number ~ closing_brace }
+
+repeat_min_max = { opening_brace ~ number ~ comma ~ number ~ closing_brace }
+
+comma = { "," }
+
+_push = { "push" ~ opening_paren ~ expression ~ closing_paren }
+
+identifier = @{ !"push" ~ ("_" | alpha) ~ ("_" | alpha_num) }
+
+alpha = _{ 'a'..'z' | 'A'..'Z' }
+
+alpha_num = _{ alpha | '0'..'9' }
+
+string = @{  quote ~ (escape | !(quote | "\\") ~ any)* ~ quote }
+
+quote = { "\"" }
+
+insensitive_string = @{ "^" ~ string }
+
+range = { character ~ range_operator ~ character }
+
+range_operator = { ".." }
+
+character = @{ single_quote ~ ( escape | !(quote | "\\") ~ any ) ~ single_quote }
+
+number = @{ "0" | '1'..'9' ~ '0'..'9'* }
+
+single_quote = { "'" }
+
+escape  = _{ escape_tight }
+escape_tight = @{ "\\" ~ (quote | "\\") }
+
+newline    = _{ "\n" | "\r\n" }
+whitespace = _{ " " | "\t" | newline }
+comment    = _{ "//" ~ (!newline ~ any)* }

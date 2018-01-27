@@ -9,773 +9,21 @@
 
 use std::iter::Peekable;
 
-use pest::{self, Error, Parser, ParserState};
-use pest::Position;
+use pest::{Error, Parser};
 use pest::Span;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 
-use ast::{Expr, Rule, RuleType};
+use ast::{Expr, Rule as AstRule, RuleType};
 use validator;
 
-#[allow(dead_code, non_camel_case_types)]
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum PestRule {
-    grammar_rules,
-    grammar_rule,
-    assignment_operator,
-    silent_modifier,
-    atomic_modifier,
-    compound_atomic_modifier,
-    non_atomic_modifier,
-    opening_brace,
-    closing_brace,
-    opening_paren,
-    closing_paren,
-    expression,
-    term,
-    positive_predicate_operator,
-    negative_predicate_operator,
-    sequence_operator,
-    choice_operator,
-    optional_operator,
-    repeat_operator,
-    repeat_once_operator,
-    repeat_exact,
-    repeat_min,
-    repeat_max,
-    repeat_min_max,
-    comma,
-    push,
-    identifier,
-    string,
-    quote,
-    insensitive_string,
-    range,
-    range_operator,
-    character,
-    number,
-    single_quote
-}
-
+#[derive(Parser)]
+#[grammar = "grammar/pest.pest"]
 pub struct PestParser;
 
-impl Parser<PestRule> for PestParser {
-    fn parse<'i>(
-        rule: PestRule,
-        input: &'i str
-    ) -> Result<Pairs<'i, PestRule>, Error<'i, PestRule>> {
-        fn grammar_rules<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            pos.sequence(|pos| {
-                soi(pos, state)
-                    .and_then(|pos| skip(pos, state))
-                    .and_then(|pos| grammar_rule(pos, state))
-                    .and_then(|pos| {
-                        pos.repeat(|pos| {
-                            state.sequence(move |state| {
-                                pos.sequence(|pos| {
-                                    skip(pos, state).and_then(|pos| grammar_rule(pos, state))
-                                })
-                            })
-                        })
-                    })
-                    .and_then(|pos| skip(pos, state))
-                    .and_then(|pos| eoi(pos, state))
-            })
-        }
 
-        fn soi<'i>(
-            pos: Position<'i>,
-            _: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            pos.at_start()
-        }
-
-        fn eoi<'i>(
-            pos: Position<'i>,
-            _: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            pos.at_end()
-        }
-
-        fn grammar_rule<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::grammar_rule, pos, |state, pos| {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        identifier(pos, state)
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| assignment_operator(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| pos.optional(|pos| modifier(pos, state)))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| opening_brace(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| expression(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| closing_brace(pos, state))
-                    })
-                })
-            })
-        }
-
-        fn assignment_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::assignment_operator, pos, |_, pos| {
-                pos.match_string("=")
-            })
-        }
-
-        fn modifier<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            silent_modifier(pos, state)
-                .or_else(|pos| atomic_modifier(pos, state))
-                .or_else(|pos| compound_atomic_modifier(pos, state))
-                .or_else(|pos| non_atomic_modifier(pos, state))
-        }
-
-        fn silent_modifier<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::silent_modifier, pos, |_, pos| {
-                pos.match_string("_")
-            })
-        }
-
-        fn atomic_modifier<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::atomic_modifier, pos, |_, pos| {
-                pos.match_string("@")
-            })
-        }
-
-        fn compound_atomic_modifier<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::compound_atomic_modifier, pos, |_, pos| {
-                pos.match_string("$")
-            })
-        }
-
-        fn non_atomic_modifier<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::non_atomic_modifier, pos, |_, pos| {
-                pos.match_string("!")
-            })
-        }
-
-        fn opening_brace<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::opening_brace, pos, |_, pos| {
-                pos.match_string("{")
-            })
-        }
-
-        fn closing_brace<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::closing_brace, pos, |_, pos| {
-                pos.match_string("}")
-            })
-        }
-
-        fn opening_paren<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::opening_paren, pos, |_, pos| {
-                pos.match_string("(")
-            })
-        }
-
-        fn closing_paren<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::closing_paren, pos, |_, pos| {
-                pos.match_string(")")
-            })
-        }
-
-        fn expression<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::expression, pos, |state, pos| {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        term(pos, state).and_then(|pos| {
-                            pos.repeat(|pos| {
-                                state.sequence(move |state| {
-                                    pos.sequence(|pos| {
-                                        skip(pos, state)
-                                            .and_then(|pos| infix_operator(pos, state))
-                                            .and_then(|pos| skip(pos, state))
-                                            .and_then(|pos| term(pos, state))
-                                    })
-                                })
-                            })
-                        })
-                    })
-                })
-            })
-        }
-
-        fn term<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::term, pos, |state, pos| {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        pos.repeat(|pos| {
-                            pos.sequence(|pos| {
-                                prefix_operator(pos, state).and_then(|pos| skip(pos, state))
-                            })
-                        }).and_then(|pos| {
-                                state
-                                    .sequence(move |state| {
-                                        pos.sequence(|pos| {
-                                            opening_paren(pos, state)
-                                                .and_then(|pos| skip(pos, state))
-                                                .and_then(|pos| expression(pos, state))
-                                                .and_then(|pos| skip(pos, state))
-                                                .and_then(|pos| closing_paren(pos, state))
-                                        })
-                                    })
-                                    .or_else(|pos| terminal(pos, state))
-                            })
-                            .and_then(|pos| {
-                                pos.repeat(|pos| {
-                                    pos.sequence(|pos| {
-                                        skip(pos, state)
-                                            .and_then(|pos| postfix_operator(pos, state))
-                                    })
-                                })
-                            })
-                    })
-                })
-            })
-        }
-
-        fn terminal<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            push(pos, state)
-                .or_else(|pos| identifier(pos, state))
-                .or_else(|pos| string(pos, state))
-                .or_else(|pos| insensitive_string(pos, state))
-                .or_else(|pos| range(pos, state))
-        }
-
-        fn prefix_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            positive_predicate_operator(pos, state)
-                .or_else(|pos| negative_predicate_operator(pos, state))
-        }
-
-        fn infix_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            sequence_operator(pos, state).or_else(|pos| choice_operator(pos, state))
-        }
-
-        fn postfix_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            optional_operator(pos, state)
-                .or_else(|pos| repeat_operator(pos, state))
-                .or_else(|pos| repeat_once_operator(pos, state))
-                .or_else(|pos| repeat_exact(pos, state))
-                .or_else(|pos| repeat_min(pos, state))
-                .or_else(|pos| repeat_max(pos, state))
-                .or_else(|pos| repeat_min_max(pos, state))
-        }
-
-        fn positive_predicate_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::positive_predicate_operator, pos, |_, pos| {
-                pos.match_string("&")
-            })
-        }
-
-        fn negative_predicate_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::negative_predicate_operator, pos, |_, pos| {
-                pos.match_string("!")
-            })
-        }
-
-        fn sequence_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::sequence_operator, pos, |_, pos| {
-                pos.match_string("~")
-            })
-        }
-
-        fn choice_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::choice_operator, pos, |_, pos| {
-                pos.match_string("|")
-            })
-        }
-
-        fn optional_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::optional_operator, pos, |_, pos| {
-                pos.match_string("?")
-            })
-        }
-
-        fn repeat_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::repeat_operator, pos, |_, pos| {
-                pos.match_string("*")
-            })
-        }
-
-        fn repeat_once_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::repeat_once_operator, pos, |_, pos| {
-                pos.match_string("+")
-            })
-        }
-
-        fn repeat_exact<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::repeat_exact, pos, |state, pos| {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        opening_brace(pos, state)
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| number(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| closing_brace(pos, state))
-                    })
-                })
-            })
-        }
-
-        fn repeat_min<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::repeat_min, pos, |state, pos| {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        opening_brace(pos, state)
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| number(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| comma(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| closing_brace(pos, state))
-                    })
-                })
-            })
-        }
-
-        fn repeat_max<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::repeat_max, pos, |state, pos| {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        opening_brace(pos, state)
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| comma(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| number(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| closing_brace(pos, state))
-                    })
-                })
-            })
-        }
-
-        fn repeat_min_max<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::repeat_min_max, pos, |state, pos| {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        opening_brace(pos, state)
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| number(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| comma(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| number(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| closing_brace(pos, state))
-                    })
-                })
-            })
-        }
-
-        fn comma<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::comma, pos, |_, pos| {
-                pos.match_string(",")
-            })
-        }
-
-        fn push<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::push, pos, |state, pos| {
-                pos.sequence(|pos| {
-                    pos.match_string("push").and_then(|pos| {
-                        skip(pos, state)
-                    }).and_then(|pos| {
-                        opening_paren(pos, state)
-                    }).and_then(|pos| {
-                        skip(pos, state)
-                    }).and_then(|pos| {
-                        expression(pos, state)
-                    }).and_then(|pos| {
-                        skip(pos, state)
-                    }).and_then(|pos| {
-                        closing_paren(pos, state)
-                    })
-                })
-            })
-        }
-
-        fn identifier<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::identifier, pos, |state, pos| {
-                pos.sequence(|pos| {
-                    pos.lookahead(false, |pos| {
-                        pos.match_string("push")
-                    }).and_then(|pos| {
-                        pos.match_string("_").or_else(|pos| {
-                            alpha(pos, state)
-                        }).and_then(|pos| {
-                            pos.repeat(|pos| {
-                                pos.match_string("_").or_else(|pos| {
-                                    alpha_num(pos, state)
-                                })
-                            })
-                        })
-                    })
-                })
-            })
-        }
-
-
-        fn alpha<'i>(
-            pos: Position<'i>,
-            _: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            pos.match_range('a'..'z')
-                .or_else(|pos| pos.match_range('A'..'Z'))
-        }
-
-        fn alpha_num<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            alpha(pos, state).or_else(|pos| pos.match_range('0'..'9'))
-        }
-
-        fn string<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::string, pos, |state, pos| {
-                pos.sequence(|pos| {
-                    quote(pos, state)
-                        .and_then(|pos| {
-                            pos.repeat(|pos| {
-                                pos.sequence(|pos| {
-                                    pos.lookahead(false, |pos| {
-                                        pos.match_string("\"").or_else(|pos| pos.match_string("\\"))
-                                    }).and_then(|pos| pos.skip(1))
-                                }).or_else(|pos| escape(pos, state))
-                            })
-                        })
-                        .and_then(|pos| quote(pos, state))
-                })
-            })
-        }
-
-        fn quote<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::quote, pos, |_, pos| pos.match_string("\""))
-        }
-
-        fn insensitive_string<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::insensitive_string, pos, |state, pos| {
-                pos.sequence(|pos| {
-                    pos.match_string("^")
-                        .and_then(|pos| skip(pos, state))
-                        .and_then(|pos| string(pos, state))
-                })
-            })
-        }
-
-        fn range<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::range, pos, |state, pos| {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        character(pos, state)
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| range_operator(pos, state))
-                            .and_then(|pos| skip(pos, state))
-                            .and_then(|pos| character(pos, state))
-                    })
-                })
-            })
-        }
-
-        fn range_operator<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::range_operator, pos, |_, pos| {
-                pos.match_string("..")
-            })
-        }
-
-        fn character<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::character, pos, |state, pos| {
-                pos.sequence(|pos| {
-                    single_quote(pos, state)
-                        .and_then(|pos| {
-                            pos.sequence(|pos| {
-                                pos.lookahead(false, |pos| {
-                                    pos.match_string("'").or_else(|pos| pos.match_string("\\"))
-                                }).and_then(|pos| pos.skip(1))
-                            }).or_else(|pos| escape(pos, state))
-                        })
-                        .and_then(|pos| single_quote(pos, state))
-                })
-            })
-        }
-
-        fn number<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::number, pos, |_, pos| {
-                pos.sequence(|pos| {
-                    pos.match_range('0'..'9')
-                        .and_then(|pos| pos.repeat(|pos| pos.match_range('0'..'9')))
-                })
-            })
-        }
-
-        fn single_quote<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(PestRule::single_quote, pos, |_, pos| {
-                pos.match_string("'")
-            })
-        }
-
-        fn escape<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            pos.sequence(|pos| {
-                pos.match_string("\\").and_then(|pos| {
-                    pos.match_string("n")
-                        .or_else(|pos| pos.match_string("r"))
-                        .or_else(|pos| pos.match_string("t"))
-                        .or_else(|pos| pos.match_string("\\"))
-                        .or_else(|pos| pos.match_string("0"))
-                        .or_else(|pos| pos.match_string("'"))
-                        .or_else(|pos| pos.match_string("\""))
-                        .or_else(|pos| unicode(pos, state))
-                        .or_else(|pos| code(pos, state))
-                })
-            })
-        }
-
-        fn unicode<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            pos.sequence(|pos| {
-                pos.match_string("u")
-                    .and_then(|pos| pos.match_string("{"))
-                    .and_then(|pos| hex_digit(pos, state))
-                    .and_then(|pos| hex_digit(pos, state))
-                    .and_then(|pos| pos.optional(|pos| hex_digit(pos, state)))
-                    .and_then(|pos| pos.optional(|pos| hex_digit(pos, state)))
-                    .and_then(|pos| pos.optional(|pos| hex_digit(pos, state)))
-                    .and_then(|pos| pos.optional(|pos| hex_digit(pos, state)))
-                    .and_then(|pos| pos.match_string("}"))
-            })
-        }
-
-        fn code<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            pos.sequence(|pos| {
-                pos.match_string("x")
-                    .and_then(|pos| hex_digit(pos, state))
-                    .and_then(|pos| hex_digit(pos, state))
-            })
-        }
-
-        fn hex_digit<'i>(
-            pos: Position<'i>,
-            _: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            pos.match_range('0'..'9')
-                .or_else(|pos| pos.match_range('a'..'f'))
-                .or_else(|pos| pos.match_range('A'..'F'))
-        }
-
-        fn skip<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            pos.sequence(|pos| {
-                pos.repeat(|pos| whitespace(pos, state)).and_then(|pos| {
-                    pos.repeat(|pos| {
-                        pos.sequence(|pos| {
-                            pos.optional(|pos| comment(pos, state)).and_then(|pos| {
-                                pos.sequence(|pos| {
-                                    whitespace(pos, state)
-                                        .and_then(|pos| pos.repeat(|pos| whitespace(pos, state)))
-                                })
-                            })
-                        })
-                    })
-                })
-            })
-        }
-
-        fn whitespace<'i>(
-            pos: Position<'i>,
-            _: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            pos.match_string(" ")
-                .or_else(|pos| pos.match_string("\t"))
-                .or_else(|pos| pos.match_string("\r"))
-                .or_else(|pos| pos.match_string("\n"))
-        }
-
-        fn comment<'i>(
-            pos: Position<'i>,
-            _: &mut ParserState<'i, PestRule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            pos.sequence(|pos| {
-                pos.match_string("//").and_then(|pos| {
-                    pos.repeat(|pos| {
-                        pos.sequence(|pos| {
-                            pos.lookahead(false, |pos| pos.match_string("\n"))
-                                .and_then(|pos| pos.skip(1))
-                        })
-                    })
-                })
-            })
-        }
-
-        pest::state(input, move |mut state, pos: Position<'i>| match rule {
-            PestRule::grammar_rules => grammar_rules(pos, &mut state),
-            PestRule::grammar_rule => grammar_rule(pos, &mut state),
-            PestRule::assignment_operator => assignment_operator(pos, &mut state),
-            PestRule::silent_modifier => silent_modifier(pos, &mut state),
-            PestRule::atomic_modifier => atomic_modifier(pos, &mut state),
-            PestRule::compound_atomic_modifier => compound_atomic_modifier(pos, &mut state),
-            PestRule::non_atomic_modifier => non_atomic_modifier(pos, &mut state),
-            PestRule::opening_brace => opening_brace(pos, &mut state),
-            PestRule::closing_brace => closing_brace(pos, &mut state),
-            PestRule::opening_paren => opening_paren(pos, &mut state),
-            PestRule::closing_paren => closing_paren(pos, &mut state),
-            PestRule::expression => expression(pos, &mut state),
-            PestRule::term => term(pos, &mut state),
-            PestRule::positive_predicate_operator => {
-                positive_predicate_operator(pos, &mut state)
-            }
-            PestRule::negative_predicate_operator => {
-                negative_predicate_operator(pos, &mut state)
-            }
-            PestRule::sequence_operator => sequence_operator(pos, &mut state),
-            PestRule::choice_operator => choice_operator(pos, &mut state),
-            PestRule::optional_operator => optional_operator(pos, &mut state),
-            PestRule::repeat_operator => repeat_operator(pos, &mut state),
-            PestRule::repeat_once_operator => repeat_once_operator(pos, &mut state),
-            PestRule::repeat_exact => repeat_exact(pos, &mut state),
-            PestRule::repeat_min => repeat_min(pos, &mut state),
-            PestRule::repeat_max => repeat_max(pos, &mut state),
-            PestRule::repeat_min_max => repeat_min_max(pos, &mut state),
-            PestRule::comma => comma(pos, &mut state),
-            PestRule::push => push(pos, &mut state),
-            PestRule::identifier => identifier(pos, &mut state),
-            PestRule::string => string(pos, &mut state),
-            PestRule::quote => quote(pos, &mut state),
-            PestRule::insensitive_string => insensitive_string(pos, &mut state),
-            PestRule::range => range(pos, &mut state),
-            PestRule::range_operator => range_operator(pos, &mut state),
-            PestRule::character => character(pos, &mut state),
-            PestRule::number => number(pos, &mut state),
-            PestRule::single_quote => single_quote(pos, &mut state)
-        })
-    }
+pub fn parse<'i>(rule: Rule, data: &'i str) -> Result<Pairs<Rule>, Error<Rule>> {
+    PestParser::parse(rule, data)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -812,12 +60,12 @@ pub enum ParserExpr<'i> {
     Push(Box<ParserNode<'i>>)
 }
 
-fn convert_rule<'i>(rule: ParserRule<'i>) -> Rule {
+fn convert_rule<'i>(rule: ParserRule<'i>) -> AstRule {
     match rule {
         ParserRule { name, ty, node, .. } => {
             let expr = convert_node(node);
 
-            Rule { name, ty, expr }
+            AstRule { name, ty, expr }
         }
     }
 }
@@ -851,7 +99,7 @@ fn convert_node<'i>(node: ParserNode<'i>) -> Expr<'i> {
     }
 }
 
-pub fn consume_rules<'i>(pairs: Pairs<'i, PestRule>) -> Result<Vec<Rule<'i>>, Vec<Error<'i, PestRule>>> {
+pub fn consume_rules<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<AstRule<'i>>, Vec<Error<'i, Rule>>> {
     let rules = consume_rules_with_spans(pairs);
     let errors = validator::validate_ast(&rules);
     if errors.len() == 0 {
@@ -861,14 +109,14 @@ pub fn consume_rules<'i>(pairs: Pairs<'i, PestRule>) -> Result<Vec<Rule<'i>>, Ve
     }
 }
 
-fn consume_rules_with_spans<'i>(pairs: Pairs<'i, PestRule>) -> Vec<ParserRule<'i>> {
+fn consume_rules_with_spans<'i>(pairs: Pairs<'i, Rule>) -> Vec<ParserRule<'i>> {
     let climber = PrecClimber::new(vec![
-        Operator::new(PestRule::choice_operator, Assoc::Left),
-        Operator::new(PestRule::sequence_operator, Assoc::Left),
+        Operator::new(Rule::choice_operator, Assoc::Left),
+        Operator::new(Rule::sequence_operator, Assoc::Left),
     ]);
 
     pairs
-        .filter(|pair| pair.as_rule() == PestRule::grammar_rule)
+        .filter(|pair| pair.as_rule() == Rule::grammar_rule)
         .map(|pair| {
             let mut pairs = pair.into_inner().peekable();
 
@@ -877,12 +125,12 @@ fn consume_rules_with_spans<'i>(pairs: Pairs<'i, PestRule>) -> Vec<ParserRule<'i
 
             pairs.next().unwrap(); // assignment_operator
 
-            let ty = if pairs.peek().unwrap().as_rule() != PestRule::opening_brace {
+            let ty = if pairs.peek().unwrap().as_rule() != Rule::opening_brace {
                 match pairs.next().unwrap().as_rule() {
-                    PestRule::silent_modifier => RuleType::Silent,
-                    PestRule::atomic_modifier => RuleType::Atomic,
-                    PestRule::compound_atomic_modifier => RuleType::CompoundAtomic,
-                    PestRule::non_atomic_modifier => RuleType::NonAtomic,
+                    Rule::silent_modifier => RuleType::Silent,
+                    Rule::atomic_modifier => RuleType::Atomic,
+                    Rule::compound_atomic_modifier => RuleType::CompoundAtomic,
+                    Rule::non_atomic_modifier => RuleType::NonAtomic,
                     _ => unreachable!()
                 }
             } else {
@@ -904,17 +152,17 @@ fn consume_rules_with_spans<'i>(pairs: Pairs<'i, PestRule>) -> Vec<ParserRule<'i
 }
 
 fn consume_expr<'i>(
-    pairs: Peekable<Pairs<'i, PestRule>>,
-    climber: &PrecClimber<PestRule>
+    pairs: Peekable<Pairs<'i, Rule>>,
+    climber: &PrecClimber<Rule>
 ) -> ParserNode<'i> {
     fn unaries<'i>(
-        mut pairs: Peekable<Pairs<'i, PestRule>>,
-        climber: &PrecClimber<PestRule>
+        mut pairs: Peekable<Pairs<'i, Rule>>,
+        climber: &PrecClimber<Rule>
     ) -> ParserNode<'i> {
         let pair = pairs.next().unwrap();
 
         match pair.as_rule() {
-            PestRule::opening_paren => {
+            Rule::opening_paren => {
                 let node = unaries(pairs, climber);
                 let end = node.span.end_pos();
 
@@ -923,7 +171,7 @@ fn consume_expr<'i>(
                     span: pair.into_span().start_pos().span(&end)
                 }
             }
-            PestRule::positive_predicate_operator => {
+            Rule::positive_predicate_operator => {
                 let node = unaries(pairs, climber);
                 let end = node.span.end_pos();
 
@@ -932,7 +180,7 @@ fn consume_expr<'i>(
                     span: pair.into_span().start_pos().span(&end)
                 }
             }
-            PestRule::negative_predicate_operator => {
+            Rule::negative_predicate_operator => {
                 let node = unaries(pairs, climber);
                 let end = node.span.end_pos();
 
@@ -943,8 +191,8 @@ fn consume_expr<'i>(
             }
             other_rule => {
                 let node = match other_rule {
-                    PestRule::expression => consume_expr(pair.into_inner().peekable(), climber),
-                    PestRule::push => {
+                    Rule::expression => consume_expr(pair.into_inner().peekable(), climber),
+                    Rule::_push => {
                         let start = pair.clone().into_span().start_pos();
                         let mut pairs = pair.into_inner();
                         pairs.next().unwrap(); // opening_paren
@@ -958,25 +206,25 @@ fn consume_expr<'i>(
                             span: start.span(&end)
                         }
                     }
-                    PestRule::identifier => ParserNode {
+                    Rule::identifier => ParserNode {
                         expr: ParserExpr::Ident(pair.as_str()),
                         span: pair.clone().into_span()
                     },
-                    PestRule::string => {
+                    Rule::string => {
                         let string = pair.as_str();
                         ParserNode {
                             expr: ParserExpr::Str(string[1..string.len() - 1].to_owned()),
                             span: pair.clone().into_span()
                         }
                     }
-                    PestRule::insensitive_string => {
+                    Rule::insensitive_string => {
                         let string = pair.as_str();
                         ParserNode {
                             expr: ParserExpr::Insens(string[2..string.len() - 1].to_owned()),
                             span: pair.clone().into_span()
                         }
                     }
-                    PestRule::range => {
+                    Rule::range => {
                         let mut pairs = pair.into_inner();
                         let pair = pairs.next().unwrap();
                         let start = pair.as_str();
@@ -996,28 +244,28 @@ fn consume_expr<'i>(
 
                 pairs.fold(node, |node, pair| {
                     match pair.as_rule() {
-                        PestRule::optional_operator => {
+                        Rule::optional_operator => {
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::Opt(Box::new(node)),
                                 span: start.span(&pair.into_span().end_pos())
                             }
                         }
-                        PestRule::repeat_operator => {
+                        Rule::repeat_operator => {
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::Rep(Box::new(node)),
                                 span: start.span(&pair.into_span().end_pos())
                             }
                         }
-                        PestRule::repeat_once_operator => {
+                        Rule::repeat_once_operator => {
                             let start = node.span.start_pos();
                             ParserNode {
                                 expr: ParserExpr::RepOnce(Box::new(node)),
                                 span: start.span(&pair.into_span().end_pos())
                             }
                         }
-                        PestRule::repeat_exact => {
+                        Rule::repeat_exact => {
                             let overflow = |span| {
                                 let error: Error<()> = Error::CustomErrorSpan {
                                     message: "number cannot overflow u32".to_owned(),
@@ -1043,7 +291,7 @@ fn consume_expr<'i>(
                                 span: start.span(&pair.into_span().end_pos())
                             }
                         }
-                        PestRule::repeat_min => {
+                        Rule::repeat_min => {
                             let overflow = |span| {
                                 let error: Error<()> = Error::CustomErrorSpan {
                                     message: "number cannot overflow u32".to_owned(),
@@ -1069,7 +317,7 @@ fn consume_expr<'i>(
                                 span: start.span(&pair.into_span().end_pos())
                             }
                         }
-                        PestRule::repeat_max => {
+                        Rule::repeat_max => {
                             let overflow = |span| {
                                 let error: Error<()> = Error::CustomErrorSpan {
                                     message: "number cannot overflow u32".to_owned(),
@@ -1096,7 +344,7 @@ fn consume_expr<'i>(
                                 span: start.span(&pair.into_span().end_pos())
                             }
                         }
-                        PestRule::repeat_min_max => {
+                        Rule::repeat_min_max => {
                             let overflow = |span| {
                                 let error: Error<()> = Error::CustomErrorSpan {
                                     message: "number cannot overflow u32".to_owned(),
@@ -1130,7 +378,7 @@ fn consume_expr<'i>(
                                 span: start.span(&pair.into_span().end_pos())
                             }
                         }
-                        PestRule::closing_paren => {
+                        Rule::closing_paren => {
                             let start = node.span.start_pos();
 
                             ParserNode {
@@ -1145,10 +393,10 @@ fn consume_expr<'i>(
         }
     }
 
-    let term = |pair: Pair<'i, PestRule>| unaries(pair.into_inner().peekable(), climber);
+    let term = |pair: Pair<'i, Rule>| unaries(pair.into_inner().peekable(), climber);
     let infix =
-        |lhs: ParserNode<'i>, op: Pair<'i, PestRule>, rhs: ParserNode<'i>| match op.as_rule() {
-            PestRule::sequence_operator => {
+        |lhs: ParserNode<'i>, op: Pair<'i, Rule>, rhs: ParserNode<'i>| match op.as_rule() {
+            Rule::sequence_operator => {
                 let start = lhs.span.start_pos();
                 let end = rhs.span.end_pos();
 
@@ -1157,7 +405,7 @@ fn consume_expr<'i>(
                     span: start.span(&end)
                 }
             }
-            PestRule::choice_operator => {
+            Rule::choice_operator => {
                 let start = lhs.span.start_pos();
                 let end = rhs.span.end_pos();
 
@@ -1181,7 +429,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "a = { b } c = { d }",
-            rule: PestRule::grammar_rules,
+            rule: Rule::grammar_rules,
             tokens: [
                 grammar_rule(0, 9, [
                     identifier(0, 1),
@@ -1214,7 +462,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "a = ! { b ~ c }",
-            rule: PestRule::grammar_rule,
+            rule: Rule::grammar_rule,
             tokens: [
                 grammar_rule(0, 15, [
                     identifier(0, 1),
@@ -1241,7 +489,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "_a | 'a'..'b' ~ !^\"abc\" ~ (d | e)*?",
-            rule: PestRule::expression,
+            rule: Rule::expression,
             tokens: [
                 expression(0, 35, [
                     term(0, 2, [
@@ -1297,7 +545,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "{1}",
-            rule: PestRule::repeat_exact,
+            rule: Rule::repeat_exact,
             tokens: [
                 repeat_exact(0, 3, [
                     opening_brace(0, 1),
@@ -1313,7 +561,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "{2,}",
-            rule: PestRule::repeat_min,
+            rule: Rule::repeat_min,
             tokens: [
                 repeat_min(0, 4, [
                     opening_brace(0,1),
@@ -1330,7 +578,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "{, 3}",
-            rule: PestRule::repeat_max,
+            rule: Rule::repeat_max,
             tokens: [
                 repeat_max(0, 5, [
                     opening_brace(0,1),
@@ -1347,7 +595,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "{1, 2}",
-            rule: PestRule::repeat_min_max,
+            rule: Rule::repeat_min_max,
             tokens: [
                 repeat_min_max(0, 6, [
                     opening_brace(0, 1),
@@ -1365,7 +613,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "push ( a )",
-            rule: PestRule::push,
+            rule: Rule::push,
             tokens: [
                 push(0, 10, [
                     opening_paren(5, 6),
@@ -1385,7 +633,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "_a8943",
-            rule: PestRule::identifier,
+            rule: Rule::identifier,
             tokens: [
                 identifier(0, 6)
             ]
@@ -1397,7 +645,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "\"aaaaa\\n\\r\\t\\\\\\0\\'\\\"\\x0F\\u{123abC}\\u{12}aaaaa\"",
-            rule: PestRule::string,
+            rule: Rule::string,
             tokens: [
                 string(0, 46, [
                     quote(0, 1),
@@ -1412,7 +660,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "^  \"\\\"hi\"",
-            rule: PestRule::insensitive_string,
+            rule: Rule::insensitive_string,
             tokens: [
                 insensitive_string(0, 9, [
                     string(3, 9, [
@@ -1429,7 +677,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "'\\n' .. '\\x1a'",
-            rule: PestRule::range,
+            rule: Rule::range,
             tokens: [
                 range(0, 14, [
                     character(0, 4, [
@@ -1451,7 +699,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "'\\u{123abC}'",
-            rule: PestRule::character,
+            rule: Rule::character,
             tokens: [
                 character(0, 12, [
                     single_quote(0, 1),
@@ -1466,7 +714,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "0123",
-            rule: PestRule::number,
+            rule: Rule::number,
             tokens: [
                 number(0, 4)
             ]
@@ -1478,7 +726,7 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "a ~    // asda\n b",
-            rule: PestRule::expression,
+            rule: Rule::expression,
             tokens: [
                 expression(0, 17, [
                     term(0, 1, [
@@ -1498,8 +746,8 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "0",
-            rule: PestRule::grammar_rules,
-            positives: vec![PestRule::identifier],
+            rule: Rule::grammar_rules,
+            positives: vec![Rule::identifier],
             negatives: vec![],
             pos: 0
         };
@@ -1510,8 +758,8 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a {}",
-            rule: PestRule::grammar_rules,
-            positives: vec![PestRule::assignment_operator],
+            rule: Rule::grammar_rules,
+            positives: vec![Rule::assignment_operator],
             negatives: vec![],
             pos: 2
         };
@@ -1522,13 +770,13 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = *{}",
-            rule: PestRule::grammar_rules,
+            rule: Rule::grammar_rules,
             positives: vec![
-                PestRule::silent_modifier,
-                PestRule::atomic_modifier,
-                PestRule::compound_atomic_modifier,
-                PestRule::non_atomic_modifier,
-                PestRule::opening_brace
+                Rule::silent_modifier,
+                Rule::atomic_modifier,
+                Rule::compound_atomic_modifier,
+                Rule::non_atomic_modifier,
+                Rule::opening_brace
             ],
             negatives: vec![],
             pos: 4
@@ -1540,8 +788,8 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = _",
-            rule: PestRule::grammar_rules,
-            positives: vec![PestRule::opening_brace],
+            rule: Rule::grammar_rules,
+            positives: vec![Rule::opening_brace],
             negatives: vec![],
             pos: 5
         };
@@ -1552,8 +800,8 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = {}",
-            rule: PestRule::grammar_rules,
-            positives: vec![PestRule::expression],
+            rule: Rule::grammar_rules,
+            positives: vec![Rule::expression],
             negatives: vec![],
             pos: 5
         };
@@ -1564,16 +812,16 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = { b ~ }",
-            rule: PestRule::grammar_rules,
+            rule: Rule::grammar_rules,
             positives: vec![
-                PestRule::opening_paren,
-                PestRule::positive_predicate_operator,
-                PestRule::negative_predicate_operator,
-                PestRule::push,
-                PestRule::identifier,
-                PestRule::quote,
-                PestRule::insensitive_string,
-                PestRule::single_quote
+                Rule::opening_paren,
+                Rule::positive_predicate_operator,
+                Rule::negative_predicate_operator,
+                Rule::push,
+                Rule::identifier,
+                Rule::quote,
+                Rule::insensitive_string,
+                Rule::single_quote
             ],
             negatives: vec![],
             pos: 10
@@ -1585,15 +833,15 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = { b % }",
-            rule: PestRule::grammar_rules,
+            rule: Rule::grammar_rules,
             positives: vec![
-                PestRule::opening_brace,
-                PestRule::closing_brace,
-                PestRule::sequence_operator,
-                PestRule::choice_operator,
-                PestRule::optional_operator,
-                PestRule::repeat_operator,
-                PestRule::repeat_once_operator
+                Rule::opening_brace,
+                Rule::closing_brace,
+                Rule::sequence_operator,
+                Rule::choice_operator,
+                Rule::optional_operator,
+                Rule::repeat_operator,
+                Rule::repeat_once_operator
             ],
             negatives: vec![],
             pos: 8
@@ -1605,15 +853,15 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = { (b }",
-            rule: PestRule::grammar_rules,
+            rule: Rule::grammar_rules,
             positives: vec![
-                PestRule::opening_brace,
-                PestRule::closing_paren,
-                PestRule::sequence_operator,
-                PestRule::choice_operator,
-                PestRule::optional_operator,
-                PestRule::repeat_operator,
-                PestRule::repeat_once_operator
+                Rule::opening_brace,
+                Rule::closing_paren,
+                Rule::sequence_operator,
+                Rule::choice_operator,
+                Rule::optional_operator,
+                Rule::repeat_operator,
+                Rule::repeat_once_operator
             ],
             negatives: vec![],
             pos: 9
@@ -1625,16 +873,16 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = { ! }",
-            rule: PestRule::grammar_rules,
+            rule: Rule::grammar_rules,
             positives: vec![
-                PestRule::opening_paren,
-                PestRule::positive_predicate_operator,
-                PestRule::negative_predicate_operator,
-                PestRule::push,
-                PestRule::identifier,
-                PestRule::quote,
-                PestRule::insensitive_string,
-                PestRule::single_quote
+                Rule::opening_paren,
+                Rule::positive_predicate_operator,
+                Rule::negative_predicate_operator,
+                Rule::push,
+                Rule::identifier,
+                Rule::quote,
+                Rule::insensitive_string,
+                Rule::single_quote
             ],
             negatives: vec![],
             pos: 8
@@ -1646,8 +894,8 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = { \" }",
-            rule: PestRule::grammar_rules,
-            positives: vec![PestRule::quote],
+            rule: Rule::grammar_rules,
+            positives: vec![Rule::quote],
             negatives: vec![],
             pos: 9
         };
@@ -1658,8 +906,8 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = { ^ }",
-            rule: PestRule::grammar_rules,
-            positives: vec![PestRule::string],
+            rule: Rule::grammar_rules,
+            positives: vec![Rule::string],
             negatives: vec![],
             pos: 8
         };
@@ -1670,8 +918,8 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = { \' }",
-            rule: PestRule::grammar_rules,
-            positives: vec![PestRule::single_quote],
+            rule: Rule::grammar_rules,
+            positives: vec![Rule::single_quote],
             negatives: vec![],
             pos: 8
         };
@@ -1682,8 +930,8 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = { \'a\' }",
-            rule: PestRule::grammar_rules,
-            positives: vec![PestRule::range_operator],
+            rule: Rule::grammar_rules,
+            positives: vec![Rule::range_operator],
             negatives: vec![],
             pos: 10
         };
@@ -1694,15 +942,15 @@ mod tests {
         fails_with! {
             parser: PestParser,
             input: "a = { a& }",
-            rule: PestRule::grammar_rules,
+            rule: Rule::grammar_rules,
             positives: vec![
-                PestRule::opening_brace,
-                PestRule::closing_brace,
-                PestRule::sequence_operator,
-                PestRule::choice_operator,
-                PestRule::optional_operator,
-                PestRule::repeat_operator,
-                PestRule::repeat_once_operator
+                Rule::opening_brace,
+                Rule::closing_brace,
+                Rule::sequence_operator,
+                Rule::choice_operator,
+                Rule::optional_operator,
+                Rule::repeat_operator,
+                Rule::repeat_once_operator
             ],
             negatives: vec![],
             pos: 7
@@ -1714,14 +962,14 @@ mod tests {
         let input =
             "rule = _{ a{1} ~ \"a\"{3,} ~ b{, 2} ~ \"b\"{1, 2} | !(^\"c\" | push('d'..'e'))?* }";
 
-        let pairs = PestParser::parse(PestRule::grammar_rules, input).unwrap();
+        let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs);
         let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule)).collect();
 
         assert_eq!(
             ast,
             vec![
-                Rule {
+                AstRule {
                     name: "rule",
                     ty: RuleType::Silent,
                     expr: Expr::Choice(
