@@ -1565,7 +1565,16 @@ mod tests {
             parser: PestParser,
             input: "a = { b ~ }",
             rule: PestRule::grammar_rules,
-            positives: vec![PestRule::term],
+            positives: vec![
+                PestRule::opening_paren,
+                PestRule::positive_predicate_operator,
+                PestRule::negative_predicate_operator,
+                PestRule::push,
+                PestRule::identifier,
+                PestRule::quote,
+                PestRule::insensitive_string,
+                PestRule::single_quote
+            ],
             negatives: vec![],
             pos: 10
         };
