@@ -20,7 +20,7 @@ use token::Token;
 #[derive(Clone, Debug)]
 pub struct Tokens<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i str,
+    input: &'i [u8],
     index: usize,
     start: usize,
     end: usize
@@ -28,7 +28,7 @@ pub struct Tokens<'i, R> {
 
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &str,
+    input: &[u8],
     start: usize,
     end: usize
 ) -> Tokens<R> {

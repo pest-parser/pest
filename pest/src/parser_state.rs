@@ -74,7 +74,7 @@ where
 
     if f(&mut state, Position::from_start(input)).is_ok() {
         let len = state.queue.len();
-        Ok(pairs::new(Rc::new(state.queue), input, 0, len))
+        Ok(pairs::new(Rc::new(state.queue), input.as_bytes(), 0, len))
     } else {
         state.pos_attempts.sort();
         state.pos_attempts.dedup();
@@ -85,7 +85,7 @@ where
             positives: state.pos_attempts,
             negatives: state.neg_attempts,
             // All attempted positions were legal.
-            pos: unsafe { position::new(input, state.attempt_pos) }
+            pos: unsafe { position::new(input.as_bytes(), state.attempt_pos) }
         })
     }
 }
