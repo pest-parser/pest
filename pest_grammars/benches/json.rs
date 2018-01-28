@@ -21,7 +21,7 @@ use test::Bencher;
 
 use pest::Parser;
 use pest::iterators::Pair;
-use pest::span::Span;
+use pest::Span;
 
 use pest_grammars::json::*;
 
