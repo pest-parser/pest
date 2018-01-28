@@ -11,6 +11,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ptr;
+use std::str;
 
 use position;
 
@@ -18,13 +19,13 @@ use position;
 /// [two `Position`s](struct.Position.html#method.span) or from a
 /// [`Pair`](../iterators/struct.Pair.html#method.span).
 pub struct Span<'i> {
-    input: &'i str,
+    input: &'i [u8],
     start: usize,
     end: usize
 }
 
 #[inline]
-pub fn new(input: &str, start: usize, end: usize) -> Span {
+pub unsafe fn new(input: &[u8], start: usize, end: usize) -> Span {
     Span { input, start, end }
 }
 
@@ -80,7 +81,7 @@ impl<'i> Span<'i> {
     /// ```
     #[inline]
     pub fn start_pos(&self) -> position::Position<'i> {
-        // Span start position is a UTF-8 border and is safe.
+        // Span's start position is always a UTF-8 border.
         unsafe { position::new(self.input, self.start) }
     }
 
@@ -99,7 +100,7 @@ impl<'i> Span<'i> {
     /// ```
     #[inline]
     pub fn end_pos(&self) -> position::Position<'i> {
-        // Span end position is a UTF-8 border and is safe.
+        // Span's end position is always a UTF-8 border.
         unsafe { position::new(self.input, self.end) }
     }
 
@@ -118,7 +119,7 @@ impl<'i> Span<'i> {
     /// ```
     #[inline]
     pub fn split(self) -> (position::Position<'i>, position::Position<'i>) {
-        // Span start and end positions are UTF-8 borders and safe.
+        // Span's start and end positions are always a UTF-8 borders.
         let pos1 = unsafe { position::new(self.input, self.start) };
         let pos2 = unsafe { position::new(self.input, self.end) };
 
@@ -140,7 +141,8 @@ impl<'i> Span<'i> {
     /// ```
     #[inline]
     pub fn as_str(&self) -> &'i str {
-        unsafe { self.input.slice_unchecked(self.start, self.end) }
+        // Span's start and end positions are always a UTF-8 borders.
+        unsafe { str::from_utf8_unchecked(&self.input[self.start..self.end]) }
     }
 }
 
@@ -152,7 +154,7 @@ impl<'i> fmt::Debug for Span<'i> {
 
 impl<'i> Clone for Span<'i> {
     fn clone(&self) -> Span<'i> {
-        new(self.input, self.start, self.end)
+        unsafe { new(self.input, self.start, self.end) }
     }
 }
 
@@ -188,7 +190,7 @@ impl<'i> Ord for Span<'i> {
 
 impl<'i> Hash for Span<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.input as *const str).hash(state);
+        (self.input as *const [u8]).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }

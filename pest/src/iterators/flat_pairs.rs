@@ -19,14 +19,14 @@ use RuleType;
 /// [`Pairs::flatten`](struct.Pairs.html#method.flatten).
 pub struct FlatPairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i str,
+    input: &'i [u8],
     start: usize,
     end: usize
 }
 
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &str,
+    input: &[u8],
     start: usize,
     end: usize
 ) -> FlatPairs<R> {
