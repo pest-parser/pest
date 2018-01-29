@@ -14,6 +14,8 @@ use std::ops::Range;
 use std::ptr;
 use std::str;
 
+use memchr;
+
 use span;
 
 /// A `struct` containing a position that is tied to a `&str` which provides useful methods to
@@ -293,6 +295,40 @@ impl<'i> Position<'i> {
 
         self.pos += skipped;
         Ok(self)
+    }
+
+    /// Skips until the first occurrence of `string`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::Position;
+    /// let input = "ab";
+    /// let start = Position::from_start(input);
+    ///
+    /// assert_eq!(start.clone().skip_until("a").unwrap().pos(), 0);
+    /// assert_eq!(start.clone().skip_until("b").unwrap().pos(), 1);
+    /// assert_eq!(start.clone().skip_until("c"), Err(start));
+    /// ```
+    #[inline]
+    pub fn skip_until(mut self, string: &str) -> Result<Position<'i>, Position<'i>> {
+        let slice = string.as_bytes();
+
+        if let Some(pos) = memchr::memchr(slice[0], &self.input[self.pos..]) {
+            if slice.len() == 1 {
+                self.pos += pos;
+                Ok(self)
+            } else {
+                if slice == &self.input[self.pos..self.pos + slice.len()] {
+                    self.pos += pos;
+                    Ok(self)
+                } else {
+                    Err(self)
+                }
+            }
+        } else {
+            Err(self)
+        }
     }
 
     /// Matches `string` from the `Position` and returns `Ok` with the new `Position` if a match was
