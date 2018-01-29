@@ -382,7 +382,7 @@ impl<'i> Position<'i> {
         let matched = {
             // Matching is safe since, even if the string does not fall on UTF-8 borders, that
             // particular slice is only used for comparison which will be handled correctly.
-            let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..self.input.len()]) };
+            let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
 
             if slice.is_char_boundary(string.len()) {
                 let slice = unsafe { slice.slice_unchecked(0, string.len()) };
@@ -417,7 +417,7 @@ impl<'i> Position<'i> {
     pub fn match_range(mut self, range: Range<char>) -> Result<Position<'i>, Position<'i>> {
         let len = {
             // Cannot actually cause undefined behavior.
-            let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..self.input.len()]) };
+            let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
 
             if let Some(c) = slice.chars().next() {
                 if range.start <= c && c <= range.end {
