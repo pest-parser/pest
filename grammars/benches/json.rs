@@ -20,8 +20,8 @@ use std::io::Read;
 use test::Bencher;
 
 use pest::Parser;
-use pest::iterators::Pair;
 use pest::Span;
+use pest::iterators::Pair;
 
 use pest_grammars::json::*;
 

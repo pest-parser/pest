@@ -20,9 +20,7 @@ use pest::Position;
 fn find(b: &mut Bencher) {
     let pos = Position::from_start("aaaaaaaaab");
 
-    b.iter(|| {
-        pos.clone().skip_until("b").unwrap()
-    });
+    b.iter(|| pos.clone().skip_until("b").unwrap());
 }
 
 #[bench]
@@ -30,18 +28,15 @@ fn repeated_skip(b: &mut Bencher) {
     let pos = Position::from_start("aaaaaaaaab");
 
     b.iter(|| {
-        pos.clone().sequence(|pos| {
-            pos.repeat(|pos| {
-                pos.sequence(|pos| {
-                    pos.lookahead(false, |pos| {
-                        pos.match_string("b")
-                    }).and_then(|pos| {
-                        pos.skip(1)
+        pos.clone()
+            .sequence(|pos| {
+                pos.repeat(|pos| {
+                    pos.sequence(|pos| {
+                        pos.lookahead(false, |pos| pos.match_string("b"))
+                            .and_then(|pos| pos.skip(1))
                     })
-                })
-            }).and_then(|pos| {
-                pos.match_string("b")
+                }).and_then(|pos| pos.match_string("b"))
             })
-        }).unwrap()
+            .unwrap()
     });
 }
