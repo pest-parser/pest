@@ -42,6 +42,7 @@ pub enum Expr {
     RepMin(Box<Expr>, u32),
     RepMax(Box<Expr>, u32),
     RepMinMax(Box<Expr>, u32, u32),
+    Skip(Vec<String>),
     Push(Box<Expr>)
 }
 

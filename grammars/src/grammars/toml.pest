@@ -36,8 +36,9 @@ array = { "[" ~ value ~ ("," ~ value)* ~ ","? ~ "]" | "[" ~ "]" }
 
 identifier = { ('a'..'z' | 'A'..'Z' | '0'..'9' | "_" | "-")+ }
 
-multi_line_string  = @{ "\"\"\"" ~ (escape | !("\"" | "\\" | "\u{0000}" | "\u{001F}") ~ any)* ~ "\"\"\"" }
-string             = @{ "\"" ~ (escape | !("\"" | "\\" | "\u{0000}" | "\u{001F}") ~ any)* ~ "\"" }
+multi_line_string  = @{ "\"\"\"" ~ inner ~ "\"\"\"" }
+string             = @{ "\"" ~ inner ~ "\"" }
+inner              = @{ (!("\"" | "\\" | "\u{0000}" | "\u{001F}") ~ any)* ~ (escape ~ inner)? }
 multi_line_literal = @{ "'''" ~ (!"'''" ~ any)* ~ "'''" }
 literal            = @{ "'" ~ (!"'" ~ any)* ~ "'" }
 

@@ -16,7 +16,8 @@ array = { "[" ~ value ~ ("," ~ value)* ~ "]" | "[" ~ "]" }
 
 value = { string | number | object | array | bool | null }
 
-string  = @{ "\"" ~ (escape | !("\"" | "\\") ~ any)* ~ "\"" }
+string  = @{ "\"" ~ inner ~ "\"" }
+inner   = @{ (!("\"" | "\\") ~ any)* ~ (escape ~ inner)? }
 escape  = @{ "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | unicode) }
 unicode = @{ "u" ~ hex ~ hex ~ hex ~ hex }
 hex     = { '0'..'9' | 'a'..'f' | 'A'..'F' }
