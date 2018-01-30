@@ -312,23 +312,24 @@ impl<'i> Position<'i> {
     /// ```
     #[inline]
     pub fn skip_until(mut self, string: &str) -> Result<Position<'i>, Position<'i>> {
+        let mut current = self.pos;
         let slice = string.as_bytes();
 
-        if let Some(pos) = memchr::memchr(slice[0], &self.input[self.pos..]) {
+        while let Some(pos) = memchr::memchr(slice[0], &self.input[current..]) {
             if slice.len() == 1 {
-                self.pos += pos;
-                Ok(self)
+                self.pos = current + pos;
+                return Ok(self);
             } else {
-                if slice == &self.input[self.pos..self.pos + slice.len()] {
-                    self.pos += pos;
-                    Ok(self)
+                if slice == &self.input[current + pos..current + pos + slice.len()] {
+                    self.pos = current + pos;
+                    return Ok(self);
                 } else {
-                    Err(self)
+                    current += pos + 1;
                 }
             }
-        } else {
-            Err(self)
         }
+
+        Err(self)
     }
 
     /// Matches `string` from the `Position` and returns `Ok` with the new `Position` if a match was
@@ -774,6 +775,16 @@ mod tests {
         assert_eq!(measure_skip(input, 0, 0), Some(0));
         assert_eq!(measure_skip(input, 0, 1), Some(1));
         assert_eq!(measure_skip(input, 1, 1), Some(3));
+    }
+
+    #[test]
+    fn skip_until() {
+        let input = b"ab ac";
+
+        assert_eq!(unsafe { new(input, 0) }.skip_until("a").unwrap().pos(), 0);
+        assert_eq!(unsafe { new(input, 0) }.skip_until("b").unwrap().pos(), 1);
+        assert_eq!(unsafe { new(input, 0) }.skip_until("ab").unwrap().pos(), 0);
+        assert_eq!(unsafe { new(input, 0) }.skip_until("ac").unwrap().pos(), 3);
     }
 
     #[test]
