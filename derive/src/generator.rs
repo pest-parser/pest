@@ -645,7 +645,12 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
 
             string_tokens.append("[");
 
-            string_tokens.append_separated(&strings[..], ",");
+            for string in &strings[..strings.len() - 1] {
+                string_tokens.append(format!("\"{}\"", string));
+                string_tokens.append(",");
+            }
+
+            string_tokens.append(format!("\"{}\"", strings[strings.len() - 1]));
 
             string_tokens.append("]");
             string_tokens.append(";");
