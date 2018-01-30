@@ -12,7 +12,7 @@ readme = "_README.md"
 
 [dependencies]
 pest = { path = "../pest", version = "^1.0" }
-pest_derive = { path = "../pest_derive", version = "^1.0" }
+pest_derive = { path = "../derive", version = "^1.0" }
 
 [badges]
 codecov = { repository = "pest-parser/pest" }

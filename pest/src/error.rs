@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     fn display_parsing_error_mixed() {
-        let input = "ab\ncd\nef";
+        let input = b"ab\ncd\nef";
         let pos = unsafe { position::new(input, 4) };
         let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2, 3],
@@ -279,7 +279,7 @@ mod tests {
 
     #[test]
     fn display_parsing_error_positives() {
-        let input = "ab\ncd\nef";
+        let input = b"ab\ncd\nef";
         let pos = unsafe { position::new(input, 4) };
         let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2],
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn display_parsing_error_negatives() {
-        let input = "ab\ncd\nef";
+        let input = b"ab\ncd\nef";
         let pos = unsafe { position::new(input, 4) };
         let error: Error<u32> = Error::ParsingError {
             positives: vec![],
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn display_parsing_error_unknown() {
-        let input = "ab\ncd\nef";
+        let input = b"ab\ncd\nef";
         let pos = unsafe { position::new(input, 4) };
         let error: Error<u32> = Error::ParsingError {
             positives: vec![],
@@ -348,7 +348,7 @@ mod tests {
 
     #[test]
     fn display_custom_pos() {
-        let input = "ab\ncd\nef";
+        let input = b"ab\ncd\nef";
         let pos = unsafe { position::new(input, 4) };
         let error: Error<&str> = Error::CustomErrorPos {
             message: "error: big one".to_owned(),
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn display_custom_span_two_lines() {
-        let input = "ab\ncd\nefgh";
+        let input = b"ab\ncd\nefgh";
         let start = unsafe { position::new(input, 4) };
         let end = unsafe { position::new(input, 9) };
         let error: Error<&str> = Error::CustomErrorSpan {
@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn display_custom_span_three_lines() {
-        let input = "ab\ncd\nefgh";
+        let input = b"ab\ncd\nefgh";
         let start = unsafe { position::new(input, 1) };
         let end = unsafe { position::new(input, 9) };
         let error: Error<&str> = Error::CustomErrorSpan {
@@ -419,7 +419,7 @@ mod tests {
 
     #[test]
     fn display_custom_span_two_lines_inverted() {
-        let input = "abcdef\ngh";
+        let input = b"abcdef\ngh";
         let start = unsafe { position::new(input, 5) };
         let end = unsafe { position::new(input, 8) };
         let error: Error<&str> = Error::CustomErrorSpan {
@@ -443,7 +443,7 @@ mod tests {
 
     #[test]
     fn mapped_parsing_error() {
-        let input = "ab\ncd\nef";
+        let input = b"ab\ncd\nef";
         let pos = unsafe { position::new(input, 4) };
         let error: Error<u32> = Error::ParsingError {
             positives: vec![1, 2, 3],

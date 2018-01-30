@@ -12,17 +12,20 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::ptr;
+use std::str;
+
+use memchr;
 
 use span;
 
 /// A `struct` containing a position that is tied to a `&str` which provides useful methods to
 /// manually parse it. This leads to an API largely based on the standard `Result`.
 pub struct Position<'i> {
-    input: &'i str,
+    input: &'i [u8],
     pos: usize
 }
 
-pub unsafe fn new(input: &str, pos: usize) -> Position {
+pub unsafe fn new(input: &[u8], pos: usize) -> Position {
     Position { input, pos }
 }
 
@@ -39,7 +42,7 @@ impl<'i> Position<'i> {
     #[inline]
     pub fn from_start(input: &'i str) -> Position<'i> {
         // Position 0 is always safe because it's always a valid UTF-8 border.
-        unsafe { new(input, 0) }
+        unsafe { new(input.as_bytes(), 0) }
     }
 
     /// Returns the current byte position as a `usize`.
@@ -80,7 +83,8 @@ impl<'i> Position<'i> {
     #[inline]
     pub fn span(&self, other: &Position<'i>) -> span::Span<'i> {
         if ptr::eq(self.input, other.input) {
-            span::new(self.input, self.pos, other.pos)
+            // Position's pos is always a UTF-8 border.
+            unsafe { span::new(self.input, self.pos, other.pos) }
         } else {
             panic!("span created from positions from different inputs")
         }
@@ -105,7 +109,8 @@ impl<'i> Position<'i> {
         }
 
         let mut pos = self.pos;
-        let slice = &self.input[..pos];
+        // Position's pos is always a UTF-8 border.
+        let slice = unsafe { str::from_utf8_unchecked(&self.input[..pos]) };
         let mut chars = slice.chars().peekable();
 
         let mut line_col = (1, 1);
@@ -161,53 +166,54 @@ impl<'i> Position<'i> {
             panic!("position out of bounds");
         }
 
-        unsafe {
-            let start = if self.pos == 0 {
-                0
-            } else {
-                let start = self.input
-                    .char_indices()
-                    .rev()
-                    .skip_while(|&(i, _)| i >= self.pos)
-                    .find(|&(_, c)| c == '\n');
-                match start {
-                    Some((i, _)) => i + 1,
-                    None => 0
-                }
+        let start = if self.pos == 0 {
+            0
+        } else {
+            // Position's pos is always a UTF-8 border.
+            let start = unsafe { str::from_utf8_unchecked(&self.input) }
+                .char_indices()
+                .rev()
+                .skip_while(|&(i, _)| i >= self.pos)
+                .find(|&(_, c)| c == '\n');
+            match start {
+                Some((i, _)) => i + 1,
+                None => 0
+            }
+        };
+
+        let end = if self.input.is_empty() {
+            0
+        } else if self.pos == self.input.len() - 1 {
+            let mut end = self.input.len();
+
+            if end > 0 && self.input[end - 1] == b'\n' {
+                end -= 1;
+            }
+            if end > 0 && self.input[end - 1] == b'\r' {
+                end -= 1;
+            }
+
+            end
+        } else {
+            // Position's pos is always a UTF-8 border.
+            let end = unsafe { str::from_utf8_unchecked(&self.input) }
+                .char_indices()
+                .skip_while(|&(i, _)| i < self.pos)
+                .find(|&(_, c)| c == '\n');
+            let mut end = match end {
+                Some((i, _)) => i,
+                None => self.input.len()
             };
 
-            let end = if self.input.is_empty() {
-                0
-            } else if self.pos == self.input.len() - 1 {
-                let mut end = self.input.len();
+            if end > 0 && self.input[end - 1] == b'\r' {
+                end -= 1;
+            }
 
-                if end > 0 && self.input.slice_unchecked(end - 1, end) == "\n" {
-                    end -= 1;
-                }
-                if end > 0 && self.input.slice_unchecked(end - 1, end) == "\r" {
-                    end -= 1;
-                }
+            end
+        };
 
-                end
-            } else {
-                let end = self.input
-                    .char_indices()
-                    .skip_while(|&(i, _)| i < self.pos)
-                    .find(|&(_, c)| c == '\n');
-                let mut end = match end {
-                    Some((i, _)) => i,
-                    None => self.input.len()
-                };
-
-                if end > 0 && self.input.slice_unchecked(end - 1, end) == "\r" {
-                    end -= 1;
-                }
-
-                end
-            };
-
-            self.input.slice_unchecked(start, end)
-        }
+        // Safe since start and end can only be valid UTF-8 borders.
+        unsafe { str::from_utf8_unchecked(&self.input[start..end]) }
     }
 
     /// Returns `Ok` with the current `Position` if it is at the start of its `&str` or `Err` of
@@ -271,11 +277,10 @@ impl<'i> Position<'i> {
     /// ```
     #[inline]
     pub fn skip(mut self, n: usize) -> Result<Position<'i>, Position<'i>> {
-        let skipped = unsafe {
+        let skipped = {
             let mut len = 0;
-            let mut chars = self.input
-                .slice_unchecked(self.pos, self.input.len())
-                .chars();
+            // Position's pos is always a UTF-8 border.
+            let mut chars = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) }.chars();
 
             for _ in 0..n {
                 if let Some(c) = chars.next() {
@@ -290,6 +295,41 @@ impl<'i> Position<'i> {
 
         self.pos += skipped;
         Ok(self)
+    }
+
+    /// Skips until the first occurrence of `string`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::Position;
+    /// let input = "ab";
+    /// let start = Position::from_start(input);
+    ///
+    /// assert_eq!(start.clone().skip_until("a").unwrap().pos(), 0);
+    /// assert_eq!(start.clone().skip_until("b").unwrap().pos(), 1);
+    /// assert_eq!(start.clone().skip_until("c"), Err(start));
+    /// ```
+    #[inline]
+    pub fn skip_until(mut self, string: &str) -> Result<Position<'i>, Position<'i>> {
+        let mut current = self.pos;
+        let slice = string.as_bytes();
+
+        while let Some(pos) = memchr::memchr(slice[0], &self.input[current..]) {
+            if slice.len() == 1 {
+                self.pos = current + pos;
+                return Ok(self);
+            } else {
+                if slice == &self.input[current + pos..current + pos + slice.len()] {
+                    self.pos = current + pos;
+                    return Ok(self);
+                } else {
+                    current += pos + 1;
+                }
+            }
+        }
+
+        Err(self)
     }
 
     /// Matches `string` from the `Position` and returns `Ok` with the new `Position` if a match was
@@ -307,14 +347,11 @@ impl<'i> Position<'i> {
     /// ```
     #[inline]
     pub fn match_string(mut self, string: &'i str) -> Result<Position<'i>, Position<'i>> {
-        // Matching is safe since, even if the string does not fall on UTF-8 borders, that
-        // particular slice is only used for comparison which will be handled correctly.
-        let matched = unsafe {
+        let matched = {
             let to = self.pos + string.len();
 
             if to <= self.input.len() {
-                let slice = self.input.slice_unchecked(self.pos, to);
-                slice == string
+                string.as_bytes() == &self.input[self.pos..to]
             } else {
                 false
             }
@@ -343,14 +380,13 @@ impl<'i> Position<'i> {
     /// ```
     #[inline]
     pub fn match_insensitive(mut self, string: &'i str) -> Result<Position<'i>, Position<'i>> {
-        // Matching is safe since, even if the string does not fall on UTF-8 borders, that
-        // particular slice is only used for comparison which will be handled correctly.
-
-        let matched = unsafe {
-            let slice = self.input.slice_unchecked(self.pos, self.input.len());
+        let matched = {
+            // Matching is safe since, even if the string does not fall on UTF-8 borders, that
+            // particular slice is only used for comparison which will be handled correctly.
+            let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
 
             if slice.is_char_boundary(string.len()) {
-                let slice = slice.slice_unchecked(0, string.len());
+                let slice = unsafe { slice.slice_unchecked(0, string.len()) };
                 slice.eq_ignore_ascii_case(string)
             } else {
                 false
@@ -380,13 +416,13 @@ impl<'i> Position<'i> {
     /// ```
     #[inline]
     pub fn match_range(mut self, range: Range<char>) -> Result<Position<'i>, Position<'i>> {
-        // Cannot actually cause undefined behavior.
-        let len = unsafe {
-            let slice = self.input.slice_unchecked(self.pos, self.input.len());
+        let len = {
+            // Cannot actually cause undefined behavior.
+            let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
 
-            if let Some(char) = slice.chars().next() {
-                if range.start <= char && char <= range.end {
-                    Some(char.len_utf8())
+            if let Some(c) = slice.chars().next() {
+                if range.start <= c && c <= range.end {
+                    Some(c.len_utf8())
                 } else {
                     None
                 }
@@ -638,7 +674,7 @@ impl<'i> Ord for Position<'i> {
 
 impl<'i> Hash for Position<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.input as *const str).hash(state);
+        (self.input as *const [u8]).hash(state);
         self.pos.hash(state);
     }
 }
@@ -649,14 +685,14 @@ mod tests {
 
     #[test]
     fn empty() {
-        let input = "";
+        let input = b"";
         assert!(unsafe { new(input, 0) }.match_string("").is_ok());
         assert!(!unsafe { new(input, 0) }.match_string("a").is_ok());
     }
 
     #[test]
     fn parts() {
-        let input = "asdasdf";
+        let input = b"asdasdf";
 
         assert!(unsafe { new(input, 0) }.match_string("asd").is_ok());
         assert!(unsafe { new(input, 3) }.match_string("asdf").is_ok());
@@ -664,7 +700,7 @@ mod tests {
 
     #[test]
     fn line_col() {
-        let input = "a\rb\nc\r\nd嗨";
+        let input = "a\rb\nc\r\nd嗨".as_bytes();
 
         assert_eq!(unsafe { new(input, 0) }.line_col(), (1, 1));
         assert_eq!(unsafe { new(input, 1) }.line_col(), (1, 2));
@@ -680,7 +716,7 @@ mod tests {
 
     #[test]
     fn line_of() {
-        let input = "a\rb\nc\r\nd嗨";
+        let input = "a\rb\nc\r\nd嗨".as_bytes();
 
         assert_eq!(unsafe { new(input, 0) }.line_of(), "a\rb");
         assert_eq!(unsafe { new(input, 1) }.line_of(), "a\rb");
@@ -696,26 +732,26 @@ mod tests {
 
     #[test]
     fn line_of_empty() {
-        let input = "";
+        let input = b"";
 
         assert_eq!(unsafe { new(input, 0) }.line_of(), "");
     }
 
     #[test]
     fn line_of_new_line() {
-        let input = "\n";
+        let input = b"\n";
 
         assert_eq!(unsafe { new(input, 0) }.line_of(), "");
     }
 
     #[test]
     fn line_of_between_new_line() {
-        let input = "\n\n";
+        let input = b"\n\n";
 
         assert_eq!(unsafe { new(input, 1) }.line_of(), "");
     }
 
-    fn measure_skip<'i>(input: &'i str, pos: usize, n: usize) -> Option<usize> {
+    fn measure_skip(input: &[u8], pos: usize, n: usize) -> Option<usize> {
         let p = unsafe { new(input, pos) };
         if let Ok(p) = p.skip(n) {
             Some(p.pos - pos)
@@ -726,7 +762,7 @@ mod tests {
 
     #[test]
     fn skip_empty() {
-        let input = "";
+        let input = b"";
 
         assert_eq!(measure_skip(input, 0, 0), Some(0));
         assert_eq!(measure_skip(input, 0, 1), None);
@@ -734,7 +770,7 @@ mod tests {
 
     #[test]
     fn skip() {
-        let input = "d嗨";
+        let input = "d嗨".as_bytes();
 
         assert_eq!(measure_skip(input, 0, 0), Some(0));
         assert_eq!(measure_skip(input, 0, 1), Some(1));
@@ -742,8 +778,18 @@ mod tests {
     }
 
     #[test]
+    fn skip_until() {
+        let input = b"ab ac";
+
+        assert_eq!(unsafe { new(input, 0) }.skip_until("a").unwrap().pos(), 0);
+        assert_eq!(unsafe { new(input, 0) }.skip_until("b").unwrap().pos(), 1);
+        assert_eq!(unsafe { new(input, 0) }.skip_until("ab").unwrap().pos(), 0);
+        assert_eq!(unsafe { new(input, 0) }.skip_until("ac").unwrap().pos(), 3);
+    }
+
+    #[test]
     fn match_range() {
-        let input = "b";
+        let input = b"b";
 
         assert!(unsafe { new(input, 0) }.match_range('a'..'c').is_ok());
         assert!(unsafe { new(input, 0) }.match_range('b'..'b').is_ok());
@@ -754,7 +800,7 @@ mod tests {
 
     #[test]
     fn match_insensitive() {
-        let input = "AsdASdF";
+        let input = b"AsdASdF";
 
         assert!(unsafe { new(input, 0) }.match_insensitive("asd").is_ok());
         assert!(unsafe { new(input, 3) }.match_insensitive("asdf").is_ok());

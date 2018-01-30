@@ -1,6 +1,6 @@
 [workspace]
 members = [
     "pest",
-    "pest_derive",
-    "pest_grammars"
+    "derive",
+    "grammars"
 ]
