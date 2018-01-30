@@ -12,12 +12,14 @@ use ast::*;
 mod concatenator;
 mod factorizer;
 mod rotater;
+mod skipper;
 mod unroller;
 
 pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
     rules
         .into_iter()
         .map(rotater::rotate)
+        .map(skipper::skip)
         .map(unroller::unroll)
         .map(concatenator::concatenate)
         .map(factorizer::factor)
@@ -29,6 +31,36 @@ mod tests {
     use super::*;
 
     use quote::Ident;
+
+    #[test]
+    fn skip() {
+        let rules = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty: RuleType::Atomic,
+                expr: Expr::Rep(
+                    Box::new(Expr::Seq(
+                        Box::new(Expr::NegPred(
+                            Box::new(Expr::Choice(
+                                Box::new(Expr::Str("a".to_owned())),
+                                Box::new(Expr::Str("b".to_owned()))
+                            ))
+                        )),
+                        Box::new(Expr::Ident(Ident::new("any")))
+                    ))
+                )
+            },
+        ];
+        let skipped = vec![
+            Rule {
+                name: Ident::new("rule"),
+                ty: RuleType::Atomic,
+                expr: Expr::Skip(vec!["a".to_owned(), "b".to_owned()])
+            },
+        ];
+
+        assert_eq!(optimize(rules), skipped);
+    }
 
     #[test]
     fn concat_strings() {

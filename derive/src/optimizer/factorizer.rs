@@ -29,7 +29,7 @@ pub fn factor(rule: Rule) -> Rule {
                             }
                         }
                         (lhs, rhs) => Expr::Choice(Box::new(lhs), Box::new(rhs))
-                    },
+                    }
                     expr => expr
                 }
             })

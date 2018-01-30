@@ -638,6 +638,37 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                 })
             }
         }
+        Expr::Skip(strings) => {
+            let mut string_tokens = quote! {
+                let strings =
+            };
+
+            string_tokens.append("[");
+
+            string_tokens.append_separated(&strings[..], ",");
+
+            string_tokens.append("]");
+            string_tokens.append(";");
+
+            quote! {
+                #string_tokens
+
+                strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
+                    match (result, pos.clone().skip_until(string)) {
+                        (Ok(lhs), Ok(rhs)) => {
+                            if rhs.pos() < lhs.pos() {
+                                Ok(rhs)
+                            } else {
+                                Ok(lhs)
+                            }
+                        }
+                        (Ok(lhs), Err(_)) => Ok(lhs),
+                        (Err(_), Ok(rhs)) => Ok(rhs),
+                        (Err(lhs), Err(_)) => Err(lhs)
+                    }
+                })
+            }
+        }
         Expr::Push(expr) => {
             let expr = generate_expr_atomic(*expr);
 
@@ -802,6 +833,33 @@ mod tests {
                     pos.match_string("c")
                 }).or_else(#[inline(always)] |pos| {
                     pos.match_string("d")
+                })
+            }
+        );
+    }
+
+    #[test]
+    fn skip() {
+        let expr = Expr::Skip(vec!["a".to_owned(), "b".to_owned()]);
+
+        assert_eq!(
+            generate_expr_atomic(expr),
+            quote! {
+                let strings = ["a", "b"];
+
+                strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
+                    match (result, pos.clone().skip_until(string)) {
+                        (Ok(lhs), Ok(rhs)) => {
+                            if rhs.pos() < lhs.pos() {
+                                Ok(rhs)
+                            } else {
+                                Ok(lhs)
+                            }
+                        }
+                        (Ok(lhs), Err(_)) => Ok(lhs),
+                        (Err(_), Ok(rhs)) => Ok(rhs),
+                        (Err(lhs), Err(_)) => Err(lhs)
+                    }
                 })
             }
         );
