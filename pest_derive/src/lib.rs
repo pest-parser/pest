@@ -279,6 +279,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
             file_name,
             error.renamed_rules(|rule| { match *rule {
                 Rule::grammar_rule => "rule".to_owned(),
+                Rule::_push => "push".to_owned(),
                 Rule::assignment_operator => "`=`".to_owned(),
                 Rule::silent_modifier => "`_`".to_owned(),
                 Rule::atomic_modifier => "`@`".to_owned(),

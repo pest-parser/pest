@@ -238,7 +238,7 @@ mod tests {
         let rules = vec![
             Rule {
                 name: "rule",
-                ty:   RuleType::Silent,
+                ty: RuleType::Silent,
                 expr: Expr::Choice(
                     Box::new(Expr::Seq(
                         Box::new(Expr::Ident("a")),
@@ -260,7 +260,7 @@ mod tests {
         let optimized = vec![
             Rule {
                 name: "rule",
-                ty:   RuleType::Silent,
+                ty: RuleType::Silent,
                 expr: Expr::Seq(
                     Box::new(Expr::Ident("a")),
                     Box::new(Expr::Seq(
