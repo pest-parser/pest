@@ -1,4 +1,4 @@
-grammar_rules = _{ soi ~ grammar_rule* ~ eoi }
+grammar_rules = _{ soi ~ grammar_rule+ ~ eoi }
 
 grammar_rule = { identifier ~ assignment_operator ~ modifier? ~ opening_brace ~ expression ~ closing_brace }
 
