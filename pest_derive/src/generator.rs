@@ -690,12 +690,12 @@ mod tests {
     #[test]
     fn sequence() {
         let expr = Expr::Seq(
-            Box::new(Expr::Str("a".to_owned())),
+            Box::new(Expr::Str(&"a")),
             Box::new(Expr::Seq(
-                Box::new(Expr::Str("b".to_owned())),
+                Box::new(Expr::Str(&"b")),
                 Box::new(Expr::Seq(
-                    Box::new(Expr::Str("c".to_owned())),
-                    Box::new(Expr::Str("d".to_owned()))
+                    Box::new(Expr::Str(&"c")),
+                    Box::new(Expr::Str(&"d"))
                 ))
             ))
         );
@@ -727,12 +727,12 @@ mod tests {
     #[test]
     fn sequence_atomic() {
         let expr = Expr::Seq(
-            Box::new(Expr::Str("a".to_owned())),
+            Box::new(Expr::Str(&"a")),
             Box::new(Expr::Seq(
-                Box::new(Expr::Str("b".to_owned())),
+                Box::new(Expr::Str(&"b")),
                 Box::new(Expr::Seq(
-                    Box::new(Expr::Str("c".to_owned())),
-                    Box::new(Expr::Str("d".to_owned()))
+                    Box::new(Expr::Str(&"c")),
+                    Box::new(Expr::Str(&"d"))
                 ))
             ))
         );
@@ -758,12 +758,12 @@ mod tests {
     #[test]
     fn choice() {
         let expr = Expr::Choice(
-            Box::new(Expr::Str("a".to_owned())),
+            Box::new(Expr::Str(&"a")),
             Box::new(Expr::Choice(
-                Box::new(Expr::Str("b".to_owned())),
+                Box::new(Expr::Str(&"b")),
                 Box::new(Expr::Choice(
-                    Box::new(Expr::Str("c".to_owned())),
-                    Box::new(Expr::Str("d".to_owned()))
+                    Box::new(Expr::Str(&"c")),
+                    Box::new(Expr::Str(&"d"))
                 ))
             ))
         );
@@ -785,12 +785,12 @@ mod tests {
     #[test]
     fn choice_atomic() {
         let expr = Expr::Choice(
-            Box::new(Expr::Str("a".to_owned())),
+            Box::new(Expr::Str(&"a")),
             Box::new(Expr::Choice(
-                Box::new(Expr::Str("b".to_owned())),
+                Box::new(Expr::Str(&"b")),
                 Box::new(Expr::Choice(
-                    Box::new(Expr::Str("c".to_owned())),
-                    Box::new(Expr::Str("d".to_owned()))
+                    Box::new(Expr::Str(&"c")),
+                    Box::new(Expr::Str(&"d"))
                 ))
             ))
         );
@@ -814,15 +814,13 @@ mod tests {
         let expr = Expr::Choice(
             Box::new(Expr::Ident("a")),
             Box::new(Expr::Seq(
-                Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
+                Box::new(Expr::Range(&"'a'", &"'b'")),
                 Box::new(Expr::Seq(
-                    Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Insens(
-                        "b".to_owned()
-                    )))))),
+                    Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Insens(&"b")))))),
                     Box::new(Expr::PosPred(Box::new(Expr::Opt(Box::new(Expr::Rep(
                         Box::new(Expr::Choice(
-                            Box::new(Expr::Str("c".to_owned())),
-                            Box::new(Expr::Str("d".to_owned()))
+                            Box::new(Expr::Str(&"c")),
+                            Box::new(Expr::Str(&"d"))
                         ))
                     ))))))
                 ))
@@ -912,15 +910,13 @@ mod tests {
         let expr = Expr::Choice(
             Box::new(Expr::Ident("a")),
             Box::new(Expr::Seq(
-                Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
+                Box::new(Expr::Range(&"'a'", &"'b'")),
                 Box::new(Expr::Seq(
-                    Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Insens(
-                        "b".to_owned()
-                    )))))),
+                    Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Insens(&"b")))))),
                     Box::new(Expr::PosPred(Box::new(Expr::Opt(Box::new(Expr::Rep(
                         Box::new(Expr::Choice(
-                            Box::new(Expr::Str("c".to_owned())),
-                            Box::new(Expr::Str("d".to_owned()))
+                            Box::new(Expr::Str(&"c")),
+                            Box::new(Expr::Str(&"d"))
                         ))
                     ))))))
                 ))
@@ -969,7 +965,7 @@ mod tests {
             Rule {
                 name: "a",
                 ty: RuleType::Silent,
-                expr: Expr::Str("b".to_owned())
+                expr: Expr::Str(&"b")
             },
         ];
         let defaults = vec!["any"];

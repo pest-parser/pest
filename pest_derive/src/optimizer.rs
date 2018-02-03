@@ -91,23 +91,6 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
                     ty,
                     expr: expr.map_bottom_up(rotate_right)
                         .map_bottom_up(unroll_loops)
-                        .map_bottom_up(|expr| {
-                            if ty == RuleType::Atomic {
-                                // TODO: Use box syntax when it gets stabilized.
-                                match expr {
-                                    Expr::Seq(lhs, rhs) => match (*lhs, *rhs) {
-                                        (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),
-                                        (Expr::Insens(lhs), Expr::Insens(rhs)) => {
-                                            Expr::Insens(lhs + &rhs)
-                                        }
-                                        (lhs, rhs) => Expr::Seq(Box::new(lhs), Box::new(rhs))
-                                    },
-                                    expr => expr
-                                }
-                            } else {
-                                expr
-                            }
-                        })
                         .map_top_down(|expr| {
                             // TODO: Use box syntax when it gets stabilized.
                             match expr {
@@ -136,35 +119,6 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn concat_strings() {
-        let rules = vec![
-            Rule {
-                name: "rule",
-                ty:   RuleType::Atomic,
-                expr: Expr::Seq(
-                    Box::new(Expr::Seq(
-                        Box::new(Expr::Str("a".to_owned())),
-                        Box::new(Expr::Str("b".to_owned()))
-                    )),
-                    Box::new(Expr::Seq(
-                        Box::new(Expr::Str("c".to_owned())),
-                        Box::new(Expr::Str("d".to_owned()))
-                    ))
-                )
-            },
-        ];
-        let concatenated = vec![
-            Rule {
-                name: "rule",
-                ty:   RuleType::Atomic,
-                expr: Expr::Str("abcd".to_owned())
-            },
-        ];
-
-        assert_eq!(optimize(rules), concatenated);
-    }
 
     #[test]
     fn unroll_loop_exact() {
@@ -198,7 +152,7 @@ mod tests {
             Rule {
                 name: "rule",
                 ty: RuleType::Atomic,
-                expr: Expr::RepMax(Box::new(Expr::Str("a".to_owned())), 3)
+                expr: Expr::RepMax(Box::new(Expr::Str(&"a")), 3)
             },
         ];
         let unrolled = vec![
@@ -206,10 +160,10 @@ mod tests {
                 name: "rule",
                 ty: RuleType::Atomic,
                 expr: Expr::Seq(
-                    Box::new(Expr::Opt(Box::new(Expr::Str("a".to_owned())))),
+                    Box::new(Expr::Opt(Box::new(Expr::Str(&"a")))),
                     Box::new(Expr::Seq(
-                        Box::new(Expr::Opt(Box::new(Expr::Str("a".to_owned())))),
-                        Box::new(Expr::Opt(Box::new(Expr::Str("a".to_owned()))))
+                        Box::new(Expr::Opt(Box::new(Expr::Str(&"a")))),
+                        Box::new(Expr::Opt(Box::new(Expr::Str(&"a"))))
                     ))
                 )
             },
@@ -224,7 +178,7 @@ mod tests {
             Rule {
                 name: "rule",
                 ty: RuleType::Atomic,
-                expr: Expr::RepMin(Box::new(Expr::Str("a".to_owned())), 2)
+                expr: Expr::RepMin(Box::new(Expr::Str(&"a")), 2)
             },
         ];
         let unrolled = vec![
@@ -232,10 +186,10 @@ mod tests {
                 name: "rule",
                 ty: RuleType::Atomic,
                 expr: Expr::Seq(
-                    Box::new(Expr::Str("a".to_owned())),
+                    Box::new(Expr::Str(&"a")),
                     Box::new(Expr::Seq(
-                        Box::new(Expr::Str("a".to_owned())),
-                        Box::new(Expr::Rep(Box::new(Expr::Str("a".to_owned()))))
+                        Box::new(Expr::Str(&"a")),
+                        Box::new(Expr::Rep(Box::new(Expr::Str(&"a"))))
                     ))
                 )
             },
@@ -250,7 +204,7 @@ mod tests {
             Rule {
                 name: "rule",
                 ty: RuleType::Atomic,
-                expr: Expr::RepMinMax(Box::new(Expr::Str("a".to_owned())), 2, 3)
+                expr: Expr::RepMinMax(Box::new(Expr::Str(&"a")), 2, 3)
             },
         ];
         let unrolled = vec![
@@ -262,50 +216,21 @@ mod tests {
                      * if the sequences were rolled out in the opposite
                      * order, we could further optimize the strings
                      * in cases like this.
-                    Box::new(Expr::Str("aa".to_owned())),
+                    Box::new(Expr::Str(&"aa")),
                     Box::new(Expr::Opt(
-                        Box::new(Expr::Str("a".to_owned()))
+                        Box::new(Expr::Str(&"a"))
                     ))
                     */
-                    Box::new(Expr::Str("a".to_owned())),
+                    Box::new(Expr::Str(&"a")),
                     Box::new(Expr::Seq(
-                        Box::new(Expr::Str("a".to_owned())),
-                        Box::new(Expr::Opt(Box::new(Expr::Str("a".to_owned()))))
+                        Box::new(Expr::Str(&"a")),
+                        Box::new(Expr::Opt(Box::new(Expr::Str(&"a"))))
                     ))
                 )
             },
         ];
 
         assert_eq!(optimize(rules), unrolled);
-    }
-
-    #[test]
-    fn concat_insensitive_strings() {
-        let rules = vec![
-            Rule {
-                name: "rule",
-                ty:   RuleType::Atomic,
-                expr: Expr::Seq(
-                    Box::new(Expr::Seq(
-                        Box::new(Expr::Insens("a".to_owned())),
-                        Box::new(Expr::Insens("b".to_owned()))
-                    )),
-                    Box::new(Expr::Seq(
-                        Box::new(Expr::Insens("c".to_owned())),
-                        Box::new(Expr::Insens("d".to_owned()))
-                    ))
-                )
-            },
-        ];
-        let concatenated = vec![
-            Rule {
-                name: "rule",
-                ty:   RuleType::Atomic,
-                expr: Expr::Insens("abcd".to_owned())
-            },
-        ];
-
-        assert_eq!(optimize(rules), concatenated);
     }
 
     #[test]

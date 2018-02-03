@@ -45,9 +45,9 @@ pub struct ParserNode<'i> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ParserExpr<'i> {
-    Str(String),
-    Insens(String),
-    Range(String, String),
+    Str(&'i str),
+    Insens(&'i str),
+    Range(&'i str, &'i str),
     Ident(&'i str),
     PosPred(Box<ParserNode<'i>>),
     NegPred(Box<ParserNode<'i>>),
@@ -216,14 +216,14 @@ fn consume_expr<'i>(
                     Rule::string => {
                         let string = pair.as_str();
                         ParserNode {
-                            expr: ParserExpr::Str(string[1..string.len() - 1].to_owned()),
+                            expr: ParserExpr::Str(&string[1..string.len() - 1]),
                             span: pair.clone().into_span()
                         }
                     }
                     Rule::insensitive_string => {
                         let string = pair.as_str();
                         ParserNode {
-                            expr: ParserExpr::Insens(string[2..string.len() - 1].to_owned()),
+                            expr: ParserExpr::Insens(&string[2..string.len() - 1]),
                             span: pair.clone().into_span()
                         }
                     }
@@ -238,7 +238,7 @@ fn consume_expr<'i>(
                         let end_pos = pair.clone().into_span().end_pos();
 
                         ParserNode {
-                            expr: ParserExpr::Range(start.to_owned(), end.to_owned()),
+                            expr: ParserExpr::Range(&start, &end),
                             span: start_pos.span(&end_pos)
                         }
                     }
@@ -982,19 +982,16 @@ mod tests {
                                         Box::new(Expr::Ident("a")),
                                         1
                                     )),
-                                    Box::new(Expr::RepMin(Box::new(Expr::Str("a".to_owned())), 3))
+                                    Box::new(Expr::RepMin(Box::new(Expr::Str(&"a")), 3))
                                 )),
                                 Box::new(Expr::RepMax(Box::new(Expr::Ident("b")), 2))
                             )),
-                            Box::new(Expr::RepMinMax(Box::new(Expr::Str("b".to_owned())), 1, 2))
+                            Box::new(Expr::RepMinMax(Box::new(Expr::Str(&"b")), 1, 2))
                         )),
                         Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Opt(
                             Box::new(Expr::Choice(
-                                Box::new(Expr::Insens("c".to_owned())),
-                                Box::new(Expr::Push(Box::new(Expr::Range(
-                                    "'d'".to_owned(),
-                                    "'e'".to_owned()
-                                ))))
+                                Box::new(Expr::Insens(&"c")),
+                                Box::new(Expr::Push(Box::new(Expr::Range(&"'d'", &"'e'"))))
                             ))
                         ))))))
                     )

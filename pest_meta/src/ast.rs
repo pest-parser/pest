@@ -25,9 +25,9 @@ pub enum RuleType {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expr<'i> {
-    Str(String),
-    Insens(String),
-    Range(String, String),
+    Str(&'i str),
+    Insens(&'i str),
+    Range(&'i str, &'i str),
     Ident(&'i str),
     PosPred(Box<Expr<'i>>),
     NegPred(Box<Expr<'i>>),
@@ -192,16 +192,13 @@ mod tests {
         let expr = Expr::Choice(
             Box::new(Expr::Seq(
                 Box::new(Expr::Ident("a")),
-                Box::new(Expr::Str("b".to_owned()))
+                Box::new(Expr::Str(&"b"))
             )),
             Box::new(Expr::PosPred(Box::new(Expr::NegPred(Box::new(
                 Expr::Rep(Box::new(Expr::RepOnce(Box::new(Expr::Opt(Box::new(
                     Expr::Choice(
-                        Box::new(Expr::Insens("c".to_owned())),
-                        Box::new(Expr::Push(Box::new(Expr::Range(
-                            "'d'".to_owned(),
-                            "'e'".to_owned()
-                        ))))
+                        Box::new(Expr::Insens(&"c")),
+                        Box::new(Expr::Push(Box::new(Expr::Range(&"'d'", &"'e'"))))
                     )
                 ))))))
             )))))
