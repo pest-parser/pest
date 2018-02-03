@@ -7,7 +7,7 @@ use std::io::{self, Read};
 
 use colored::Colorize;
 use pest::Parser;
-use pest_meta::parser::{PestParser, PestRule};
+use pest_meta::parser::{PestParser, Rule};
 
 fn main() {
     // Read a pest grammar definition from stdin
@@ -22,7 +22,7 @@ fn main() {
     // list of all subtrees of an AST tree in depth-first pre-order of their root nodes (parents
     // occur before children and siblings occur in the same order that their spans occur in the
     // input).
-    let ast = match PestParser::parse(PestRule::grammar_rules, &input) {
+    let ast = match PestParser::parse(Rule::grammar_rules, &input) {
         Ok(pairs) => pairs,
         Err(err) => {
             println!("{}:\n\n{}", "Parsing error".red(), err);
@@ -52,10 +52,10 @@ fn main() {
         
         let style = match sub_tree.as_rule() {
             // We choose a style for the sub-trees we want to style
-            PestRule::string => <&str>::magenta,
-            PestRule::identifier => <&str>::cyan,
-            PestRule::opening_brace | PestRule::closing_brace => <&str>::bold,
-            PestRule::character => <&str>::blue,
+            Rule::string => <&str>::magenta,
+            Rule::identifier => <&str>::cyan,
+            Rule::opening_brace | Rule::closing_brace => <&str>::bold,
+            Rule::character => <&str>::blue,
             // and skip over the sub-trees that we don't really care about styling.
             _ => continue
         };

@@ -17,6 +17,9 @@ use pest::prec_climber::{Assoc, Operator, PrecClimber};
 use ast::{Expr, Rule as AstRule, RuleType};
 use validator;
 
+#[cfg(debug_assertions)]
+const _GRAMMAR: &'static str = include_str!("grammar/pest.pest");
+
 #[derive(Parser)]
 #[grammar = "grammar/pest.pest"]
 pub struct PestParser;
@@ -435,8 +438,8 @@ mod tests {
                     identifier(0, 1),
                     assignment_operator(2, 3),
                     opening_brace(4, 5),
-                    expression(6, 7, [
-                        term(6, 7, [
+                    expression(6, 8, [
+                        term(6, 8, [
                             identifier(6, 7)
                         ])
                     ]),
@@ -446,8 +449,8 @@ mod tests {
                     identifier(10, 11),
                     assignment_operator(12, 13),
                     opening_brace(14, 15),
-                    expression(16, 17, [
-                        term(16, 17, [
+                    expression(16, 18, [
+                        term(16, 18, [
                             identifier(16, 17)
                         ])
                     ]),
@@ -469,12 +472,12 @@ mod tests {
                     assignment_operator(2, 3),
                     non_atomic_modifier(4, 5),
                     opening_brace(6, 7),
-                    expression(8, 13, [
-                        term(8, 9, [
+                    expression(8, 14, [
+                        term(8, 10, [
                             identifier(8, 9)
                         ]),
                         sequence_operator(10, 11),
-                        term(12, 13, [
+                        term(12, 14, [
                             identifier(12, 13)
                         ])
                     ]),
@@ -492,29 +495,32 @@ mod tests {
             rule: Rule::expression,
             tokens: [
                 expression(0, 35, [
-                    term(0, 2, [
+                    term(0, 3, [
                         identifier(0, 2)
                     ]),
                     choice_operator(3, 4),
-                    term(5, 13, [
+                    term(5, 14, [
                         range(5, 13, [
                             character(5, 8, [
                                 single_quote(5, 6),
+                                chr(6, 7),
                                 single_quote(7, 8)
                             ]),
                             range_operator(8, 10),
                             character(10, 13, [
                                 single_quote(10, 11),
+                                chr(11, 12),
                                 single_quote(12, 13)
                             ])
                         ])
                     ]),
                     sequence_operator(14, 15),
-                    term(16, 23, [
+                    term(16, 24, [
                         negative_predicate_operator(16, 17),
                         insensitive_string(17, 23, [
                             string(18, 23, [
                                 quote(18, 19),
+                                str(19, 22),
                                 quote(22, 23)
                             ])
                         ])
@@ -523,7 +529,7 @@ mod tests {
                     term(26, 35, [
                         opening_paren(26, 27),
                         expression(27, 32, [
-                            term(27, 28, [
+                            term(27, 29, [
                                 identifier(27, 28)
                             ]),
                             choice_operator(29, 30),
@@ -613,12 +619,12 @@ mod tests {
         parses_to! {
             parser: PestParser,
             input: "push ( a )",
-            rule: Rule::push,
+            rule: Rule::_push,
             tokens: [
-                push(0, 10, [
+                _push(0, 10, [
                     opening_paren(5, 6),
-                    expression(7, 8, [
-                        term(7, 8, [
+                    expression(7, 9, [
+                        term(7, 9, [
                             identifier(7, 8)
                         ])
                     ]),
@@ -649,6 +655,7 @@ mod tests {
             tokens: [
                 string(0, 46, [
                     quote(0, 1),
+                    str(1, 45),
                     quote(45, 46)
                 ])
             ]
@@ -665,6 +672,7 @@ mod tests {
                 insensitive_string(0, 9, [
                     string(3, 9, [
                         quote(3, 4),
+                        str(4, 8),
                         quote(8, 9)
                     ])
                 ])
@@ -682,11 +690,13 @@ mod tests {
                 range(0, 14, [
                     character(0, 4, [
                         single_quote(0, 1),
+                        chr(1, 3),
                         single_quote(3, 4)
                     ]),
                     range_operator(5, 7),
                     character(8, 14, [
                         single_quote(8, 9),
+                        chr(9, 13),
                         single_quote(13, 14)
                     ])
                 ])
@@ -703,6 +713,7 @@ mod tests {
             tokens: [
                 character(0, 12, [
                     single_quote(0, 1),
+                    chr(1, 11),
                     single_quote(11, 12)
                 ])
             ]
@@ -729,7 +740,7 @@ mod tests {
             rule: Rule::expression,
             tokens: [
                 expression(0, 17, [
-                    term(0, 1, [
+                    term(0, 2, [
                         identifier(0, 1)
                     ]),
                     sequence_operator(2, 3),
@@ -813,16 +824,7 @@ mod tests {
             parser: PestParser,
             input: "a = { b ~ }",
             rule: Rule::grammar_rules,
-            positives: vec![
-                Rule::opening_paren,
-                Rule::positive_predicate_operator,
-                Rule::negative_predicate_operator,
-                Rule::push,
-                Rule::identifier,
-                Rule::quote,
-                Rule::insensitive_string,
-                Rule::single_quote
-            ],
+            positives: vec![ Rule::term ],
             negatives: vec![],
             pos: 10
         };
@@ -878,7 +880,7 @@ mod tests {
                 Rule::opening_paren,
                 Rule::positive_predicate_operator,
                 Rule::negative_predicate_operator,
-                Rule::push,
+                Rule::_push,
                 Rule::identifier,
                 Rule::quote,
                 Rule::insensitive_string,
