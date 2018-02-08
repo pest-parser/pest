@@ -18,7 +18,7 @@ value = { string | number | object | array | bool | null }
 
 string  = @{ "\"" ~ (escape | !("\"" | "\\") ~ any)* ~ "\"" }
 escape  = @{ "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | unicode) }
-unicode = @{ "u" ~ hex ~ hex ~ hex ~ hex }
+unicode = @{ "u" ~ hex{4} }
 hex     = { '0'..'9' | 'a'..'f' | 'A'..'F' }
 
 number = @{ "-"? ~ int ~ ("." ~ '0'..'9'+ ~ exp? | exp)? }
