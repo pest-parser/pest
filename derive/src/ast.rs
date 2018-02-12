@@ -85,17 +85,17 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::RepOnce(mapped)
                 }
-                Expr::RepExact(expr, max) => {
+                Expr::RepExact(expr, num) => {
                     let mapped = Box::new(map_internal(*expr, f));
-                    Expr::RepExact(mapped, max)
+                    Expr::RepExact(mapped, num)
                 }
-                Expr::RepMin(expr, num) => {
+                Expr::RepMin(expr, min) => {
                     let mapped = Box::new(map_internal(*expr, f));
-                    Expr::RepMin(mapped, num)
+                    Expr::RepMin(mapped, min)
                 }
-                Expr::RepMax(expr, num) => {
+                Expr::RepMax(expr, max) => {
                     let mapped = Box::new(map_internal(*expr, f));
-                    Expr::RepMax(mapped, num)
+                    Expr::RepMax(mapped, max)
                 }
                 Expr::RepMinMax(expr, min, max) => {
                     let mapped = Box::new(map_internal(*expr, f));
@@ -125,8 +125,8 @@ impl Expr {
             F: FnMut(Expr) -> Expr
         {
             let mapped = match expr {
+                // TODO: Use box syntax when it gets stabilized.
                 Expr::PosPred(expr) => {
-                    // TODO: Use box syntax when it gets stabilized.
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::PosPred(mapped)
                 }
@@ -156,9 +156,9 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::RepExact(mapped, num)
                 }
-                Expr::RepMin(expr, max) => {
+                Expr::RepMin(expr, min) => {
                     let mapped = Box::new(map_internal(*expr, f));
-                    Expr::RepMin(mapped, max)
+                    Expr::RepMin(mapped, min)
                 }
                 Expr::RepMax(expr, max) => {
                     let mapped = Box::new(map_internal(*expr, f));
