@@ -19,6 +19,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<Ident>) -> Tokens {
         "any",
         quote! {
             #[inline]
+            #[allow(dead_code)]
             fn any<'i>(
                 pos: ::pest::Position<'i>,
                 _: &mut ::pest::ParserState<'i, Rule>
@@ -1065,6 +1066,7 @@ mod tests {
                             }
 
                             #[inline]
+                            #[allow(dead_code)]
                             fn any<'i>(
                                 pos: ::pest::Position<'i>,
                                 _: &mut ::pest::ParserState<'i, Rule>
