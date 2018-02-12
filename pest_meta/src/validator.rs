@@ -223,7 +223,7 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i,
 
 fn is_non_progressing<'i>(expr: &ParserExpr<'i>) -> bool {
     match *expr {
-        ParserExpr::Str(string) => string == "",
+        ParserExpr::Str(ref string) => string == "",
         ParserExpr::Ident(ident) => ident == "soi" || ident == "eoi",
         ParserExpr::PosPred(_) => true,
         ParserExpr::NegPred(_) => true,
@@ -239,7 +239,7 @@ fn is_non_progressing<'i>(expr: &ParserExpr<'i>) -> bool {
 
 fn is_non_failing<'i>(expr: &ParserExpr<'i>) -> bool {
     match *expr {
-        ParserExpr::Str(string) => string == "",
+        ParserExpr::Str(ref string) => string == "",
         ParserExpr::Opt(_) => true,
         ParserExpr::Rep(_) => true,
         ParserExpr::Seq(ref lhs, ref rhs) => is_non_failing(&lhs.expr) && is_non_failing(&rhs.expr),
