@@ -332,13 +332,7 @@ fn validate_left_recursion<'i>(rules: &Vec<ParserRule<'i>>) -> Vec<Error<'i, Gra
 }
 
 fn to_hash_map<'a, 'i>(rules: &'a Vec<ParserRule<'i>>) -> HashMap<Ident, &'a ParserNode<'i>> {
-    let mut hash_map = HashMap::new();
-
-    for rule in rules {
-        hash_map.insert(rule.name.clone(), &rule.node);
-    }
-
-    hash_map
+    rules.iter().map(|r| (r.name.clone(), &r.node)).collect()
 }
 
 fn left_recursion<'i>(rules: HashMap<Ident, &ParserNode<'i>>) -> Vec<Error<'i, GrammarRule>> {
