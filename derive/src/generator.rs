@@ -425,18 +425,11 @@ fn generate_expr(expr: Expr) -> Tokens {
             let mut tail = vec![];
             let mut current = *rhs;
 
-            loop {
-                match current {
-                    Expr::Seq(lhs, rhs) => {
-                        tail.push(generate_expr(*lhs));
-                        current = *rhs;
-                    }
-                    expr => {
-                        tail.push(generate_expr(expr));
-                        break;
-                    }
-                }
+            while let Expr::Seq(lhs, rhs) = current {
+                tail.push(generate_expr(*lhs));
+                current = *rhs;
             }
+            tail.push(generate_expr(current));
 
             quote! {
                 state.sequence(#[inline(always)] move |state| {
@@ -458,18 +451,11 @@ fn generate_expr(expr: Expr) -> Tokens {
             let mut tail = vec![];
             let mut current = *rhs;
 
-            loop {
-                match current {
-                    Expr::Choice(lhs, rhs) => {
-                        tail.push(generate_expr(*lhs));
-                        current = *rhs;
-                    }
-                    expr => {
-                        tail.push(generate_expr(expr));
-                        break;
-                    }
-                }
+            while let Expr::Choice(lhs, rhs) = current {
+                tail.push(generate_expr(*lhs));
+                current = *rhs;
             }
+            tail.push(generate_expr(current));
 
             quote! {
                 #head
@@ -604,18 +590,11 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             let mut tail = vec![];
             let mut current = *rhs;
 
-            loop {
-                match current {
-                    Expr::Seq(lhs, rhs) => {
-                        tail.push(generate_expr_atomic(*lhs));
-                        current = *rhs;
-                    }
-                    expr => {
-                        tail.push(generate_expr_atomic(expr));
-                        break;
-                    }
-                }
+            while let Expr::Seq(lhs, rhs) = current {
+                tail.push(generate_expr_atomic(*lhs));
+                current = *rhs;
             }
+            tail.push(generate_expr_atomic(current));
 
             quote! {
                 state.sequence(#[inline(always)] move |state| {
@@ -635,18 +614,11 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             let mut tail = vec![];
             let mut current = *rhs;
 
-            loop {
-                match current {
-                    Expr::Choice(lhs, rhs) => {
-                        tail.push(generate_expr_atomic(*lhs));
-                        current = *rhs;
-                    }
-                    expr => {
-                        tail.push(generate_expr_atomic(expr));
-                        break;
-                    }
-                }
+            while let Expr::Choice(lhs, rhs) = current {
+                tail.push(generate_expr_atomic(*lhs));
+                current = *rhs;
             }
+            tail.push(generate_expr_atomic(current));
 
             quote! {
                 #head
