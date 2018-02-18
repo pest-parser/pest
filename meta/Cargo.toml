@@ -11,7 +11,6 @@ license = "MIT/Apache-2.0"
 readme = "_README.md"
 
 [dependencies]
-colored = { version = "1.5", optional = true }
 maplit = "^0.1.5"
 pest_derive = "^1.0"
 pest = "^1.0"
