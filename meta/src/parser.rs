@@ -17,11 +17,8 @@ use pest::prec_climber::{Assoc, Operator, PrecClimber};
 use ast::{Expr, Rule as AstRule, RuleType};
 use validator;
 
-#[cfg(debug_assertions)]
-const _GRAMMAR: &'static str = include_str!("grammar/pest.pest");
-
 #[derive(Parser)]
-#[grammar = "grammar/pest.pest"]
+#[grammar = "grammar.pest"]
 pub struct PestParser;
 
 pub fn parse<'i>(rule: Rule, data: &'i str) -> Result<Pairs<Rule>, Error<Rule>> {
