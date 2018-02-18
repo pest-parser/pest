@@ -250,9 +250,8 @@ use syn::{Attribute, Lit, MetaItem};
 mod generator;
 mod optimizer;
 
+use pest_meta::{ast, unwrap_or_report, validator};
 use pest_meta::parser::{self, Rule};
-use pest_meta::{ast, validator, unwrap_or_report};
-
 
 #[proc_macro_derive(Parser, attributes(grammar))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
@@ -277,7 +276,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         Err(error) => panic!(
             "error parsing {:?}\n\n{}",
             file_name,
-            error.renamed_rules(|rule| { match *rule {
+            error.renamed_rules(|rule| match *rule {
                 Rule::grammar_rule => "rule".to_owned(),
                 Rule::_push => "push".to_owned(),
                 Rule::assignment_operator => "`=`".to_owned(),
@@ -302,10 +301,9 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
                 Rule::range_operator => "`..`".to_owned(),
                 Rule::single_quote => "`'`".to_owned(),
                 other_rule => format!("{:?}", other_rule)
-            }
-        }))
+            })
+        )
     };
-
 
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
     let ast = unwrap_or_report(parser::consume_rules(pairs));

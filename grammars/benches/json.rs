@@ -75,11 +75,10 @@ fn data(b: &mut Bencher) {
     file.read_to_string(&mut data).unwrap();
 
     b.iter(|| {
-//        consume(
-            JsonParser::parse(Rule::json, &data)
-                .unwrap()
-//                .next()
-//                .unwrap()
-//        )
+        //        consume(
+        JsonParser::parse(Rule::json, &data).unwrap()
+        //                .next()
+        //                .unwrap()
+        //        )
     });
 }

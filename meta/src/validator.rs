@@ -13,7 +13,7 @@ use pest::Error;
 use pest::Span;
 use pest::iterators::Pairs;
 
-use parser::{Rule, ParserExpr, ParserNode, ParserRule};
+use parser::{ParserExpr, ParserNode, ParserRule, Rule};
 
 pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Error<'i, Rule>>> {
     let mut rust_keywords = HashSet::new();
@@ -110,7 +110,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     errors.extend(validate_undefined(&definitions, &called_rules, &predefined));
 
     if errors.len() > 0 {
-        return Err(errors)
+        return Err(errors);
     }
 
     let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
@@ -118,10 +118,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
 
     let defaults = called_rules.difference(&definitions);
 
-    Ok(defaults
-        .into_iter()
-        .map(|string| *string)
-        .collect())
+    Ok(defaults.into_iter().map(|string| *string).collect())
 }
 
 pub fn validate_rust_keywords<'i>(
@@ -395,8 +392,8 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
 mod tests {
     use super::*;
     use super::super::parser::{consume_rules, PestParser};
-    use pest::Parser;
     use super::super::unwrap_or_report;
+    use pest::Parser;
 
     #[test]
     #[should_panic(expected = "grammar error
@@ -409,7 +406,9 @@ mod tests {
   = let is a rust keyword")]
     fn rust_keyword() {
         let input = "let = { \"a\" }";
-        unwrap_or_report(validate_pairs(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(validate_pairs(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
@@ -423,7 +422,9 @@ mod tests {
   = any is a pest keyword")]
     fn pest_keyword() {
         let input = "any = { \"a\" }";
-        unwrap_or_report(validate_pairs(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(validate_pairs(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
@@ -437,7 +438,9 @@ mod tests {
   = rule a already defined")]
     fn already_defined() {
         let input = "a = { \"a\" } a = { \"a\" }";
-        unwrap_or_report(validate_pairs(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(validate_pairs(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
@@ -451,13 +454,17 @@ mod tests {
   = rule b is undefined")]
     fn undefined() {
         let input = "a = { b }";
-        unwrap_or_report(validate_pairs(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(validate_pairs(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
     fn valid_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"b\") ~ a }";
-        unwrap_or_report(consume_rules(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
@@ -471,7 +478,9 @@ mod tests {
   = whitespace is non-failing and will repeat infinitely")]
     fn non_failing_whitespace() {
         let input = "whitespace = { \"\" }";
-        unwrap_or_report(consume_rules(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
@@ -485,7 +494,9 @@ mod tests {
   = comment is non-progressing and will repeat infinitely")]
     fn non_progressing_comment() {
         let input = "comment = { soi }";
-        unwrap_or_report(consume_rules(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
@@ -499,7 +510,9 @@ mod tests {
   = expression inside repetition is non-failing and will repeat infinitely")]
     fn non_failing_repetition() {
         let input = "a = { (\"\")* }";
-        unwrap_or_report(consume_rules(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
@@ -513,7 +526,9 @@ mod tests {
   = expression inside repetition is non-progressing and will repeat infinitely")]
     fn non_progressing_repetition() {
         let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }";
-        unwrap_or_report(consume_rules(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
@@ -527,7 +542,9 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn simple_left_recursion() {
         let input = "a = { a }";
-        unwrap_or_report(consume_rules(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
@@ -548,7 +565,9 @@ mod tests {
   = rule a is left-recursive (a -> b -> a); pest::prec_climber might be useful in this case")]
     fn indirect_left_recursion() {
         let input = "a = { b } b = { a }";
-        unwrap_or_report(consume_rules(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
@@ -562,7 +581,9 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn non_failing_left_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }";
-        unwrap_or_report(consume_rules(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 
     #[test]
@@ -576,6 +597,8 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn non_primary_choice_left_recursion() {
         let input = "a = { \"a\" | a }";
-        unwrap_or_report(consume_rules(PestParser::parse(Rule::grammar_rules, input).unwrap()));
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
     }
 }

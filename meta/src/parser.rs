@@ -396,28 +396,27 @@ fn consume_expr<'i>(
     }
 
     let term = |pair: Pair<'i, Rule>| unaries(pair.into_inner().peekable(), climber);
-    let infix =
-        |lhs: ParserNode<'i>, op: Pair<'i, Rule>, rhs: ParserNode<'i>| match op.as_rule() {
-            Rule::sequence_operator => {
-                let start = lhs.span.start_pos();
-                let end = rhs.span.end_pos();
+    let infix = |lhs: ParserNode<'i>, op: Pair<'i, Rule>, rhs: ParserNode<'i>| match op.as_rule() {
+        Rule::sequence_operator => {
+            let start = lhs.span.start_pos();
+            let end = rhs.span.end_pos();
 
-                ParserNode {
-                    expr: ParserExpr::Seq(Box::new(lhs), Box::new(rhs)),
-                    span: start.span(&end)
-                }
+            ParserNode {
+                expr: ParserExpr::Seq(Box::new(lhs), Box::new(rhs)),
+                span: start.span(&end)
             }
-            Rule::choice_operator => {
-                let start = lhs.span.start_pos();
-                let end = rhs.span.end_pos();
+        }
+        Rule::choice_operator => {
+            let start = lhs.span.start_pos();
+            let end = rhs.span.end_pos();
 
-                ParserNode {
-                    expr: ParserExpr::Choice(Box::new(lhs), Box::new(rhs)),
-                    span: start.span(&end)
-                }
+            ParserNode {
+                expr: ParserExpr::Choice(Box::new(lhs), Box::new(rhs)),
+                span: start.span(&end)
             }
-            _ => unreachable!()
-        };
+        }
+        _ => unreachable!()
+    };
 
     climber.climb(pairs, term, infix)
 }
@@ -502,13 +501,13 @@ mod tests {
                         range(5, 13, [
                             character(5, 8, [
                                 single_quote(5, 6),
-                                chr(6, 7),
+                                inner_chr(6, 7),
                                 single_quote(7, 8)
                             ]),
                             range_operator(8, 10),
                             character(10, 13, [
                                 single_quote(10, 11),
-                                chr(11, 12),
+                                inner_chr(11, 12),
                                 single_quote(12, 13)
                             ])
                         ])
@@ -519,7 +518,7 @@ mod tests {
                         insensitive_string(17, 23, [
                             string(18, 23, [
                                 quote(18, 19),
-                                str(19, 22),
+                                inner_str(19, 22),
                                 quote(22, 23)
                             ])
                         ])
@@ -654,7 +653,7 @@ mod tests {
             tokens: [
                 string(0, 46, [
                     quote(0, 1),
-                    str(1, 45),
+                    inner_str(1, 45),
                     quote(45, 46)
                 ])
             ]
@@ -671,7 +670,7 @@ mod tests {
                 insensitive_string(0, 9, [
                     string(3, 9, [
                         quote(3, 4),
-                        str(4, 8),
+                        inner_str(4, 8),
                         quote(8, 9)
                     ])
                 ])
@@ -689,13 +688,13 @@ mod tests {
                 range(0, 14, [
                     character(0, 4, [
                         single_quote(0, 1),
-                        chr(1, 3),
+                        inner_chr(1, 3),
                         single_quote(3, 4)
                     ]),
                     range_operator(5, 7),
                     character(8, 14, [
                         single_quote(8, 9),
-                        chr(9, 13),
+                        inner_chr(9, 13),
                         single_quote(13, 14)
                     ])
                 ])
@@ -712,7 +711,7 @@ mod tests {
             tokens: [
                 character(0, 12, [
                     single_quote(0, 1),
-                    chr(1, 11),
+                    inner_chr(1, 11),
                     single_quote(11, 12)
                 ])
             ]
@@ -782,11 +781,11 @@ mod tests {
             input: "a = *{}",
             rule: Rule::grammar_rules,
             positives: vec![
+                Rule::opening_brace,
                 Rule::silent_modifier,
                 Rule::atomic_modifier,
                 Rule::compound_atomic_modifier,
-                Rule::non_atomic_modifier,
-                Rule::opening_brace
+                Rule::non_atomic_modifier
             ],
             negatives: vec![],
             pos: 4
@@ -881,8 +880,8 @@ mod tests {
                 Rule::negative_predicate_operator,
                 Rule::_push,
                 Rule::identifier,
-                Rule::quote,
                 Rule::insensitive_string,
+                Rule::quote,
                 Rule::single_quote
             ],
             negatives: vec![],

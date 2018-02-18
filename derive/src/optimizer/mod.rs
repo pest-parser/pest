@@ -46,7 +46,7 @@ mod tests {
                     )),
                     Box::new(Expr::Str("d".to_owned()))
                 )
-            }
+            },
         ];
         let rotated = vec![
             Rule {
@@ -74,18 +74,14 @@ mod tests {
             Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
-                expr: Expr::Rep(
-                    Box::new(Expr::Seq(
-                        Box::new(Expr::NegPred(
-                            Box::new(Expr::Choice(
-                                Box::new(Expr::Str("a".to_owned())),
-                                Box::new(Expr::Str("b".to_owned()))
-                            ))
-                        )),
-                        Box::new(Expr::Ident("any".to_owned()))
-                    ))
-                )
-            }
+                expr: Expr::Rep(Box::new(Expr::Seq(
+                    Box::new(Expr::NegPred(Box::new(Expr::Choice(
+                        Box::new(Expr::Str("a".to_owned())),
+                        Box::new(Expr::Str("b".to_owned()))
+                    )))),
+                    Box::new(Expr::Ident("any".to_owned()))
+                )))
+            },
         ];
         let skipped = vec![
             Rule {
@@ -103,7 +99,7 @@ mod tests {
         let rules = vec![
             Rule {
                 name: "rule".to_owned(),
-                ty:   RuleType::Atomic,
+                ty: RuleType::Atomic,
                 expr: Expr::Seq(
                     Box::new(Expr::Seq(
                         Box::new(Expr::Str("a".to_owned())),
@@ -114,14 +110,14 @@ mod tests {
                         Box::new(Expr::Str("d".to_owned()))
                     ))
                 )
-            }
+            },
         ];
         let concatenated = vec![
             Rule {
                 name: "rule".to_owned(),
-                ty:   RuleType::Atomic,
+                ty: RuleType::Atomic,
                 expr: Expr::Str("abcd".to_owned())
-            }
+            },
         ];
 
         assert_eq!(optimize(rules), concatenated);
@@ -134,7 +130,7 @@ mod tests {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
                 expr: Expr::RepExact(Box::new(Expr::Ident("a".to_owned())), 3)
-            }
+            },
         ];
         let unrolled = vec![
             Rule {
@@ -147,7 +143,7 @@ mod tests {
                         Box::new(Expr::Ident("a".to_owned()))
                     ))
                 )
-            }
+            },
         ];
 
         assert_eq!(optimize(rules), unrolled);
@@ -160,7 +156,7 @@ mod tests {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
                 expr: Expr::RepMax(Box::new(Expr::Str("a".to_owned())), 3)
-            }
+            },
         ];
         let unrolled = vec![
             Rule {
@@ -173,7 +169,7 @@ mod tests {
                         Box::new(Expr::Opt(Box::new(Expr::Str("a".to_owned()))))
                     ))
                 )
-            }
+            },
         ];
 
         assert_eq!(optimize(rules), unrolled);
@@ -186,7 +182,7 @@ mod tests {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
                 expr: Expr::RepMin(Box::new(Expr::Str("a".to_owned())), 2)
-            }
+            },
         ];
         let unrolled = vec![
             Rule {
@@ -199,7 +195,7 @@ mod tests {
                         Box::new(Expr::Rep(Box::new(Expr::Str("a".to_owned()))))
                     ))
                 )
-            }
+            },
         ];
 
         assert_eq!(optimize(rules), unrolled);
@@ -212,7 +208,7 @@ mod tests {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
                 expr: Expr::RepMinMax(Box::new(Expr::Str("a".to_owned())), 2, 3)
-            }
+            },
         ];
         let unrolled = vec![
             Rule {
@@ -234,7 +230,7 @@ mod tests {
                         Box::new(Expr::Opt(Box::new(Expr::Str("a".to_owned()))))
                     ))
                 )
-            }
+            },
         ];
 
         assert_eq!(optimize(rules), unrolled);
@@ -245,7 +241,7 @@ mod tests {
         let rules = vec![
             Rule {
                 name: "rule".to_owned(),
-                ty:   RuleType::Atomic,
+                ty: RuleType::Atomic,
                 expr: Expr::Seq(
                     Box::new(Expr::Seq(
                         Box::new(Expr::Insens("a".to_owned())),
@@ -256,14 +252,14 @@ mod tests {
                         Box::new(Expr::Insens("d".to_owned()))
                     ))
                 )
-            }
+            },
         ];
         let concatenated = vec![
             Rule {
                 name: "rule".to_owned(),
-                ty:   RuleType::Atomic,
+                ty: RuleType::Atomic,
                 expr: Expr::Insens("abcd".to_owned())
-            }
+            },
         ];
 
         assert_eq!(optimize(rules), concatenated);
@@ -291,7 +287,7 @@ mod tests {
                         Box::new(Expr::Ident("d".to_owned()))
                     ))
                 )
-            }
+            },
         ];
         let optimized = vec![
             Rule {
@@ -307,7 +303,7 @@ mod tests {
                         ))
                     ))
                 )
-            }
+            },
         ];
 
         assert_eq!(optimize(rules), optimized);

@@ -366,7 +366,7 @@ fn generate_expr(expr: Expr) -> Tokens {
         Expr::Ident(ident) => {
             let ident = Ident::new(ident);
             quote! { self::#ident(pos, state) }
-        },
+        }
         Expr::PosPred(expr) => {
             let expr = generate_expr(*expr);
 
@@ -542,7 +542,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
         Expr::Ident(ident) => {
             let ident = Ident::new(ident);
             quote! { self::#ident(pos, state) }
-        },
+        }
         Expr::PosPred(expr) => {
             let expr = generate_expr_atomic(*expr);
 
@@ -709,7 +709,7 @@ mod tests {
                 name: "f".to_owned(),
                 ty: RuleType::Normal,
                 expr: Expr::Ident("g".to_owned())
-            }
+            },
         ];
 
         assert_eq!(

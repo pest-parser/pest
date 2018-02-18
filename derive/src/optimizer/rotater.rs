@@ -18,7 +18,7 @@ pub fn rotate(rule: Rule) -> Rule {
                 match lhs {
                     Expr::Seq(ll, lr) => {
                         rotate_internal(Expr::Seq(ll, Box::new(Expr::Seq(lr, rhs))))
-                    },
+                    }
                     lhs => Expr::Seq(Box::new(lhs), rhs)
                 }
             }
