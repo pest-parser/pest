@@ -8,10 +8,10 @@
 // modified, or distributed except according to those terms.
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Rule<'i> {
-    pub name: &'i str,
+pub struct Rule {
+    pub name: String,
     pub ty: RuleType,
-    pub expr: Expr<'i>
+    pub expr: Expr
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -24,33 +24,34 @@ pub enum RuleType {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Expr<'i> {
+pub enum Expr {
     Str(String),
     Insens(String),
     Range(String, String),
-    Ident(&'i str),
-    PosPred(Box<Expr<'i>>),
-    NegPred(Box<Expr<'i>>),
-    Seq(Box<Expr<'i>>, Box<Expr<'i>>),
-    Choice(Box<Expr<'i>>, Box<Expr<'i>>),
-    Opt(Box<Expr<'i>>),
-    Rep(Box<Expr<'i>>),
-    RepOnce(Box<Expr<'i>>),
-    RepExact(Box<Expr<'i>>, u32),
-    RepMin(Box<Expr<'i>>, u32),
-    RepMax(Box<Expr<'i>>, u32),
-    RepMinMax(Box<Expr<'i>>, u32, u32),
-    Push(Box<Expr<'i>>)
+    Ident(String),
+    PosPred(Box<Expr>),
+    NegPred(Box<Expr>),
+    Seq(Box<Expr>, Box<Expr>),
+    Choice(Box<Expr>, Box<Expr>),
+    Opt(Box<Expr>),
+    Rep(Box<Expr>),
+    RepOnce(Box<Expr>),
+    RepExact(Box<Expr>, u32),
+    RepMin(Box<Expr>, u32),
+    RepMax(Box<Expr>, u32),
+    RepMinMax(Box<Expr>, u32, u32),
+    Skip(Vec<String>),
+    Push(Box<Expr>)
 }
 
-impl<'i> Expr<'i> {
-    pub fn map_top_down<F>(self, mut f: F) -> Expr<'i>
+impl Expr {
+    pub fn map_top_down<F>(self, mut f: F) -> Expr
     where
-        F: FnMut(Expr<'i>) -> Expr<'i>
+        F: FnMut(Expr) -> Expr
     {
-        pub fn map_internal<'i, F>(expr: Expr<'i>, f: &mut F) -> Expr<'i>
+        pub fn map_internal<'i, F>(expr: Expr, f: &mut F) -> Expr
         where
-            F: FnMut(Expr<'i>) -> Expr<'i>
+            F: FnMut(Expr) -> Expr
         {
             let expr = f(expr);
 
@@ -113,13 +114,13 @@ impl<'i> Expr<'i> {
         map_internal(self, &mut f)
     }
 
-    pub fn map_bottom_up<F>(self, mut f: F) -> Expr<'i>
+    pub fn map_bottom_up<F>(self, mut f: F) -> Expr
     where
-        F: FnMut(Expr<'i>) -> Expr<'i>
+        F: FnMut(Expr) -> Expr
     {
-        pub fn map_internal<'i, F>(expr: Expr<'i>, f: &mut F) -> Expr<'i>
+        pub fn map_internal<'i, F>(expr: Expr, f: &mut F) -> Expr
         where
-            F: FnMut(Expr<'i>) -> Expr<'i>
+            F: FnMut(Expr) -> Expr
         {
             let mapped = match expr {
                 Expr::PosPred(expr) => {
@@ -191,7 +192,7 @@ mod tests {
     fn identity() {
         let expr = Expr::Choice(
             Box::new(Expr::Seq(
-                Box::new(Expr::Ident("a")),
+                Box::new(Expr::Ident("a".to_owned())),
                 Box::new(Expr::Str("b".to_owned()))
             )),
             Box::new(Expr::PosPred(Box::new(Expr::NegPred(Box::new(

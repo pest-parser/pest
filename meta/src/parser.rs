@@ -24,14 +24,13 @@ const _GRAMMAR: &'static str = include_str!("grammar/pest.pest");
 #[grammar = "grammar/pest.pest"]
 pub struct PestParser;
 
-
 pub fn parse<'i>(rule: Rule, data: &'i str) -> Result<Pairs<Rule>, Error<Rule>> {
     PestParser::parse(rule, data)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParserRule<'i> {
-    pub name: &'i str,
+    pub name: String,
     pub span: Span<'i>,
     pub ty: RuleType,
     pub node: ParserNode<'i>
@@ -48,7 +47,7 @@ pub enum ParserExpr<'i> {
     Str(String),
     Insens(String),
     Range(String, String),
-    Ident(&'i str),
+    Ident(String),
     PosPred(Box<ParserNode<'i>>),
     NegPred(Box<ParserNode<'i>>),
     Seq(Box<ParserNode<'i>>, Box<ParserNode<'i>>),
@@ -73,7 +72,7 @@ fn convert_rule<'i>(rule: ParserRule<'i>) -> AstRule {
     }
 }
 
-fn convert_node<'i>(node: ParserNode<'i>) -> Expr<'i> {
+fn convert_node<'i>(node: ParserNode<'i>) -> Expr {
     match node.expr {
         ParserExpr::Str(string) => Expr::Str(string),
         ParserExpr::Insens(string) => Expr::Insens(string),
@@ -102,7 +101,7 @@ fn convert_node<'i>(node: ParserNode<'i>) -> Expr<'i> {
     }
 }
 
-pub fn consume_rules<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<AstRule<'i>>, Vec<Error<'i, Rule>>> {
+pub fn consume_rules<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<AstRule>, Vec<Error<'i, Rule>>> {
     let rules = consume_rules_with_spans(pairs);
     let errors = validator::validate_ast(&rules);
     if errors.len() == 0 {
@@ -124,7 +123,7 @@ fn consume_rules_with_spans<'i>(pairs: Pairs<'i, Rule>) -> Vec<ParserRule<'i>> {
             let mut pairs = pair.into_inner().peekable();
 
             let span = pairs.next().unwrap().into_span();
-            let name = span.as_str();
+            let name = span.as_str().to_owned();
 
             pairs.next().unwrap(); // assignment_operator
 
@@ -210,7 +209,7 @@ fn consume_expr<'i>(
                         }
                     }
                     Rule::identifier => ParserNode {
-                        expr: ParserExpr::Ident(pair.as_str()),
+                        expr: ParserExpr::Ident(pair.as_str().to_owned()),
                         span: pair.clone().into_span()
                     },
                     Rule::string => {
@@ -972,19 +971,19 @@ mod tests {
             ast,
             vec![
                 AstRule {
-                    name: "rule",
+                    name: "rule".to_owned(),
                     ty: RuleType::Silent,
                     expr: Expr::Choice(
                         Box::new(Expr::Seq(
                             Box::new(Expr::Seq(
                                 Box::new(Expr::Seq(
                                     Box::new(Expr::RepExact(
-                                        Box::new(Expr::Ident("a")),
+                                        Box::new(Expr::Ident("a".to_owned())),
                                         1
                                     )),
                                     Box::new(Expr::RepMin(Box::new(Expr::Str("a".to_owned())), 3))
                                 )),
-                                Box::new(Expr::RepMax(Box::new(Expr::Ident("b")), 2))
+                                Box::new(Expr::RepMax(Box::new(Expr::Ident("b".to_owned())), 2))
                             )),
                             Box::new(Expr::RepMinMax(Box::new(Expr::Str("b".to_owned())), 1, 2))
                         )),

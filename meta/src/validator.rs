@@ -224,7 +224,7 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i,
 fn is_non_progressing<'i>(expr: &ParserExpr<'i>) -> bool {
     match *expr {
         ParserExpr::Str(ref string) => string == "",
-        ParserExpr::Ident(ident) => ident == "soi" || ident == "eoi",
+        ParserExpr::Ident(ref ident) => ident == "soi" || ident == "eoi",
         ParserExpr::PosPred(_) => true,
         ParserExpr::NegPred(_) => true,
         ParserExpr::Seq(ref lhs, ref rhs) => {
@@ -315,23 +315,17 @@ fn validate_left_recursion<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Er
     left_recursion(to_hash_map(rules))
 }
 
-fn to_hash_map<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> HashMap<&'i str, &'a ParserNode<'i>> {
-    let mut hash_map = HashMap::new();
-
-    for rule in rules {
-        hash_map.insert(rule.name, &rule.node);
-    }
-
-    hash_map
+fn to_hash_map<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> HashMap<String, &'a ParserNode<'i>> {
+    rules.iter().map(|r| (r.name.clone(), &r.node)).collect()
 }
 
-fn left_recursion<'a, 'i: 'a>(rules: HashMap<&'i str, &'a ParserNode<'i>>) -> Vec<Error<'i, Rule>> {
+fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec<Error<'i, Rule>> {
     fn check_expr<'a, 'i: 'a>(
         node: &'a ParserNode<'i>,
-        rules: &'a HashMap<&'i str, &ParserNode<'i>>,
-        trace: &mut Vec<&'i str>
+        rules: &'a HashMap<String, &ParserNode<'i>>,
+        trace: &mut Vec<String>
     ) -> Option<Error<'i, Rule>> {
-        match node.expr {
+        match node.expr.clone() {
             ParserExpr::Ident(other) => {
                 if trace[0] == other {
                     trace.push(other);
@@ -353,7 +347,7 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<&'i str, &'a ParserNode<'i>>) -> Ve
                 }
 
                 if !trace.contains(&other) {
-                    if let Some(node) = rules.get(other) {
+                    if let Some(node) = rules.get(&other) {
                         trace.push(other);
                         let result = check_expr(node, rules, trace);
                         trace.pop().unwrap();

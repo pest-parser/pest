@@ -23,14 +23,14 @@ use RuleType;
 #[derive(Clone)]
 pub struct Pairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i str,
+    input: &'i [u8],
     start: usize,
     end: usize
 }
 
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &str,
+    input: &[u8],
     start: usize,
     end: usize
 ) -> Pairs<R> {
@@ -159,7 +159,7 @@ impl<'i, R: Eq> Eq for Pairs<'i, R> {}
 impl<'i, R: Hash> Hash for Pairs<'i, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
-        (self.input as *const str).hash(state);
+        (self.input as *const [u8]).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }

@@ -20,8 +20,8 @@ use std::io::Read;
 use test::Bencher;
 
 use pest::Parser;
-use pest::iterators::Pair;
 use pest::Span;
+use pest::iterators::Pair;
 
 use pest_grammars::json::*;
 
@@ -75,11 +75,11 @@ fn data(b: &mut Bencher) {
     file.read_to_string(&mut data).unwrap();
 
     b.iter(|| {
-        consume(
+//        consume(
             JsonParser::parse(Rule::json, &data)
                 .unwrap()
-                .next()
-                .unwrap()
-        )
+//                .next()
+//                .unwrap()
+//        )
     });
 }

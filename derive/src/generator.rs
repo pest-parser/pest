@@ -19,6 +19,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "any",
         quote! {
             #[inline]
+            #[allow(dead_code)]
             fn any<'i>(
                 pos: ::pest::Position<'i>,
                 _: &mut ::pest::ParserState<'i, Rule>
@@ -131,7 +132,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
 }
 
 fn generate_enum(rules: &Vec<Rule>) -> Tokens {
-    let rules = rules.iter().map(|rule| Ident::new(rule.name));
+    let rules = rules.iter().map(|rule| Ident::new(rule.name.as_str()));
 
     quote! {
         #[allow(dead_code, non_camel_case_types)]
@@ -146,7 +147,7 @@ fn generate_patterns(rules: &Vec<Rule>) -> Tokens {
     let mut tokens = Tokens::new();
 
     let rules = rules.iter().map(|rule| {
-        let rule = Ident::new(rule.name);
+        let rule = Ident::new(rule.name.as_str());
         quote! {
             Rule::#rule => rules::#rule(pos, &mut state)
         }
@@ -640,6 +641,42 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                 })
             }
         }
+        Expr::Skip(strings) => {
+            let mut string_tokens = quote! {
+                let strings =
+            };
+
+            string_tokens.append("[");
+
+            for string in &strings[..strings.len() - 1] {
+                string_tokens.append(format!("\"{}\"", string));
+                string_tokens.append(",");
+            }
+
+            string_tokens.append(format!("\"{}\"", strings[strings.len() - 1]));
+
+            string_tokens.append("]");
+            string_tokens.append(";");
+
+            quote! {
+                #string_tokens
+
+                strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
+                    match (result, pos.clone().skip_until(string)) {
+                        (Ok(lhs), Ok(rhs)) => {
+                            if rhs.pos() < lhs.pos() {
+                                Ok(rhs)
+                            } else {
+                                Ok(lhs)
+                            }
+                        }
+                        (Ok(lhs), Err(_)) => Ok(lhs),
+                        (Err(_), Ok(rhs)) => Ok(rhs),
+                        (Err(lhs), Err(_)) => Err(lhs)
+                    }
+                })
+            }
+        }
         Expr::Push(expr) => {
             let expr = generate_expr_atomic(*expr);
 
@@ -669,9 +706,9 @@ mod tests {
     fn rule_enum_simple() {
         let rules = vec![
             Rule {
-                name: "f",
+                name: "f".to_owned(),
                 ty: RuleType::Normal,
-                expr: Expr::Ident("g")
+                expr: Expr::Ident("g".to_owned())
             }
         ];
 
@@ -810,9 +847,36 @@ mod tests {
     }
 
     #[test]
+    fn skip() {
+        let expr = Expr::Skip(vec!["a".to_owned(), "b".to_owned()]);
+
+        assert_eq!(
+            generate_expr_atomic(expr),
+            quote! {
+                let strings = ["a", "b"];
+
+                strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
+                    match (result, pos.clone().skip_until(string)) {
+                        (Ok(lhs), Ok(rhs)) => {
+                            if rhs.pos() < lhs.pos() {
+                                Ok(rhs)
+                            } else {
+                                Ok(lhs)
+                            }
+                        }
+                        (Ok(lhs), Err(_)) => Ok(lhs),
+                        (Err(_), Ok(rhs)) => Ok(rhs),
+                        (Err(lhs), Err(_)) => Err(lhs)
+                    }
+                })
+            }
+        );
+    }
+
+    #[test]
     fn expr_complex() {
         let expr = Expr::Choice(
-            Box::new(Expr::Ident("a")),
+            Box::new(Expr::Ident("a".to_owned())),
             Box::new(Expr::Seq(
                 Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
                 Box::new(Expr::Seq(
@@ -910,7 +974,7 @@ mod tests {
     #[test]
     fn expr_complex_atomic() {
         let expr = Expr::Choice(
-            Box::new(Expr::Ident("a")),
+            Box::new(Expr::Ident("a".to_owned())),
             Box::new(Expr::Seq(
                 Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
                 Box::new(Expr::Seq(
@@ -967,7 +1031,7 @@ mod tests {
         let name = Ident::new("MyParser");
         let rules = vec![
             Rule {
-                name: "a",
+                name: "a".to_owned(),
                 ty: RuleType::Silent,
                 expr: Expr::Str("b".to_owned())
             },
@@ -1004,6 +1068,7 @@ mod tests {
                             }
 
                             #[inline]
+                            #[allow(dead_code)]
                             fn any<'i>(
                                 pos: ::pest::Position<'i>,
                                 _: &mut ::pest::ParserState<'i, Rule>

@@ -56,6 +56,8 @@
 
 #![doc(html_root_url = "https://docs.rs/pest")]
 
+extern crate memchr;
+
 use std::fmt::Debug;
 use std::hash::Hash;
 
