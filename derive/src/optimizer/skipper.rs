@@ -39,16 +39,16 @@ pub fn skip(rule: Rule) -> Rule {
                         Expr::Rep(expr) => match *expr.clone() {
                             Expr::Seq(lhs, rhs) => match (*lhs, *rhs) {
                                 (Expr::NegPred(expr), Expr::Ident(ident)) => {
-                                    if ident.as_ref() == "any" {
+                                    if ident == "any" {
                                         if let Some(expr) = populate_choices(*expr, vec![]) {
                                             return expr;
                                         }
                                     }
                                 }
                                 _ => ()
-                            }
+                            },
                             _ => ()
-                        }
+                        },
                         _ => ()
                     };
 

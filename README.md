@@ -160,11 +160,11 @@ extern crate pest_derive;
 
 ## Projects using pest
 
+* [pest_meta](https://github.com/pest-parser/pest/blob/master/meta/src/grammar.pest) (bootstrapped)
 * [brain](https://github.com/brain-lang/brain)
 * [comrak](https://github.com/kivikakk/comrak)
 * [graphql-parser](https://github.com/Keats/graphql-parser)
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
-* [pest](https://github.com/pest-parser/pest/blob/master/pest_derive/src/parser.rs) (bootstrapped)
 * [Huia](https://gitlab.com/huia-lang/huia-parser)
 * [rouler](https://github.com/jarcane/rouler)
 * [RuSh](https://github.com/lwandrebeck/RuSh)

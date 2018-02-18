@@ -7,11 +7,9 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use quote::Ident;
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rule {
-    pub name: Ident,
+    pub name: String,
     pub ty: RuleType,
     pub expr: Expr
 }
@@ -30,7 +28,7 @@ pub enum Expr {
     Str(String),
     Insens(String),
     Range(String, String),
-    Ident(Ident),
+    Ident(String),
     PosPred(Box<Expr>),
     NegPred(Box<Expr>),
     Seq(Box<Expr>, Box<Expr>),
@@ -51,7 +49,7 @@ impl Expr {
     where
         F: FnMut(Expr) -> Expr
     {
-        pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
+        pub fn map_internal<'i, F>(expr: Expr, f: &mut F) -> Expr
         where
             F: FnMut(Expr) -> Expr
         {
@@ -85,17 +83,17 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::RepOnce(mapped)
                 }
-                Expr::RepExact(expr, num) => {
+                Expr::RepExact(expr, max) => {
                     let mapped = Box::new(map_internal(*expr, f));
-                    Expr::RepExact(mapped, num)
+                    Expr::RepExact(mapped, max)
                 }
-                Expr::RepMin(expr, min) => {
+                Expr::RepMin(expr, num) => {
                     let mapped = Box::new(map_internal(*expr, f));
-                    Expr::RepMin(mapped, min)
+                    Expr::RepMin(mapped, num)
                 }
-                Expr::RepMax(expr, max) => {
+                Expr::RepMax(expr, num) => {
                     let mapped = Box::new(map_internal(*expr, f));
-                    Expr::RepMax(mapped, max)
+                    Expr::RepMax(mapped, num)
                 }
                 Expr::RepMinMax(expr, min, max) => {
                     let mapped = Box::new(map_internal(*expr, f));
@@ -120,13 +118,13 @@ impl Expr {
     where
         F: FnMut(Expr) -> Expr
     {
-        pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
+        pub fn map_internal<'i, F>(expr: Expr, f: &mut F) -> Expr
         where
             F: FnMut(Expr) -> Expr
         {
             let mapped = match expr {
-                // TODO: Use box syntax when it gets stabilized.
                 Expr::PosPred(expr) => {
+                    // TODO: Use box syntax when it gets stabilized.
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::PosPred(mapped)
                 }
@@ -156,9 +154,9 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::RepExact(mapped, num)
                 }
-                Expr::RepMin(expr, min) => {
+                Expr::RepMin(expr, max) => {
                     let mapped = Box::new(map_internal(*expr, f));
-                    Expr::RepMin(mapped, min)
+                    Expr::RepMin(mapped, max)
                 }
                 Expr::RepMax(expr, max) => {
                     let mapped = Box::new(map_internal(*expr, f));
@@ -194,7 +192,7 @@ mod tests {
     fn identity() {
         let expr = Expr::Choice(
             Box::new(Expr::Seq(
-                Box::new(Expr::Ident(Ident::new("a"))),
+                Box::new(Expr::Ident("a".to_owned())),
                 Box::new(Expr::Str("b".to_owned()))
             )),
             Box::new(Expr::PosPred(Box::new(Expr::NegPred(Box::new(

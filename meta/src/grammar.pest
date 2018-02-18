@@ -1,0 +1,84 @@
+grammar_rules = _{ soi ~ grammar_rule+ ~ eoi }
+
+grammar_rule = {
+    identifier ~ assignment_operator ~ modifier? ~
+    opening_brace ~ expression ~ closing_brace
+}
+
+assignment_operator = { "=" }
+opening_brace       = { "{" }
+closing_brace       = { "}" }
+opening_paren       = { "(" }
+closing_paren       = { ")" }
+
+modifier = _{
+    silent_modifier |
+    atomic_modifier |
+    compound_atomic_modifier |
+    non_atomic_modifier
+}
+
+silent_modifier          = { "_" }
+atomic_modifier          = { "@" }
+compound_atomic_modifier = { "$" }
+non_atomic_modifier      = { "!" }
+
+expression =  { term ~ (infix_operator ~ term)* }
+term       =  { prefix_operator* ~ node ~ postfix_operator* }
+node       = _{ opening_paren ~ expression ~ closing_paren | terminal }
+terminal   = _{ _push | identifier | string | insensitive_string | range }
+
+prefix_operator  = _{ positive_predicate_operator | negative_predicate_operator }
+infix_operator   = _{ sequence_operator | choice_operator }
+postfix_operator = _{
+    optional_operator |
+    repeat_operator |
+    repeat_once_operator |
+    repeat_exact |
+    repeat_min |
+    repeat_max |
+    repeat_min_max
+}
+
+positive_predicate_operator = { "&" }
+negative_predicate_operator = { "!" }
+sequence_operator           = { "~" }
+choice_operator             = { "|" }
+optional_operator           = { "?" }
+repeat_operator             = { "*" }
+repeat_once_operator        = { "+" }
+
+repeat_exact   = { opening_brace ~ number ~ closing_brace }
+repeat_min     = { opening_brace ~ number ~ comma ~ closing_brace }
+repeat_max     = { opening_brace ~ comma ~ number ~ closing_brace }
+repeat_min_max = { opening_brace ~ number ~ comma ~ number ~ closing_brace }
+
+number = @{ '0'..'9'+ }
+
+comma = { "," }
+
+_push = { "push" ~ opening_paren ~ expression ~ closing_paren }
+
+identifier = @{ !"push" ~ ("_" | alpha) ~ ("_" | alpha_num)* }
+alpha      = _{ 'a'..'z' | 'A'..'Z' }
+alpha_num  = _{ alpha | '0'..'9' }
+
+string             = ${ quote ~ inner_str ~ quote }
+insensitive_string =  { "^" ~ string }
+range              =  { character ~ range_operator ~ character }
+character          = ${ single_quote ~ inner_chr ~ single_quote }
+
+inner_str = @{ (!("\"" | "\\") ~ any)* ~ (escape ~ inner_str)? }
+inner_chr = @{ escape | any }
+escape    = @{ "\\" ~ (quote | "\\" | "r" | "n" | "t" | "0" | single_quote | unicode | code) }
+unicode   = @{ "u" ~ opening_brace ~ hex_digit{2, 6} ~ closing_brace }
+code      = @{ "x" ~ hex_digit{2} }
+hex_digit = @{ '0'..'9' | 'a'..'f' | 'A'..'F' }
+
+quote          = { "\"" }
+single_quote   = { "'" }
+range_operator = { ".." }
+
+newline    = _{ "\n" | "\r\n" }
+whitespace = _{ " " | "\t" | newline }
+comment    = _{ "//" ~ (!newline ~ any)* }

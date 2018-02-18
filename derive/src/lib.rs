@@ -230,11 +230,8 @@
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
 #![recursion_limit = "256"]
 
-#[cfg(test)]
-#[macro_use]
 extern crate pest;
-#[cfg(not(test))]
-extern crate pest;
+extern crate pest_meta;
 
 extern crate proc_macro;
 #[macro_use]
@@ -246,18 +243,15 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
 
-use pest::Parser;
 use proc_macro::TokenStream;
 use quote::Ident;
 use syn::{Attribute, Lit, MetaItem};
 
-mod ast;
 mod generator;
 mod optimizer;
-mod parser;
-mod validator;
 
-use parser::{GrammarParser, GrammarRule};
+use pest_meta::{ast, unwrap_or_report, validator};
+use pest_meta::parser::{self, Rule};
 
 #[proc_macro_derive(Parser, attributes(grammar))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
@@ -277,42 +271,42 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         Err(error) => panic!("error opening {:?}: {}", file_name, error)
     };
 
-    let input = &data;
-    let pairs = match GrammarParser::parse(GrammarRule::grammar_rules, input) {
+    let pairs = match parser::parse(Rule::grammar_rules, &data) {
         Ok(pairs) => pairs,
         Err(error) => panic!(
             "error parsing {:?}\n\n{}",
             file_name,
             error.renamed_rules(|rule| match *rule {
-                GrammarRule::grammar_rule => "rule".to_owned(),
-                GrammarRule::eoi => "end-of-input".to_owned(),
-                GrammarRule::assignment_operator => "`=`".to_owned(),
-                GrammarRule::silent_modifier => "`_`".to_owned(),
-                GrammarRule::atomic_modifier => "`@`".to_owned(),
-                GrammarRule::compound_atomic_modifier => "`$`".to_owned(),
-                GrammarRule::non_atomic_modifier => "`!`".to_owned(),
-                GrammarRule::opening_brace => "`{`".to_owned(),
-                GrammarRule::closing_brace => "`}`".to_owned(),
-                GrammarRule::opening_paren => "`(`".to_owned(),
-                GrammarRule::positive_predicate_operator => "`&`".to_owned(),
-                GrammarRule::negative_predicate_operator => "`!`".to_owned(),
-                GrammarRule::sequence_operator => "`&`".to_owned(),
-                GrammarRule::choice_operator => "`|`".to_owned(),
-                GrammarRule::optional_operator => "`?`".to_owned(),
-                GrammarRule::repeat_operator => "`*`".to_owned(),
-                GrammarRule::repeat_once_operator => "`+`".to_owned(),
-                GrammarRule::comma => "`,`".to_owned(),
-                GrammarRule::closing_paren => "`)`".to_owned(),
-                GrammarRule::quote => "`\"`".to_owned(),
-                GrammarRule::insensitive_string => "`^`".to_owned(),
-                GrammarRule::range_operator => "`..`".to_owned(),
-                GrammarRule::single_quote => "`'`".to_owned(),
+                Rule::grammar_rule => "rule".to_owned(),
+                Rule::_push => "push".to_owned(),
+                Rule::assignment_operator => "`=`".to_owned(),
+                Rule::silent_modifier => "`_`".to_owned(),
+                Rule::atomic_modifier => "`@`".to_owned(),
+                Rule::compound_atomic_modifier => "`$`".to_owned(),
+                Rule::non_atomic_modifier => "`!`".to_owned(),
+                Rule::opening_brace => "`{`".to_owned(),
+                Rule::closing_brace => "`}`".to_owned(),
+                Rule::opening_paren => "`(`".to_owned(),
+                Rule::positive_predicate_operator => "`&`".to_owned(),
+                Rule::negative_predicate_operator => "`!`".to_owned(),
+                Rule::sequence_operator => "`&`".to_owned(),
+                Rule::choice_operator => "`|`".to_owned(),
+                Rule::optional_operator => "`?`".to_owned(),
+                Rule::repeat_operator => "`*`".to_owned(),
+                Rule::repeat_once_operator => "`+`".to_owned(),
+                Rule::comma => "`,`".to_owned(),
+                Rule::closing_paren => "`)`".to_owned(),
+                Rule::quote => "`\"`".to_owned(),
+                Rule::insensitive_string => "`^`".to_owned(),
+                Rule::range_operator => "`..`".to_owned(),
+                Rule::single_quote => "`'`".to_owned(),
                 other_rule => format!("{:?}", other_rule)
             })
         )
     };
 
-    let (ast, defaults) = parser::consume_rules(pairs);
+    let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
+    let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
     let generated = generator::generate(name, optimized, defaults);
 
