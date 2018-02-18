@@ -25,22 +25,39 @@ pub enum RuleType {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expr {
+    /// Matches an exact string, e.g. `"a"`
     Str(String),
+    /// Matches an exact string, case insensitively (ASCII only), e.g. `^"a"`
     Insens(String),
+    /// Matches one character in the range, e.g. `'a'..'z'`
     Range(String, String),
-    Ident(String),
+    /// Matches the rule with the given name, e.g. `a`
+    Ident(Ident),
+    /// Positive lookahead; matches expression without making progress, e.g. `&e`
     PosPred(Box<Expr>),
+    /// Negative lookahead; matches if expression doesn't match, without making progress, e.g. `!e`
     NegPred(Box<Expr>),
+    /// Matches a sequence of two expressions, e.g. `e1 ~ e2`
     Seq(Box<Expr>, Box<Expr>),
+    /// Matches either of two expressions, e.g. `e1 | e2`
     Choice(Box<Expr>, Box<Expr>),
+    /// Optionally matches an expression, e.g. `e?`
     Opt(Box<Expr>),
+    /// Matches an expression zero or more times, e.g. `e*`
     Rep(Box<Expr>),
+    /// Matches an expression one or more times, e.g. `e+`
     RepOnce(Box<Expr>),
+    /// Matches an expression an exact number of times, e.g. `e{n}`
     RepExact(Box<Expr>, u32),
+    /// Matches an expression at least a number of times, e.g. `e{n,}`
     RepMin(Box<Expr>, u32),
+    /// Matches an expression at most a number of times, e.g. `e{,n}`
     RepMax(Box<Expr>, u32),
+    /// Matches an expression at range of times, e.g. `e{m, n}`
     RepMinMax(Box<Expr>, u32, u32),
+    /// Matches any expression that does not contain the strings in the Vec.
     Skip(Vec<String>),
+    /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<Expr>)
 }
 
