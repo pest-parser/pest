@@ -170,7 +170,7 @@ impl<'i> Position<'i> {
             0
         } else {
             // Position's pos is always a UTF-8 border.
-            let start = unsafe { str::from_utf8_unchecked(&self.input) }
+            let start = unsafe { str::from_utf8_unchecked(self.input) }
                 .char_indices()
                 .rev()
                 .skip_while(|&(i, _)| i >= self.pos)
@@ -196,7 +196,7 @@ impl<'i> Position<'i> {
             end
         } else {
             // Position's pos is always a UTF-8 border.
-            let end = unsafe { str::from_utf8_unchecked(&self.input) }
+            let end = unsafe { str::from_utf8_unchecked(self.input) }
                 .char_indices()
                 .skip_while(|&(i, _)| i < self.pos)
                 .find(|&(_, c)| c == '\n');
