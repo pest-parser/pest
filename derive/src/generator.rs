@@ -32,11 +32,13 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "eoi",
         quote! {
             #[inline]
-            fn eoi<'i>(
+            pub fn eoi<'i>(
                 pos: ::pest::Position<'i>,
-                _: &mut ::pest::ParserState<'i, Rule>
+                state: &mut ::pest::ParserState<'i, Rule>
             ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                pos.at_end()
+                state.rule(Rule::eoi, pos, #[inline(always)] |_, pos| {
+                    pos.at_end()
+                })
             }
         }
     );
@@ -89,8 +91,10 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         }
     );
 
-    let rule_enum = generate_enum(&rules);
-    let patterns = generate_patterns(&rules);
+    let uses_eoi = defaults.iter().any(|name| *name == "eoi");
+
+    let rule_enum = generate_enum(&rules, uses_eoi);
+    let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
 
     let mut rules: Vec<_> = rules.into_iter().map(|rule| generate_rule(rule)).collect();
@@ -131,29 +135,46 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
     }
 }
 
-fn generate_enum(rules: &Vec<Rule>) -> Tokens {
+fn generate_enum(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
     let rules = rules.iter().map(|rule| Ident::new(rule.name.as_str()));
 
-    quote! {
-        #[allow(dead_code, non_camel_case_types)]
-        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-        pub enum Rule {
-            #( #rules ),*
+    if uses_eoi {
+        quote! {
+            #[allow(dead_code, non_camel_case_types)]
+            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+            pub enum Rule {
+                eoi,
+                #( #rules ),*
+            }
+        }
+    } else {
+        quote! {
+            #[allow(dead_code, non_camel_case_types)]
+            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+            pub enum Rule {
+                #( #rules ),*
+            }
         }
     }
 }
 
-fn generate_patterns(rules: &Vec<Rule>) -> Tokens {
+fn generate_patterns(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
     let mut tokens = Tokens::new();
 
-    let rules = rules.iter().map(|rule| {
+    let mut rules: Vec<_> = rules.iter().map(|rule| {
         let rule = Ident::new(rule.name.as_str());
         quote! {
             Rule::#rule => rules::#rule(pos, &mut state)
         }
-    });
+    }).collect();
 
-    tokens.append_separated(rules, ",");
+    if uses_eoi {
+        rules.push(quote! {
+            Rule::eoi => rules::eoi(pos, &mut state)
+        });
+    }
+
+    tokens.append_separated(rules.iter(), ",");
 
     tokens
 }
@@ -713,7 +734,7 @@ mod tests {
         ];
 
         assert_eq!(
-            generate_enum(&rules),
+            generate_enum(&rules, false),
             quote! {
                 #[allow(dead_code, non_camel_case_types)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
