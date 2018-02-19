@@ -3,5 +3,6 @@ members = [
     "derive",
     "grammars",
     "meta",
-    "pest"
+    "pest",
+    "vm"
 ]
