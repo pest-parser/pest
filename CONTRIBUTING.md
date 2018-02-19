@@ -18,7 +18,7 @@ Reach out on [Gitter](https://gitter.im/pest-parser/pest) for more ideas.
 
 ## Security Issues
 
-**DO NOT** publically post about the security issue. Doing so will leave others vulnerable until it is patched.
+**DO NOT** publicly post about the security issue. Doing so will leave others vulnerable until it is patched.
 
 1. Reach out on [Gitter](https://gitter.im/pest-parser/pest) and someone will direct you about what to do. 
    DO NOT report the issue itself on the public channel. Just let them know that you have found something
