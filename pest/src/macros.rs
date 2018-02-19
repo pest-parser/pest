@@ -216,7 +216,30 @@ macro_rules! parses_to {
 
             let rest: Vec<_> = tokens.collect();
 
-            assert!(rest.is_empty(), format!("expected end of stream, but found {:?}", rest));
+            match rest.len() {
+                0 => (),
+                2 => {
+                    let (first, second) = (&rest[0], &rest[1]);
+
+                    match (first, second) {
+                        (
+                            &$crate::Token::Start { rule: ref first_rule, .. },
+                            &$crate::Token::End { rule: ref second_rule, .. }
+                        ) => {
+                            assert!(
+                                format!("{:?}", first_rule) == "eoi",
+                                format!("expected end of input, but found {:?}", rest)
+                            );
+                            assert!(
+                                format!("{:?}", second_rule) == "eoi",
+                                format!("expected end of input, but found {:?}", rest)
+                            );
+                        }
+                        _ => panic!("expected end of input, but found {:?}", rest)
+                    }
+                }
+                _ => panic!("expected end of input, but found {:?}", rest)
+            };
         }
     };
 }
