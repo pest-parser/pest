@@ -161,12 +161,15 @@ fn generate_enum(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
 fn generate_patterns(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
     let mut tokens = Tokens::new();
 
-    let mut rules: Vec<_> = rules.iter().map(|rule| {
-        let rule = Ident::new(rule.name.as_str());
-        quote! {
-            Rule::#rule => rules::#rule(pos, &mut state)
-        }
-    }).collect();
+    let mut rules: Vec<_> = rules
+        .iter()
+        .map(|rule| {
+            let rule = Ident::new(rule.name.as_str());
+            quote! {
+                Rule::#rule => rules::#rule(pos, &mut state)
+            }
+        })
+        .collect();
 
     if uses_eoi {
         rules.push(quote! {

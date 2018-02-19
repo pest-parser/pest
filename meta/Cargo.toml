@@ -1,6 +1,6 @@
 [package]
 name = "pest_meta"
-description = "the grammar of pest's grammar definition language"
+description = "pest meta language parser and validator"
 version = "1.0.3"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 repository = "https://github.com/pest-parser/pest"
@@ -14,3 +14,8 @@ readme = "_README.md"
 maplit = "^0.1.5"
 pest = { path = "../pest", version = "^1.0" }
 pest_derive = "^1.0"
+
+[badges]
+codecov = { repository = "pest-parser/pest" }
+maintenance = { status = "actively-developed" }
+travis-ci = { repository = "pest-parser/pest" }
