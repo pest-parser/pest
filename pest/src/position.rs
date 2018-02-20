@@ -346,7 +346,7 @@ impl<'i> Position<'i> {
     /// assert_eq!(start.clone().match_string("ac"), Err(start));
     /// ```
     #[inline]
-    pub fn match_string(mut self, string: &'i str) -> Result<Position<'i>, Position<'i>> {
+    pub fn match_string(mut self, string: &str) -> Result<Position<'i>, Position<'i>> {
         let matched = {
             let to = self.pos + string.len();
 
@@ -379,7 +379,7 @@ impl<'i> Position<'i> {
     /// assert_eq!(start.clone().match_insensitive("AC"), Err(start));
     /// ```
     #[inline]
-    pub fn match_insensitive(mut self, string: &'i str) -> Result<Position<'i>, Position<'i>> {
+    pub fn match_insensitive(mut self, string: &str) -> Result<Position<'i>, Position<'i>> {
         let matched = {
             // Matching is safe since, even if the string does not fall on UTF-8 borders, that
             // particular slice is only used for comparison which will be handled correctly.
