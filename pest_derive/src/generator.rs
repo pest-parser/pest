@@ -463,13 +463,13 @@ fn generate_expr(expr: Expr) -> Tokens {
                 state.sequence(#[inline(always)] move |state| {
                     pos.sequence(#[inline(always)] |pos| {
                         pos.optional(#[inline(always)] |pos| {
-                            #expr
-                        }).and_then(#[inline(always)] |pos| {
-                            pos.repeat(#[inline(always)] |pos| {
-                                state.sequence(#[inline(always)] move |state| {
-                                    pos.sequence(#[inline(always)] |pos| {
-                                        self::skip(pos, state).and_then(#[inline(always)] |pos| {
-                                            #expr
+                            #expr.and_then(#[inline(always)] |pos| {
+                                pos.repeat(#[inline(always)] |pos| {
+                                    state.sequence(#[inline(always)] move |state| {
+                                        pos.sequence(#[inline(always)] |pos| {
+                                            self::skip(pos, state).and_then(#[inline(always)] |pos| {
+                                                #expr
+                                            })
                                         })
                                     })
                                 })
@@ -857,7 +857,7 @@ mod tests {
                 self::a(pos, state).or_else(#[inline(always)] |pos| {
                     state.sequence(#[inline(always)] move |state| {
                         pos.sequence(#[inline(always)] |pos| {
-                            pos.match_range( 'a' .. 'b' ).and_then(#[inline(always)] |pos| {
+                            pos.match_range('a'..'b').and_then(#[inline(always)] |pos| {
                                 self::skip(pos, state)
                             }).and_then(#[inline(always)] |pos| {
                                 state.lookahead(false, #[inline(always)] move |state| {
@@ -865,10 +865,12 @@ mod tests {
                                         state.sequence(#[inline(always)] move |state| {
                                             pos.sequence(#[inline(always)] |pos| {
                                                 pos.optional(#[inline(always)] |pos| {
-                                                    pos.match_insensitive("b")
-                                                }).and_then(#[inline(always)] |pos| {
-                                                    pos.repeat(#[inline(always)] |pos| {
-                                                        #sequence
+                                                    pos.match_insensitive(
+                                                        "b"
+                                                    ).and_then(#[inline(always)] |pos| {
+                                                        pos.repeat(#[inline(always)] |pos| {
+                                                            #sequence
+                                                        })
                                                     })
                                                 })
                                             })
@@ -888,9 +890,9 @@ mod tests {
                                                             #[inline(always)] |pos| {
                                                                 pos.match_string("d")
                                                             }
-                                                        )
-                                                    }).and_then(#[inline(always)] |pos| {
-                                                        #repeat
+                                                        ).and_then(#[inline(always)] |pos| {
+                                                            #repeat
+                                                        })
                                                     })
                                                 })
                                             })
