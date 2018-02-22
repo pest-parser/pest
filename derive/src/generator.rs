@@ -380,9 +380,9 @@ fn generate_expr(expr: Expr) -> Tokens {
             };
 
             tokens.append("(");
-            tokens.append(start);
+            tokens.append(format!("'{}'", start));
             tokens.append("..");
-            tokens.append(end);
+            tokens.append(format!("'{}'", end));
             tokens.append(")");
 
             tokens
@@ -556,9 +556,9 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             };
 
             tokens.append("(");
-            tokens.append(start);
+            tokens.append(format!("'{}'", start));
             tokens.append("..");
-            tokens.append(end);
+            tokens.append(format!("'{}'", end));
             tokens.append(")");
 
             tokens
@@ -902,7 +902,7 @@ mod tests {
         let expr = Expr::Choice(
             Box::new(Expr::Ident("a".to_owned())),
             Box::new(Expr::Seq(
-                Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
+                Box::new(Expr::Range("a".to_owned(), "b".to_owned())),
                 Box::new(Expr::Seq(
                     Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Insens(
                         "b".to_owned()
@@ -1002,7 +1002,7 @@ mod tests {
         let expr = Expr::Choice(
             Box::new(Expr::Ident("a".to_owned())),
             Box::new(Expr::Seq(
-                Box::new(Expr::Range("'a'".to_owned(), "'b'".to_owned())),
+                Box::new(Expr::Range("a".to_owned(), "b".to_owned())),
                 Box::new(Expr::Seq(
                     Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Insens(
                         "b".to_owned()

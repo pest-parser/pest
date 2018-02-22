@@ -234,7 +234,10 @@ fn consume_expr<'i>(
                         let end_pos = pair.clone().into_span().end_pos();
 
                         ParserNode {
-                            expr: ParserExpr::Range(start.to_owned(), end.to_owned()),
+                            expr: ParserExpr::Range(
+                                start[1..start.len() - 1].to_owned(),
+                                end[1..end.len() - 1].to_owned()
+                            ),
                             span: start_pos.span(&end_pos)
                         }
                     }
@@ -996,8 +999,8 @@ mod tests {
                             Box::new(Expr::Choice(
                                 Box::new(Expr::Insens("c".to_owned())),
                                 Box::new(Expr::Push(Box::new(Expr::Range(
-                                    "'d'".to_owned(),
-                                    "'e'".to_owned()
+                                    "d".to_owned(),
+                                    "e".to_owned()
                                 ))))
                             ))
                         ))))))
