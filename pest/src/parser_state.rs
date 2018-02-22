@@ -14,6 +14,7 @@ use error::Error;
 use iterators::{pairs, QueueableToken};
 use position::{self, Position};
 use span::Span;
+use stack::Stack;
 
 /// An `enum` specifying the current lookahead status of a `ParserState`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -42,7 +43,7 @@ pub struct ParserState<'i, R: RuleType> {
     /// Specifies current atomicity
     pub atomicity: Atomicity,
     /// Stack of `Span`s
-    pub stack: Vec<Span<'i>>
+    pub stack: Stack<Span<'i>>
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -69,7 +70,7 @@ where
         neg_attempts: vec![],
         attempt_pos: 0,
         atomicity: Atomicity::NonAtomic,
-        stack: vec![]
+        stack: Stack::new()
     };
 
     if f(&mut state, Position::from_start(input)).is_ok() {

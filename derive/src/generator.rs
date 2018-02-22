@@ -64,9 +64,10 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
             ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
                 let string = state
                     .stack
-                    .last()
+                    .peek()
                     .expect("peek was called on empty stack")
                     .as_str();
+
                 pos.match_string(string)
             }
         }
@@ -82,7 +83,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
                 let pos = {
                     let string = state
                         .stack
-                        .last()
+                        .peek()
                         .expect("pop was called on empty stack")
                         .as_str();
 
@@ -94,6 +95,21 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
                 }
 
                 pos
+            }
+        }
+    );
+    predefined.insert(
+        "drop",
+        quote! {
+            #[inline]
+            fn drop<'i>(
+                pos: ::pest::Position<'i>,
+                state: &mut ::pest::ParserState<'i, Rule>
+            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
+                match state.stack.pop() {
+                    Some(_) => Ok(pos),
+                    None => Err(pos),
+                }
             }
         }
     );

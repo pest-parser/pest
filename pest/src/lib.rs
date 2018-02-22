@@ -69,6 +69,7 @@ mod parser_state;
 mod position;
 pub mod prec_climber;
 mod span;
+mod stack;
 mod token;
 
 /// A `trait` which parser rules must implement.
@@ -86,4 +87,5 @@ pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, ParserState};
 pub use position::Position;
 pub use span::Span;
+pub use stack::Stack;
 pub use token::Token;

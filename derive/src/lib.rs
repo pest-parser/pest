@@ -164,6 +164,13 @@
 //!
 //!     where `e`, `e1`, and `e2` are expressions.
 //!
+//! Expressions can modify the stack only if they match the input. For example,
+//! if `e1` in the compound expression `e1 | e2` does not match the input, then
+//! it does not modify the stack, so `e2` sees the stack in the same state as
+//! `e1` did. Repetitions and optionals (`e*`, `e+`, `e{, n}`, `e{n,}`,
+//! `e{m,n}`, `e?`) can modify the stack each time `e` matches. The `!e`
+//! expression is a special case; it never modifies the stack.
+//!
 //! ## Special rules
 //!
 //! Special rules can be called within the grammar. They are:

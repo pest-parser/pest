@@ -32,7 +32,7 @@ pub enum Expr {
     /// Matches one character in the range, e.g. `'a'..'z'`
     Range(String, String),
     /// Matches the rule with the given name, e.g. `a`
-    Ident(Ident),
+    Ident(String),
     /// Positive lookahead; matches expression without making progress, e.g. `&e`
     PosPred(Box<Expr>),
     /// Negative lookahead; matches if expression doesn't match, without making progress, e.g. `!e`
