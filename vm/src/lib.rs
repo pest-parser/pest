@@ -45,7 +45,7 @@ impl Vm {
     }
 
     fn parse_rule<'a, 'i>(
-        &self,
+        &'a self,
         rule: &'a Rule,
         pos: Position<'i>,
         state: &mut ParserState<'i, &'a str>
@@ -101,13 +101,99 @@ impl Vm {
         }
     }
 
-    fn parse_expr<'i>(
-        &self,
+    fn parse_expr<'a, 'i>(
+        &'a self,
         expr: &Expr,
         pos: Position<'i>,
-        state: &mut ParserState<'i, &str>
+        state: &mut ParserState<'i, &'a str>
     ) -> Result<Position<'i>, Position<'i>> {
-        unimplemented!()
+        match *expr {
+            Expr::Str(ref string) => {
+                pos.match_string(&unescape(string).expect("incorrect string literal"))
+            }
+            Expr::Insens(ref string) => {
+                pos.match_insensitive(&unescape(string).expect("incorrect string literal"))
+            }
+            Expr::Range(ref start, ref end) => {
+                let start = unescape(start)
+                    .expect("incorrect char literal")
+                    .chars()
+                    .next()
+                    .expect("empty char literal");
+                let end = unescape(end)
+                    .expect("incorrect char literal")
+                    .chars()
+                    .next()
+                    .expect("empty char literal");
+
+                pos.match_range(start..end)
+            }
+            Expr::Ident(ref name) => {
+                let rule = self.rules
+                    .get(name)
+                    .expect(&format!("undefined rule {}", name));
+                self.parse_rule(rule, pos, state)
+            }
+            Expr::PosPred(ref expr) => state.lookahead(true, move |state| {
+                pos.lookahead(true, |pos| self.parse_expr(&*expr, pos, state))
+            }),
+            Expr::NegPred(ref expr) => state.lookahead(false, move |state| {
+                pos.lookahead(false, |pos| self.parse_expr(&*expr, pos, state))
+            }),
+            Expr::Seq(ref lhs, ref rhs) => state.sequence(move |state| {
+                pos.sequence(|pos| {
+                    self.parse_expr(&*lhs, pos, state)
+                        .and_then(|pos| self.skip(pos, state))
+                        .and_then(|pos| self.parse_expr(&*rhs, pos, state))
+                })
+            }),
+            Expr::Choice(ref lhs, ref rhs) => self.parse_expr(&*lhs, pos, state)
+                .or_else(|pos| self.parse_expr(&*rhs, pos, state)),
+            Expr::Opt(ref expr) => pos.optional(|pos| self.parse_expr(&*expr, pos, state)),
+            Expr::Rep(ref expr) => state.sequence(move |state| {
+                pos.sequence(|pos| {
+                    pos.optional(|pos| {
+                        self.parse_expr(&*expr, pos, state).and_then(|pos| {
+                            pos.repeat(|pos| {
+                                state.sequence(move |state| {
+                                    pos.sequence(|pos| {
+                                        self.skip(pos, state)
+                                            .and_then(|pos| self.parse_expr(&*expr, pos, state))
+                                    })
+                                })
+                            })
+                        })
+                    })
+                })
+            }),
+            Expr::Push(ref expr) => {
+                let start = pos.clone();
+
+                match self.parse_expr(&*expr, pos, state) {
+                    Ok(end) => {
+                        state.stack.push(start.span(&end));
+                        Ok(end)
+                    }
+                    Err(pos) => Err(pos)
+                }
+            }
+            Expr::Skip(ref strings) => strings[1..].iter().fold(
+                pos.clone().skip_until(&strings[0]),
+                |result, string| match (result, pos.clone().skip_until(string)) {
+                    (Ok(lhs), Ok(rhs)) => {
+                        if rhs.pos() < lhs.pos() {
+                            Ok(rhs)
+                        } else {
+                            Ok(lhs)
+                        }
+                    }
+                    (Ok(lhs), Err(_)) => Ok(lhs),
+                    (Err(_), Ok(rhs)) => Ok(rhs),
+                    (Err(lhs), Err(_)) => Err(lhs)
+                }
+            ),
+            _ => unimplemented!()
+        }
     }
 
     fn skip<'a, 'i>(
