@@ -204,37 +204,32 @@ impl Vm {
         match (self.rules.get("whitespace"), self.rules.get("comment")) {
             (None, None) => Ok(pos),
             (Some(whitespace), None) => if state.atomicity == Atomicity::NonAtomic {
-                pos.repeat(|pos| {
-                    self.parse_rule(whitespace, pos, state)
-                })
+                pos.repeat(|pos| self.parse_rule(whitespace, pos, state))
             } else {
                 Ok(pos)
             },
             (None, Some(comment)) => if state.atomicity == Atomicity::NonAtomic {
-                pos.repeat(|pos| {
-                    self.parse_rule(comment, pos, state)
-                })
+                pos.repeat(|pos| self.parse_rule(comment, pos, state))
             } else {
                 Ok(pos)
             },
             (Some(whitespace), Some(comment)) => if state.atomicity == Atomicity::NonAtomic {
                 state.sequence(move |state| {
                     pos.sequence(|pos| {
-                        pos.repeat(|pos| {
-                            self.parse_rule(whitespace, pos, state)
-                        }).and_then(|pos| {
-                            pos.repeat(|pos| {
-                                state.sequence(move |state| {
-                                    pos.sequence(|pos| {
-                                        self.parse_rule(comment, pos, state).and_then(|pos| {
-                                            pos.repeat(|pos| {
-                                                self.parse_rule(whitespace, pos, state)
+                        pos.repeat(|pos| self.parse_rule(whitespace, pos, state))
+                            .and_then(|pos| {
+                                pos.repeat(|pos| {
+                                    state.sequence(move |state| {
+                                        pos.sequence(|pos| {
+                                            self.parse_rule(comment, pos, state).and_then(|pos| {
+                                                pos.repeat(|pos| {
+                                                    self.parse_rule(whitespace, pos, state)
+                                                })
                                             })
                                         })
                                     })
                                 })
                             })
-                        })
                     })
                 })
             } else {
@@ -250,48 +245,50 @@ fn unescape(string: &str) -> Option<String> {
 
     loop {
         match chars.next() {
-            Some('\\') => {
-                match chars.next()? {
-                    '"' => result.push('"'),
-                    '\\' => result.push('\\'),
-                    'r' => result.push('\r'),
-                    'n' => result.push('\n'),
-                    't' => result.push('\t'),
-                    '0' => result.push('\0'),
-                    '\'' => result.push('\''),
-                    'x' => {
-                        let string: String = chars.clone().take(2).collect();
+            Some('\\') => match chars.next()? {
+                '"' => result.push('"'),
+                '\\' => result.push('\\'),
+                'r' => result.push('\r'),
+                'n' => result.push('\n'),
+                't' => result.push('\t'),
+                '0' => result.push('\0'),
+                '\'' => result.push('\''),
+                'x' => {
+                    let string: String = chars.clone().take(2).collect();
 
-                        if string.len() != 2 {
-                            return None;
-                        }
-
-                        for _ in 0..string.len() { chars.next()?; }
-
-                        let value = u8::from_str_radix(&string, 16).ok()?;
-
-                        result.push(char::from(value));
+                    if string.len() != 2 {
+                        return None;
                     }
-                    'u' => {
-                        if chars.next()? != '{' {
-                            return None;
-                        }
 
-                        let string: String = chars.clone().take_while(|c| *c != '}').collect();
-
-                        if string.len() < 2 || 6 < string.len() {
-                            return None;
-                        }
-
-                        for _ in 0..string.len() + 1 { chars.next()?; }
-
-                        let value = u32::from_str_radix(&string, 16).ok()?;
-
-                        result.push(char::from_u32(value)?);
+                    for _ in 0..string.len() {
+                        chars.next()?;
                     }
-                    _ => return None
+
+                    let value = u8::from_str_radix(&string, 16).ok()?;
+
+                    result.push(char::from(value));
                 }
-            }
+                'u' => {
+                    if chars.next()? != '{' {
+                        return None;
+                    }
+
+                    let string: String = chars.clone().take_while(|c| *c != '}').collect();
+
+                    if string.len() < 2 || 6 < string.len() {
+                        return None;
+                    }
+
+                    for _ in 0..string.len() + 1 {
+                        chars.next()?;
+                    }
+
+                    let value = u32::from_str_radix(&string, 16).ok()?;
+
+                    result.push(char::from_u32(value)?);
+                }
+                _ => return None
+            },
             Some(c) => result.push(c),
             None => return Some(result)
         };

@@ -493,7 +493,10 @@ fn generate_expr(expr: Expr) -> Tokens {
                                 pos.repeat(#[inline(always)] |pos| {
                                     state.sequence(#[inline(always)] move |state| {
                                         pos.sequence(#[inline(always)] |pos| {
-                                            self::skip(pos, state).and_then(#[inline(always)] |pos| {
+                                            self::skip(
+                                                pos,
+                                                state
+                                            ).and_then(#[inline(always)] |pos| {
                                                 #expr
                                             })
                                         })
