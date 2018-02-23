@@ -9,6 +9,7 @@
 
 #[derive(Debug)]
 pub struct Stack<T: Clone> {
+    snapshots: Vec<usize>,
     ops: Vec<StackOp<T>>,
     cache: Vec<T>
 }
@@ -17,7 +18,8 @@ impl<T: Clone> Stack<T> {
     pub fn new() -> Self {
         Stack {
             ops: vec![],
-            cache: vec![]
+            cache: vec![],
+            snapshots: vec![]
         }
     }
 
@@ -39,12 +41,21 @@ impl<T: Clone> Stack<T> {
         self.cache.pop()
     }
 
-    pub fn backtrack(&mut self, index: usize) {
-        self.ops.truncate(index);
-        self.cache();
+    pub fn snapshot(&mut self) {
+        self.snapshots.push(self.ops.len());
     }
 
-    fn cache(&mut self) {
+    pub fn backtrack(&mut self) {
+        match self.snapshots.pop() {
+            Some(index) => {
+                self.ops.truncate(index);
+                self.recache();
+            }
+            None => {}
+        }
+    }
+
+    fn recache(&mut self) {
         self.cache.clear();
         for op in self.ops.iter() {
             match op {
@@ -108,6 +119,9 @@ mod test {
         assert!(!stack.is_empty());
         assert_eq!(stack.peek(), Some(&2));
 
+        // Take a snapshot of the current stack
+        stack.snapshot();
+
         // [0]
         assert_eq!(stack.pop(), Some(2));
         assert!(!stack.is_empty());
@@ -121,7 +135,7 @@ mod test {
 
         // Test backtracking
         // [0, 2]
-        stack.backtrack(5);
+        stack.backtrack();
         assert_eq!(stack.peek(), Some(&2));
     }
 }
