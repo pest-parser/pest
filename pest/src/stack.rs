@@ -9,9 +9,9 @@
 
 #[derive(Debug)]
 pub struct Stack<T: Clone> {
-    snapshots: Vec<usize>,
     ops: Vec<StackOp<T>>,
-    cache: Vec<T>
+    cache: Vec<T>,
+    snapshots: Vec<usize>
 }
 
 impl<T: Clone> Stack<T> {
@@ -120,6 +120,7 @@ mod test {
         assert_eq!(stack.peek(), Some(&2));
 
         // Take a snapshot of the current stack
+        // [0, 2]
         stack.snapshot();
 
         // [0]
@@ -136,6 +137,8 @@ mod test {
         // Test backtracking
         // [0, 2]
         stack.backtrack();
-        assert_eq!(stack.peek(), Some(&2));
+        assert_eq!(stack.pop(), Some(2));
+        assert_eq!(stack.pop(), Some(0));
+        assert_eq!(stack.pop(), None);
     }
 }
