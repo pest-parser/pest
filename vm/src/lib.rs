@@ -10,6 +10,7 @@
 extern crate pest;
 extern crate pest_meta;
 
+use std::char;
 use std::collections::HashMap;
 
 use pest::{Atomicity, Error, ParserState, Position};
@@ -154,5 +155,127 @@ impl Vm {
                 Ok(pos)
             }
         }
+    }
+}
+
+fn unescape(string: &str) -> Option<String> {
+    let mut result = String::new();
+    let mut chars = string.chars();
+
+    loop {
+        match chars.next() {
+            Some('\\') => {
+                match chars.next()? {
+                    '"' => result.push('"'),
+                    '\\' => result.push('\\'),
+                    'r' => result.push('\r'),
+                    'n' => result.push('\n'),
+                    't' => result.push('\t'),
+                    '0' => result.push('\0'),
+                    '\'' => result.push('\''),
+                    'x' => {
+                        let string: String = chars.clone().take(2).collect();
+
+                        if string.len() != 2 {
+                            return None;
+                        }
+
+                        for _ in 0..string.len() { chars.next()?; }
+
+                        let value = u8::from_str_radix(&string, 16).ok()?;
+
+                        result.push(char::from(value));
+                    }
+                    'u' => {
+                        if chars.next()? != '{' {
+                            return None;
+                        }
+
+                        let string: String = chars.clone().take_while(|c| *c != '}').collect();
+
+                        if string.len() < 2 || 6 < string.len() {
+                            return None;
+                        }
+
+                        for _ in 0..string.len() + 1 { chars.next()?; }
+
+                        let value = u32::from_str_radix(&string, 16).ok()?;
+
+                        result.push(char::from_u32(value)?);
+                    }
+                    _ => return None
+                }
+            }
+            Some(c) => result.push(c),
+            None => return Some(result)
+        };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unescape_all() {
+        let string = r"a\nb\x55c\u{111}d";
+
+        assert_eq!(unescape(string), Some("a\nb\x55c\u{111}d".to_owned()));
+    }
+
+    #[test]
+    fn unescape_empty_escape() {
+        let string = r"\";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_wrong_escape() {
+        let string = r"\w";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_wrong_byte() {
+        let string = r"\xfg";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_short_byte() {
+        let string = r"\xf";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_no_open_brace_unicode() {
+        let string = r"\u11";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_no_close_brace_unicode() {
+        let string = r"\u{11";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_short_unicode() {
+        let string = r"\u{1}";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_long_unicode() {
+        let string = r"\u{1111111}";
+
+        assert_eq!(unescape(string), None);
     }
 }
