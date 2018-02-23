@@ -79,9 +79,9 @@ character          = ${ single_quote ~ inner_chr ~ single_quote }
 
 inner_str = @{ (!("\"" | "\\") ~ any)* ~ (escape ~ inner_str)? }
 inner_chr = @{ escape | any }
-escape    = @{ "\\" ~ (quote | "\\" | "r" | "n" | "t" | "0" | single_quote | unicode | code) }
-unicode   = @{ "u" ~ opening_brace ~ hex_digit{2, 6} ~ closing_brace }
+escape    = @{ "\\" ~ ("\"" | "\\" | "r" | "n" | "t" | "0" | "'" | code | unicode) }
 code      = @{ "x" ~ hex_digit{2} }
+unicode   = @{ "u" ~ opening_brace ~ hex_digit{2, 6} ~ closing_brace }
 hex_digit = @{ '0'..'9' | 'a'..'f' | 'A'..'F' }
 
 quote          = { "\"" }
