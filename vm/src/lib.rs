@@ -218,8 +218,7 @@ impl Vm {
                     (Err(_), Ok(rhs)) => Ok(rhs),
                     (Err(lhs), Err(_)) => Err(lhs)
                 }
-            ),
-            _ => unimplemented!()
+            )
         }
     }
 

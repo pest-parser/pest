@@ -184,3 +184,29 @@ macro_rules! parses_to {
         }
     };
 }
+
+#[macro_export]
+macro_rules! fails_with {
+    ( parser: $parser:expr, input: $string:expr, rule: $rule:expr,
+      positives: $positives:expr, negatives: $negatives:expr, pos: $pos:expr ) => {
+
+        #[allow(unused_mut)]
+        #[allow(dead_code)]
+        {
+            let vm = $parser;
+            let error = vm.parse($rule, $string).unwrap_err();
+
+            match error {
+                ::pest::Error::ParsingError { positives, negatives, pos } => {
+                    let positives: Vec<&str> = $positives;
+                    let negatives: Vec<&str> = $negatives;
+
+                    assert_eq!(positives, positives);
+                    assert_eq!(negatives, negatives);
+                    assert_eq!(pos.pos(), $pos);
+                }
+                _ => unreachable!()
+            };
+        }
+    };
+}
