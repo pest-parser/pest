@@ -285,7 +285,16 @@ fn consume_expr<'i>(
                             let num: u32 = number
                                 .as_str()
                                 .parse()
-                                .expect(&overflow(number.into_span()));
+                                .expect(&overflow(number.clone().into_span()));
+
+                            if num == 0 {
+                                let error: Error<()> = Error::CustomErrorSpan {
+                                    message: "cannot repeat 0 times".to_owned(),
+                                    span: number.into_span()
+                                };
+
+                                panic!("parsing error\n\n{}", error)
+                            }
 
                             let start = node.span.start_pos();
                             ParserNode {
@@ -338,7 +347,16 @@ fn consume_expr<'i>(
                             let max: u32 = max_number
                                 .as_str()
                                 .parse()
-                                .expect(&overflow(max_number.into_span()));
+                                .expect(&overflow(max_number.clone().into_span()));
+
+                            if max == 0 {
+                                let error: Error<()> = Error::CustomErrorSpan {
+                                    message: "cannot repeat 0 times".to_owned(),
+                                    span: max_number.into_span()
+                                };
+
+                                panic!("parsing error\n\n{}", error)
+                            }
 
                             let start = node.span.start_pos();
                             ParserNode {
@@ -372,7 +390,16 @@ fn consume_expr<'i>(
                             let max: u32 = max_number
                                 .as_str()
                                 .parse()
-                                .expect(&overflow(max_number.into_span()));
+                                .expect(&overflow(max_number.clone().into_span()));
+
+                            if max == 0 {
+                                let error: Error<()> = Error::CustomErrorSpan {
+                                    message: "cannot repeat 0 times".to_owned(),
+                                    span: max_number.into_span()
+                                };
+
+                                panic!("parsing error\n\n{}", error)
+                            }
 
                             let start = node.span.start_pos();
                             ParserNode {
