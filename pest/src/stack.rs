@@ -114,6 +114,10 @@ mod test {
         assert!(!stack.is_empty());
         assert_eq!(stack.peek(), Some(&3));
 
+        // Take a snapshot of the current stack
+        // [0, 2, 3]
+        stack.snapshot();
+
         // [0, 2]
         assert_eq!(stack.pop(), Some(3));
         assert!(!stack.is_empty());
@@ -137,6 +141,14 @@ mod test {
         // Test backtracking
         // [0, 2]
         stack.backtrack();
+        assert_eq!(stack.pop(), Some(2));
+        assert_eq!(stack.pop(), Some(0));
+        assert_eq!(stack.pop(), None);
+
+        // Test backtracking
+        // [0, 2, 3]
+        stack.backtrack();
+        assert_eq!(stack.pop(), Some(3));
         assert_eq!(stack.pop(), Some(2));
         assert_eq!(stack.pop(), Some(0));
         assert_eq!(stack.pop(), None);
