@@ -191,7 +191,7 @@ macro_rules! fails_with {
       positives: $positives:expr, negatives: $negatives:expr, pos: $pos:expr ) => {
 
         #[allow(unused_mut)]
-        #[allow(dead_code)]
+        #[allow(unused_variables)]
         {
             let vm = $parser;
             let error = vm.parse($rule, $string).unwrap_err();
