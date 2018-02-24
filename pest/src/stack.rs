@@ -37,8 +37,13 @@ impl<T: Clone> Stack<T> {
     }
 
     pub fn pop(&mut self) -> Option<T> {
-        self.ops.push(StackOp::Pop());
+        self.ops.push(StackOp::Pop);
         self.cache.pop()
+    }
+
+    pub fn clear(&mut self) {
+        self.ops.push(StackOp::Clear);
+        self.cache.clear();
     }
 
     pub fn snapshot(&mut self) {
@@ -62,8 +67,11 @@ impl<T: Clone> Stack<T> {
                 &StackOp::Push(ref elem) => {
                     self.cache.push(elem.clone());
                 },
-                &StackOp::Pop() => {
+                &StackOp::Pop => {
                     self.cache.pop();
+                },
+                &StackOp::Clear => {
+                    self.cache.clear();
                 }
             }
         }
@@ -73,7 +81,8 @@ impl<T: Clone> Stack<T> {
 #[derive(Debug)]
 enum StackOp<T> {
     Push(T),
-    Pop()
+    Pop,
+    Clear
 }
 
 #[cfg(test)]
