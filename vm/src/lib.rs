@@ -18,6 +18,8 @@ use pest::iterators::Pairs;
 
 use pest_meta::ast::{Expr, Rule, RuleType};
 
+mod macros;
+
 pub struct Vm {
     rules: HashMap<String, Rule>
 }
