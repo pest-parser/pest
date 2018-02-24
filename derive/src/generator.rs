@@ -91,7 +91,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
                 };
 
                 if pos.is_ok() {
-                    state.stack.pop().unwrap();
+                    state.stack.pop();
                 }
 
                 pos
