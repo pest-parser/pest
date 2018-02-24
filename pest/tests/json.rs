@@ -52,8 +52,7 @@ impl Parser<Rule> for JsonParser {
             state: &mut ParserState<'i, Rule>
         ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::object, pos, |state, pos| {
-                state
-                    .sequence(move |state| {
+                state.sequence(move |state| {
                         pos.sequence(|pos| {
                             pos.match_string("{")
                                 .and_then(|pos| skip(pos, state))
@@ -108,8 +107,7 @@ impl Parser<Rule> for JsonParser {
             state: &mut ParserState<'i, Rule>
         ) -> Result<Position<'i>, Position<'i>> {
             state.rule(Rule::array, pos, |state, pos| {
-                state
-                    .sequence(move |state| {
+                state.sequence(move |state| {
                         pos.sequence(|pos| {
                             pos.match_string("[")
                                 .and_then(|pos| skip(pos, state))

@@ -64,8 +64,7 @@ impl Parser<Rule> for CalculatorParser {
             pos: Position<'i>,
             state: &mut ParserState<'i, Rule>
         ) -> Result<Position<'i>, Position<'i>> {
-            state
-                .sequence(move |state| {
+            state.sequence(move |state| {
                     pos.sequence(|pos| {
                         pos.match_string("(")
                             .and_then(|pos| expression(pos, state))
