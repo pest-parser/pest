@@ -52,6 +52,42 @@ impl Vm {
         pos: Position<'i>,
         state: &mut ParserState<'i, &'a str>
     ) -> Result<Position<'i>, Position<'i>> {
+        match rule.name.as_str() {
+            "any" => return pos.skip(1),
+            "eoi" => return state.rule("eoi", pos, |_, pos| pos.at_end()),
+            "soi" => return pos.at_start(),
+            "peek" => {
+                return {
+                    let string = state
+                        .stack
+                        .last()
+                        .expect("peek was called on empty stack")
+                        .as_str();
+                    pos.match_string(string)
+                }
+            }
+            "pop" => {
+                return {
+                    let pos = {
+                        let string = state
+                            .stack
+                            .last()
+                            .expect("pop was called on empty stack")
+                            .as_str();
+
+                        pos.match_string(string)
+                    };
+
+                    if pos.is_ok() {
+                        state.stack.pop().unwrap();
+                    }
+
+                    pos
+                }
+            }
+            _ => ()
+        };
+
         if &rule.name == "whitespace" || &rule.name == "comment" {
             match rule.ty {
                 RuleType::Normal => state.rule(&rule.name, pos, |state, pos| {
