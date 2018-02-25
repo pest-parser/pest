@@ -556,82 +556,82 @@ impl<'i> Position<'i> {
         }
     }
 
-    /// Optionally applies the transformation provided by `f` from the `Position`. It returns `Ok`
-    /// with the `Position` returned by `f` regardless of the `Result`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(
-    ///     start.clone().optional(|p| {
-    ///         p.match_string("a").and_then(|p| {
-    ///             p.match_string("b")
-    ///         })
-    ///     }).unwrap().pos(),
-    ///     2
-    /// );
-    /// assert_eq!(
-    ///     start.clone().sequence(|p| {
-    ///         p.match_string("a").and_then(|p| {
-    ///             p.match_string("c")
-    ///         })
-    ///     }),
-    ///     Err(start)
-    /// );
-    /// ```
-    #[inline]
-    pub fn optional<F>(self, f: F) -> Result<Position<'i>, Position<'i>>
-    where
-        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
-    {
-        let result = f(self);
+//    /// Optionally applies the transformation provided by `f` from the `Position`. It returns `Ok`
+//    /// with the `Position` returned by `f` regardless of the `Result`.
+//    ///
+//    /// # Examples
+//    ///
+//    /// ```
+//    /// # use pest::Position;
+//    /// let input = "ab";
+//    /// let start = Position::from_start(input);
+//    ///
+//    /// assert_eq!(
+//    ///     start.clone().optional(|p| {
+//    ///         p.match_string("a").and_then(|p| {
+//    ///             p.match_string("b")
+//    ///         })
+//    ///     }).unwrap().pos(),
+//    ///     2
+//    /// );
+//    /// assert_eq!(
+//    ///     start.clone().sequence(|p| {
+//    ///         p.match_string("a").and_then(|p| {
+//    ///             p.match_string("c")
+//    ///         })
+//    ///     }),
+//    ///     Err(start)
+//    /// );
+//    /// ```
+//    #[inline]
+//    pub fn optional<F>(self, f: F) -> Result<Position<'i>, Position<'i>>
+//    where
+//        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
+//    {
+//        let result = f(self);
+//
+//        match result {
+//            Ok(pos) | Err(pos) => Ok(pos)
+//        }
+//    }
 
-        match result {
-            Ok(pos) | Err(pos) => Ok(pos)
-        }
-    }
-
-    /// Repeatedly applies the transformation provided by `f` from the `Position`. It returns `Ok`
-    /// with the first `Position` returned by `f` which is wrapped up in an `Err`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(
-    ///     start.clone().repeat(|p| {
-    ///         p.match_string("a")
-    ///     }).unwrap().pos(),
-    ///     1
-    /// );
-    /// assert_eq!(
-    ///     start.repeat(|p| {
-    ///         p.match_string("b")
-    ///     }).unwrap().pos(),
-    ///     0
-    /// );
-    /// ```
-    #[inline]
-    pub fn repeat<F>(self, mut f: F) -> Result<Position<'i>, Position<'i>>
-    where
-        F: FnMut(Position<'i>) -> Result<Position<'i>, Position<'i>>
-    {
-        let mut result = f(self);
-
-        loop {
-            match result {
-                Ok(pos) => result = f(pos),
-                Err(pos) => return Ok(pos)
-            };
-        }
-    }
+//    /// Repeatedly applies the transformation provided by `f` from the `Position`. It returns `Ok`
+//    /// with the first `Position` returned by `f` which is wrapped up in an `Err`.
+//    ///
+//    /// # Examples
+//    ///
+//    /// ```
+//    /// # use pest::Position;
+//    /// let input = "ab";
+//    /// let start = Position::from_start(input);
+//    ///
+//    /// assert_eq!(
+//    ///     start.clone().repeat(|p| {
+//    ///         p.match_string("a")
+//    ///     }).unwrap().pos(),
+//    ///     1
+//    /// );
+//    /// assert_eq!(
+//    ///     start.repeat(|p| {
+//    ///         p.match_string("b")
+//    ///     }).unwrap().pos(),
+//    ///     0
+//    /// );
+//    /// ```
+//    #[inline]
+//    pub fn repeat<F>(self, mut f: F) -> Result<Position<'i>, Position<'i>>
+//    where
+//        F: FnMut(Position<'i>) -> Result<Position<'i>, Position<'i>>
+//    {
+//        let mut result = f(self);
+//
+//        loop {
+//            match result {
+//                Ok(pos) => result = f(pos),
+//                Err(pos) => return Ok(pos)
+//            };
+//        }
+//    }
 }
 
 impl<'i> fmt::Debug for Position<'i> {

@@ -2,8 +2,7 @@ extern crate pest;
 
 use std::io::{self, Write};
 
-use pest::{state, Error, Parser, ParserState};
-use pest::Position;
+use pest::{state, Error, Parser, ParserState, ParseResult};
 use pest::iterators::Pairs;
 
 #[allow(dead_code, non_camel_case_types)]
@@ -18,47 +17,42 @@ struct ParenParser;
 
 impl Parser<Rule> for ParenParser {
     fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
-        fn expr<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, Rule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.sequence(move |state| {
-                pos.sequence(|p| p.repeat(|p| paren(p, state)).and_then(|p| p.at_end()))
+        fn expr(state: ParserState<Rule>) -> ParseResult<Rule> {
+            state.sequence(|state| {
+                state.repeat(|state| paren(state)).and_then(|state| state.end_of_input())
             })
         }
 
-        fn paren<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, Rule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(Rule::paren, pos, |state, pos| {
-                state.sequence(move |state| {
-                    pos.sequence(|p| {
-                        p.match_string("(")
-                            .and_then(|p| {
-                                p.optional(|p| {
-                                    state.sequence(move |state| {
-                                        p.sequence(|p| {
-                                            state
-                                                .lookahead(true, move |_| {
-                                                    p.lookahead(true, |p| p.match_string("("))
-                                                })
-                                                .and_then(|p| p.repeat(|p| paren(p, state)))
-                                        })
-                                    })
-                                })
-                            })
-                            .and_then(|p| {
-                                state.rule(Rule::paren_end, p, |_, pos| pos.match_string(")"))
-                            })
-                    })
-                })
-            })
+        fn paren(state: ParserState<Rule>) -> ParseResult<Rule> {
+//            state.rule(Rule::paren, pos, |state, pos| {
+//                state.sequence(move |state| {
+//                    pos.sequence(|p| {
+//                        p.match_string("(")
+//                            .and_then(|p| {
+//                                p.optional(|p| {
+//                                    state.sequence(move |state| {
+//                                        p.sequence(|p| {
+//                                            state
+//                                                .lookahead(true, move |_| {
+//                                                    p.lookahead(true, |p| p.match_string("("))
+//                                                })
+//                                                .and_then(|p| p.repeat(|p| paren(p, state)))
+//                                        })
+//                                    })
+//                                })
+//                            })
+//                            .and_then(|p| {
+//                                state.rule(Rule::paren_end, p, |_, pos| pos.match_string(")"))
+//                            })
+//                    })
+//                })
+//            })
+            Ok(state)
         }
 
-        state(input, move |mut state, pos| match rule {
-            Rule::expr => expr(pos, &mut state),
-            Rule::paren => paren(pos, &mut state),
+        state(input,|state| match rule {
+            Rule::expr => expr(state),
+            Rule::paren => paren(state),
             _ => unreachable!()
         })
     }

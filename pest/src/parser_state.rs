@@ -35,6 +35,7 @@ pub enum Atomicity {
 /// A `struct` which contains the complete state of a `Parser`.
 #[derive(Debug)]
 pub struct ParserState<'i, R: RuleType> {
+    position: Position<'i>,
     queue: Vec<QueueableToken<R>>,
     lookahead: Lookahead,
     pos_attempts: Vec<R>,
@@ -45,6 +46,8 @@ pub struct ParserState<'i, R: RuleType> {
     /// Stack of `Span`s
     pub stack: Stack<Span<'i>>
 }
+
+pub type ParseResult<'i, R> = Result<ParserState<'i, R>, ParserState<'i, R>>;
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
 ///
@@ -61,9 +64,10 @@ pub struct ParserState<'i, R: RuleType> {
 /// ```
 pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<'i, R>>
 where
-    F: FnOnce(&mut ParserState<'i, R>, Position<'i>) -> Result<Position<'i>, Position<'i>>
+    F: FnOnce(ParserState<'i, R>) -> ParseResult<R>
 {
-    let mut state = ParserState {
+    let state = ParserState {
+        position: Position::from_start(input),
         queue: vec![],
         lookahead: Lookahead::None,
         pos_attempts: vec![],
@@ -73,21 +77,24 @@ where
         stack: Stack::new()
     };
 
-    if f(&mut state, Position::from_start(input)).is_ok() {
-        let len = state.queue.len();
-        Ok(pairs::new(Rc::new(state.queue), input.as_bytes(), 0, len))
-    } else {
-        state.pos_attempts.sort();
-        state.pos_attempts.dedup();
-        state.neg_attempts.sort();
-        state.neg_attempts.dedup();
+    match f(state) {
+        Ok(s) => {
+            let len = s.queue.len();
+            Ok(pairs::new(Rc::new(s.queue), input.as_bytes(), 0, len))
+        }
+        Err(mut s) => {
+            s.pos_attempts.sort();
+            s.pos_attempts.dedup();
+            s.neg_attempts.sort();
+            s.neg_attempts.dedup();
 
-        Err(Error::ParsingError {
-            positives: state.pos_attempts,
-            negatives: state.neg_attempts,
-            // All attempted positions were legal.
-            pos: unsafe { position::new(input.as_bytes(), state.attempt_pos) }
-        })
+            Err(Error::ParsingError {
+                positives: s.pos_attempts,
+                negatives: s.neg_attempts,
+                // All attempted positions were legal.
+                pos: unsafe { position::new(input.as_bytes(), s.attempt_pos) }
+            })
+        }
     }
 }
 
@@ -250,19 +257,62 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn sequence<F>(&mut self, f: F) -> Result<Position<'i>, Position<'i>>
+    pub fn sequence<F>(self, f: F) -> ParseResult<'i, R>
     where
-        F: FnOnce(&mut ParserState<'i, R>) -> Result<Position<'i>, Position<'i>>
+        F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
     {
         let index = self.queue.len();
 
         let result = f(self);
 
-        if result.is_err() {
-            self.queue.truncate(index);
+        match result {
+            Ok(state) => Ok(state),
+            Err(mut state) => {
+                state.queue.truncate(index);
+                Err(state)
+            }
         }
+    }
 
-        result
+    #[inline]
+    pub fn repeat<F>(self, mut f: F) -> ParseResult<'i, R>
+    where
+        F: FnMut(ParserState<'i, R>) -> ParseResult<'i, R>
+    {
+        let mut result = f(self);
+
+        loop {
+            match result {
+                Ok(state) => result = f(state),
+                Err(state) => return Ok(state)
+            };
+        }
+    }
+
+    #[inline]
+    pub fn optional<F>(self, f: F) -> ParseResult<'i, R>
+    where
+        F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
+    {
+        let result = f(self);
+
+        match result {
+            Ok(state) | Err(state) => Ok(state)
+        }
+    }
+
+    #[inline]
+    pub fn end_of_input(mut self) -> ParseResult<'i, R> {
+        match self.position.at_end() {
+            Ok(pos) => {
+                self.position = pos;
+                Ok(self)
+            },
+            Err(pos) => {
+                self.position = pos;
+                Err(self)
+            }
+        }
     }
 
     /// Wrapper which stops `Token`s from being generated.
