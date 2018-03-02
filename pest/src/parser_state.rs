@@ -8,6 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use std::rc::Rc;
+use std::ops::Range;
 
 use RuleType;
 use error::Error;
@@ -58,8 +59,8 @@ pub type ParseResult<'i, R> = Result<ParserState<'i, R>, ParserState<'i, R>>;
 /// # use pest;
 ///
 /// let input = "";
-/// pest::state::<(), _>(input, |_, pos| {
-///     Ok(pos)
+/// pest::state::<(), _>(input, |s| {
+///     Ok(s)
 /// }).unwrap();
 /// ```
 pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<'i, R>>
@@ -113,23 +114,22 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// }
     ///
     /// let input = "a";
-    /// let pairs: Vec<_> = pest::state(input, |state, pos| {
-    ///     state.rule(Rule::a, pos, |_, p| Ok(p))
+    /// let pairs: Vec<_> = pest::state(input, |state| {
+    ///     state.rule(Rule::a, |s| Ok(s))
     /// }).unwrap().collect();
     ///
     /// assert_eq!(pairs.len(), 1);
     /// ```
     #[inline]
     pub fn rule<F>(
-        &mut self,
+        mut self,
         rule: R,
-        pos: Position<'i>,
         f: F
-    ) -> Result<Position<'i>, Position<'i>>
+    ) -> ParseResult<'i, R>
     where
-        F: FnOnce(&mut ParserState<'i, R>, Position<'i>) -> Result<Position<'i>, Position<'i>>
+        F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
     {
-        let actual_pos = pos.pos();
+        let actual_pos = self.position.pos();
         let index = self.queue.len();
 
         let (pos_attempts_index, neg_attempts_index) = if actual_pos == self.attempt_pos {
@@ -149,38 +149,55 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         let attempts = self.pos_attempts.len() + self.neg_attempts.len();
 
-        let result = f(self, pos);
+        let result = f(self);
 
-        if result.is_err() ^ (self.lookahead == Lookahead::Negative) {
-            self.track(
-                rule,
-                actual_pos,
-                pos_attempts_index,
-                neg_attempts_index,
-                attempts
-            );
-        }
+        match result {
+            Ok(mut new_state) => {
+                if new_state.lookahead == Lookahead::Negative {
+                    new_state.track(
+                        rule,
+                        actual_pos,
+                        pos_attempts_index,
+                        neg_attempts_index,
+                        attempts
+                    );
+                }
 
-        if self.lookahead == Lookahead::None && self.atomicity != Atomicity::Atomic {
-            if let Ok(ref pos) = result {
-                // Storing the pair's index in the first token that was added before the closure was
-                // run.
-                let new_index = self.queue.len();
-                match self.queue[index] {
-                    QueueableToken::Start { ref mut pair, .. } => *pair = new_index,
-                    _ => unreachable!()
-                };
+                if new_state.lookahead == Lookahead::None && new_state.atomicity != Atomicity::Atomic {
+                    // Storing the pair's index in the first token that was added before the closure was
+                    // run.
+                    let new_index = new_state.queue.len();
+                    match new_state.queue[index] {
+                        QueueableToken::Start { ref mut pair, .. } => *pair = new_index,
+                        _ => unreachable!()
+                    };
 
-                self.queue.push(QueueableToken::End {
-                    rule,
-                    pos: pos.pos()
-                });
-            } else {
-                self.queue.truncate(index);
+                    new_state.queue.push(QueueableToken::End {
+                        rule,
+                        pos: new_state.position.pos()
+                    });
+                }
+
+                Ok(new_state)
+            }
+            Err(mut new_state) => {
+                if new_state.lookahead != Lookahead::Negative {
+                    new_state.track(
+                        rule,
+                        actual_pos,
+                        pos_attempts_index,
+                        neg_attempts_index,
+                        attempts
+                    );
+                }
+
+                if new_state.lookahead == Lookahead::None && new_state.atomicity != Atomicity::Atomic {
+                    new_state.queue.truncate(index);
+                }
+
+                Err(new_state)
             }
         }
-
-        result
     }
 
     fn track(
@@ -242,15 +259,13 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// }
     ///
     /// let input = "a";
-    /// let pairs: Vec<_> = pest::state(input, |state, pos| {
-    ///     state.sequence(move |state| {
-    ///         pos.sequence(|p| {
-    ///             state.rule(Rule::a, p, |_, p| Ok(p)).and_then(|p| {
-    ///                 p.match_string("b")
-    ///             })
+    /// let pairs: Vec<_> = pest::state(input, |state| {
+    ///     state.sequence(|s| {
+    ///         s.rule(Rule::a, |s| Ok(s)).and_then(|s| {
+    ///             s.match_string("b")
     ///         })
-    ///     }).or_else(|p| {
-    ///         Ok(p)
+    ///     }).or_else(|s| {
+    ///         Ok(s)
     ///     })
     /// }).unwrap().collect();
     ///
@@ -261,15 +276,18 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
     {
-        let index = self.queue.len();
+        let initial_pos = self.position.pos();
+        let token_index = self.queue.len();
 
         let result = f(self);
 
         match result {
-            Ok(state) => Ok(state),
-            Err(mut state) => {
-                state.queue.truncate(index);
-                Err(state)
+            Ok(new_state) => Ok(new_state),
+            Err(mut new_state) => {
+                // Restore the initial position and truncate the token queue.
+                new_state.position = new_state.position.set_pos(initial_pos);
+                new_state.queue.truncate(token_index);
+                Err(new_state)
             }
         }
     }
@@ -298,6 +316,64 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         match result {
             Ok(state) | Err(state) => Ok(state)
+        }
+    }
+
+    #[inline]
+    pub fn match_string(mut self, string: &str) -> ParseResult<'i, R> {
+        // TODO: Set up a macro for this...
+        match self.position.match_string(string) {
+            Ok(pos) => {
+                self.position = pos;
+                Ok(self)
+            },
+            Err(pos) => {
+                self.position = pos;
+                Err(self)
+            }
+        }
+    }
+
+    #[inline]
+    pub fn match_range(mut self, range: Range<char>) -> ParseResult<'i, R> {
+        // TODO: Set up a macro for this...
+        match self.position.match_range(range) {
+            Ok(pos) => {
+                self.position = pos;
+                Ok(self)
+            },
+            Err(pos) => {
+                self.position = pos;
+                Err(self)
+            }
+        }
+    }
+
+    #[inline]
+    pub fn skip(mut self, n: usize) -> ParseResult<'i, R> {
+        match self.position.skip(n) {
+            Ok(pos) => {
+                self.position = pos;
+                Ok(self)
+            },
+            Err(pos) => {
+                self.position = pos;
+                Err(self)
+            }
+        }
+    }
+
+    #[inline]
+    pub fn start_of_input(mut self) -> ParseResult<'i, R> {
+        match self.position.at_start() {
+            Ok(pos) => {
+                self.position = pos;
+                Ok(self)
+            },
+            Err(pos) => {
+                self.position = pos;
+                Err(self)
+            }
         }
     }
 
@@ -332,18 +408,18 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// }
     ///
     /// let input = "a";
-    /// let pairs: Vec<_> = pest::state(input, |state, pos| {
-    ///     state.lookahead(true, move |state| {
-    ///         state.rule(Rule::a, pos, |_, p| Ok(p))
+    /// let pairs: Vec<_> = pest::state(input, |state| {
+    ///     state.lookahead(true, |state| {
+    ///         state.rule(Rule::a, |s| Ok(s))
     ///     })
     /// }).unwrap().collect();
     ///
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn lookahead<F>(&mut self, is_positive: bool, f: F) -> Result<Position<'i>, Position<'i>>
+    pub fn lookahead<F>(mut self, is_positive: bool, f: F) -> ParseResult<'i, R>
     where
-        F: FnOnce(&mut ParserState<'i, R>) -> Result<Position<'i>, Position<'i>>
+        F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
     {
         let initial_lookahead = self.lookahead;
 
@@ -359,11 +435,32 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             }
         };
 
+        let initial_pos = self.position.pos();
+
         let result = f(self);
 
-        self.lookahead = initial_lookahead;
+        let return_state = match result {
+            Ok(mut new_state) => {
+                new_state.position = new_state.position.set_pos(initial_pos);
+                new_state.lookahead = initial_lookahead;
+                Ok(new_state)
+            }
+            Err(mut new_state) => {
+                new_state.position = new_state.position.set_pos(initial_pos);
+                new_state.lookahead = initial_lookahead;
+                Err(new_state)
+            }
+        };
 
-        result
+        if is_positive {
+            return_state
+        } else {
+            match return_state {
+                Ok(s) => Err(s),
+                Err(s) => Ok(s)
+            }
+        }
+
     }
 
     /// Wrapper which stops `Token`s from being generated according to `is_atomic`.
@@ -380,18 +477,18 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// }
     ///
     /// let input = "a";
-    /// let pairs: Vec<_> = pest::state(input, |state, pos| {
-    ///     state.atomic(Atomicity::Atomic, move |state| {
-    ///         state.rule(Rule::a, pos, |_, p| Ok(p))
+    /// let pairs: Vec<_> = pest::state(input, |state| {
+    ///     state.atomic(Atomicity::Atomic, |s| {
+    ///         s.rule(Rule::a, |s| Ok(s))
     ///     })
     /// }).unwrap().collect();
     ///
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn atomic<F>(&mut self, atomicity: Atomicity, f: F) -> Result<Position<'i>, Position<'i>>
+    pub fn atomic<F>(mut self, atomicity: Atomicity, f: F) -> ParseResult<'i, R>
     where
-        F: FnOnce(&mut ParserState<'i, R>) -> Result<Position<'i>, Position<'i>>
+        F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
     {
         let initial_atomicity = self.atomicity;
         let should_toggle = self.atomicity != atomicity;

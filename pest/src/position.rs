@@ -62,6 +62,12 @@ impl<'i> Position<'i> {
         self.pos
     }
 
+    #[inline]
+    pub fn set_pos(mut self, new_p: usize) -> Self {
+        self.pos = new_p;
+        self
+    }
+
     /// Creates a `Span` from two `Position`s.
     ///
     /// # Panics
@@ -440,121 +446,121 @@ impl<'i> Position<'i> {
         }
     }
 
-    /// Starts a sequence of transformations provided by `f` from the `Position`. It returns the
-    /// same `Result` returned by `f` in the case of an `Ok` or `Err` with the current `Position`
-    /// otherwise.
-    ///
-    /// This method is useful to parse sequences that only match together which usually come in the
-    /// form of chained `Result`s with
-    /// [`Result::and_then`](https://doc.rust-lang.org/std/result/enum.Result.html#method.and_then).
-    /// Such chains should always be wrapped up in
-    /// [`ParserState::sequence`](../struct.ParserState.html#method.sequence) if they can create
-    /// `Token`s before being wrapped in `Position::sequence`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(
-    ///     start.clone().sequence(|p| {
-    ///         p.match_string("a").and_then(|p| {
-    ///             p.match_string("b")
-    ///         })
-    ///     }).unwrap().pos(),
-    ///     2
-    /// );
-    /// assert_eq!(
-    ///     start.clone().sequence(|p| {
-    ///         p.match_string("a").and_then(|p| {
-    ///             p.match_string("c")
-    ///         })
-    ///     }),
-    ///     Err(start)
-    /// );
-    /// ```
-    #[inline]
-    pub fn sequence<F>(self, f: F) -> Result<Position<'i>, Position<'i>>
-    where
-        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
-    {
-        let initial_pos = self.pos;
-        let result = f(self);
+//    / Starts a sequence of transformations provided by `f` from the `Position`. It returns the
+//    / same `Result` returned by `f` in the case of an `Ok` or `Err` with the current `Position`
+//    / otherwise.
+//    /
+//    / This method is useful to parse sequences that only match together which usually come in the
+//    / form of chained `Result`s with
+//    / [`Result::and_then`](https://doc.rust-lang.org/std/result/enum.Result.html#method.and_then).
+//    / Such chains should always be wrapped up in
+//    / [`ParserState::sequence`](../struct.ParserState.html#method.sequence) if they can create
+//    / `Token`s before being wrapped in `Position::sequence`.
+//    /
+//    / # Examples
+//    /
+//    / ```
+//    / # use pest::Position;
+//    / let input = "ab";
+//    / let start = Position::from_start(input);
+//    /
+//    / assert_eq!(
+//    /     start.clone().sequence(|p| {
+//    /         p.match_string("a").and_then(|p| {
+//    /             p.match_string("b")
+//    /         })
+//    /     }).unwrap().pos(),
+//    /     2
+//    / );
+//    / assert_eq!(
+//    /     start.clone().sequence(|p| {
+//    /         p.match_string("a").and_then(|p| {
+//    /             p.match_string("c")
+//    /         })
+//    /     }),
+//    /     Err(start)
+//    / );
+//    / ```
+//    #[inline]
+//    pub fn sequence<F>(self, f: F) -> Result<Position<'i>, Position<'i>>
+//    where
+//        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
+//    {
+//        let initial_pos = self.pos;
+//        let result = f(self);
+//
+//        match result {
+//            Ok(pos) => Ok(pos),
+//            Err(mut pos) => {
+//                pos.pos = initial_pos;
+//                Err(pos)
+//            }
+//        }
+//    }
 
-        match result {
-            Ok(pos) => Ok(pos),
-            Err(mut pos) => {
-                pos.pos = initial_pos;
-                Err(pos)
-            }
-        }
-    }
-
-    /// Starts a lookahead transformation provided by `f` from the `Position`. It returns `Ok` with
-    /// the current position if `f` also returns an `Ok ` or `Err` with the current `Position`
-    /// otherwise.
-    ///
-    /// If `is_positive` is `false`, it swaps the `Ok` and `Err` together, negating the `Result`. It
-    /// should always be wrapped up in
-    /// [`ParserState::lookahead`](../struct.ParserState.html#method.lookahead) if it can create
-    /// `Token`s before being wrapped in `Position::lookahead`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(
-    ///     start.clone().lookahead(true, |p| {
-    ///         p.match_string("ab")
-    ///     }),
-    ///     Ok(start.clone())
-    /// );
-    /// assert_eq!(
-    ///     start.clone().lookahead(true, |p| {
-    ///         p.match_string("ac")
-    ///     }),
-    ///     Err(start.clone())
-    /// );
-    /// assert_eq!(
-    ///     start.clone().lookahead(false, |p| {
-    ///         p.match_string("ac")
-    ///     }),
-    ///     Ok(start)
-    /// );
-    /// ```
-    #[inline]
-    pub fn lookahead<F>(self, is_positive: bool, f: F) -> Result<Position<'i>, Position<'i>>
-    where
-        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
-    {
-        let initial_pos = self.pos;
-        let result = f(self);
-
-        let result = match result {
-            Ok(mut pos) => {
-                pos.pos = initial_pos;
-                Ok(pos)
-            }
-            Err(mut pos) => {
-                pos.pos = initial_pos;
-                Err(pos)
-            }
-        };
-
-        if is_positive {
-            result
-        } else {
-            match result {
-                Ok(pos) => Err(pos),
-                Err(pos) => Ok(pos)
-            }
-        }
-    }
+//    /// Starts a lookahead transformation provided by `f` from the `Position`. It returns `Ok` with
+//    /// the current position if `f` also returns an `Ok ` or `Err` with the current `Position`
+//    /// otherwise.
+//    ///
+//    /// If `is_positive` is `false`, it swaps the `Ok` and `Err` together, negating the `Result`. It
+//    /// should always be wrapped up in
+//    /// [`ParserState::lookahead`](../struct.ParserState.html#method.lookahead) if it can create
+//    /// `Token`s before being wrapped in `Position::lookahead`.
+//    ///
+//    /// # Examples
+//    ///
+//    /// ```
+//    /// # use pest::Position;
+//    /// let input = "ab";
+//    /// let start = Position::from_start(input);
+//    ///
+//    /// assert_eq!(
+//    ///     start.clone().lookahead(true, |p| {
+//    ///         p.match_string("ab")
+//    ///     }),
+//    ///     Ok(start.clone())
+//    /// );
+//    /// assert_eq!(
+//    ///     start.clone().lookahead(true, |p| {
+//    ///         p.match_string("ac")
+//    ///     }),
+//    ///     Err(start.clone())
+//    /// );
+//    /// assert_eq!(
+//    ///     start.clone().lookahead(false, |p| {
+//    ///         p.match_string("ac")
+//    ///     }),
+//    ///     Ok(start)
+//    /// );
+//    /// ```
+//    #[inline]
+//    pub fn lookahead<F>(self, is_positive: bool, f: F) -> Result<Position<'i>, Position<'i>>
+//    where
+//        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
+//    {
+//        let initial_pos = self.pos;
+//        let result = f(self);
+//
+//        let result = match result {
+//            Ok(mut pos) => {
+//                pos.pos = initial_pos;
+//                Ok(pos)
+//            }
+//            Err(mut pos) => {
+//                pos.pos = initial_pos;
+//                Err(pos)
+//            }
+//        };
+//
+//        if is_positive {
+//            result
+//        } else {
+//            match result {
+//                Ok(pos) => Err(pos),
+//                Err(pos) => Ok(pos)
+//            }
+//        }
+//    }
 
 //    /// Optionally applies the transformation provided by `f` from the `Position`. It returns `Ok`
 //    /// with the `Position` returned by `f` regardless of the `Result`.

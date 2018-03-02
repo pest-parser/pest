@@ -24,30 +24,24 @@ impl Parser<Rule> for ParenParser {
         }
 
         fn paren(state: ParserState<Rule>) -> ParseResult<Rule> {
-//            state.rule(Rule::paren, pos, |state, pos| {
-//                state.sequence(move |state| {
-//                    pos.sequence(|p| {
-//                        p.match_string("(")
-//                            .and_then(|p| {
-//                                p.optional(|p| {
-//                                    state.sequence(move |state| {
-//                                        p.sequence(|p| {
-//                                            state
-//                                                .lookahead(true, move |_| {
-//                                                    p.lookahead(true, |p| p.match_string("("))
-//                                                })
-//                                                .and_then(|p| p.repeat(|p| paren(p, state)))
-//                                        })
-//                                    })
-//                                })
-//                            })
-//                            .and_then(|p| {
-//                                state.rule(Rule::paren_end, p, |_, pos| pos.match_string(")"))
-//                            })
-//                    })
-//                })
-//            })
-            Ok(state)
+            state.rule(Rule::paren, |s| {
+                s.sequence(|s| {
+                    s.match_string("(")
+                        .and_then(|s| {
+                            s.optional(|s| {
+                                s.sequence(|s| {
+                                    s.lookahead(true, |s| {
+                                        s.match_string("(")
+                                    })
+                                    .and_then(|s| s.repeat(|s| paren(s)))
+                                })
+                            })
+                        })
+                        .and_then(|s| {
+                            s.rule(Rule::paren_end, |s| s.match_string(")"))
+                        })
+                })
+            })
         }
 
         state(input,|state| match rule {

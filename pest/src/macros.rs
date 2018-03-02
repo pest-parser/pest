@@ -175,14 +175,14 @@ macro_rules! consumes_to {
 /// #
 /// # impl Parser<Rule> for AbcParser {
 /// #     fn parse<'i>(_: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
-/// #         pest::state(input, |state, pos| {
-/// #             state.rule(Rule::a, pos, |state, pos| {
-/// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
-/// #                     pos.skip(1)
+/// #         pest::state(input, |state| {
+/// #             state.rule(Rule::a, |state| {
+/// #                 state.skip(1).unwrap().rule(Rule::b, |state| {
+/// #                     state.skip(1)
 /// #                 }).unwrap().skip(1)
-/// #             }).and_then(|p| {
-/// #                 state.rule(Rule::c, p.skip(1).unwrap(), |_, pos| {
-/// #                     pos.skip(1)
+/// #             }).and_then(|state| {
+/// #                 state.skip(1).unwrap().rule(Rule::c, |state| {
+/// #                     state.skip(1)
 /// #                 })
 /// #             })
 /// #         })
@@ -275,14 +275,14 @@ macro_rules! parses_to {
 /// #
 /// # impl Parser<Rule> for AbcParser {
 /// #     fn parse<'i>(_: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
-/// #         pest::state(input, |state, pos| {
-/// #             state.rule(Rule::a, pos, |state, pos| {
-/// #                 state.rule(Rule::b, pos.skip(1).unwrap(), |_, pos| {
-/// #                     pos.skip(1)
+/// #         pest::state(input, |state| {
+/// #             state.rule(Rule::a, |state| {
+/// #                 state.skip(1).unwrap().rule(Rule::b, |s| {
+/// #                     s.skip(1)
 /// #                 }).unwrap().skip(1)
-/// #             }).and_then(|p| {
-/// #                 state.rule(Rule::c, p.skip(1).unwrap(), |_, pos| {
-/// #                     pos.match_string("e")
+/// #             }).and_then(|state| {
+/// #                 state.skip(1).unwrap().rule(Rule::c, |s| {
+/// #                     s.match_string("e")
 /// #                 })
 /// #             })
 /// #         })
@@ -339,16 +339,16 @@ pub mod tests {
 
     impl Parser<Rule> for AbcParser {
         fn parse<'i>(_: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<'i, Rule>> {
-            state(input, |state, pos| {
+            state(input, |state| {
                 state
-                    .rule(Rule::a, pos, |state, pos| {
-                        state
-                            .rule(Rule::b, pos.skip(1).unwrap(), |_, pos| pos.skip(1))
+                    .rule(Rule::a, |s| {
+                        s.skip(1).unwrap()
+                            .rule(Rule::b, |s| s.skip(1))
                             .unwrap()
                             .skip(1)
                     })
-                    .and_then(|p| {
-                        state.rule(Rule::c, p.skip(1).unwrap(), |_, pos| pos.match_string("e"))
+                    .and_then(|s| {
+                        s.skip(1).unwrap().rule(Rule::c, |s| s.match_string("e"))
                     })
             })
         }
