@@ -7,7 +7,6 @@
 [![Join the chat at https://gitter.im/dragostis/pest](https://badges.gitter.im/dragostis/pest.svg)](https://gitter.im/dragostis/pest?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Book](https://img.shields.io/badge/book-WIP-4d76ae.svg)](https://pest-parser.github.io/book)
 [![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)
-(docs are currently [broken on docs.rs](https://github.com/onur/docs.rs/issues/23#issuecomment-359179441); build them locally with `cargo doc`)
 
 [![Build Status](https://travis-ci.org/pest-parser/pest.svg?branch=master)](https://travis-ci.org/pest-parser/pest)
 [![codecov](https://codecov.io/gh/pest-parser/pest/branch/master/graph/badge.svg)](https://codecov.io/gh/pest-parser/pest)
