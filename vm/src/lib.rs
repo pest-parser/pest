@@ -10,13 +10,11 @@
 extern crate pest;
 extern crate pest_meta;
 
-use std::char;
-use std::collections::HashMap;
-
 use pest::{Atomicity, Error, ParserState, Position};
 use pest::iterators::Pairs;
-
 use pest_meta::ast::{Expr, Rule, RuleType};
+use std::char;
+use std::collections::HashMap;
 
 mod macros;
 
@@ -33,7 +31,7 @@ impl Vm {
     pub fn parse<'a, 'i>(
         &'a self,
         rule: &'a str,
-        input: &'i str
+        input: &'i str,
     ) -> Result<Pairs<'i, &str>, Error<'i, &str>> {
         pest::state(input, |mut state, pos| {
             self.parse_rule(rule, pos, &mut state)
@@ -44,7 +42,7 @@ impl Vm {
         &'a self,
         rule: &'a str,
         pos: Position<'i>,
-        state: &mut ParserState<'i, &'a str>
+        state: &mut ParserState<'i, &'a str>,
     ) -> Result<Position<'i>, Position<'i>> {
         match rule {
             "any" => return pos.skip(1),
@@ -58,7 +56,7 @@ impl Vm {
                         .expect("peek was called on empty stack")
                         .as_str();
                     pos.match_string(string)
-                }
+                };
             }
             "pop" => {
                 return {
@@ -77,7 +75,7 @@ impl Vm {
                     }
 
                     pos
-                }
+                };
             }
             _ => ()
         };
@@ -145,7 +143,7 @@ impl Vm {
         &'a self,
         expr: &'a Expr,
         pos: Position<'i>,
-        state: &mut ParserState<'i, &'a str>
+        state: &mut ParserState<'i, &'a str>,
     ) -> Result<Position<'i>, Position<'i>> {
         match *expr {
             Expr::Str(ref string) => {
@@ -217,7 +215,7 @@ impl Vm {
                     (Ok(lhs), Err(_)) => Ok(lhs),
                     (Err(_), Ok(rhs)) => Ok(rhs),
                     (Err(lhs), Err(_)) => Err(lhs)
-                }
+                },
             )
         }
     }
@@ -228,7 +226,7 @@ impl Vm {
         min: Option<u32>,
         max: Option<u32>,
         pos: Position<'i>,
-        state: &mut ParserState<'i, &'a str>
+        state: &mut ParserState<'i, &'a str>,
     ) -> Result<Position<'i>, Position<'i>> {
         state.sequence(move |state| {
             pos.sequence(|pos| {
@@ -276,7 +274,7 @@ impl Vm {
     fn skip<'a, 'i>(
         &'a self,
         pos: Position<'i>,
-        state: &mut ParserState<'i, &'a str>
+        state: &mut ParserState<'i, &'a str>,
     ) -> Result<Position<'i>, Position<'i>> {
         match (
             self.rules.contains_key("whitespace"),
@@ -375,10 +373,10 @@ fn unescape(string: &str) -> Option<String> {
     }
 }
 
+use super::*;
+
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn unescape_all() {
         let string = r"a\nb\x55c\u{111}d";

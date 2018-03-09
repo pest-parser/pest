@@ -58,8 +58,14 @@
 
 extern crate memchr;
 
+pub use error::Error;
+pub use parser::Parser;
+pub use parser_state::{Atomicity, Lookahead, ParseResult, ParserState, state};
+pub use position::Position;
+pub use span::Span;
 use std::fmt::Debug;
 use std::hash::Hash;
+pub use token::Token;
 
 mod error;
 pub mod iterators;
@@ -80,11 +86,6 @@ mod token;
 /// This is essentially a [trait alias](https://github.com/rust-lang/rfcs/pull/1733). When trait
 /// aliases are implemented, this may be replaced by one.
 pub trait RuleType: Copy + Debug + Eq + Hash + Ord {}
+
 impl<T: Copy + Debug + Eq + Hash + Ord> RuleType for T {}
 
-pub use error::Error;
-pub use parser::Parser;
-pub use parser_state::{state, Atomicity, Lookahead, ParserState, ParseResult};
-pub use position::Position;
-pub use span::Span;
-pub use token::Token;

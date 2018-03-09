@@ -10,11 +10,10 @@
 #[macro_use]
 extern crate pest;
 
-use std::collections::HashMap;
-
-use pest::{state, Error, Parser, ParserState, ParseResult};
-use pest::Span;
+use pest::{Error, Parser, ParseResult, ParserState, state};
 use pest::iterators::{Pair, Pairs};
+use pest::Span;
+use std::collections::HashMap;
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -32,7 +31,7 @@ enum Rule {
     int,
     exp,
     bool,
-    null
+    null,
 }
 
 struct JsonParser;
@@ -46,22 +45,22 @@ impl Parser<Rule> for JsonParser {
         fn object(state: ParserState<Rule>) -> ParseResult<Rule> {
             state.rule(Rule::object, |s| {
                 s.sequence(move |s| {
-                        s.match_string("{")
-                            .and_then(|s| skip(s))
-                            .and_then(|s| pair(s))
-                            .and_then(|s| skip(s))
-                            .and_then(|s| {
-                                s.repeat(|s| {
-                                    s.sequence(|s| {
-                                        s.match_string(",")
-                                            .and_then(|s| skip(s))
-                                            .and_then(|s| pair(s))
-                                            .and_then(|s| skip(s))
-                                    })
+                    s.match_string("{")
+                        .and_then(|s| skip(s))
+                        .and_then(|s| pair(s))
+                        .and_then(|s| skip(s))
+                        .and_then(|s| {
+                            s.repeat(|s| {
+                                s.sequence(|s| {
+                                    s.match_string(",")
+                                        .and_then(|s| skip(s))
+                                        .and_then(|s| pair(s))
+                                        .and_then(|s| skip(s))
                                 })
                             })
-                            .and_then(|s| s.match_string("}"))
-                    })
+                        })
+                        .and_then(|s| s.match_string("}"))
+                })
                     .or_else(|s| {
                         s.sequence(|s| {
                             s.match_string("{")
@@ -93,7 +92,7 @@ impl Parser<Rule> for JsonParser {
                         .and_then(|s| skip(s))
                         .and_then(|s| {
                             s.repeat(|s| {
-                                s.sequence( |s| {
+                                s.sequence(|s| {
                                     s.match_string(",")
                                         .and_then(|s| skip(s))
                                         .and_then(|s| value(s))
@@ -238,7 +237,7 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        state(input,|state| match rule {
+        state(input, |state| match rule {
             Rule::json => json(state),
             Rule::object => object(state),
             Rule::pair => pair(state),
@@ -264,7 +263,7 @@ enum Json<'i> {
     Number(f64),
     String(Span<'i>),
     Array(Vec<Json<'i>>),
-    Object(HashMap<Span<'i>, Json<'i>>)
+    Object(HashMap<Span<'i>, Json<'i>>),
 }
 
 fn consume(pair: Pair<Rule>) -> Json {

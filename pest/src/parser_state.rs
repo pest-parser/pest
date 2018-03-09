@@ -100,6 +100,18 @@ where
 }
 
 impl<'i, R: RuleType> ParserState<'i, R> {
+
+    ///
+    ///
+    pub fn get_position(&self) -> Position<'i> {
+        self.position.clone()
+    }
+
+    pub fn with_updated_position(mut self, position: Position<'i>) -> Self {
+        self.position = position;
+        self
+    }
+
     /// Wrapper needed to generate tokens.
     ///
     /// # Examples
@@ -276,8 +288,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
     {
-        let initial_pos = self.position.pos();
         let token_index = self.queue.len();
+        let initial_pos = self.get_position();
 
         let result = f(self);
 
@@ -285,7 +297,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             Ok(new_state) => Ok(new_state),
             Err(mut new_state) => {
                 // Restore the initial position and truncate the token queue.
-                new_state.position = new_state.position.set_pos(initial_pos);
+                new_state.position = initial_pos;
                 new_state.queue.truncate(token_index);
                 Err(new_state)
             }
@@ -335,6 +347,21 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
+    pub fn match_insensitive(mut self, string: &str) -> ParseResult<'i, R> {
+        // TODO: Set up a macro for this...
+        match self.position.match_insensitive(string) {
+            Ok(pos) => {
+                self.position = pos;
+                Ok(self)
+            },
+            Err(pos) => {
+                self.position = pos;
+                Err(self)
+            }
+        }
+    }
+
+    #[inline]
     pub fn match_range(mut self, range: Range<char>) -> ParseResult<'i, R> {
         // TODO: Set up a macro for this...
         match self.position.match_range(range) {
@@ -352,6 +379,20 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     #[inline]
     pub fn skip(mut self, n: usize) -> ParseResult<'i, R> {
         match self.position.skip(n) {
+            Ok(pos) => {
+                self.position = pos;
+                Ok(self)
+            },
+            Err(pos) => {
+                self.position = pos;
+                Err(self)
+            }
+        }
+    }
+
+    #[inline]
+    pub fn skip_until(mut self, string: &str) -> ParseResult<'i, R> {
+        match self.position.skip_until(string) {
             Ok(pos) => {
                 self.position = pos;
                 Ok(self)
@@ -435,18 +476,18 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             }
         };
 
-        let initial_pos = self.position.pos();
+        let initial_pos = self.get_position();
 
         let result = f(self);
 
         let return_state = match result {
             Ok(mut new_state) => {
-                new_state.position = new_state.position.set_pos(initial_pos);
+                new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
                 Ok(new_state)
             }
             Err(mut new_state) => {
-                new_state.position = new_state.position.set_pos(initial_pos);
+                new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
                 Err(new_state)
             }
@@ -499,10 +540,20 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         let result = f(self);
 
-        if should_toggle {
-            self.atomicity = initial_atomicity;
+        // TODO: Don't like the code duplication here...
+        match result {
+            Ok(mut new_state) => {
+                if should_toggle {
+                    new_state.atomicity = initial_atomicity;
+                }
+                Ok(new_state)
+            }
+            Err(mut new_state) => {
+                if should_toggle {
+                    new_state.atomicity = initial_atomicity;
+                }
+                Err(new_state)
+            }
         }
-
-        result
     }
 }

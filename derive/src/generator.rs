@@ -20,11 +20,8 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         quote! {
             #[inline]
             #[allow(dead_code)]
-            fn any<'i>(
-                pos: ::pest::Position<'i>,
-                _: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                pos.skip(1)
+            fn any(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                state.skip(1)
             }
         }
     );
@@ -32,12 +29,9 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "eoi",
         quote! {
             #[inline]
-            pub fn eoi<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                state.rule(Rule::eoi, pos, #[inline(always)] |_, pos| {
-                    pos.at_end()
+            pub fn eoi(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                state.rule(Rule::eoi, #[inline(always)] |state| {
+                    state.end_of_input()
                 })
             }
         }
@@ -46,11 +40,8 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "soi",
         quote! {
             #[inline]
-            fn soi<'i>(
-                pos: ::pest::Position<'i>,
-                _: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                pos.at_start()
+            fn soi(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                state.start_of_input()
             }
         }
     );
@@ -58,17 +49,13 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "peek",
         quote! {
             #[inline]
-            fn peek<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
+            fn peek(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
                 let string = state
                     .stack
                     .peek()
                     .expect("peek was called on empty stack")
                     .as_str();
-
-                pos.match_string(string)
+                state.match_string(string)
             }
         }
     );
@@ -76,25 +63,24 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "pop",
         quote! {
             #[inline]
-            fn pop<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                let pos = {
+            fn pop(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                let result_state = {
                     let string = state
                         .stack
                         .peek()
                         .expect("pop was called on empty stack")
                         .as_str();
 
-                    pos.match_string(string)
+                    state.match_string(string)
                 };
 
-                if pos.is_ok() {
-                    state.stack.pop();
+                match result_state {
+                    Ok(mut state) => {
+                        state.stack.pop();
+                        Ok(state)
+                    }
+                    Err(state) => Err(state)
                 }
-
-                pos
             }
         }
     );
@@ -102,13 +88,10 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "drop",
         quote! {
             #[inline]
-            fn drop<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
+            fn drop(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
                 match state.stack.pop() {
-                    Some(_) => Ok(pos),
-                    None => Err(pos),
+                    Some(_) => Ok(state),
+                    None => Err(state),
                 }
             }
         }
@@ -143,7 +126,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
                     #skip
                 }
 
-                ::pest::state(input, move |mut state, pos| {
+                ::pest::state(input, |state| {
                     match rule {
                         #patterns
                     }
@@ -189,14 +172,14 @@ fn generate_patterns(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
         .map(|rule| {
             let rule = Ident::new(rule.name.as_str());
             quote! {
-                Rule::#rule => rules::#rule(pos, &mut state)
+                Rule::#rule => rules::#rule(state)
             }
         })
         .collect();
 
     if uses_eoi {
         rules.push(quote! {
-            Rule::eoi => rules::eoi(pos, &mut state)
+            Rule::eoi => rules::eoi(state)
         });
     }
 
@@ -214,7 +197,7 @@ fn generate_rule(rule: Rule) -> Tokens {
             let atomic = generate_expr_atomic(rule.expr);
 
             quote! {
-                state.atomic(::pest::Atomicity::Atomic, #[inline(always)] move |state| {
+                state.atomic(::pest::Atomicity::Atomic, #[inline(always)] |state| {
                     #atomic
                 })
             }
@@ -227,11 +210,8 @@ fn generate_rule(rule: Rule) -> Tokens {
         RuleType::Normal => quote! {
             #[inline]
             #[allow(unused_variables)]
-            pub fn #name<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
+            pub fn #name(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                state.rule(Rule::#name, #[inline(always)] |state| {
                     #expr
                 })
             }
@@ -239,22 +219,16 @@ fn generate_rule(rule: Rule) -> Tokens {
         RuleType::Silent => quote! {
             #[inline]
             #[allow(unused_variables)]
-            pub fn #name<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
+            pub fn #name(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
                 #expr
             }
         },
         RuleType::Atomic => quote! {
             #[inline]
             #[allow(unused_variables)]
-            pub fn #name<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
-                    state.atomic(::pest::Atomicity::Atomic, #[inline(always)] move |state| {
+            pub fn #name(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                state.rule(Rule::#name, #[inline(always)] |state| {
+                    state.atomic(::pest::Atomicity::Atomic, #[inline(always)] |state| {
                         #expr
                     })
                 })
@@ -263,12 +237,9 @@ fn generate_rule(rule: Rule) -> Tokens {
         RuleType::CompoundAtomic => quote! {
             #[inline]
             #[allow(unused_variables)]
-            pub fn #name<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                state.atomic(::pest::Atomicity::CompoundAtomic, #[inline(always)] move |state| {
-                    state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
+            pub fn #name(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                state.atomic(::pest::Atomicity::CompoundAtomic, #[inline(always)] |state| {
+                    state.rule(Rule::#name, #[inline(always)] |state| {
                         #expr
                     })
                 })
@@ -277,12 +248,9 @@ fn generate_rule(rule: Rule) -> Tokens {
         RuleType::NonAtomic => quote! {
             #[inline]
             #[allow(unused_variables)]
-            pub fn #name<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                state.atomic(::pest::Atomicity::NonAtomic, #[inline(always)] move |state| {
-                    state.rule(Rule::#name, pos, #[inline(always)] |state, pos| {
+            pub fn #name(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                state.atomic(::pest::Atomicity::NonAtomic, #[inline(always)] |state| {
+                    state.rule(Rule::#name, #[inline(always)] |state| {
                         #expr
                     })
                 })
@@ -299,66 +267,50 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
         (false, false) => quote! {
             #[inline]
             #[allow(dead_code)]
-            fn skip<'i>(
-                pos: ::pest::Position<'i>,
-                _: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                Ok(pos)
+            fn skip(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                Ok(state)
             }
         },
         (true, false) => quote! {
             #[inline]
             #[allow(dead_code)]
-            fn skip<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
+            fn skip(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
-                    pos.repeat(#[inline(always)] |pos| {
-                        whitespace(pos, state)
+                    state.repeat(#[inline(always)] |state| {
+                        whitespace(state)
                     })
                 } else {
-                    Ok(pos)
+                    Ok(state)
                 }
             }
         },
         (false, true) => quote! {
             #[inline]
             #[allow(dead_code)]
-            fn skip<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
+            fn skip(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
-                    pos.repeat(#[inline(always)] |pos| {
-                        comment(pos, state)
+                    state.repeat(#[inline(always)] |state| {
+                        comment(state)
                     })
                 } else {
-                    Ok(pos)
+                    Ok(state)
                 }
             }
         },
         (true, true) => quote! {
             #[inline]
             #[allow(dead_code)]
-            fn skip<'i>(
-                pos: ::pest::Position<'i>,
-                state: &mut ::pest::ParserState<'i, Rule>
-            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
+            fn skip(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
-                    state.sequence(#[inline(always)] move |state| {
-                        pos.sequence(#[inline(always)] |pos| {
-                            pos.repeat(#[inline(always)] |pos| {
-                                whitespace(pos, state)
-                            }).and_then(#[inline(always)] |pos| {
-                                pos.repeat(#[inline(always)] |pos| {
-                                    state.sequence(#[inline(always)] move |state| {
-                                        pos.sequence(#[inline(always)] |pos| {
-                                            comment(pos, state).and_then(|pos| {
-                                                pos.repeat(#[inline(always)] |pos| {
-                                                    whitespace(pos, state)
-                                                })
-                                            })
+                    state.sequence(#[inline(always)] |state| {
+                        state.repeat(#[inline(always)] |state| {
+                            whitespace(state)
+                        }).and_then(#[inline(always)] |state| {
+                            state.repeat(#[inline(always)] |state| {
+                                state.sequence(#[inline(always)] |state| {
+                                    comment(state).and_then(#[inline(always)] |state| {
+                                        state.repeat(#[inline(always)] |state| {
+                                            whitespace(state)
                                         })
                                     })
                                 })
@@ -366,7 +318,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
                         })
                     })
                 } else {
-                    Ok(pos)
+                    Ok(state)
                 }
             }
         }
@@ -377,7 +329,7 @@ fn generate_expr(expr: Expr) -> Tokens {
     match expr {
         Expr::Str(string) => {
             let mut tokens = quote! {
-                pos.match_string
+                state.match_string
             };
 
             tokens.append("(");
@@ -388,7 +340,7 @@ fn generate_expr(expr: Expr) -> Tokens {
         }
         Expr::Insens(string) => {
             let mut tokens = quote! {
-                pos.match_insensitive
+                state.match_insensitive
             };
 
             tokens.append("(");
@@ -399,7 +351,7 @@ fn generate_expr(expr: Expr) -> Tokens {
         }
         Expr::Range(start, end) => {
             let mut tokens = quote! {
-                pos.match_range
+                state.match_range
             };
 
             tokens.append("(");
@@ -412,16 +364,14 @@ fn generate_expr(expr: Expr) -> Tokens {
         }
         Expr::Ident(ident) => {
             let ident = Ident::new(ident);
-            quote! { self::#ident(pos, state) }
+            quote! { self::#ident(state) }
         }
         Expr::PosPred(expr) => {
             let expr = generate_expr(*expr);
 
             quote! {
-                state.lookahead(true, #[inline(always)] move |state| {
-                    pos.lookahead(true, #[inline(always)] |pos| {
-                        #expr
-                    })
+                state.lookahead(true, #[inline(always)] |state| {
+                    #expr
                 })
             }
         }
@@ -429,10 +379,8 @@ fn generate_expr(expr: Expr) -> Tokens {
             let expr = generate_expr(*expr);
 
             quote! {
-                state.lookahead(false, #[inline(always)] move |state| {
-                    pos.lookahead(false, #[inline(always)] |pos| {
-                        #expr
-                    })
+                state.lookahead(false, #[inline(always)] |state| {
+                    #expr
                 })
             }
         }
@@ -448,17 +396,15 @@ fn generate_expr(expr: Expr) -> Tokens {
             tail.push(generate_expr(current));
 
             quote! {
-                state.sequence(#[inline(always)] move |state| {
-                    pos.sequence(#[inline(always)] |pos| {
-                        #head
-                        #(
-                            .and_then(#[inline(always)] |pos| {
-                                self::skip(pos, state)
-                            }).and_then(#[inline(always)] |pos| {
-                                #tail
-                            })
-                        )*
-                    })
+                state.sequence(#[inline(always)] |state| {
+                    #head
+                    #(
+                        .and_then(#[inline(always)] |state| {
+                            self::skip(state)
+                        }).and_then(#[inline(always)] |state| {
+                            #tail
+                        })
+                    )*
                 })
             }
         }
@@ -476,7 +422,7 @@ fn generate_expr(expr: Expr) -> Tokens {
             quote! {
                 #head
                 #(
-                    .or_else(#[inline(always)] |pos| {
+                    .or_else(#[inline(always)] |state| {
                         #tail
                     })
                 )*
@@ -486,7 +432,7 @@ fn generate_expr(expr: Expr) -> Tokens {
             let expr = generate_expr(*expr);
 
             quote! {
-                pos.optional(#[inline(always)] |pos| {
+                state.optional(#[inline(always)] |state| {
                     #expr
                 })
             }
@@ -495,20 +441,15 @@ fn generate_expr(expr: Expr) -> Tokens {
             let expr = generate_expr(*expr);
 
             quote! {
-                state.sequence(#[inline(always)] move |state| {
-                    pos.sequence(#[inline(always)] |pos| {
-                        pos.optional(#[inline(always)] |pos| {
-                            #expr.and_then(#[inline(always)] |pos| {
-                                pos.repeat(#[inline(always)] |pos| {
-                                    state.sequence(#[inline(always)] move |state| {
-                                        pos.sequence(#[inline(always)] |pos| {
-                                            self::skip(
-                                                pos,
-                                                state
-                                            ).and_then(#[inline(always)] |pos| {
-                                                #expr
-                                            })
-                                        })
+                state.sequence(#[inline(always)] |state| {
+                    state.optional(#[inline(always)] |state| {
+                        #expr.and_then(#[inline(always)] |state| {
+                            state.repeat(#[inline(always)] |state| {
+                                state.sequence(#[inline(always)] |state| {
+                                    self::skip(
+                                        state
+                                    ).and_then(#[inline(always)] |state| {
+                                        #expr
                                     })
                                 })
                             })
@@ -522,14 +463,15 @@ fn generate_expr(expr: Expr) -> Tokens {
 
             quote! {
                 {
-                    let start = pos.clone();
+                    let start = state.get_position();
 
                     match #expr {
-                        Ok(end) => {
-                            state.stack.push(start.span(&end));
-                            Ok(end)
+                        Ok(mut new_state) => {
+                            let end = new_state.get_position();
+                            new_state.stack.push(start.span(&end));
+                            Ok(new_state)
                         }
-                        Err(pos) => Err(pos)
+                        Err(new_state) => Err(new_state)
                     }
                 }
             }
@@ -542,7 +484,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
     match expr {
         Expr::Str(string) => {
             let mut tokens = quote! {
-                pos.match_string
+                state.match_string
             };
 
             tokens.append("(");
@@ -553,7 +495,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
         }
         Expr::Insens(string) => {
             let mut tokens = quote! {
-                pos.match_insensitive
+                state.match_insensitive
             };
 
             tokens.append("(");
@@ -564,7 +506,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
         }
         Expr::Range(start, end) => {
             let mut tokens = quote! {
-                pos.match_range
+                state.match_range
             };
 
             tokens.append("(");
@@ -577,16 +519,14 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
         }
         Expr::Ident(ident) => {
             let ident = Ident::new(ident);
-            quote! { self::#ident(pos, state) }
+            quote! { self::#ident(state) }
         }
         Expr::PosPred(expr) => {
             let expr = generate_expr_atomic(*expr);
 
             quote! {
-                state.lookahead(true, #[inline(always)] move |state| {
-                    pos.lookahead(true, #[inline(always)] |pos| {
-                        #expr
-                    })
+                state.lookahead(true, #[inline(always)] |state| {
+                    #expr
                 })
             }
         }
@@ -594,10 +534,8 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             let expr = generate_expr_atomic(*expr);
 
             quote! {
-                state.lookahead(false, #[inline(always)] move |state| {
-                    pos.lookahead(false, #[inline(always)] |pos| {
-                        #expr
-                    })
+                state.lookahead(false, #[inline(always)] |state| {
+                    #expr
                 })
             }
         }
@@ -613,15 +551,13 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             tail.push(generate_expr_atomic(current));
 
             quote! {
-                state.sequence(#[inline(always)] move |state| {
-                    pos.sequence(#[inline(always)] |pos| {
-                        #head
-                        #(
-                            .and_then(#[inline(always)] |pos| {
-                                #tail
-                            })
-                        )*
-                    })
+                state.sequence(#[inline(always)] |state| {
+                    #head
+                    #(
+                        .and_then(#[inline(always)] |state| {
+                            #tail
+                        })
+                    )*
                 })
             }
         }
@@ -639,7 +575,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             quote! {
                 #head
                 #(
-                    .or_else(#[inline(always)] |pos| {
+                    .or_else(#[inline(always)] |state| {
                         #tail
                     })
                 )*
@@ -649,7 +585,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             let expr = generate_expr_atomic(*expr);
 
             quote! {
-                pos.optional(#[inline(always)] |pos| {
+                state.optional(#[inline(always)] |state| {
                     #expr
                 })
             }
@@ -658,7 +594,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             let expr = generate_expr_atomic(*expr);
 
             quote! {
-                pos.repeat(#[inline(always)] |pos| {
+                state.repeat(#[inline(always)] |state| {
                     #expr
                 })
             }
@@ -683,20 +619,45 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             quote! {
                 #string_tokens
 
-                strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
-                    match (result, pos.clone().skip_until(string)) {
-                        (Ok(lhs), Ok(rhs)) => {
-                            if rhs.pos() < lhs.pos() {
-                                Ok(rhs)
-                            } else {
-                                Ok(lhs)
+                strings[1..].iter().fold(state.skip_until(strings[0]), |begin_result, string| {
+                    match begin_result {
+                        Ok(begin_state) => {
+                            let begin_pos = begin_state.get_position();
+                            match begin_state.skip_until(string) {
+                                Ok(end_state) => {
+                                    if end_state.get_position() < begin_pos {
+                                        Ok(end_state)
+                                    } else {
+                                        Ok(end_state.with_updated_position(begin_pos))
+                                    }
+                                }
+                                Err(end_state) => Ok(end_state.with_updated_position(begin_pos))
                             }
                         }
-                        (Ok(lhs), Err(_)) => Ok(lhs),
-                        (Err(_), Ok(rhs)) => Ok(rhs),
-                        (Err(lhs), Err(_)) => Err(lhs)
+                        Err(begin_state) => {
+                            let begin_pos = begin_state.get_position();
+                            match begin_state.skip_until(string) {
+                                Ok(end_state) => Ok(end_state),
+                                Err(end_state) => Ok(end_state.with_updated_position(begin_pos))
+                            }
+                        }
                     }
                 })
+
+//                strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
+//                    match (result, pos.clone().skip_until(string)) {
+//                        (Ok(lhs), Ok(rhs)) => {
+//                            if rhs.pos() < lhs.pos() {
+//                                Ok(rhs)
+//                            } else {
+//                                Ok(lhs)
+//                            }
+//                        }
+//                        (Ok(lhs), Err(_)) => Ok(lhs),
+//                        (Err(_), Ok(rhs)) => Ok(rhs),
+//                        (Err(lhs), Err(_)) => Err(lhs)
+//                    }
+//                })
             }
         }
         Expr::Push(expr) => {
@@ -704,14 +665,15 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
 
             quote! {
                 {
-                    let start = pos.clone();
+                    let start = state.get_position();
 
                     match #expr {
-                        Ok(end) => {
-                            state.stack.push(start.span(&end));
-                            Ok(end)
+                        Ok(mut new_state) => {
+                            let end = new_state.get_position();
+                            new_state.stack.push(start.span(&end));
+                            Ok(new_state)
                         }
-                        Err(pos) => Err(pos)
+                        Err(new_state) => Err(new_state)
                     }
                 }
             }
@@ -762,21 +724,19 @@ mod tests {
         assert_eq!(
             generate_expr(expr),
             quote! {
-                state.sequence(#[inline(always)] move |state| {
-                    pos.sequence(#[inline(always)] |pos| {
-                        pos.match_string("a").and_then(#[inline(always)] |pos| {
-                            self::skip(pos, state)
-                        }).and_then(#[inline(always)] |pos| {
-                            pos.match_string("b")
-                        }).and_then(#[inline(always)] |pos| {
-                            self::skip(pos, state)
-                        }).and_then(#[inline(always)] |pos| {
-                            pos.match_string("c")
-                        }).and_then(#[inline(always)] |pos| {
-                            self::skip(pos, state)
-                        }).and_then(#[inline(always)] |pos| {
-                            pos.match_string("d")
-                        })
+                state.sequence(#[inline(always)] |state| {
+                    state.match_string("a").and_then(#[inline(always)] |state| {
+                        self::skip(state)
+                    }).and_then(#[inline(always)] |state| {
+                        state.match_string("b")
+                    }).and_then(#[inline(always)] |state| {
+                        self::skip(state)
+                    }).and_then(#[inline(always)] |state| {
+                        state.match_string("c")
+                    }).and_then(#[inline(always)] |state| {
+                        self::skip(state)
+                    }).and_then(#[inline(always)] |state| {
+                        state.match_string("d")
                     })
                 })
             }
@@ -799,15 +759,13 @@ mod tests {
         assert_eq!(
             generate_expr_atomic(expr),
             quote! {
-                state.sequence(#[inline(always)] move |state| {
-                    pos.sequence(#[inline(always)] |pos| {
-                        pos.match_string("a").and_then(#[inline(always)] |pos| {
-                            pos.match_string("b")
-                        }).and_then(#[inline(always)] |pos| {
-                            pos.match_string("c")
-                        }).and_then(#[inline(always)] |pos| {
-                            pos.match_string("d")
-                        })
+                state.sequence(#[inline(always)] |state| {
+                    state.match_string("a").and_then(#[inline(always)] |state| {
+                        state.match_string("b")
+                    }).and_then(#[inline(always)] |state| {
+                        state.match_string("c")
+                    }).and_then(#[inline(always)] |state| {
+                        state.match_string("d")
                     })
                 })
             }
@@ -830,12 +788,12 @@ mod tests {
         assert_eq!(
             generate_expr(expr),
             quote! {
-                pos.match_string("a").or_else(#[inline(always)] |pos| {
-                    pos.match_string("b")
-                }).or_else(#[inline(always)] |pos| {
-                    pos.match_string("c")
-                }).or_else(#[inline(always)] |pos| {
-                    pos.match_string("d")
+                state.match_string("a").or_else(#[inline(always)] |state| {
+                    state.match_string("b")
+                }).or_else(#[inline(always)] |state| {
+                    state.match_string("c")
+                }).or_else(#[inline(always)] |state| {
+                    state.match_string("d")
                 })
             }
         );
@@ -857,12 +815,12 @@ mod tests {
         assert_eq!(
             generate_expr_atomic(expr),
             quote! {
-                pos.match_string("a").or_else(#[inline(always)] |pos| {
-                    pos.match_string("b")
-                }).or_else(#[inline(always)] |pos| {
-                    pos.match_string("c")
-                }).or_else(#[inline(always)] |pos| {
-                    pos.match_string("d")
+                state.match_string("a").or_else(#[inline(always)] |state| {
+                    state.match_string("b")
+                }).or_else(#[inline(always)] |state| {
+                    state.match_string("c")
+                }).or_else(#[inline(always)] |state| {
+                    state.match_string("d")
                 })
             }
         );
@@ -877,18 +835,28 @@ mod tests {
             quote! {
                 let strings = ["a", "b"];
 
-                strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
-                    match (result, pos.clone().skip_until(string)) {
-                        (Ok(lhs), Ok(rhs)) => {
-                            if rhs.pos() < lhs.pos() {
-                                Ok(rhs)
-                            } else {
-                                Ok(lhs)
+                strings[1..].iter().fold(state.skip_until(strings[0]), |begin_result, string| {
+                    match begin_result {
+                        Ok(begin_state) => {
+                            let begin_pos = begin_state.get_position();
+                            match begin_state.skip_until(string) {
+                                Ok(end_state) => {
+                                    if end_state.get_position() < begin_pos {
+                                        Ok(end_state)
+                                    } else {
+                                        Ok(end_state.with_updated_position(begin_pos))
+                                    }
+                                }
+                                Err(end_state) => Ok(end_state.with_updated_position(begin_pos))
                             }
                         }
-                        (Ok(lhs), Err(_)) => Ok(lhs),
-                        (Err(_), Ok(rhs)) => Ok(rhs),
-                        (Err(lhs), Err(_)) => Err(lhs)
+                        Err(begin_state) => {
+                            let begin_pos = begin_state.get_position();
+                            match begin_state.skip_until(string) {
+                                Ok(end_state) => Ok(end_state),
+                                Err(end_state) => Ok(end_state.with_updated_position(begin_pos))
+                            }
+                        }
                     }
                 })
             }
@@ -916,73 +884,59 @@ mod tests {
         );
 
         let sequence = quote! {
-            state.sequence(#[inline(always)] move |state| {
-                pos.sequence(#[inline(always)] |pos| {
-                    self::skip(pos, state).and_then(
-                        #[inline(always)] |pos| {
-                            pos.match_insensitive("b")
-                        }
-                    )
-                })
+            state.sequence(#[inline(always)] |state| {
+                self::skip(state).and_then(
+                    #[inline(always)] |state| {
+                        state.match_insensitive("b")
+                    }
+                )
             })
         };
         let repeat = quote! {
-            pos.repeat(#[inline(always)] |pos| {
-                state.sequence(#[inline(always)] move |state| {
-                    pos.sequence(#[inline(always)] |pos| {
-                        self::skip(pos, state).and_then(#[inline(always)] |pos| {
-                            pos.match_string("c").or_else(#[inline(always)] |pos| {
-                                pos.match_string("d")
-                            })
-                         })
-                    })
+            state.repeat(#[inline(always)] |state| {
+                state.sequence(#[inline(always)] |state| {
+                    self::skip(state).and_then(#[inline(always)] |state| {
+                        state.match_string("c").or_else(#[inline(always)] |state| {
+                            state.match_string("d")
+                        })
+                     })
                 })
             })
         };
         assert_eq!(
             generate_expr(expr),
             quote! {
-                self::a(pos, state).or_else(#[inline(always)] |pos| {
-                    state.sequence(#[inline(always)] move |state| {
-                        pos.sequence(#[inline(always)] |pos| {
-                            pos.match_range('a'..'b').and_then(#[inline(always)] |pos| {
-                                self::skip(pos, state)
-                            }).and_then(#[inline(always)] |pos| {
-                                state.lookahead(false, #[inline(always)] move |state| {
-                                    pos.lookahead(false, #[inline(always)] |pos| {
-                                        state.sequence(#[inline(always)] move |state| {
-                                            pos.sequence(#[inline(always)] |pos| {
-                                                pos.optional(#[inline(always)] |pos| {
-                                                    pos.match_insensitive(
-                                                        "b"
-                                                    ).and_then(#[inline(always)] |pos| {
-                                                        pos.repeat(#[inline(always)] |pos| {
-                                                            #sequence
-                                                        })
-                                                    })
-                                                })
+                self::a(state).or_else(#[inline(always)] |state| {
+                    state.sequence(#[inline(always)] |state| {
+                        state.match_range('a'..'b').and_then(#[inline(always)] |state| {
+                            self::skip(state)
+                        }).and_then(#[inline(always)] |state| {
+                            state.lookahead(false, #[inline(always)] |state| {
+                                state.sequence(#[inline(always)] |state| {
+                                    state.optional(#[inline(always)] |state| {
+                                        state.match_insensitive(
+                                            "b"
+                                        ).and_then(#[inline(always)] |state| {
+                                            state.repeat(#[inline(always)] |state| {
+                                                #sequence
                                             })
                                         })
                                     })
                                 })
-                            }).and_then(#[inline(always)] |pos| {
-                                self::skip(pos, state)
-                            }).and_then(#[inline(always)] |pos| {
-                                state.lookahead(true, #[inline(always)] move |state| {
-                                    pos.lookahead(true, #[inline(always)] |pos| {
-                                        pos.optional(#[inline(always)] |pos| {
-                                            state.sequence(#[inline(always)] move |state| {
-                                                pos.sequence(#[inline(always)] |pos| {
-                                                    pos.optional(#[inline(always)] |pos| {
-                                                        pos.match_string("c").or_else(
-                                                            #[inline(always)] |pos| {
-                                                                pos.match_string("d")
-                                                            }
-                                                        ).and_then(#[inline(always)] |pos| {
-                                                            #repeat
-                                                        })
-                                                    })
-                                                })
+                            })
+                        }).and_then(#[inline(always)] |state| {
+                            self::skip(state)
+                        }).and_then(#[inline(always)] |state| {
+                            state.lookahead(true, #[inline(always)] |state| {
+                                state.optional(#[inline(always)] |state| {
+                                    state.sequence(#[inline(always)] |state| {
+                                        state.optional(#[inline(always)] |state| {
+                                            state.match_string("c").or_else(
+                                                #[inline(always)] |state| {
+                                                    state.match_string("d")
+                                                }
+                                            ).and_then(#[inline(always)] |state| {
+                                                #repeat
                                             })
                                         })
                                     })
@@ -1018,27 +972,21 @@ mod tests {
         assert_eq!(
             generate_expr_atomic(expr),
             quote! {
-                self::a(pos, state).or_else(#[inline(always)] |pos| {
-                    state.sequence(#[inline(always)] move |state| {
-                        pos.sequence(#[inline(always)] |pos| {
-                            pos.match_range('a'..'b').and_then(#[inline(always)] |pos| {
-                                state.lookahead(false, #[inline(always)] move |state| {
-                                    pos.lookahead(false, #[inline(always)] |pos| {
-                                        pos.repeat(#[inline(always)] |pos| {
-                                            pos.match_insensitive("b")
-                                        })
-                                    })
+                self::a(state).or_else(#[inline(always)] |state| {
+                    state.sequence(#[inline(always)] |state| {
+                        state.match_range('a'..'b').and_then(#[inline(always)] |state| {
+                            state.lookahead(false, #[inline(always)] |state| {
+                                state.repeat(#[inline(always)] |state| {
+                                    state.match_insensitive("b")
                                 })
-                            }).and_then(#[inline(always)] |pos| {
-                                state.lookahead(true, #[inline(always)] move |state| {
-                                    pos.lookahead(true, #[inline(always)] |pos| {
-                                        pos.optional(#[inline(always)] |pos| {
-                                            pos.repeat(#[inline(always)] |pos| {
-                                                pos.match_string("c")
-                                                   .or_else(#[inline(always)] |pos| {
-                                                    pos.match_string("d")
-                                                })
-                                            })
+                            })
+                        }).and_then(#[inline(always)] |state| {
+                            state.lookahead(true, #[inline(always)] |state| {
+                                state.optional(#[inline(always)] |state| {
+                                    state.repeat(#[inline(always)] |state| {
+                                        state.match_string("c")
+                                           .or_else(#[inline(always)] |state| {
+                                            state.match_string("d")
                                         })
                                     })
                                 })
@@ -1084,35 +1032,26 @@ mod tests {
 
                             #[inline]
                             #[allow(unused_variables)]
-                            pub fn a<'i>(
-                                pos: ::pest::Position<'i>,
-                                state: &mut ::pest::ParserState<'i, Rule>
-                            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                                pos.match_string("b")
+                            pub fn a(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                                state.match_string("b")
                             }
 
                             #[inline]
                             #[allow(dead_code)]
-                            fn any<'i>(
-                                pos: ::pest::Position<'i>,
-                                _: &mut ::pest::ParserState<'i, Rule>
-                            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                                pos.skip(1)
+                            fn any(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                                state.skip(1)
                             }
 
                             #[inline]
                             #[allow(dead_code)]
-                            fn skip<'i>(
-                                pos: ::pest::Position<'i>,
-                                _: &mut ::pest::ParserState<'i, Rule>
-                            ) -> ::std::result::Result<::pest::Position<'i>, ::pest::Position<'i>> {
-                                Ok(pos)
+                            fn skip(state: ::pest::ParserState<Rule>) -> ::pest::ParseResult<Rule> {
+                                Ok(state)
                             }
                         }
 
-                        ::pest::state(input, move |mut state, pos| {
+                        ::pest::state(input, |state| {
                             match rule {
-                                Rule::a => rules::a(pos, &mut state)
+                                Rule::a => rules::a(state)
                             }
                         })
                     }

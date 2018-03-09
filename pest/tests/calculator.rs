@@ -10,7 +10,7 @@
 #[macro_use]
 extern crate pest;
 
-use pest::{state, Error, Parser, ParserState, ParseResult};
+use pest::{Error, Parser, ParseResult, ParserState, state};
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 
@@ -25,7 +25,7 @@ enum Rule {
     times,
     divide,
     modulus,
-    power
+    power,
 }
 
 struct CalculatorParser;
@@ -37,7 +37,7 @@ impl Parser<Rule> for CalculatorParser {
                 s.sequence(|s| {
                     primary(s).and_then(|s| {
                         s.repeat(|s| {
-                            s.sequence( |s| {
+                            s.sequence(|s| {
                                 plus(s)
                                     .or_else(|s| minus(s))
                                     .or_else(|s| times(s))
@@ -54,11 +54,10 @@ impl Parser<Rule> for CalculatorParser {
 
         fn primary(state: ParserState<Rule>) -> ParseResult<Rule> {
             state.sequence(|s| {
-                    s.match_string("(")
-                        .and_then(|s| expression(s))
-                        .and_then(|s| s.match_string(")"))
-
-                })
+                s.match_string("(")
+                    .and_then(|s| expression(s))
+                    .and_then(|s| s.match_string(")"))
+            })
                 .or_else(|s| number(s))
         }
 
@@ -101,7 +100,7 @@ impl Parser<Rule> for CalculatorParser {
             state.rule(Rule::power, |s| s.match_string("^"))
         }
 
-        state(input,|state| match rule {
+        state(input, |state| match rule {
             Rule::expression => expression(state),
             Rule::primary => primary(state),
             Rule::number => number(state),
