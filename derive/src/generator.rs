@@ -619,45 +619,31 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             quote! {
                 #string_tokens
 
-                strings[1..].iter().fold(state.skip_until(strings[0]), |begin_result, string| {
-                    match begin_result {
-                        Ok(begin_state) => {
-                            let begin_pos = begin_state.get_position();
-                            match begin_state.skip_until(string) {
-                                Ok(end_state) => {
-                                    if end_state.get_position() < begin_pos {
-                                        Ok(end_state)
-                                    } else {
-                                        Ok(end_state.with_updated_position(begin_pos))
-                                    }
-                                }
-                                Err(end_state) => Ok(end_state.with_updated_position(begin_pos))
-                            }
-                        }
-                        Err(begin_state) => {
-                            let begin_pos = begin_state.get_position();
-                            match begin_state.skip_until(string) {
-                                Ok(end_state) => Ok(end_state),
-                                Err(end_state) => Ok(end_state.with_updated_position(begin_pos))
-                            }
-                        }
-                    }
-                })
+                let pos = state.get_position();
 
-//                strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
-//                    match (result, pos.clone().skip_until(string)) {
-//                        (Ok(lhs), Ok(rhs)) => {
-//                            if rhs.pos() < lhs.pos() {
-//                                Ok(rhs)
-//                            } else {
-//                                Ok(lhs)
-//                            }
-//                        }
-//                        (Ok(lhs), Err(_)) => Ok(lhs),
-//                        (Err(_), Ok(rhs)) => Ok(rhs),
-//                        (Err(lhs), Err(_)) => Err(lhs)
-//                    }
-//                })
+                let new_pos = strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
+                    match (result, pos.clone().skip_until(string)) {
+                        (Ok(lhs), Ok(rhs)) => {
+                            if rhs.pos() < lhs.pos() {
+                                Ok(rhs)
+                            } else {
+                                Ok(lhs)
+                            }
+                        }
+                        (Ok(lhs), Err(_)) => Ok(lhs),
+                        (Err(_), Ok(rhs)) => Ok(rhs),
+                        (Err(lhs), Err(_)) => Err(lhs)
+                    }
+                });
+
+                match new_pos {
+                    Ok(pos) => {
+                        Ok(state.with_updated_position(pos))
+                    }
+                    Err(pos) => {
+                        Err(state.with_updated_position(pos))
+                    }
+                }
             }
         }
         Expr::Push(expr) => {
@@ -835,30 +821,31 @@ mod tests {
             quote! {
                 let strings = ["a", "b"];
 
-                strings[1..].iter().fold(state.skip_until(strings[0]), |begin_result, string| {
-                    match begin_result {
-                        Ok(begin_state) => {
-                            let begin_pos = begin_state.get_position();
-                            match begin_state.skip_until(string) {
-                                Ok(end_state) => {
-                                    if end_state.get_position() < begin_pos {
-                                        Ok(end_state)
-                                    } else {
-                                        Ok(end_state.with_updated_position(begin_pos))
-                                    }
-                                }
-                                Err(end_state) => Ok(end_state.with_updated_position(begin_pos))
+                let pos = state.get_position();
+
+                let new_pos = strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
+                    match (result, pos.clone().skip_until(string)) {
+                        (Ok(lhs), Ok(rhs)) => {
+                            if rhs.pos() < lhs.pos() {
+                                Ok(rhs)
+                            } else {
+                                Ok(lhs)
                             }
                         }
-                        Err(begin_state) => {
-                            let begin_pos = begin_state.get_position();
-                            match begin_state.skip_until(string) {
-                                Ok(end_state) => Ok(end_state),
-                                Err(end_state) => Ok(end_state.with_updated_position(begin_pos))
-                            }
-                        }
+                        (Ok(lhs), Err(_)) => Ok(lhs),
+                        (Err(_), Ok(rhs)) => Ok(rhs),
+                        (Err(lhs), Err(_)) => Err(lhs)
                     }
-                })
+                });
+
+                match new_pos {
+                    Ok(pos) => {
+                        Ok(state.with_updated_position(pos))
+                    }
+                    Err(pos) => {
+                        Err(state.with_updated_position(pos))
+                    }
+                }
             }
         );
     }

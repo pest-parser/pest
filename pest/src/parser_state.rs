@@ -540,7 +540,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         let result = f(self);
 
-        // TODO: Don't like the code duplication here...
         match result {
             Ok(mut new_state) => {
                 if should_toggle {
