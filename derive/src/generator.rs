@@ -463,15 +463,14 @@ fn generate_expr(expr: Expr) -> Tokens {
 
             quote! {
                 {
-                    let start = state.get_position();
+                    let start = state.clone_position();
 
                     match #expr {
-                        Ok(mut new_state) => {
-                            let end = new_state.get_position();
-                            new_state.stack.push(start.span(&end));
-                            Ok(new_state)
+                        Ok(mut state) => {
+                            state.stack.push(start.span(state.get_position()));
+                            Ok(state)
                         }
-                        Err(new_state) => Err(new_state)
+                        Err(state) => Err(state)
                     }
                 }
             }
@@ -619,7 +618,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             quote! {
                 #string_tokens
 
-                let pos = state.get_position();
+                let pos = state.clone_position();
 
                 let new_pos = strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
                     match (result, pos.clone().skip_until(string)) {
@@ -651,15 +650,14 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
 
             quote! {
                 {
-                    let start = state.get_position();
+                    let start = state.clone_position();
 
                     match #expr {
-                        Ok(mut new_state) => {
-                            let end = new_state.get_position();
-                            new_state.stack.push(start.span(&end));
-                            Ok(new_state)
+                        Ok(mut state) => {
+                            state.stack.push(start.span(state.get_position()));
+                            Ok(state)
                         }
-                        Err(new_state) => Err(new_state)
+                        Err(state) => Err(state)
                     }
                 }
             }
@@ -821,7 +819,7 @@ mod tests {
             quote! {
                 let strings = ["a", "b"];
 
-                let pos = state.get_position();
+                let pos = state.clone_position();
 
                 let new_pos = strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
                     match (result, pos.clone().skip_until(string)) {

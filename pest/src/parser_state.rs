@@ -103,7 +103,13 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     ///
     ///
-    pub fn get_position(&self) -> Position<'i> {
+    pub fn get_position(&'i self) -> &'i Position<'i> {
+        &self.position
+    }
+
+    ///
+    ///
+    pub fn clone_position(&self) -> Position<'i> {
         self.position.clone()
     }
 
@@ -289,7 +295,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
     {
         let token_index = self.queue.len();
-        let initial_pos = self.get_position();
+        let initial_pos = self.clone_position();
 
         let result = f(self);
 
@@ -476,7 +482,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             }
         };
 
-        let initial_pos = self.get_position();
+        let initial_pos = self.clone_position();
 
         let result = f(self);
 
