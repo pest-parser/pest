@@ -103,7 +103,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     ///
     ///
-    pub fn get_position(&'i self) -> &'i Position<'i> {
+    pub fn get_position(&self) -> &Position<'i> {
         &self.position
     }
 

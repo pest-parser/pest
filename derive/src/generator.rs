@@ -619,22 +619,23 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             quote! {
                 #string_tokens
 
-                let pos = state.clone_position();
-
-                let new_pos = strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
-                    match (result, pos.clone().skip_until(string)) {
-                        (Ok(lhs), Ok(rhs)) => {
-                            if rhs.pos() < lhs.pos() {
-                                Ok(rhs)
-                            } else {
-                                Ok(lhs)
+                let new_pos = strings[1..].iter().fold(
+                    state.get_position().clone().skip_until(strings[0]),
+                    |result, string| {
+                        match (result, state.get_position().clone().skip_until(string)) {
+                            (Ok(lhs), Ok(rhs)) => {
+                                if rhs.pos() < lhs.pos() {
+                                    Ok(rhs)
+                                } else {
+                                    Ok(lhs)
+                                }
                             }
+                            (Ok(lhs), Err(_)) => Ok(lhs),
+                            (Err(_), Ok(rhs)) => Ok(rhs),
+                            (Err(lhs), Err(_)) => Err(lhs)
                         }
-                        (Ok(lhs), Err(_)) => Ok(lhs),
-                        (Err(_), Ok(rhs)) => Ok(rhs),
-                        (Err(lhs), Err(_)) => Err(lhs)
                     }
-                });
+                );
 
                 match new_pos {
                     Ok(pos) => {
@@ -821,22 +822,23 @@ mod tests {
             quote! {
                 let strings = ["a", "b"];
 
-                let pos = state.clone_position();
-
-                let new_pos = strings[1..].iter().fold(pos.clone().skip_until(strings[0]), |result, string| {
-                    match (result, pos.clone().skip_until(string)) {
-                        (Ok(lhs), Ok(rhs)) => {
-                            if rhs.pos() < lhs.pos() {
-                                Ok(rhs)
-                            } else {
-                                Ok(lhs)
+                let new_pos = strings[1..].iter().fold(
+                    state.get_position().clone().skip_until(strings[0]),
+                    |result, string| {
+                        match (result, state.get_position().clone().skip_until(string)) {
+                            (Ok(lhs), Ok(rhs)) => {
+                                if rhs.pos() < lhs.pos() {
+                                    Ok(rhs)
+                                } else {
+                                    Ok(lhs)
+                                }
                             }
+                            (Ok(lhs), Err(_)) => Ok(lhs),
+                            (Err(_), Ok(rhs)) => Ok(rhs),
+                            (Err(lhs), Err(_)) => Err(lhs)
                         }
-                        (Ok(lhs), Err(_)) => Ok(lhs),
-                        (Err(_), Ok(rhs)) => Ok(rhs),
-                        (Err(lhs), Err(_)) => Err(lhs)
                     }
-                });
+                );
 
                 match new_pos {
                     Ok(pos) => {
