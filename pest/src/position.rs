@@ -62,12 +62,6 @@ impl<'i> Position<'i> {
         self.pos
     }
 
-    #[inline]
-    pub fn set_pos(mut self, new_p: usize) -> Self {
-        self.pos = new_p;
-        self
-    }
-
     /// Creates a `Span` from two `Position`s.
     ///
     /// # Panics
