@@ -218,50 +218,91 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i,
     errors
 }
 
-fn is_non_progressing<'i>(expr: &ParserExpr<'i>) -> bool {
+fn is_non_progressing<'i>(
+    expr: &ParserExpr<'i>,
+    rules: &HashMap<String, &ParserNode<'i>>,
+    trace: &mut Vec<String>
+) -> bool {
     match *expr {
         ParserExpr::Str(ref string) => string == "",
-        ParserExpr::Ident(ref ident) => ident == "soi" || ident == "eoi",
+        ParserExpr::Ident(ref ident) => {
+            if ident == "soi" || ident == "eoi" {
+                return true;
+            }
+
+            if !trace.contains(ident) {
+                if let Some(node) = rules.get(ident) {
+                    trace.push(ident.clone());
+                    let result = is_non_progressing(&node.expr, rules, trace);
+                    trace.pop().unwrap();
+
+                    return result;
+                }
+            }
+
+            false
+        }
         ParserExpr::PosPred(_) => true,
         ParserExpr::NegPred(_) => true,
         ParserExpr::Seq(ref lhs, ref rhs) => {
-            is_non_progressing(&lhs.expr) && is_non_progressing(&rhs.expr)
+            is_non_progressing(&lhs.expr, rules, trace) && is_non_progressing(&rhs.expr, rules, trace)
         }
         ParserExpr::Choice(ref lhs, ref rhs) => {
-            is_non_progressing(&lhs.expr) || is_non_progressing(&rhs.expr)
+            is_non_progressing(&lhs.expr, rules, trace) || is_non_progressing(&rhs.expr, rules, trace)
         }
         _ => false
     }
 }
 
-fn is_non_failing<'i>(expr: &ParserExpr<'i>) -> bool {
+fn is_non_failing<'i>(
+    expr: &ParserExpr<'i>,
+    rules: &HashMap<String, &ParserNode<'i>>,
+    trace: &mut Vec<String>
+) -> bool {
     match *expr {
         ParserExpr::Str(ref string) => string == "",
+        ParserExpr::Ident(ref ident) => {
+            if !trace.contains(ident) {
+                if let Some(node) = rules.get(ident) {
+                    trace.push(ident.clone());
+                    let result = is_non_failing(&node.expr, rules, trace);
+                    trace.pop().unwrap();
+
+                    return result;
+                }
+            }
+
+            false
+        }
         ParserExpr::Opt(_) => true,
         ParserExpr::Rep(_) => true,
-        ParserExpr::Seq(ref lhs, ref rhs) => is_non_failing(&lhs.expr) && is_non_failing(&rhs.expr),
+        ParserExpr::Seq(ref lhs, ref rhs) => is_non_failing(&lhs.expr, rules, trace) && is_non_failing(&rhs.expr, rules, trace),
         ParserExpr::Choice(ref lhs, ref rhs) => {
-            is_non_failing(&lhs.expr) || is_non_failing(&rhs.expr)
+            is_non_failing(&lhs.expr, rules, trace) || is_non_failing(&rhs.expr, rules, trace)
         }
         _ => false
     }
 }
 
 fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i, Rule>> {
+    let map = to_hash_map(rules);
+
     rules
         .into_iter()
         .filter_map(|rule| match rule.node.expr {
             ParserExpr::Rep(ref other)
             | ParserExpr::RepOnce(ref other)
             | ParserExpr::RepMin(ref other, _) => {
-                if is_non_failing(&other.expr) {
+                let trace = &mut vec![rule.name.clone()];
+
+                if is_non_failing(&other.expr, &map, trace) {
                     Some(Error::CustomErrorSpan {
                         message: "expression inside repetition is non-failing and will repeat \
                                   infinitely"
                             .to_owned(),
                         span: rule.node.span.clone()
                     })
-                } else if is_non_progressing(&other.expr) {
+                } else if is_non_progressing(&other.expr, &map, trace) {
                     Some(Error::CustomErrorSpan {
                         message: "expression inside repetition is non-progressing and will repeat \
                                   infinitely"
@@ -278,11 +319,15 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<
 }
 
 fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i, Rule>> {
+    let map = to_hash_map(rules);
+
     rules
         .into_iter()
         .filter_map(|rule| {
             if rule.name == "whitespace" || rule.name == "comment" {
-                if is_non_failing(&rule.node.expr) {
+                let trace = &mut vec![rule.name.clone()];
+
+                if is_non_failing(&rule.node.expr, &map, trace) {
                     Some(Error::CustomErrorSpan {
                         message: format!(
                             "{} is non-failing and will repeat infinitely",
@@ -290,7 +335,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Ve
                         ),
                         span: rule.node.span.clone()
                     })
-                } else if is_non_progressing(&rule.node.expr) {
+                } else if is_non_progressing(&rule.node.expr, &map, trace) {
                     Some(Error::CustomErrorSpan {
                         message: format!(
                             "{} is non-progressing and will repeat infinitely",
@@ -356,7 +401,7 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
                 None
             }
             ParserExpr::Seq(ref lhs, ref rhs) => {
-                if is_non_failing(&lhs.expr) {
+                if is_non_failing(&lhs.expr, rules, &mut vec![trace.last().unwrap().clone()]) {
                     check_expr(rhs, rules, trace)
                 } else {
                     check_expr(lhs, rules, trace)
@@ -518,6 +563,22 @@ mod tests {
     #[test]
     #[should_panic(expected = "grammar error
 
+ --> 1:18
+  |
+1 | a = { \"\" } b = { a* }
+  |                  ^^
+  |
+  = expression inside repetition is non-failing and will repeat infinitely")]
+    fn indirect_non_failing_repetition() {
+        let input = "a = { \"\" } b = { a* }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
  --> 1:7
   |
 1 | a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }
@@ -526,6 +587,22 @@ mod tests {
   = expression inside repetition is non-progressing and will repeat infinitely")]
     fn non_progressing_repetition() {
         let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:20
+  |
+1 | a = { !\"a\" } b = { a* }
+  |                    ^^
+  |
+  = expression inside repetition is non-progressing and will repeat infinitely")]
+    fn indirect_non_progressing_repetition() {
+        let input = "a = { !\"a\" } b = { a* }";
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap()
         ));
