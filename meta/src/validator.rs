@@ -285,11 +285,11 @@ fn is_non_failing<'i>(
 }
 
 fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i, Rule>> {
+    let mut result = vec![];
     let map = to_hash_map(rules);
 
-    rules
-        .into_iter()
-        .filter_map(|rule| match rule.node.expr {
+    for rule in rules.into_iter() {
+        let mut errors = rule.node.clone().filter_map_top_down(|node| match node.expr {
             ParserExpr::Rep(ref other)
             | ParserExpr::RepOnce(ref other)
             | ParserExpr::RepMin(ref other, _) => {
@@ -300,22 +300,26 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<
                         message: "expression inside repetition is non-failing and will repeat \
                                   infinitely"
                             .to_owned(),
-                        span: rule.node.span.clone()
+                        span: node.span.clone()
                     })
                 } else if is_non_progressing(&other.expr, &map, trace) {
                     Some(Error::CustomErrorSpan {
                         message: "expression inside repetition is non-progressing and will repeat \
                                   infinitely"
                             .to_owned(),
-                        span: rule.node.span.clone()
+                        span: node.span.clone()
                     })
                 } else {
                     None
                 }
             }
             _ => None
-        })
-        .collect()
+        });
+
+        result.append(&mut errors);
+    }
+
+    result
 }
 
 fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i, Rule>> {
@@ -571,6 +575,22 @@ mod tests {
   = expression inside repetition is non-failing and will repeat infinitely")]
     fn indirect_non_failing_repetition() {
         let input = "a = { \"\" } b = { a* }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:20
+  |
+1 | a = { \"a\" ~ (\"b\" ~ (\"\")*) }
+  |                    ^---^
+  |
+  = expression inside repetition is non-failing and will repeat infinitely")]
+    fn deep_non_failing_repetition() {
+        let input = "a = { \"a\" ~ (\"b\" ~ (\"\")*) }";
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap()
         ));
