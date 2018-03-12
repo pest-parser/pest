@@ -41,12 +41,12 @@ pub struct ParserNode<'i> {
 
 impl<'i> ParserNode<'i> {
     pub fn filter_map_top_down<F, T>(self, mut f: F) -> Vec<T>
-        where
-            F: FnMut(ParserNode<'i>) -> Option<T>
+    where
+        F: FnMut(ParserNode<'i>) -> Option<T>
     {
         pub fn filter_internal<'i, F, T>(node: ParserNode<'i>, f: &mut F, result: &mut Vec<T>)
-            where
-                F: FnMut(ParserNode<'i>) -> Option<T>
+        where
+            F: FnMut(ParserNode<'i>) -> Option<T>
         {
             if let Some(value) = f(node.clone()) {
                 result.push(value);

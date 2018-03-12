@@ -245,10 +245,12 @@ fn is_non_progressing<'i>(
         ParserExpr::PosPred(_) => true,
         ParserExpr::NegPred(_) => true,
         ParserExpr::Seq(ref lhs, ref rhs) => {
-            is_non_progressing(&lhs.expr, rules, trace) && is_non_progressing(&rhs.expr, rules, trace)
+            is_non_progressing(&lhs.expr, rules, trace)
+                && is_non_progressing(&rhs.expr, rules, trace)
         }
         ParserExpr::Choice(ref lhs, ref rhs) => {
-            is_non_progressing(&lhs.expr, rules, trace) || is_non_progressing(&rhs.expr, rules, trace)
+            is_non_progressing(&lhs.expr, rules, trace)
+                || is_non_progressing(&rhs.expr, rules, trace)
         }
         _ => false
     }
@@ -276,7 +278,9 @@ fn is_non_failing<'i>(
         }
         ParserExpr::Opt(_) => true,
         ParserExpr::Rep(_) => true,
-        ParserExpr::Seq(ref lhs, ref rhs) => is_non_failing(&lhs.expr, rules, trace) && is_non_failing(&rhs.expr, rules, trace),
+        ParserExpr::Seq(ref lhs, ref rhs) => {
+            is_non_failing(&lhs.expr, rules, trace) && is_non_failing(&rhs.expr, rules, trace)
+        }
         ParserExpr::Choice(ref lhs, ref rhs) => {
             is_non_failing(&lhs.expr, rules, trace) || is_non_failing(&rhs.expr, rules, trace)
         }
@@ -289,32 +293,35 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<
     let map = to_hash_map(rules);
 
     for rule in rules.into_iter() {
-        let mut errors = rule.node.clone().filter_map_top_down(|node| match node.expr {
-            ParserExpr::Rep(ref other)
-            | ParserExpr::RepOnce(ref other)
-            | ParserExpr::RepMin(ref other, _) => {
-                let trace = &mut vec![rule.name.clone()];
+        let mut errors = rule.node
+            .clone()
+            .filter_map_top_down(|node| match node.expr {
+                ParserExpr::Rep(ref other)
+                | ParserExpr::RepOnce(ref other)
+                | ParserExpr::RepMin(ref other, _) => {
+                    let trace = &mut vec![rule.name.clone()];
 
-                if is_non_failing(&other.expr, &map, trace) {
-                    Some(Error::CustomErrorSpan {
-                        message: "expression inside repetition is non-failing and will repeat \
-                                  infinitely"
-                            .to_owned(),
-                        span: node.span.clone()
-                    })
-                } else if is_non_progressing(&other.expr, &map, trace) {
-                    Some(Error::CustomErrorSpan {
-                        message: "expression inside repetition is non-progressing and will repeat \
-                                  infinitely"
-                            .to_owned(),
-                        span: node.span.clone()
-                    })
-                } else {
-                    None
+                    if is_non_failing(&other.expr, &map, trace) {
+                        Some(Error::CustomErrorSpan {
+                            message: "expression inside repetition is non-failing and will repeat \
+                                      infinitely"
+                                .to_owned(),
+                            span: node.span.clone()
+                        })
+                    } else if is_non_progressing(&other.expr, &map, trace) {
+                        Some(Error::CustomErrorSpan {
+                            message:
+                                "expression inside repetition is non-progressing and will repeat \
+                                 infinitely"
+                                    .to_owned(),
+                            span: node.span.clone()
+                        })
+                    } else {
+                        None
+                    }
                 }
-            }
-            _ => None
-        });
+                _ => None
+            });
 
         result.append(&mut errors);
     }
