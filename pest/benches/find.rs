@@ -14,29 +14,34 @@ extern crate test;
 
 use test::Bencher;
 
-use pest::Position;
+use pest::ParserState;
+
+#[allow(dead_code, non_camel_case_types)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+enum Rule {
+    test_rule
+}
 
 #[bench]
 fn find(b: &mut Bencher) {
-    let pos = Position::from_start("aaaaaaaaab");
-
-    b.iter(|| pos.clone().skip_until("b").unwrap());
+    b.iter(|| {
+        let state: ParserState<Rule> = ParserState::new("aaaaaaaaab");
+        state.skip_until("b").unwrap()
+    });
 }
 
 #[bench]
 fn repeated_skip(b: &mut Bencher) {
-    let pos = Position::from_start("aaaaaaaaab");
-
     b.iter(|| {
-        pos.clone()
-            .sequence(|pos| {
-                pos.repeat(|pos| {
-                    pos.sequence(|pos| {
-                        pos.lookahead(false, |pos| pos.match_string("b"))
-                            .and_then(|pos| pos.skip(1))
+        let state: ParserState<Rule> = ParserState::new("aaaaaaaaab");
+        state
+            .sequence(|state| {
+                state.repeat(|state| {
+                    state.sequence(|state| {
+                        state.lookahead(false, |state| state.match_string("b"))
+                            .and_then(|state| state.skip(1))
                     })
-                }).and_then(|pos| pos.match_string("b"))
-            })
-            .unwrap()
+                }).and_then(|state| state.match_string("b"))
+            }).unwrap()
     });
 }

@@ -67,16 +67,7 @@ pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i
 where
     F: FnOnce(ParserState<'i, R>) -> ParseResult<R>
 {
-    let state = ParserState {
-        position: Position::from_start(input),
-        queue: vec![],
-        lookahead: Lookahead::None,
-        pos_attempts: vec![],
-        neg_attempts: vec![],
-        attempt_pos: 0,
-        atomicity: Atomicity::NonAtomic,
-        stack: Stack::new()
-    };
+    let state = ParserState::new(input);
 
     match f(state) {
         Ok(s) => {
@@ -100,6 +91,21 @@ where
 }
 
 impl<'i, R: RuleType> ParserState<'i, R> {
+
+    ///
+    ///
+    pub fn new(input: &'i str) -> Self {
+        ParserState {
+            position: Position::from_start(input),
+            queue: vec![],
+            lookahead: Lookahead::None,
+            pos_attempts: vec![],
+            neg_attempts: vec![],
+            attempt_pos: 0,
+            atomicity: Atomicity::NonAtomic,
+            stack: Stack::new()
+        }
+    }
 
     ///
     ///
