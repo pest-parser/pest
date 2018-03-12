@@ -49,7 +49,7 @@ impl Expr {
     where
         F: FnMut(Expr) -> Expr
     {
-        pub fn map_internal<'i, F>(expr: Expr, f: &mut F) -> Expr
+        pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
         where
             F: FnMut(Expr) -> Expr
         {
@@ -118,7 +118,7 @@ impl Expr {
     where
         F: FnMut(Expr) -> Expr
     {
-        pub fn map_internal<'i, F>(expr: Expr, f: &mut F) -> Expr
+        pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
         where
             F: FnMut(Expr) -> Expr
         {
