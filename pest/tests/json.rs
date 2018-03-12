@@ -12,7 +12,7 @@ extern crate pest;
 
 use pest::{Error, Parser, ParseResult, ParserState, state};
 use pest::iterators::{Pair, Pairs};
-use pest::Span;
+use pest::{Position, Span};
 use std::collections::HashMap;
 
 #[allow(dead_code, non_camel_case_types)]
@@ -44,7 +44,7 @@ impl Parser<Rule> for JsonParser {
 
         fn object(state: ParserState<Rule>) -> ParseResult<Rule> {
             state.rule(Rule::object, |s| {
-                s.sequence(move |s| {
+                s.sequence(|s| {
                     s.match_string("{")
                         .and_then(|s| skip(s))
                         .and_then(|s| pair(s))
@@ -443,25 +443,25 @@ fn object() {
     };
 }
 
-//#[test]
-//fn ast() {
-//    let input = "{\"a\": [null, true, 3.4]}";
-//    let start = Position::from_start(input).skip(1).unwrap();
-//    let end = start.clone().skip(3).unwrap();
-//    let span = start.span(&end);
-//
-//    let mut pairs = HashMap::new();
-//    pairs.insert(
-//        span,
-//        Json::Array(vec![Json::Null, Json::Bool(true), Json::Number(3.4)])
-//    );
-//
-//    let ast = consume(
-//        JsonParser::parse(Rule::json, input)
-//            .unwrap()
-//            .next()
-//            .unwrap()
-//    );
-//
-//    assert_eq!(ast, Json::Object(pairs));
-//}
+#[test]
+fn ast() {
+    let input = "{\"a\": [null, true, 3.4]}";
+    let start = Position::from_start(input).skip(1).unwrap();
+    let end = start.clone().skip(3).unwrap();
+    let span = start.span(&end);
+
+    let mut pairs = HashMap::new();
+    pairs.insert(
+        span,
+        Json::Array(vec![Json::Null, Json::Bool(true), Json::Number(3.4)])
+    );
+
+    let ast = consume(
+        JsonParser::parse(Rule::json, input)
+            .unwrap()
+            .next()
+            .unwrap()
+    );
+
+    assert_eq!(ast, Json::Object(pairs));
+}
