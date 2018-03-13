@@ -347,7 +347,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     #[inline]
     pub fn match_string(mut self: Box<Self>, string: &str) -> ParseResult<'i, R> {
-        // TODO: Set up a macro for this...
         match self.position.clone().match_string(string) {
             Ok(pos) => {
                 self.position = pos;
@@ -362,7 +361,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     #[inline]
     pub fn match_insensitive(mut self: Box<Self>, string: &str) -> ParseResult<'i, R> {
-        // TODO: Set up a macro for this...
         match self.position.clone().match_insensitive(string) {
             Ok(pos) => {
                 self.position = pos;
@@ -377,7 +375,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     #[inline]
     pub fn match_range(mut self: Box<Self>, range: Range<char>) -> ParseResult<'i, R> {
-        // TODO: Set up a macro for this...
         match self.position.clone().match_range(range) {
             Ok(pos) => {
                 self.position = pos;
