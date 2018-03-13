@@ -619,10 +619,21 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             quote! {
                 #string_tokens
 
-                let new_pos = strings[1..].iter().fold(
-                    state.get_position().clone().skip_until(strings[0]),
-                    |result, string| {
-                        match (result, state.get_position().clone().skip_until(string)) {
+                let new_pos = strings[1..].iter().fold({
+                        let mut pos = state.clone_position();
+                        if pos.skip_until(strings[0]) {
+                            Ok(pos)
+                        } else {
+                            Err(pos)
+                        }
+                    }, |result, string| {
+                        let mut pos = state.clone_position();
+                        let new_result = if pos.skip_until(string) {
+                            Ok(pos)
+                        } else {
+                            Err(pos)
+                        };
+                        match (result, new_result) {
                             (Ok(lhs), Ok(rhs)) => {
                                 if rhs.pos() < lhs.pos() {
                                     Ok(rhs)
@@ -822,10 +833,21 @@ mod tests {
             quote! {
                 let strings = ["a", "b"];
 
-                let new_pos = strings[1..].iter().fold(
-                    state.get_position().clone().skip_until(strings[0]),
-                    |result, string| {
-                        match (result, state.get_position().clone().skip_until(string)) {
+                let new_pos = strings[1..].iter().fold({
+                        let mut pos = state.clone_position();
+                        if pos.skip_until(strings[0]) {
+                            Ok(pos)
+                        } else {
+                            Err(pos)
+                        }
+                    }, |result, string| {
+                        let mut pos = state.clone_position();
+                        let new_result = if pos.skip_until(string) {
+                            Ok(pos)
+                        } else {
+                            Err(pos)
+                        };
+                        match (result, new_result) {
                             (Ok(lhs), Ok(rhs)) => {
                                 if rhs.pos() < lhs.pos() {
                                     Ok(rhs)

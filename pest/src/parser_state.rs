@@ -347,99 +347,64 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     #[inline]
     pub fn match_string(mut self: Box<Self>, string: &str) -> ParseResult<'i, R> {
-        match self.position.clone().match_string(string) {
-            Ok(pos) => {
-                self.position = pos;
-                Ok(self)
-            },
-            Err(pos) => {
-                self.position = pos;
-                Err(self)
-            }
+        if self.position.match_string(string) {
+            Ok(self)
+        } else {
+            Err(self)
         }
     }
 
     #[inline]
     pub fn match_insensitive(mut self: Box<Self>, string: &str) -> ParseResult<'i, R> {
-        match self.position.clone().match_insensitive(string) {
-            Ok(pos) => {
-                self.position = pos;
-                Ok(self)
-            },
-            Err(pos) => {
-                self.position = pos;
-                Err(self)
-            }
+        if self.position.match_insensitive(string) {
+            Ok(self)
+        } else {
+            Err(self)
         }
     }
 
     #[inline]
     pub fn match_range(mut self: Box<Self>, range: Range<char>) -> ParseResult<'i, R> {
-        match self.position.clone().match_range(range) {
-            Ok(pos) => {
-                self.position = pos;
-                Ok(self)
-            },
-            Err(pos) => {
-                self.position = pos;
-                Err(self)
-            }
+        if self.position.match_range(range) {
+            Ok(self)
+        } else {
+            Err(self)
         }
     }
 
     #[inline]
     pub fn skip(mut self: Box<Self>, n: usize) -> ParseResult<'i, R> {
-        match self.position.clone().skip(n) {
-            Ok(pos) => {
-                self.position = pos;
-                Ok(self)
-            },
-            Err(pos) => {
-                self.position = pos;
-                Err(self)
-            }
+        if self.position.skip(n) {
+            Ok(self)
+        } else {
+            Err(self)
         }
     }
 
     #[inline]
     pub fn skip_until(mut self: Box<Self>, string: &str) -> ParseResult<'i, R> {
-        match self.position.clone().skip_until(string) {
-            Ok(pos) => {
-                self.position = pos;
-                Ok(self)
-            },
-            Err(pos) => {
-                self.position = pos;
-                Err(self)
-            }
+        if self.position.skip_until(string) {
+            Ok(self)
+        } else {
+            Err(self)
         }
     }
 
     #[inline]
-    pub fn start_of_input(mut self: Box<Self>) -> ParseResult<'i, R> {
-        match self.position.clone().at_start() {
-            Ok(pos) => {
-                self.position = pos;
-                Ok(self)
-            },
-            Err(pos) => {
-                self.position = pos;
-                Err(self)
-            }
+    pub fn start_of_input(self: Box<Self>) -> ParseResult<'i, R> {
+        if self.position.at_start() {
+            Ok(self)
+        } else {
+            Err(self)
         }
     }
 
     #[inline]
-    pub fn end_of_input(mut self: Box<Self>) -> ParseResult<'i, R> {
-        match self.position.clone().at_end() {
-            Ok(pos) => {
-                self.position = pos;
-                Ok(self)
-            },
-            Err(pos) => {
-                self.position = pos;
-                Err(self)
-            }
+    pub fn end_of_input(self: Box<Self>) -> ParseResult<'i, R> {
+        if self.position.at_end() {
+            Ok(self)
+        } else {
+            Err(self)
         }
     }
 

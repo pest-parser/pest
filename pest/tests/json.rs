@@ -446,8 +446,10 @@ fn object() {
 #[test]
 fn ast() {
     let input = "{\"a\": [null, true, 3.4]}";
-    let start = Position::from_start(input).skip(1).unwrap();
-    let end = start.clone().skip(3).unwrap();
+    let mut start = Position::from_start(input);
+    start.skip(1);
+    let mut end = start.clone();
+    end.skip(3);
     let span = start.span(&end);
 
     let mut pairs = HashMap::new();

@@ -38,7 +38,8 @@ impl<'i> Span<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let mut end = start.clone();
+    /// end.match_string("ab");
     /// let span = start.span(&end);
     ///
     /// assert_eq!(span.start(), 0);
@@ -56,7 +57,8 @@ impl<'i> Span<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let mut end = start.clone();
+    /// end.match_string("ab");
     /// let span = start.span(&end);
     ///
     /// assert_eq!(span.end(), 2);
@@ -74,7 +76,8 @@ impl<'i> Span<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let mut end = start.clone();
+    /// end.match_string("ab");
     /// let span = start.clone().span(&end);
     ///
     /// assert_eq!(span.start_pos(), start);
@@ -93,7 +96,8 @@ impl<'i> Span<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let mut end = start.clone();
+    /// end.match_string("ab");
     /// let span = start.span(&end);
     ///
     /// assert_eq!(span.end_pos(), end);
@@ -112,7 +116,8 @@ impl<'i> Span<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let mut end = start.clone();
+    /// end.match_string("ab");
     /// let span = start.clone().span(&end);
     ///
     /// assert_eq!(span.split(), (start, end));
@@ -133,8 +138,10 @@ impl<'i> Span<'i> {
     /// ```
     /// # use pest::Position;
     /// let input = "abc";
-    /// let start = Position::from_start(input).skip(1).unwrap();
-    /// let end = start.clone().match_string("b").unwrap();
+    /// let mut start = Position::from_start(input);
+    /// start.skip(1);
+    /// let mut end = start.clone();
+    /// end.match_string("b");
     /// let span = start.span(&end);
     ///
     /// assert_eq!(span.as_str(), "b");

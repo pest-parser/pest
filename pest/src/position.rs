@@ -52,10 +52,12 @@ impl<'i> Position<'i> {
     /// ```
     /// # use pest::Position;
     /// let input = "ab";
-    /// let start = Position::from_start(input);
+    /// let mut start = Position::from_start(input);
     ///
     /// assert_eq!(start.pos(), 0);
-    /// assert_eq!(start.match_string("ab").unwrap().pos(), 2);
+    ///
+    /// start.match_string("ab");
+    /// assert_eq!(start.pos(), 2);
     /// ```
     #[inline]
     pub fn pos(&self) -> usize {
@@ -74,7 +76,8 @@ impl<'i> Position<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let mut end = start.clone();
+    /// end.match_string("ab");
     /// let span = start.span(&end);
     ///
     /// assert_eq!(span.start(), 0);
@@ -97,8 +100,8 @@ impl<'i> Position<'i> {
     /// ```
     /// # use pest::Position;
     /// let input = "\na";
-    /// let start = Position::from_start(input);
-    /// let pos = start.match_string("\na").unwrap();
+    /// let mut pos = Position::from_start(input);
+    /// pos.match_string("\na");
     ///
     /// assert_eq!(pos.line_col(), (2, 2));
     /// ```
@@ -155,8 +158,8 @@ impl<'i> Position<'i> {
     /// ```
     /// # use pest::Position;
     /// let input = "\na";
-    /// let start = Position::from_start(input);
-    /// let pos = start.match_string("\na").unwrap();
+    /// let mut pos = Position::from_start(input);
+    /// pos.match_string("\na");
     ///
     /// assert_eq!(pos.line_of(), "a");
     /// ```
@@ -225,18 +228,15 @@ impl<'i> Position<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let mut end = start.clone();
+    /// end.match_string("ab");
     ///
-    /// assert_eq!(start.clone().at_start(), Ok(start));
-    /// assert_eq!(end.clone().at_start(), Err(end));
+    /// assert_eq!(start.clone().at_start(), true);
+    /// assert_eq!(end.clone().at_start(), false);
     /// ```
     #[inline]
-    pub fn at_start(self) -> Result<Position<'i>, Position<'i>> {
-        if self.pos == 0 {
-            Ok(self)
-        } else {
-            Err(self)
-        }
+    pub fn at_start(&self) -> bool {
+        self.pos == 0
     }
 
     /// Returns `Ok` with the current `Position` if it is at the end of its `&str` or `Err` of the
@@ -248,18 +248,15 @@ impl<'i> Position<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let mut end = start.clone();
+    /// end.match_string("ab");
     ///
-    /// assert_eq!(start.clone().at_end(), Err(start));
-    /// assert_eq!(end.clone().at_end(), Ok(end));
+    /// assert_eq!(start.clone().at_end(), false);
+    /// assert_eq!(end.clone().at_end(), true);
     /// ```
     #[inline]
-    pub fn at_end(self) -> Result<Position<'i>, Position<'i>> {
-        if self.pos == self.input.len() {
-            Ok(self)
-        } else {
-            Err(self)
-        }
+    pub fn at_end(&self) -> bool {
+        self.pos == self.input.len()
     }
 
     /// Skips `n` `char`s from the `Position` and returns `Ok` with the new `Position` if the skip
@@ -272,11 +269,11 @@ impl<'i> Position<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
-    /// assert_eq!(start.clone().skip(2).unwrap().pos(), 2);
-    /// assert_eq!(start.clone().skip(3), Err(start));
+    /// assert_eq!(start.clone().skip(2), true);
+    /// assert_eq!(start.clone().skip(3), false);
     /// ```
     #[inline]
-    pub fn skip(mut self, n: usize) -> Result<Position<'i>, Position<'i>> {
+    pub fn skip(&mut self, n: usize) -> bool {
         let skipped = {
             let mut len = 0;
             // Position's pos is always a UTF-8 border.
@@ -286,7 +283,7 @@ impl<'i> Position<'i> {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
                 } else {
-                    return Err(self);
+                    return false;
                 }
             }
 
@@ -294,7 +291,7 @@ impl<'i> Position<'i> {
         };
 
         self.pos += skipped;
-        Ok(self)
+        true
     }
 
     /// Skips until the first occurrence of `string`.
@@ -306,30 +303,30 @@ impl<'i> Position<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
-    /// assert_eq!(start.clone().skip_until("a").unwrap().pos(), 0);
-    /// assert_eq!(start.clone().skip_until("b").unwrap().pos(), 1);
-    /// assert_eq!(start.clone().skip_until("c"), Err(start));
+    /// assert_eq!(start.clone().skip_until("a"), true);
+    /// assert_eq!(start.clone().skip_until("b"), true);
+    /// assert_eq!(start.clone().skip_until("c"), false);
     /// ```
     #[inline]
-    pub fn skip_until(mut self, string: &str) -> Result<Position<'i>, Position<'i>> {
+    pub fn skip_until(&mut self, string: &str) -> bool {
         let mut current = self.pos;
         let slice = string.as_bytes();
 
         while let Some(pos) = memchr::memchr(slice[0], &self.input[current..]) {
             if slice.len() == 1 {
                 self.pos = current + pos;
-                return Ok(self);
+                return true;
             } else {
                 if slice == &self.input[current + pos..current + pos + slice.len()] {
                     self.pos = current + pos;
-                    return Ok(self);
+                    return true;
                 } else {
                     current += pos + 1;
                 }
             }
         }
 
-        Err(self)
+        false
     }
 
     /// Matches `string` from the `Position` and returns `Ok` with the new `Position` if a match was
@@ -342,11 +339,11 @@ impl<'i> Position<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
-    /// assert_eq!(start.clone().match_string("ab").unwrap().pos(), 2);
-    /// assert_eq!(start.clone().match_string("ac"), Err(start));
+    /// assert_eq!(start.clone().match_string("ab"), true);
+    /// assert_eq!(start.clone().match_string("ac"), false);
     /// ```
     #[inline]
-    pub fn match_string(mut self, string: &str) -> Result<Position<'i>, Position<'i>> {
+    pub fn match_string(&mut self, string: &str) -> bool {
         let matched = {
             let to = self.pos + string.len();
 
@@ -359,9 +356,9 @@ impl<'i> Position<'i> {
 
         if matched {
             self.pos += string.len();
-            Ok(self)
+            true
         } else {
-            Err(self)
+            false
         }
     }
 
@@ -375,11 +372,11 @@ impl<'i> Position<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
-    /// assert_eq!(start.clone().match_insensitive("AB").unwrap().pos(), 2);
-    /// assert_eq!(start.clone().match_insensitive("AC"), Err(start));
+    /// assert_eq!(start.clone().match_insensitive("AB"), true);
+    /// assert_eq!(start.clone().match_insensitive("AC"), false);
     /// ```
     #[inline]
-    pub fn match_insensitive(mut self, string: &str) -> Result<Position<'i>, Position<'i>> {
+    pub fn match_insensitive(&mut self, string: &str) -> bool {
         let matched = {
             // Matching is safe since, even if the string does not fall on UTF-8 borders, that
             // particular slice is only used for comparison which will be handled correctly.
@@ -395,9 +392,9 @@ impl<'i> Position<'i> {
 
         if matched {
             self.pos += string.len();
-            Ok(self)
+            true
         } else {
-            Err(self)
+            false
         }
     }
 
@@ -411,11 +408,11 @@ impl<'i> Position<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
-    /// assert_eq!(start.clone().match_range('a'..'z').unwrap().pos(), 1);
-    /// assert_eq!(start.clone().match_range('A'..'Z'), Err(start));
+    /// assert_eq!(start.clone().match_range('a'..'z'), true);
+    /// assert_eq!(start.clone().match_range('A'..'Z'), false);
     /// ```
     #[inline]
-    pub fn match_range(mut self, range: Range<char>) -> Result<Position<'i>, Position<'i>> {
+    pub fn match_range(&mut self, range: Range<char>) -> bool {
         let len = {
             // Cannot actually cause undefined behavior.
             let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
@@ -434,9 +431,9 @@ impl<'i> Position<'i> {
         match len {
             Some(len) => {
                 self.pos += len;
-                Ok(self)
+                true
             }
-            None => Err(self)
+            None => false
         }
     }
 
@@ -686,16 +683,16 @@ mod tests {
     #[test]
     fn empty() {
         let input = b"";
-        assert!(unsafe { new(input, 0) }.match_string("").is_ok());
-        assert!(!unsafe { new(input, 0) }.match_string("a").is_ok());
+        assert_eq!(unsafe { new(input, 0) }.match_string(""), true);
+        assert_eq!(!unsafe { new(input, 0) }.match_string("a"), true);
     }
 
     #[test]
     fn parts() {
         let input = b"asdasdf";
 
-        assert!(unsafe { new(input, 0) }.match_string("asd").is_ok());
-        assert!(unsafe { new(input, 3) }.match_string("asdf").is_ok());
+        assert_eq!(unsafe { new(input, 0) }.match_string("asd"), true);
+        assert_eq!(unsafe { new(input, 3) }.match_string("asdf"), true);
     }
 
     #[test]
@@ -752,8 +749,8 @@ mod tests {
     }
 
     fn measure_skip(input: &[u8], pos: usize, n: usize) -> Option<usize> {
-        let p = unsafe { new(input, pos) };
-        if let Ok(p) = p.skip(n) {
+        let mut p = unsafe { new(input, pos) };
+        if p.skip(n) {
             Some(p.pos - pos)
         } else {
             None
@@ -779,30 +776,42 @@ mod tests {
 
     #[test]
     fn skip_until() {
-        let input = b"ab ac";
+        let input = "ab ac";
+        let pos = Position::from_start(input);
 
-        assert_eq!(unsafe { new(input, 0) }.skip_until("a").unwrap().pos(), 0);
-        assert_eq!(unsafe { new(input, 0) }.skip_until("b").unwrap().pos(), 1);
-        assert_eq!(unsafe { new(input, 0) }.skip_until("ab").unwrap().pos(), 0);
-        assert_eq!(unsafe { new(input, 0) }.skip_until("ac").unwrap().pos(), 3);
+        let mut test_pos = pos.clone();
+        test_pos.skip_until("a");
+        assert_eq!(test_pos.pos(), 0);
+
+        test_pos = pos.clone();
+        test_pos.skip_until("b");
+        assert_eq!(test_pos.pos(), 1);
+
+        test_pos = pos.clone();
+        test_pos.skip_until("ab");
+        assert_eq!(test_pos.pos(), 0);
+
+        test_pos = pos.clone();
+        test_pos.skip_until("ac");
+        assert_eq!(test_pos.pos(), 3);
     }
 
     #[test]
     fn match_range() {
         let input = b"b";
 
-        assert!(unsafe { new(input, 0) }.match_range('a'..'c').is_ok());
-        assert!(unsafe { new(input, 0) }.match_range('b'..'b').is_ok());
-        assert!(!unsafe { new(input, 0) }.match_range('a'..'a').is_ok());
-        assert!(!unsafe { new(input, 0) }.match_range('c'..'c').is_ok());
-        assert!(unsafe { new(input, 0) }.match_range('a'..'嗨').is_ok());
+        assert_eq!(unsafe { new(input, 0) }.match_range('a'..'c'), true);
+        assert_eq!(unsafe { new(input, 0) }.match_range('b'..'b'), true);
+        assert_eq!(!unsafe { new(input, 0) }.match_range('a'..'a'), true);
+        assert_eq!(!unsafe { new(input, 0) }.match_range('c'..'c'), true);
+        assert_eq!(unsafe { new(input, 0) }.match_range('a'..'嗨'), true);
     }
 
     #[test]
     fn match_insensitive() {
         let input = b"AsdASdF";
 
-        assert!(unsafe { new(input, 0) }.match_insensitive("asd").is_ok());
-        assert!(unsafe { new(input, 3) }.match_insensitive("asdf").is_ok());
+        assert_eq!(unsafe { new(input, 0) }.match_insensitive("asd"), true);
+        assert_eq!(unsafe { new(input, 3) }.match_insensitive("asdf"), true);
     }
 }
