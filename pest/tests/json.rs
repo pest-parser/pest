@@ -38,11 +38,11 @@ struct JsonParser;
 
 impl Parser<Rule> for JsonParser {
     fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
-        fn json(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn json(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             value(state)
         }
 
-        fn object(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn object(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.rule(Rule::object, |s| {
                 s.sequence(|s| {
                     s.match_string("{")
@@ -71,7 +71,7 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn pair(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn pair(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.rule(Rule::pair, |s| {
                 s.sequence(|s| {
                     string(s)
@@ -83,7 +83,7 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn array(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn array(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.rule(Rule::array, |s| {
                 s.sequence(|s| {
                     s.match_string("[")
@@ -112,7 +112,7 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn value(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn value(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.rule(Rule::value, |s| {
                 string(s)
                     .or_else(|s| number(s))
@@ -123,7 +123,7 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn string(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn string(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.rule(Rule::string, |s| {
                 s.match_string("\"")
                     .and_then(|s| {
@@ -144,7 +144,7 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn escape(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn escape(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.sequence(|s| {
                 s.match_string("\\").and_then(|s| {
                     s.match_string("\"")
@@ -160,7 +160,7 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn unicode(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn unicode(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.sequence(|s| {
                 s.match_string("u")
                     .and_then(|s| hex(s))
@@ -169,13 +169,13 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn hex(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn hex(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.match_range('0'..'9')
                 .or_else(|s| s.match_range('a'..'f'))
                 .or_else(|s| s.match_range('A'..'F'))
         }
 
-        fn number(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn number(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.rule(Rule::number, |s| {
                 s.sequence(|s| {
                     s.optional(|s| s.match_string("-"))
@@ -195,7 +195,7 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn int(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn int(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.match_string("0").or_else(|s| {
                 s.sequence(|s| {
                     s.match_range('1'..'9')
@@ -204,7 +204,7 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn exp(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn exp(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.sequence(|s| {
                 s.match_string("E")
                     .or_else(|s| s.match_string("e"))
@@ -217,18 +217,18 @@ impl Parser<Rule> for JsonParser {
             })
         }
 
-        fn bool(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn bool(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.rule(Rule::bool, |s| {
                 s.match_string("true")
                     .or_else(|s| s.match_string("false"))
             })
         }
 
-        fn null(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn null(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.rule(Rule::null, |s| s.match_string("null"))
         }
 
-        fn skip(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn skip(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.repeat(|s| {
                 s.match_string(" ")
                     .or_else(|s| s.match_string("\t"))

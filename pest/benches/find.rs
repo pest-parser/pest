@@ -25,7 +25,7 @@ enum Rule {
 #[bench]
 fn find(b: &mut Bencher) {
     b.iter(|| {
-        let state: ParserState<Rule> = ParserState::new("aaaaaaaaab");
+        let state: Box<ParserState<Rule>> = ParserState::new("aaaaaaaaab");
         state.skip_until("b").unwrap()
     });
 }
@@ -33,7 +33,7 @@ fn find(b: &mut Bencher) {
 #[bench]
 fn repeated_skip(b: &mut Bencher) {
     b.iter(|| {
-        let state: ParserState<Rule> = ParserState::new("aaaaaaaaab");
+        let state: Box<ParserState<Rule>> = ParserState::new("aaaaaaaaab");
         state
             .sequence(|state| {
                 state.repeat(|state| {

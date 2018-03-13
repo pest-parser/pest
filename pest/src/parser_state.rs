@@ -48,7 +48,7 @@ pub struct ParserState<'i, R: RuleType> {
     pub stack: Stack<Span<'i>>
 }
 
-pub type ParseResult<'i, R> = Result<ParserState<'i, R>, ParserState<'i, R>>;
+pub type ParseResult<'i, R> = Result<Box<ParserState<'i, R>>, Box<ParserState<'i, R>>>;
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
 ///
@@ -65,7 +65,7 @@ pub type ParseResult<'i, R> = Result<ParserState<'i, R>, ParserState<'i, R>>;
 /// ```
 pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<'i, R>>
 where
-    F: FnOnce(ParserState<'i, R>) -> ParseResult<R>
+    F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<R>
 {
     let state = ParserState::new(input);
 
@@ -81,8 +81,8 @@ where
             s.neg_attempts.dedup();
 
             Err(Error::ParsingError {
-                positives: s.pos_attempts,
-                negatives: s.neg_attempts,
+                positives: s.pos_attempts.clone(),
+                negatives: s.neg_attempts.clone(),
                 // All attempted positions were legal.
                 pos: unsafe { position::new(input.as_bytes(), s.attempt_pos) }
             })
@@ -94,8 +94,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     ///
     ///
-    pub fn new(input: &'i str) -> Self {
-        ParserState {
+    pub fn new(input: &'i str) -> Box<Self> {
+        Box::new(ParserState {
             position: Position::from_start(input),
             queue: vec![],
             lookahead: Lookahead::None,
@@ -104,7 +104,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             attempt_pos: 0,
             atomicity: Atomicity::NonAtomic,
             stack: Stack::new()
-        }
+        })
     }
 
     ///
@@ -119,7 +119,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         self.position.clone()
     }
 
-    pub fn with_updated_position(mut self, position: Position<'i>) -> Self {
+    pub fn with_updated_position(mut self: Box<Self>, position: Position<'i>) -> Box<Self> {
         self.position = position;
         self
     }
@@ -146,12 +146,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn rule<F>(
-        mut self,
+        mut self: Box<Self>,
         rule: R,
         f: F
     ) -> ParseResult<'i, R>
     where
-        F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
+        F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<'i, R>
     {
         let actual_pos = self.position.pos();
         let index = self.queue.len();
@@ -196,9 +196,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                         _ => unreachable!()
                     };
 
+                    let new_pos= new_state.position.pos();
+
                     new_state.queue.push(QueueableToken::End {
                         rule,
-                        pos: new_state.position.pos()
+                        pos: new_pos
                     });
                 }
 
@@ -296,9 +298,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn sequence<F>(self, f: F) -> ParseResult<'i, R>
+    pub fn sequence<F>(self: Box<Self>, f: F) -> ParseResult<'i, R>
     where
-        F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
+        F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<'i, R>
     {
         let token_index = self.queue.len();
         let initial_pos = self.clone_position();
@@ -317,9 +319,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
-    pub fn repeat<F>(self, mut f: F) -> ParseResult<'i, R>
+    pub fn repeat<F>(self: Box<Self>, mut f: F) -> ParseResult<'i, R>
     where
-        F: FnMut(ParserState<'i, R>) -> ParseResult<'i, R>
+        F: FnMut(Box<ParserState<'i, R>>) -> ParseResult<'i, R>
     {
         let mut result = f(self);
 
@@ -332,9 +334,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
-    pub fn optional<F>(self, f: F) -> ParseResult<'i, R>
+    pub fn optional<F>(self: Box<Self>, f: F) -> ParseResult<'i, R>
     where
-        F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
+        F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<'i, R>
     {
         let result = f(self);
 
@@ -344,9 +346,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
-    pub fn match_string(mut self, string: &str) -> ParseResult<'i, R> {
+    pub fn match_string(mut self: Box<Self>, string: &str) -> ParseResult<'i, R> {
         // TODO: Set up a macro for this...
-        match self.position.match_string(string) {
+        match self.position.clone().match_string(string) {
             Ok(pos) => {
                 self.position = pos;
                 Ok(self)
@@ -359,9 +361,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
-    pub fn match_insensitive(mut self, string: &str) -> ParseResult<'i, R> {
+    pub fn match_insensitive(mut self: Box<Self>, string: &str) -> ParseResult<'i, R> {
         // TODO: Set up a macro for this...
-        match self.position.match_insensitive(string) {
+        match self.position.clone().match_insensitive(string) {
             Ok(pos) => {
                 self.position = pos;
                 Ok(self)
@@ -374,9 +376,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
-    pub fn match_range(mut self, range: Range<char>) -> ParseResult<'i, R> {
+    pub fn match_range(mut self: Box<Self>, range: Range<char>) -> ParseResult<'i, R> {
         // TODO: Set up a macro for this...
-        match self.position.match_range(range) {
+        match self.position.clone().match_range(range) {
             Ok(pos) => {
                 self.position = pos;
                 Ok(self)
@@ -389,8 +391,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
-    pub fn skip(mut self, n: usize) -> ParseResult<'i, R> {
-        match self.position.skip(n) {
+    pub fn skip(mut self: Box<Self>, n: usize) -> ParseResult<'i, R> {
+        match self.position.clone().skip(n) {
             Ok(pos) => {
                 self.position = pos;
                 Ok(self)
@@ -403,8 +405,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
-    pub fn skip_until(mut self, string: &str) -> ParseResult<'i, R> {
-        match self.position.skip_until(string) {
+    pub fn skip_until(mut self: Box<Self>, string: &str) -> ParseResult<'i, R> {
+        match self.position.clone().skip_until(string) {
             Ok(pos) => {
                 self.position = pos;
                 Ok(self)
@@ -417,8 +419,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
-    pub fn start_of_input(mut self) -> ParseResult<'i, R> {
-        match self.position.at_start() {
+    pub fn start_of_input(mut self: Box<Self>) -> ParseResult<'i, R> {
+        match self.position.clone().at_start() {
             Ok(pos) => {
                 self.position = pos;
                 Ok(self)
@@ -431,8 +433,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
-    pub fn end_of_input(mut self) -> ParseResult<'i, R> {
-        match self.position.at_end() {
+    pub fn end_of_input(mut self: Box<Self>) -> ParseResult<'i, R> {
+        match self.position.clone().at_end() {
             Ok(pos) => {
                 self.position = pos;
                 Ok(self)
@@ -470,9 +472,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn lookahead<F>(mut self, is_positive: bool, f: F) -> ParseResult<'i, R>
+    pub fn lookahead<F>(mut self: Box<Self>, is_positive: bool, f: F) -> ParseResult<'i, R>
     where
-        F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
+        F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<'i, R>
     {
         let initial_lookahead = self.lookahead;
 
@@ -539,9 +541,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn atomic<F>(mut self, atomicity: Atomicity, f: F) -> ParseResult<'i, R>
+    pub fn atomic<F>(mut self: Box<Self>, atomicity: Atomicity, f: F) -> ParseResult<'i, R>
     where
-        F: FnOnce(ParserState<'i, R>) -> ParseResult<'i, R>
+        F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<'i, R>
     {
         let initial_atomicity = self.atomicity;
         let should_toggle = self.atomicity != atomicity;

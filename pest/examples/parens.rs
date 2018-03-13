@@ -17,13 +17,13 @@ struct ParenParser;
 
 impl Parser<Rule> for ParenParser {
     fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
-        fn expr(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn expr(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.sequence(|state| {
                 state.repeat(|state| paren(state)).and_then(|state| state.end_of_input())
             })
         }
 
-        fn paren(state: ParserState<Rule>) -> ParseResult<Rule> {
+        fn paren(state: Box<ParserState<Rule>>) -> ParseResult<Rule> {
             state.rule(Rule::paren, |s| {
                 s.sequence(|s| {
                     s.match_string("(")
