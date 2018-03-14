@@ -10,7 +10,7 @@
 extern crate pest;
 extern crate pest_meta;
 
-use pest::{Atomicity, Error, ParserState, Position};
+use pest::{Atomicity, Error, ParserState, ParseResult};
 use pest::iterators::Pairs;
 use pest_meta::ast::{Expr, Rule, RuleType};
 use std::char;
@@ -33,48 +33,49 @@ impl Vm {
         rule: &'a str,
         input: &'i str,
     ) -> Result<Pairs<'i, &str>, Error<'i, &str>> {
-        pest::state(input, |mut state, pos| {
-            self.parse_rule(rule, pos, &mut state)
+        pest::state(input, |state| {
+            self.parse_rule(rule, state)
         })
     }
 
     fn parse_rule<'a, 'i>(
         &'a self,
         rule: &'a str,
-        pos: Position<'i>,
-        state: &mut ParserState<'i, &'a str>,
-    ) -> Result<Position<'i>, Position<'i>> {
+        state: Box<ParserState<'i, &'a str>>,
+    ) -> ParseResult<'i, &'a str> {
         match rule {
-            "any" => return pos.skip(1),
-            "eoi" => return state.rule("eoi", pos, |_, pos| pos.at_end()),
-            "soi" => return pos.at_start(),
+            "any" => return state.skip(1),
+            "eoi" => return state.rule("eoi", |state| state.end_of_input()),
+            "soi" => return state.start_of_input(),
             "peek" => {
                 return {
                     let string = state
                         .stack
-                        .last()
+                        .peek()
                         .expect("peek was called on empty stack")
                         .as_str();
-                    pos.match_string(string)
+                    state.match_string(string)
                 };
             }
             "pop" => {
                 return {
-                    let pos = {
+                    let result_state = {
                         let string = state
                             .stack
-                            .last()
+                            .peek()
                             .expect("pop was called on empty stack")
                             .as_str();
 
-                        pos.match_string(string)
+                        state.match_string(string)
                     };
 
-                    if pos.is_ok() {
-                        state.stack.pop().unwrap();
+                    match result_state {
+                        Ok(mut state) => {
+                            state.stack.pop();
+                            Ok(state)
+                        }
+                        Err(state) => Err(state)
                     }
-
-                    pos
                 };
             }
             _ => ()
@@ -83,53 +84,53 @@ impl Vm {
         if let Some(rule) = self.rules.get(rule) {
             if &rule.name == "whitespace" || &rule.name == "comment" {
                 match rule.ty {
-                    RuleType::Normal => state.rule(&rule.name, pos, |state, pos| {
-                        state.atomic(Atomicity::Atomic, move |state| {
-                            self.parse_expr(&rule.expr, pos, state)
+                    RuleType::Normal => state.rule(&rule.name, |state| {
+                        state.atomic(Atomicity::Atomic, |state| {
+                            self.parse_expr(&rule.expr, state)
                         })
                     }),
-                    RuleType::Silent => state.atomic(Atomicity::Atomic, move |state| {
-                        self.parse_expr(&rule.expr, pos, state)
+                    RuleType::Silent => state.atomic(Atomicity::Atomic, |state| {
+                        self.parse_expr(&rule.expr, state)
                     }),
-                    RuleType::Atomic => state.rule(&rule.name, pos, |state, pos| {
-                        state.atomic(Atomicity::Atomic, move |state| {
-                            self.parse_expr(&rule.expr, pos, state)
+                    RuleType::Atomic => state.rule(&rule.name, |state| {
+                        state.atomic(Atomicity::Atomic, |state| {
+                            self.parse_expr(&rule.expr, state)
                         })
                     }),
                     RuleType::CompoundAtomic => {
-                        state.atomic(Atomicity::CompoundAtomic, move |state| {
-                            state.rule(&rule.name, pos, |state, pos| {
-                                self.parse_expr(&rule.expr, pos, state)
+                        state.atomic(Atomicity::CompoundAtomic, |state| {
+                            state.rule(&rule.name, |state| {
+                                self.parse_expr(&rule.expr, state)
                             })
                         })
                     }
-                    RuleType::NonAtomic => state.atomic(Atomicity::Atomic, move |state| {
-                        state.rule(&rule.name, pos, |state, pos| {
-                            self.parse_expr(&rule.expr, pos, state)
+                    RuleType::NonAtomic => state.atomic(Atomicity::Atomic, |state| {
+                        state.rule(&rule.name, |state| {
+                            self.parse_expr(&rule.expr, state)
                         })
                     })
                 }
             } else {
                 match rule.ty {
-                    RuleType::Normal => state.rule(&rule.name, pos, |state, pos| {
-                        self.parse_expr(&rule.expr, pos, state)
+                    RuleType::Normal => state.rule(&rule.name, move |state| {
+                        self.parse_expr(&rule.expr, state)
                     }),
-                    RuleType::Silent => self.parse_expr(&rule.expr, pos, state),
-                    RuleType::Atomic => state.rule(&rule.name, pos, |state, pos| {
+                    RuleType::Silent => self.parse_expr(&rule.expr, state),
+                    RuleType::Atomic => state.rule(&rule.name, move |state| {
                         state.atomic(Atomicity::Atomic, move |state| {
-                            self.parse_expr(&rule.expr, pos, state)
+                            self.parse_expr(&rule.expr, state)
                         })
                     }),
                     RuleType::CompoundAtomic => {
                         state.atomic(Atomicity::CompoundAtomic, move |state| {
-                            state.rule(&rule.name, pos, |state, pos| {
-                                self.parse_expr(&rule.expr, pos, state)
+                            state.rule(&rule.name, |state| {
+                                self.parse_expr(&rule.expr, state)
                             })
                         })
                     }
                     RuleType::NonAtomic => state.atomic(Atomicity::NonAtomic, move |state| {
-                        state.rule(&rule.name, pos, |state, pos| {
-                            self.parse_expr(&rule.expr, pos, state)
+                        state.rule(&rule.name, |state| {
+                            self.parse_expr(&rule.expr, state)
                         })
                     })
                 }
@@ -142,15 +143,14 @@ impl Vm {
     fn parse_expr<'a, 'i>(
         &'a self,
         expr: &'a Expr,
-        pos: Position<'i>,
-        state: &mut ParserState<'i, &'a str>,
-    ) -> Result<Position<'i>, Position<'i>> {
+        state: Box<ParserState<'i, &'a str>>,
+    ) -> ParseResult<'i, &'a str> {
         match *expr {
             Expr::Str(ref string) => {
-                pos.match_string(&unescape(string).expect("incorrect string literal"))
+                state.match_string(&unescape(string).expect("incorrect string literal"))
             }
             Expr::Insens(ref string) => {
-                pos.match_insensitive(&unescape(string).expect("incorrect string literal"))
+                state.match_insensitive(&unescape(string).expect("incorrect string literal"))
             }
             Expr::Range(ref start, ref end) => {
                 let start = unescape(start)
@@ -164,59 +164,83 @@ impl Vm {
                     .next()
                     .expect("empty char literal");
 
-                pos.match_range(start..end)
+                state.match_range(start..end)
             }
-            Expr::Ident(ref name) => self.parse_rule(name, pos, state),
-            Expr::PosPred(ref expr) => state.lookahead(true, move |state| {
-                pos.lookahead(true, |pos| self.parse_expr(&*expr, pos, state))
+            Expr::Ident(ref name) => self.parse_rule(name, state),
+            Expr::PosPred(ref expr) => state.lookahead(true, |state| {
+                self.parse_expr(&*expr, state)
             }),
-            Expr::NegPred(ref expr) => state.lookahead(false, move |state| {
-                pos.lookahead(false, |pos| self.parse_expr(&*expr, pos, state))
+            Expr::NegPred(ref expr) => state.lookahead(false, |state| {
+                self.parse_expr(&*expr, state)
             }),
-            Expr::Seq(ref lhs, ref rhs) => state.sequence(move |state| {
-                pos.sequence(|pos| {
-                    self.parse_expr(&*lhs, pos, state)
-                        .and_then(|pos| self.skip(pos, state))
-                        .and_then(|pos| self.parse_expr(&*rhs, pos, state))
-                })
+            Expr::Seq(ref lhs, ref rhs) => state.sequence(|state| {
+                self.parse_expr(&*lhs, state)
+                    .and_then(|state| self.skip(state))
+                    .and_then(|state| self.parse_expr(&*rhs, state))
+
             }),
-            Expr::Choice(ref lhs, ref rhs) => self.parse_expr(&*lhs, pos, state)
-                .or_else(|pos| self.parse_expr(&*rhs, pos, state)),
-            Expr::Opt(ref expr) => pos.optional(|pos| self.parse_expr(&*expr, pos, state)),
-            Expr::Rep(ref expr) => self.repeat(expr, None, None, pos, state),
-            Expr::RepOnce(ref expr) => self.repeat(expr, Some(1), None, pos, state),
-            Expr::RepExact(ref expr, num) => self.repeat(expr, Some(num), Some(num), pos, state),
-            Expr::RepMin(ref expr, min) => self.repeat(expr, Some(min), None, pos, state),
-            Expr::RepMax(ref expr, max) => self.repeat(expr, None, Some(max), pos, state),
+            Expr::Choice(ref lhs, ref rhs) => self.parse_expr(&*lhs, state)
+                .or_else(|state| self.parse_expr(&*rhs, state)),
+            Expr::Opt(ref expr) => state.optional(|state| self.parse_expr(&*expr, state)),
+            Expr::Rep(ref expr) => self.repeat(expr, None, None, state),
+            Expr::RepOnce(ref expr) => self.repeat(expr, Some(1), None, state),
+            Expr::RepExact(ref expr, num) => self.repeat(expr, Some(num), Some(num), state),
+            Expr::RepMin(ref expr, min) => self.repeat(expr, Some(min), None, state),
+            Expr::RepMax(ref expr, max) => self.repeat(expr, None, Some(max), state),
             Expr::RepMinMax(ref expr, min, max) => {
-                self.repeat(expr, Some(min), Some(max), pos, state)
+                self.repeat(expr, Some(min), Some(max), state)
             }
             Expr::Push(ref expr) => {
-                let start = pos.clone();
+                let start = state.clone_position();
 
-                match self.parse_expr(&*expr, pos, state) {
-                    Ok(end) => {
+                match self.parse_expr(&*expr, state) {
+                    Ok(mut state) => {
+                        let end = state.clone_position();
                         state.stack.push(start.span(&end));
-                        Ok(end)
+                        Ok(state)
                     }
-                    Err(pos) => Err(pos)
+                    Err(state) => Err(state)
                 }
             }
-            Expr::Skip(ref strings) => strings[1..].iter().fold(
-                pos.clone().skip_until(&strings[0]),
-                |result, string| match (result, pos.clone().skip_until(string)) {
-                    (Ok(lhs), Ok(rhs)) => {
-                        if rhs.pos() < lhs.pos() {
-                            Ok(rhs)
+            Expr::Skip(ref strings) => {
+                let new_pos = strings[1..].iter().fold({
+                        let mut pos = state.clone_position();
+                        if pos.skip_until(&strings[0]) {
+                            Ok(pos)
                         } else {
-                            Ok(lhs)
+                            Err(pos)
                         }
+                    }, |result, string| {
+                    let mut pos = state.clone_position();
+                    let new_result = if pos.skip_until(string) {
+                        Ok(pos)
+                    } else {
+                        Err(pos)
+                    };
+                    match (result, new_result) {
+                        (Ok(lhs), Ok(rhs)) => {
+                            if rhs.pos() < lhs.pos() {
+                                Ok(rhs)
+                            } else {
+                                Ok(lhs)
+                            }
+                        }
+                        (Ok(lhs), Err(_)) => Ok(lhs),
+                        (Err(_), Ok(rhs)) => Ok(rhs),
+                        (Err(lhs), Err(_)) => Err(lhs)
                     }
-                    (Ok(lhs), Err(_)) => Ok(lhs),
-                    (Err(_), Ok(rhs)) => Ok(rhs),
-                    (Err(lhs), Err(_)) => Err(lhs)
-                },
-            )
+                }
+                );
+
+                match new_pos {
+                    Ok(pos) => {
+                        Ok(state.with_updated_position(pos))
+                    }
+                    Err(pos) => {
+                        Err(state.with_updated_position(pos))
+                    }
+                }
+            }
         }
     }
 
@@ -225,93 +249,93 @@ impl Vm {
         expr: &'a Expr,
         min: Option<u32>,
         max: Option<u32>,
-        pos: Position<'i>,
-        state: &mut ParserState<'i, &'a str>,
-    ) -> Result<Position<'i>, Position<'i>> {
-        state.sequence(move |state| {
-            pos.sequence(|pos| {
-                let mut result = match min {
-                    Some(min) if min > 0 => {
-                        let mut result = self.parse_expr(&*expr, pos, state);
+        state: Box<ParserState<'i, &'a str>>,
+    ) -> ParseResult<'i, &'a str> {
+        state.sequence(|state| {
+            let mut result = match min {
+                Some(min) if min > 0 => {
+                    let mut result = self.parse_expr(&*expr, state);
 
-                        for _ in 2..min + 1 {
-                            result = result.and_then(|pos| {
-                                self.skip(pos, state)
-                                    .and_then(|pos| self.parse_expr(&*expr, pos, state))
-                            });
-                        }
-
-                        result
-                    }
-                    _ => pos.optional(|pos| self.parse_expr(&*expr, pos, state))
-                };
-
-                let mut times = 1;
-
-                loop {
-                    if let Some(max) = max {
-                        if times >= max {
-                            return result;
-                        }
+                    for _ in 2..min + 1 {
+                        result = result.and_then(|state| {
+                            self.skip(state)
+                                .and_then(|state| self.parse_expr(&*expr, state))
+                        });
                     }
 
-                    let current = result.clone().and_then(|pos| {
-                        self.skip(pos, state)
-                            .and_then(|pos| self.parse_expr(&*expr, pos, state))
-                    });
-                    times += 1;
+                    result
+                }
+                _ => state.optional(|state| self.parse_expr(&*expr, state))
+            };
 
-                    if current.is_err() {
+            let mut times = 1;
+
+            loop {
+                if let Some(max) = max {
+                    if times >= max {
                         return result;
                     }
-
-                    result = current;
                 }
-            })
+
+                let original_pos = match result {
+                    Ok(ref state) => Ok(state.clone_position()),
+                    Err(ref state) => Err(state.clone_position())
+                };
+
+                let current = result.and_then(|state| {
+                    self.skip(state)
+                        .and_then(|state| self.parse_expr(&*expr, state))
+                });
+                times += 1;
+
+                if current.is_err() {
+                    return match original_pos {
+                        Ok(pos) => Ok(current.unwrap_err().with_updated_position(pos)),
+                        Err(pos) => Err(current.unwrap_err().with_updated_position(pos))
+                    }
+                }
+
+                result = current;
+            }
         })
     }
 
     fn skip<'a, 'i>(
         &'a self,
-        pos: Position<'i>,
-        state: &mut ParserState<'i, &'a str>,
-    ) -> Result<Position<'i>, Position<'i>> {
+        state: Box<ParserState<'i, &'a str>>,
+    ) -> ParseResult<'i, &'a str> {
         match (
             self.rules.contains_key("whitespace"),
             self.rules.contains_key("comment")
         ) {
-            (false, false) => Ok(pos),
+            (false, false) => Ok(state),
             (true, false) => if state.atomicity == Atomicity::NonAtomic {
-                pos.repeat(|pos| self.parse_rule("whitespace", pos, state))
+                state.repeat(|state| self.parse_rule("whitespace", state))
             } else {
-                Ok(pos)
+                Ok(state)
             },
             (false, true) => if state.atomicity == Atomicity::NonAtomic {
-                pos.repeat(|pos| self.parse_rule("comment", pos, state))
+                state.repeat(|state| self.parse_rule("comment", state))
             } else {
-                Ok(pos)
+                Ok(state)
             },
             (true, true) => if state.atomicity == Atomicity::NonAtomic {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        pos.repeat(|pos| self.parse_rule("whitespace", pos, state))
-                            .and_then(|pos| {
-                                pos.repeat(|pos| {
-                                    state.sequence(move |state| {
-                                        pos.sequence(|pos| {
-                                            self.parse_rule("comment", pos, state).and_then(|pos| {
-                                                pos.repeat(|pos| {
-                                                    self.parse_rule("whitespace", pos, state)
-                                                })
-                                            })
+                state.sequence(|state| {
+                    state.repeat(|state| self.parse_rule("whitespace", state))
+                        .and_then(|state| {
+                            state.repeat(|state| {
+                                state.sequence(|state| {
+                                    self.parse_rule("comment", state).and_then(|state| {
+                                        state.repeat(|state| {
+                                            self.parse_rule("whitespace", state)
                                         })
                                     })
                                 })
                             })
-                    })
+                        })
                 })
             } else {
-                Ok(pos)
+                Ok(state)
             }
         }
     }
@@ -373,10 +397,9 @@ fn unescape(string: &str) -> Option<String> {
     }
 }
 
-use super::*;
-
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
     fn unescape_all() {
         let string = r"a\nb\x55c\u{111}d";

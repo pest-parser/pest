@@ -65,7 +65,7 @@ pub type ParseResult<'i, R> = Result<Box<ParserState<'i, R>>, Box<ParserState<'i
 /// ```
 pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<'i, R>>
 where
-    F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<R>
+    F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<'i, R>
 {
     let state = ParserState::new(input);
 
@@ -119,6 +119,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         self.position.clone()
     }
 
+    ///
+    ///
     pub fn with_updated_position(mut self: Box<Self>, position: Position<'i>) -> Box<Self> {
         self.position = position;
         self
