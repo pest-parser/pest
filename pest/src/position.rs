@@ -151,7 +151,7 @@ impl<'i> Position<'i> {
         line_col
     }
 
-    /// Returns the actual line of the current `Position`.
+    /// Returns the actual line of the input represented by the current `Position`.
     ///
     /// # Examples
     ///
@@ -219,8 +219,7 @@ impl<'i> Position<'i> {
         unsafe { str::from_utf8_unchecked(&self.input[start..end]) }
     }
 
-    /// Returns `Ok` with the current `Position` if it is at the start of its `&str` or `Err` of
-    /// the same `Position` otherwise.
+    /// Returns `true` when the `Position` is at the start of the input `&str`.
     ///
     /// # Examples
     ///
@@ -239,8 +238,7 @@ impl<'i> Position<'i> {
         self.pos == 0
     }
 
-    /// Returns `Ok` with the current `Position` if it is at the end of its `&str` or `Err` of the
-    /// same `Position` otherwise.
+    /// Returns `true` when the `Position` is at the end of the input `&str`.
     ///
     /// # Examples
     ///
@@ -259,8 +257,8 @@ impl<'i> Position<'i> {
         self.pos == self.input.len()
     }
 
-    /// Skips `n` `char`s from the `Position` and returns `Ok` with the new `Position` if the skip
-    /// was possible or `Err` with the current `Position` otherwise.
+    /// Skips `n` `char`s from the `Position` and returns `true` if the skip was possible or `false`
+    /// otherwise.
     ///
     /// # Examples
     ///
@@ -294,7 +292,8 @@ impl<'i> Position<'i> {
         true
     }
 
-    /// Skips until the first occurrence of `string`.
+    /// Skips until the first occurrence of `string`. If the `string` can not be found, this
+    /// function will return false.
     ///
     /// # Examples
     ///
@@ -329,8 +328,8 @@ impl<'i> Position<'i> {
         false
     }
 
-    /// Matches `string` from the `Position` and returns `Ok` with the new `Position` if a match was
-    /// made or `Err` with the current `Position` otherwise.
+    /// Matches `string` from the `Position` and returns `true` if a match was made or `false`
+    /// otherwise.
     ///
     /// # Examples
     ///
@@ -362,8 +361,8 @@ impl<'i> Position<'i> {
         }
     }
 
-    /// Case-insensitively matches `string` from the `Position` and returns `Ok` with the new
-    /// `Position` if a match was made or `Err` with the current `Position` otherwise.
+    /// Case-insensitively matches `string` from the `Position` and returns `true` if a match was
+    /// made or `false` otherwise.
     ///
     /// # Examples
     ///
@@ -398,8 +397,8 @@ impl<'i> Position<'i> {
         }
     }
 
-    /// Matches `char` `range` from the `Position` and returns `Ok` with the new `Position` if a
-    /// match was made or `Err` with the current `Position` otherwise.
+    /// Matches `char` `range` from the `Position` and returns `true` if a match was made or `false`
+    /// otherwise.
     ///
     /// # Examples
     ///

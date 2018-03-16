@@ -42,7 +42,7 @@ impl Vm {
         &'a self,
         rule: &'a str,
         state: Box<ParserState<'i, &'a str>>,
-    ) -> ParseResult<'i, &'a str> {
+    ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match rule {
             "any" => return state.skip(1),
             "eoi" => return state.rule("eoi", |state| state.end_of_input()),
@@ -144,7 +144,7 @@ impl Vm {
         &'a self,
         expr: &'a Expr,
         state: Box<ParserState<'i, &'a str>>,
-    ) -> ParseResult<'i, &'a str> {
+    ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match *expr {
             Expr::Str(ref string) => {
                 state.match_string(&unescape(string).expect("incorrect string literal"))
@@ -250,7 +250,7 @@ impl Vm {
         min: Option<u32>,
         max: Option<u32>,
         state: Box<ParserState<'i, &'a str>>,
-    ) -> ParseResult<'i, &'a str> {
+    ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         state.sequence(|state| {
             let mut result = match min {
                 Some(min) if min > 0 => {
@@ -303,7 +303,7 @@ impl Vm {
     fn skip<'a, 'i>(
         &'a self,
         state: Box<ParserState<'i, &'a str>>,
-    ) -> ParseResult<'i, &'a str> {
+    ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match (
             self.rules.contains_key("whitespace"),
             self.rules.contains_key("comment")

@@ -20,7 +20,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         quote! {
             #[inline]
             #[allow(dead_code)]
-            fn any(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            fn any(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.skip(1)
             }
         }
@@ -29,7 +29,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "eoi",
         quote! {
             #[inline]
-            pub fn eoi(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            pub fn eoi(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.rule(Rule::eoi, #[inline(always)] |state| {
                     state.end_of_input()
                 })
@@ -40,7 +40,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "soi",
         quote! {
             #[inline]
-            fn soi(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            fn soi(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.start_of_input()
             }
         }
@@ -49,7 +49,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "peek",
         quote! {
             #[inline]
-            fn peek(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            fn peek(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 let string = state
                     .stack
                     .peek()
@@ -63,7 +63,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "pop",
         quote! {
             #[inline]
-            fn pop(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            fn pop(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 let result_state = {
                     let string = state
                         .stack
@@ -88,7 +88,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         "drop",
         quote! {
             #[inline]
-            fn drop(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            fn drop(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 match state.stack.pop() {
                     Some(_) => Ok(state),
                     None => Err(state),
@@ -210,7 +210,7 @@ fn generate_rule(rule: Rule) -> Tokens {
         RuleType::Normal => quote! {
             #[inline]
             #[allow(unused_variables)]
-            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.rule(Rule::#name, #[inline(always)] |state| {
                     #expr
                 })
@@ -219,14 +219,14 @@ fn generate_rule(rule: Rule) -> Tokens {
         RuleType::Silent => quote! {
             #[inline]
             #[allow(unused_variables)]
-            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 #expr
             }
         },
         RuleType::Atomic => quote! {
             #[inline]
             #[allow(unused_variables)]
-            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.rule(Rule::#name, #[inline(always)] |state| {
                     state.atomic(::pest::Atomicity::Atomic, #[inline(always)] |state| {
                         #expr
@@ -237,7 +237,7 @@ fn generate_rule(rule: Rule) -> Tokens {
         RuleType::CompoundAtomic => quote! {
             #[inline]
             #[allow(unused_variables)]
-            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.atomic(::pest::Atomicity::CompoundAtomic, #[inline(always)] |state| {
                     state.rule(Rule::#name, #[inline(always)] |state| {
                         #expr
@@ -248,7 +248,7 @@ fn generate_rule(rule: Rule) -> Tokens {
         RuleType::NonAtomic => quote! {
             #[inline]
             #[allow(unused_variables)]
-            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.atomic(::pest::Atomicity::NonAtomic, #[inline(always)] |state| {
                     state.rule(Rule::#name, #[inline(always)] |state| {
                         #expr
@@ -267,14 +267,14 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
         (false, false) => quote! {
             #[inline]
             #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 Ok(state)
             }
         },
         (true, false) => quote! {
             #[inline]
             #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
                     state.repeat(#[inline(always)] |state| {
                         whitespace(state)
@@ -287,7 +287,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
         (false, true) => quote! {
             #[inline]
             #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
                     state.repeat(#[inline(always)] |state| {
                         comment(state)
@@ -300,7 +300,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
         (true, true) => quote! {
             #[inline]
             #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 if state.atomicity == ::pest::Atomicity::NonAtomic {
                     state.sequence(#[inline(always)] |state| {
                         state.repeat(#[inline(always)] |state| {
@@ -1043,19 +1043,19 @@ mod tests {
 
                             #[inline]
                             #[allow(unused_variables)]
-                            pub fn a(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+                            pub fn a(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 state.match_string("b")
                             }
 
                             #[inline]
                             #[allow(dead_code)]
-                            fn any(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+                            fn any(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 state.skip(1)
                             }
 
                             #[inline]
                             #[allow(dead_code)]
-                            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Rule> {
+                            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 Ok(state)
                             }
                         }
