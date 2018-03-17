@@ -19,7 +19,7 @@ use memchr;
 use span;
 
 /// A `struct` containing a position that is tied to a `&str` which provides useful methods to
-/// manually parse it. This leads to an API largely based on the standard `Result`.
+/// manually parse it.
 pub struct Position<'i> {
     input: &'i [u8],
     pos: usize
