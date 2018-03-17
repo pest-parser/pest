@@ -37,7 +37,8 @@ impl<'i> Position<'i> {
     /// ```
     /// # use pest::Position;
     ///
-    /// Position::from_start("");
+    /// let start = Position::from_start("");
+    /// assert_eq!(start.pos(), 0);
     /// ```
     #[inline]
     pub fn from_start(input: &'i str) -> Position<'i> {
@@ -219,7 +220,7 @@ impl<'i> Position<'i> {
         unsafe { str::from_utf8_unchecked(&self.input[start..end]) }
     }
 
-    /// Returns `true` when the `Position` is at the start of the input `&str`.
+    /// Returns `true` when the `Position` points to the start of the input `&str`.
     ///
     /// # Examples
     ///
@@ -230,15 +231,15 @@ impl<'i> Position<'i> {
     /// let mut end = start.clone();
     /// end.match_string("ab");
     ///
-    /// assert_eq!(start.clone().at_start(), true);
-    /// assert_eq!(end.clone().at_start(), false);
+    /// assert_eq!(start.at_start(), true);
+    /// assert_eq!(end.at_start(), false);
     /// ```
     #[inline]
     pub fn at_start(&self) -> bool {
         self.pos == 0
     }
 
-    /// Returns `true` when the `Position` is at the end of the input `&str`.
+    /// Returns `true` when the `Position` points to the end of the input `&str`.
     ///
     /// # Examples
     ///
@@ -249,8 +250,8 @@ impl<'i> Position<'i> {
     /// let mut end = start.clone();
     /// end.match_string("ab");
     ///
-    /// assert_eq!(start.clone().at_end(), false);
-    /// assert_eq!(end.clone().at_end(), true);
+    /// assert_eq!(start.at_end(), false);
+    /// assert_eq!(end.at_end(), true);
     /// ```
     #[inline]
     pub fn at_end(&self) -> bool {
@@ -258,7 +259,7 @@ impl<'i> Position<'i> {
     }
 
     /// Skips `n` `char`s from the `Position` and returns `true` if the skip was possible or `false`
-    /// otherwise.
+    /// otherwise. If the return value is `false`, `pos` will not be updated.
     ///
     /// # Examples
     ///
@@ -267,8 +268,13 @@ impl<'i> Position<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
-    /// assert_eq!(start.clone().skip(2), true);
-    /// assert_eq!(start.clone().skip(3), false);
+    /// let mut skipped_2 = start.clone();
+    /// assert_eq!(skipped_2.skip(2), true);
+    /// assert_eq!(skipped_2.pos(), 2);
+    ///
+    /// let mut skipped_3 = start.clone();
+    /// assert_eq!(skipped_3.skip(3), false);
+    /// assert_eq!(skipped_3.pos(), 0);
     /// ```
     #[inline]
     pub fn skip(&mut self, n: usize) -> bool {
@@ -293,7 +299,7 @@ impl<'i> Position<'i> {
     }
 
     /// Skips until the first occurrence of `string`. If the `string` can not be found, this
-    /// function will return false.
+    /// function will return `false` and its `pos` will not be updated.
     ///
     /// # Examples
     ///
@@ -302,9 +308,17 @@ impl<'i> Position<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
-    /// assert_eq!(start.clone().skip_until("a"), true);
-    /// assert_eq!(start.clone().skip_until("b"), true);
-    /// assert_eq!(start.clone().skip_until("c"), false);
+    /// let mut skipped_a = start.clone();
+    /// assert_eq!(skipped_a.skip_until("a"), true);
+    /// assert_eq!(skipped_a.pos(), 0);
+    ///
+    /// let mut skipped_b = start.clone();
+    /// assert_eq!(skipped_b.skip_until("b"), true);
+    /// assert_eq!(skipped_b.pos(), 1);
+    ///
+    /// let mut skipped_c = start.clone();
+    /// assert_eq!(skipped_c.skip_until("c"), false);
+    /// assert_eq!(skipped_c.pos(), 0);
     /// ```
     #[inline]
     pub fn skip_until(&mut self, string: &str) -> bool {
@@ -329,7 +343,7 @@ impl<'i> Position<'i> {
     }
 
     /// Matches `string` from the `Position` and returns `true` if a match was made or `false`
-    /// otherwise.
+    /// otherwise. If no match was made, `pos` will not be updated.
     ///
     /// # Examples
     ///
@@ -338,8 +352,13 @@ impl<'i> Position<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
-    /// assert_eq!(start.clone().match_string("ab"), true);
-    /// assert_eq!(start.clone().match_string("ac"), false);
+    /// let mut matched_ab = start.clone();
+    /// assert_eq!(matched_ab.match_string("ab"), true);
+    /// assert_eq!(matched_ab.pos(), 2);
+    ///
+    /// let mut matched_ac = start.clone();
+    /// assert_eq!(matched_ac.match_string("ac"), false);
+    /// assert_eq!(matched_ac.pos(), 0);
     /// ```
     #[inline]
     pub fn match_string(&mut self, string: &str) -> bool {
@@ -362,7 +381,7 @@ impl<'i> Position<'i> {
     }
 
     /// Case-insensitively matches `string` from the `Position` and returns `true` if a match was
-    /// made or `false` otherwise.
+    /// made or `false` otherwise. If no match was made, `pos` will not be updated.
     ///
     /// # Examples
     ///
@@ -371,8 +390,13 @@ impl<'i> Position<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
-    /// assert_eq!(start.clone().match_insensitive("AB"), true);
-    /// assert_eq!(start.clone().match_insensitive("AC"), false);
+    /// let mut matched_AB = start.clone();
+    /// assert_eq!(matched_AB.match_insensitive("AB"), true);
+    /// assert_eq!(matched_AB.pos(), 2);
+    ///
+    /// let mut matched_AC = start.clone();
+    /// assert_eq!(matched_AC.match_insensitive("AC"), false);
+    /// assert_eq!(matched_AC.pos(), 0);
     /// ```
     #[inline]
     pub fn match_insensitive(&mut self, string: &str) -> bool {
@@ -398,7 +422,7 @@ impl<'i> Position<'i> {
     }
 
     /// Matches `char` `range` from the `Position` and returns `true` if a match was made or `false`
-    /// otherwise.
+    /// otherwise. If no match was made, `pos` will not be updated.
     ///
     /// # Examples
     ///
@@ -407,8 +431,13 @@ impl<'i> Position<'i> {
     /// let input = "ab";
     /// let start = Position::from_start(input);
     ///
-    /// assert_eq!(start.clone().match_range('a'..'z'), true);
-    /// assert_eq!(start.clone().match_range('A'..'Z'), false);
+    /// let mut matched_a_z = start.clone();
+    /// assert_eq!(matched_a_z.match_range('a'..'z'), true);
+    /// assert_eq!(matched_a_z.pos(), 1);
+    ///
+    /// let mut matched_A_Z = start.clone();
+    /// assert_eq!(matched_A_Z.match_range('A'..'Z'), false);
+    /// assert_eq!(matched_A_Z.pos(), 0);
     /// ```
     #[inline]
     pub fn match_range(&mut self, range: Range<char>) -> bool {
