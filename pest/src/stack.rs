@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+/// Implementation of a `Stack` which maintains an log of `StackOp`s in order to rewind the stack
+/// to a previous state.
 #[derive(Debug)]
 pub struct Stack<T: Clone> {
     ops: Vec<StackOp<T>>,
@@ -15,6 +17,7 @@ pub struct Stack<T: Clone> {
 }
 
 impl<T: Clone> Stack<T> {
+    /// Creates a new `Stack`.
     pub fn new() -> Self {
         Stack {
             ops: vec![],
@@ -23,33 +26,41 @@ impl<T: Clone> Stack<T> {
         }
     }
 
+    /// Returns `true` if the stack is currently empty.
     pub fn is_empty(&self) -> bool {
         self.cache.is_empty()
     }
 
+    /// Returns the top-most `&T` in the `Stack`.
     pub fn peek(&self) -> Option<&T> {
         self.cache.last()
     }
 
+    /// Pushes a `T` onto the `Stack`.
     pub fn push(&mut self, elem: T) {
         self.ops.push(StackOp::Push(elem.clone()));
         self.cache.push(elem);
     }
 
+    /// Pops the top-most `T` from the `Stack`.
     pub fn pop(&mut self) -> Option<T> {
         self.ops.push(StackOp::Pop);
         self.cache.pop()
     }
 
+    /// Clears all the values from the `Stack`.
     pub fn clear(&mut self) {
         self.ops.push(StackOp::Clear);
         self.cache.clear();
     }
 
+    /// Takes a snapshot of the current `Stack`.
     pub fn snapshot(&mut self) {
         self.snapshots.push(self.ops.len());
     }
 
+    /// Rewinds the `Stack` to the most `snapshot()`. If no `snapshot()` has been taken, this
+    /// function will do nothing.
     pub fn backtrack(&mut self) {
         match self.snapshots.pop() {
             Some(index) => {
@@ -60,6 +71,7 @@ impl<T: Clone> Stack<T> {
         }
     }
 
+    // Rebuilds the internal cache based on the previous operations stored.
     fn recache(&mut self) {
         self.cache.clear();
         for op in self.ops.iter() {
