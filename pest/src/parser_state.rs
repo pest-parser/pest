@@ -281,10 +281,14 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Wrapper which removes `Tokens` in case of a sequence's failure.
+    /// Starts a sequence of transformations provided by `f` from the `Box<ParserState>`. It returns the
+    /// same `Result` returned by `f` in the case of an `Ok` or `Err` with the current `Box<ParserState>`
+    /// otherwise.
     ///
-    /// Usually used in conjunction with
-    /// [`Position::sequence`](struct.Position.html#method.sequence).
+    /// This method is useful to parse sequences that only match together which usually come in the
+    /// form of chained `Result`s with
+    /// [`Result::and_then`](https://doc.rust-lang.org/std/result/enum.Result.html#method.and_then).
+    ///
     ///
     /// # Examples
     ///
@@ -330,6 +334,35 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Repeatedly applies the transformation provided by `f` from the `Box<ParserState>`. It
+    /// returns `Ok` with the updated `Box<ParserState>` returned by `f` wrapped up in an `Err`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     ab
+    /// }
+    ///
+    /// let input = "aab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.repeat(|s| {
+    ///     s.match_string("a")
+    /// });
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().get_position().pos(), 2);
+    ///
+    /// state = pest::ParserState::new(input);
+    /// result = state.repeat(|s| {
+    ///     s.match_string("b")
+    /// });
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().get_position().pos(), 0);
+    /// ```
     #[inline]
     pub fn repeat<F>(self: Box<Self>, mut f: F) -> ParseResult<Box<ParserState<'i, R>>>
     where
@@ -345,6 +378,34 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Optionally applies the transformation provided by `f` from the `Box<ParserState>`. It returns `Ok`
+    /// with the updated `Box<ParserState>` returned by `f` regardless of the `Result`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     ab
+    /// }
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let result = state.optional(|s| {
+    ///     s.match_string("ab")
+    /// });
+    /// assert!(result.is_ok());
+    ///
+    /// state = pest::ParserState::new(input);
+    /// let result = state.optional(|s| {
+    ///     s.match_string("ac")
+    /// });
+    /// assert!(result.is_ok());
+    ///
+    /// ```
     #[inline]
     pub fn optional<F>(self: Box<Self>, f: F) -> ParseResult<Box<ParserState<'i, R>>>
     where
@@ -420,15 +481,14 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Wrapper which stops `Token`s from being generated.
-    ///
-    /// Usually used in conjunction with
-    /// [`Position::lookahead`](struct.Position.html#method.lookahead).
+    /// Starts a lookahead transformation provided by `f` from the `Box<ParserState>`. It returns
+    /// `Ok` with the current position if `f` also returns an `Ok ` or `Err` with the current
+    /// `Box<ParserState>` otherwise. If `is_positive` is `false`, it swaps the `Ok` and `Err`
+    /// together, negating the `Result`.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
     /// # use pest;
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -468,7 +528,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         let result = f(self);
 
-        let return_state = match result {
+        let result_state = match result {
             Ok(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
@@ -482,9 +542,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         };
 
         if is_positive {
-            return_state
+            result_state
         } else {
-            match return_state {
+            match result_state {
                 Ok(s) => Err(s),
                 Err(s) => Ok(s)
             }
