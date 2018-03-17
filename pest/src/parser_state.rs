@@ -418,6 +418,29 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Asks the `ParserState` to match the given `string`. If the match is successful, the
+    /// `position` will be updated and an `Ok` `Result` is returned. If failed, an `Err` is
+    /// returned.
+    ///
+    /// # Examples
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.match_string("ab");
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().get_position().pos(), 2);
+    ///
+    /// state = pest::ParserState::new(input);
+    /// result = state.match_string("ac");
+    /// assert!(result.is_err());
+    /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
+    /// ```
     #[inline]
     pub fn match_string(mut self: Box<Self>, string: &str) -> ParseResult<Box<ParserState<'i, R>>> {
         if self.position.match_string(string) {
@@ -427,6 +450,29 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Asks the `ParserState` to case-insensitively match the given `string`. If the match is
+    /// successful, the `position` will be updated and an `Ok` `Result` is returned. If failed, an
+    /// `Err` is returned.
+    ///
+    /// # Examples
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.match_insensitive("AB");
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().get_position().pos(), 2);
+    ///
+    /// state = pest::ParserState::new(input);
+    /// result = state.match_insensitive("AC");
+    /// assert!(result.is_err());
+    /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
+    /// ```
     #[inline]
     pub fn match_insensitive(mut self: Box<Self>, string: &str) -> ParseResult<Box<ParserState<'i, R>>> {
         if self.position.match_insensitive(string) {
@@ -436,6 +482,29 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Asks the `ParserState` to match a `char` `range` from the given `string`. If the match is
+    /// successful, the `position` will be updated and an `Ok` `Result` is returned. If failed, an
+    /// `Err` is returned.
+    ///
+    /// # Examples
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.match_range('a'..'z');
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().get_position().pos(), 1);
+    ///
+    /// state = pest::ParserState::new(input);
+    /// result = state.match_range('A'..'Z');
+    /// assert!(result.is_err());
+    /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
+    /// ```
     #[inline]
     pub fn match_range(mut self: Box<Self>, range: Range<char>) -> ParseResult<Box<ParserState<'i, R>>> {
         if self.position.match_range(range) {
@@ -445,6 +514,28 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Asks the `ParserState` to skip `n` `char`s. If the match is successful, the `position` will
+    /// be updated and an `Ok` `Result` is returned. If failed, an `Err` is returned.
+    ///
+    /// # Examples
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.skip(1);
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().get_position().pos(), 1);
+    ///
+    /// state = pest::ParserState::new(input);
+    /// result = state.skip(3);
+    /// assert!(result.is_err());
+    /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
+    /// ```
     #[inline]
     pub fn skip(mut self: Box<Self>, n: usize) -> ParseResult<Box<ParserState<'i, R>>> {
         if self.position.skip(n) {
@@ -454,6 +545,29 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Asks the `ParserState` to skip until the first occurrence of `string`. If the match is
+    /// successful, the `position` will be updated and an `Ok` `Result` is returned. If failed, an
+    /// `Err` is returned.
+    ///
+    /// # Examples
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.skip_until("b");
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().get_position().pos(), 1);
+    ///
+    /// state = pest::ParserState::new(input);
+    /// result = state.skip_until("c");
+    /// assert!(result.is_err());
+    /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
+    /// ```
     #[inline]
     pub fn skip_until(mut self: Box<Self>, string: &str) -> ParseResult<Box<ParserState<'i, R>>> {
         if self.position.skip_until(string) {
@@ -463,6 +577,27 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Asks the `ParserState` to match the start of the `input`. If the match is successful, an
+    /// `Ok` `Result` is returned. If failed, an `Err` is returned.
+    ///
+    /// # Examples
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.start_of_input();
+    /// assert!(result.is_ok());
+    ///
+    /// state = pest::ParserState::new(input);
+    /// state = state.match_string("ab").unwrap();
+    /// result = state.start_of_input();
+    /// assert!(result.is_err());
+    /// ```
     #[inline]
     pub fn start_of_input(self: Box<Self>) -> ParseResult<Box<ParserState<'i, R>>> {
         if self.position.at_start() {
@@ -472,6 +607,27 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Asks the `ParserState` to match the end of the `input`. If the match is successful, an
+    /// `Ok` `Result` is returned. If failed, an `Err` is returned.
+    ///
+    /// # Examples
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.end_of_input();
+    /// assert!(result.is_err());
+    ///
+    /// state = pest::ParserState::new(input);
+    /// state = state.match_string("ab").unwrap();
+    /// result = state.end_of_input();
+    /// assert!(result.is_ok());
+    /// ```
     #[inline]
     pub fn end_of_input(self: Box<Self>) -> ParseResult<Box<ParserState<'i, R>>> {
         if self.position.at_end() {
@@ -552,7 +708,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     }
 
-    /// Wrapper which stops `Token`s from being generated according to `is_atomic`.
+    /// Transformation which stops `Token`s from being generated according to `is_atomic`.
     ///
     /// # Examples
     ///
