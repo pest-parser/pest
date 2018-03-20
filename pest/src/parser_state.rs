@@ -118,6 +118,22 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     /// Returns a reference to the current `Position` of the `ParserState`.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     ab
+    /// }
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let position = state.get_position();
+    /// assert_eq!(position.pos(), 0);
+    /// ```
     pub fn get_position(&self) -> &Position<'i> {
         &self.position
     }
@@ -126,12 +142,33 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// not be needed as manually manipulating the `Position` can lead to a future inconsistent
     /// state.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     ab
+    /// }
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let position = state.clone_position();
+    /// assert_eq!(position.pos(), 0);
+    /// ```
     pub fn clone_position(&self) -> Position<'i> {
         self.position.clone()
     }
 
     /// Given a `Position`, replace the current `Position` of the `ParserState` with the new one.
     ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
     pub fn with_updated_position(mut self: Box<Self>, position: Position<'i>) -> Box<Self> {
         self.position = position;
         self
@@ -162,9 +199,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         mut self: Box<Self>,
         rule: R,
         f: F
-    ) -> ParseResult<Box<ParserState<'i, R>>>
+    ) -> ParseResult<Box<Self>>
     where
-        F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>
+        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
     {
         let actual_pos = self.position.pos();
         let index = self.queue.len();
@@ -314,9 +351,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn sequence<F>(self: Box<Self>, f: F) -> ParseResult<Box<ParserState<'i, R>>>
+    pub fn sequence<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
-        F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>
+        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
     {
         let token_index = self.queue.len();
         let initial_pos = self.clone_position();
@@ -364,9 +401,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap().get_position().pos(), 0);
     /// ```
     #[inline]
-    pub fn repeat<F>(self: Box<Self>, mut f: F) -> ParseResult<Box<ParserState<'i, R>>>
+    pub fn repeat<F>(self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
     where
-        F: FnMut(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>
+        F: FnMut(Box<Self>) -> ParseResult<Box<Self>>
     {
         let mut result = f(self);
 
@@ -407,9 +444,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// ```
     #[inline]
-    pub fn optional<F>(self: Box<Self>, f: F) -> ParseResult<Box<ParserState<'i, R>>>
+    pub fn optional<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
-        F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>
+        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
     {
         let result = f(self);
 
@@ -442,7 +479,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
     /// ```
     #[inline]
-    pub fn match_string(mut self: Box<Self>, string: &str) -> ParseResult<Box<ParserState<'i, R>>> {
+    pub fn match_string(mut self: Box<Self>, string: &str) -> ParseResult<Box<Self>> {
         if self.position.match_string(string) {
             Ok(self)
         } else {
@@ -474,7 +511,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
     /// ```
     #[inline]
-    pub fn match_insensitive(mut self: Box<Self>, string: &str) -> ParseResult<Box<ParserState<'i, R>>> {
+    pub fn match_insensitive(mut self: Box<Self>, string: &str) -> ParseResult<Box<Self>> {
         if self.position.match_insensitive(string) {
             Ok(self)
         } else {
@@ -506,7 +543,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
     /// ```
     #[inline]
-    pub fn match_range(mut self: Box<Self>, range: Range<char>) -> ParseResult<Box<ParserState<'i, R>>> {
+    pub fn match_range(mut self: Box<Self>, range: Range<char>) -> ParseResult<Box<Self>> {
         if self.position.match_range(range) {
             Ok(self)
         } else {
@@ -537,7 +574,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
     /// ```
     #[inline]
-    pub fn skip(mut self: Box<Self>, n: usize) -> ParseResult<Box<ParserState<'i, R>>> {
+    pub fn skip(mut self: Box<Self>, n: usize) -> ParseResult<Box<Self>> {
         if self.position.skip(n) {
             Ok(self)
         } else {
@@ -569,7 +606,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
     /// ```
     #[inline]
-    pub fn skip_until(mut self: Box<Self>, string: &str) -> ParseResult<Box<ParserState<'i, R>>> {
+    pub fn skip_until(mut self: Box<Self>, string: &str) -> ParseResult<Box<Self>> {
         if self.position.skip_until(string) {
             Ok(self)
         } else {
@@ -577,7 +614,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Asks the `ParserState` to match the start of the `input`. If the match is successful, an
+    /// Asks the `ParserState` to match the start of the input. If the match is successful, an
     /// `Ok` `Result` is returned. If failed, an `Err` is returned.
     ///
     /// # Examples
@@ -599,7 +636,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert!(result.is_err());
     /// ```
     #[inline]
-    pub fn start_of_input(self: Box<Self>) -> ParseResult<Box<ParserState<'i, R>>> {
+    pub fn start_of_input(self: Box<Self>) -> ParseResult<Box<Self>> {
         if self.position.at_start() {
             Ok(self)
         } else {
@@ -607,7 +644,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Asks the `ParserState` to match the end of the `input`. If the match is successful, an
+    /// Asks the `ParserState` to match the end of the input. If the match is successful, an
     /// `Ok` `Result` is returned. If failed, an `Err` is returned.
     ///
     /// # Examples
@@ -629,7 +666,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert!(result.is_ok());
     /// ```
     #[inline]
-    pub fn end_of_input(self: Box<Self>) -> ParseResult<Box<ParserState<'i, R>>> {
+    pub fn end_of_input(self: Box<Self>) -> ParseResult<Box<Self>> {
         if self.position.at_end() {
             Ok(self)
         } else {
@@ -662,9 +699,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn lookahead<F>(mut self: Box<Self>, is_positive: bool, f: F) -> ParseResult<Box<ParserState<'i, R>>>
+    pub fn lookahead<F>(mut self: Box<Self>, is_positive: bool, f: F) -> ParseResult<Box<Self>>
     where
-        F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>
+        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
     {
         let initial_lookahead = self.lookahead;
 
@@ -731,9 +768,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn atomic<F>(mut self: Box<Self>, atomicity: Atomicity, f: F) -> ParseResult<Box<ParserState<'i, R>>>
+    pub fn atomic<F>(mut self: Box<Self>, atomicity: Atomicity, f: F) -> ParseResult<Box<Self>>
     where
-        F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>
+        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
     {
         let initial_atomicity = self.atomicity;
         let should_toggle = self.atomicity != atomicity;

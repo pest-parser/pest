@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-/// Implementation of a `Stack` which maintains an log of `StackOp`s in order to rewind the stack
+/// Implementation of a `Stack` which maintains a log of `StackOp`s in order to rewind the stack
 /// to a previous state.
 #[derive(Debug)]
 pub struct Stack<T: Clone> {
