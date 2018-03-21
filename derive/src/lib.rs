@@ -168,7 +168,7 @@
 //! if `e1` in the compound expression `e1 | e2` does not match the input, then
 //! it does not modify the stack, so `e2` sees the stack in the same state as
 //! `e1` did. Repetitions and optionals (`e*`, `e+`, `e{, n}`, `e{n,}`,
-//! `e{m,n}`, `e?`) can modify the stack each time `e` matches. The `!e`
+//! `e{m,n}`, `e?`, `&e`) can modify the stack each time `e` matches. The `!e`
 //! expression is a special case; it never modifies the stack.
 //!
 //! ## Special rules
@@ -275,12 +275,12 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
     let path = Path::new(&root).join("src/").join(&path);
     let file_name = match path.file_name() {
         Some(file_name) => file_name,
-        None => panic!("grammar attribute should point to a file")
+        None => panic!("grammar attribute should point to a file"),
     };
 
     let data = match read_file(&path) {
         Ok(data) => data,
-        Err(error) => panic!("error opening {:?}: {}", file_name, error)
+        Err(error) => panic!("error opening {:?}: {}", file_name, error),
     };
 
     let pairs = match parser::parse(Rule::grammar_rules, &data) {
@@ -312,9 +312,9 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
                 Rule::insensitive_string => "`^`".to_owned(),
                 Rule::range_operator => "`..`".to_owned(),
                 Rule::single_quote => "`'`".to_owned(),
-                other_rule => format!("{:?}", other_rule)
+                other_rule => format!("{:?}", other_rule),
             })
-        )
+        ),
     };
 
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
@@ -340,14 +340,14 @@ fn parse_derive(source: String) -> (Ident, String) {
         .iter()
         .filter(|attr| match attr.value {
             MetaItem::NameValue(ref ident, _) => format!("{}", ident) == "grammar",
-            _ => false
+            _ => false,
         })
         .collect();
 
     let filename = match grammar.len() {
         0 => panic!("a grammar file needs to be provided with the #[grammar(\"...\")] attribute"),
         1 => get_filename(grammar[0]),
-        _ => panic!("only 1 grammar file can be provided")
+        _ => panic!("only 1 grammar file can be provided"),
     };
 
     (name, filename)

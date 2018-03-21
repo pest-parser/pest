@@ -58,6 +58,7 @@
 
 extern crate memchr;
 
+
 pub use error::Error;
 pub use parser::Parser;
 pub use parser_state::{Atomicity, Lookahead, ParseResult, ParserState, state};
