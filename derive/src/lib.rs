@@ -168,8 +168,8 @@
 //! if `e1` in the compound expression `e1 | e2` does not match the input, then
 //! it does not modify the stack, so `e2` sees the stack in the same state as
 //! `e1` did. Repetitions and optionals (`e*`, `e+`, `e{, n}`, `e{n,}`,
-//! `e{m,n}`, `e?`, `&e`) can modify the stack each time `e` matches. The `!e`
-//! expression is a special case; it never modifies the stack.
+//! `e{m,n}`, `e?`) can modify the stack each time `e` matches. The `!e` and `&e`
+//! expressions are a special case; they never modify the stack.
 //!
 //! ## Special rules
 //!

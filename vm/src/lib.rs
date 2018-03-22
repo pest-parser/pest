@@ -45,37 +45,9 @@ impl Vm {
             "any" => return state.skip(1),
             "eoi" => return state.rule("eoi", |state| state.end_of_input()),
             "soi" => return state.start_of_input(),
-            "peek" => {
-                return {
-                    let string = state
-                        .stack
-                        .peek()
-                        .expect("peek was called on empty stack")
-                        .as_str();
-                    state.match_string(string)
-                };
-            }
-            "pop" => {
-                return {
-                    let result_state = {
-                        let string = state
-                            .stack
-                            .peek()
-                            .expect("pop was called on empty stack")
-                            .as_str();
-
-                        state.match_string(string)
-                    };
-
-                    match result_state {
-                        Ok(mut state) => {
-                            state.stack.pop();
-                            Ok(state)
-                        }
-                        Err(state) => Err(state)
-                    }
-                };
-            }
+            "peek" => return state.stack_peek(),
+            "pop" => return state.stack_pop(),
+            "drop" => return state.stack_drop(),
             _ => ()
         };
 
@@ -175,18 +147,7 @@ impl Vm {
             Expr::RepMin(ref expr, min) => self.repeat(expr, Some(min), None, state),
             Expr::RepMax(ref expr, max) => self.repeat(expr, None, Some(max), state),
             Expr::RepMinMax(ref expr, min, max) => self.repeat(expr, Some(min), Some(max), state),
-            Expr::Push(ref expr) => {
-                let start = state.clone_position();
-
-                match self.parse_expr(&*expr, state) {
-                    Ok(mut state) => {
-                        let end = state.clone_position();
-                        state.stack.push(start.span(&end));
-                        Ok(state)
-                    }
-                    Err(state) => Err(state)
-                }
-            }
+            Expr::Push(ref expr) => state.stack_push(|state| self.parse_expr(&*expr, state)),
             Expr::Skip(ref strings) => {
                 let new_pos = strings[1..].iter().fold(
                     {
@@ -292,17 +253,17 @@ impl Vm {
             self.rules.contains_key("comment")
         ) {
             (false, false) => Ok(state),
-            (true, false) => if state.atomicity == Atomicity::NonAtomic {
+            (true, false) => if state.atomicity() == Atomicity::NonAtomic {
                 state.repeat(|state| self.parse_rule("whitespace", state))
             } else {
                 Ok(state)
             },
-            (false, true) => if state.atomicity == Atomicity::NonAtomic {
+            (false, true) => if state.atomicity() == Atomicity::NonAtomic {
                 state.repeat(|state| self.parse_rule("comment", state))
             } else {
                 Ok(state)
             },
-            (true, true) => if state.atomicity == Atomicity::NonAtomic {
+            (true, true) => if state.atomicity() == Atomicity::NonAtomic {
                 state.sequence(|state| {
                     state
                         .repeat(|state| self.parse_rule("whitespace", state))

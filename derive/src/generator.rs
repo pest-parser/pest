@@ -50,12 +50,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         quote! {
             #[inline]
             fn peek(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                let string = state
-                    .stack
-                    .peek()
-                    .expect("peek was called on empty stack")
-                    .as_str();
-                state.match_string(string)
+                state.stack_peek()
             }
         }
     );
@@ -64,23 +59,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         quote! {
             #[inline]
             fn pop(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                let result_state = {
-                    let string = state
-                        .stack
-                        .peek()
-                        .expect("pop was called on empty stack")
-                        .as_str();
-
-                    state.match_string(string)
-                };
-
-                match result_state {
-                    Ok(mut state) => {
-                        state.stack.pop();
-                        Ok(state)
-                    }
-                    Err(state) => Err(state)
-                }
+                state.stack_pop()
             }
         }
     );
@@ -89,10 +68,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
         quote! {
             #[inline]
             fn drop(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                match state.stack.pop() {
-                    Some(_) => Ok(state),
-                    None => Err(state),
-                }
+                state.stack_drop()
             }
         }
     );
@@ -275,7 +251,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             #[inline]
             #[allow(dead_code)]
             fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                if state.atomicity == ::pest::Atomicity::NonAtomic {
+                if state.atomicity() == ::pest::Atomicity::NonAtomic {
                     state.repeat(#[inline(always)] |state| {
                         whitespace(state)
                     })
@@ -288,7 +264,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             #[inline]
             #[allow(dead_code)]
             fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                if state.atomicity == ::pest::Atomicity::NonAtomic {
+                if state.atomicity() == ::pest::Atomicity::NonAtomic {
                     state.repeat(#[inline(always)] |state| {
                         comment(state)
                     })
@@ -301,7 +277,7 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
             #[inline]
             #[allow(dead_code)]
             fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                if state.atomicity == ::pest::Atomicity::NonAtomic {
+                if state.atomicity() == ::pest::Atomicity::NonAtomic {
                     state.sequence(#[inline(always)] |state| {
                         state.repeat(#[inline(always)] |state| {
                             whitespace(state)
@@ -463,16 +439,9 @@ fn generate_expr(expr: Expr) -> Tokens {
 
             quote! {
                 {
-                    let start = state.clone_position();
-
-                    match #expr {
-                        Ok(mut state) => {
-                            let end = state.clone_position();
-                            state.stack.push(start.span(&end));
-                            Ok(state)
-                        }
-                        Err(state) => Err(state)
-                    }
+                    state.stack_push(#[inline(always)] |state| {
+                        #expr
+                    })
                 }
             }
         }
@@ -663,16 +632,9 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
 
             quote! {
                 {
-                    let start = state.clone_position();
-
-                    match #expr {
-                        Ok(mut state) => {
-                            let end = state.clone_position();
-                            state.stack.push(start.span(&end));
-                            Ok(state)
-                        }
-                        Err(state) => Err(state)
-                    }
+                    state.stack_push(#[inline(always)] |state| {
+                        #expr
+                    })
                 }
             }
         }

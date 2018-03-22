@@ -46,9 +46,9 @@ pub struct ParserState<'i, R: RuleType> {
     neg_attempts: Vec<R>,
     attempt_pos: usize,
     /// Specifies current atomicity
-    pub atomicity: Atomicity,
+    atomicity: Atomicity,
     /// Stack of `Span`s
-    pub stack: Stack<Span<'i>>
+    stack: Stack<Span<'i>>
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -130,11 +130,34 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "ab";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let position = state.get_position();
+    /// let position = state.position();
     /// assert_eq!(position.pos(), 0);
     /// ```
-    pub fn get_position(&self) -> &Position<'i> {
+    pub fn position(&self) -> &Position<'i> {
         &self.position
+    }
+
+    /// Returns the current atomicity of the `ParserState`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    /// # use pest::Atomicity;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     ab
+    /// }
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let atomicity = state.atomicity();
+    /// assert_eq!(atomicity, Atomicity::NonAtomic);
+    /// ```
+    pub fn atomicity(&self) -> Atomicity {
+        self.atomicity
     }
 
     /// Returns a clone of the current `Position` of the `ParserState`. Ideally, this will likely
@@ -179,7 +202,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// let mut position = state.clone_position();
     /// position.skip(3);
     /// state = state.with_updated_position(position);
-    /// assert_eq!(state.get_position().pos(), 3);
+    /// assert_eq!(state.position().pos(), 3);
     /// ```
     pub fn with_updated_position(mut self: Box<Self>, position: Position<'i>) -> Box<Self> {
         self.position = position;
@@ -367,7 +390,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
     {
         let token_index = self.queue.len();
-        let initial_pos = self.clone_position();
+        let initial_pos = self.position.clone();
 
         let result = f(self);
 
@@ -402,14 +425,14 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///     s.match_string("a")
     /// });
     /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap().get_position().pos(), 2);
+    /// assert_eq!(result.unwrap().position().pos(), 2);
     ///
     /// state = pest::ParserState::new(input);
     /// result = state.repeat(|s| {
     ///     s.match_string("b")
     /// });
     /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap().get_position().pos(), 0);
+    /// assert_eq!(result.unwrap().position().pos(), 0);
     /// ```
     #[inline]
     pub fn repeat<F>(self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
@@ -482,12 +505,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
     /// let mut result = state.match_string("ab");
     /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap().get_position().pos(), 2);
+    /// assert_eq!(result.unwrap().position().pos(), 2);
     ///
     /// state = pest::ParserState::new(input);
     /// result = state.match_string("ac");
     /// assert!(result.is_err());
-    /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
+    /// assert_eq!(result.unwrap_err().position().pos(), 0);
     /// ```
     #[inline]
     pub fn match_string(mut self: Box<Self>, string: &str) -> ParseResult<Box<Self>> {
@@ -514,12 +537,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
     /// let mut result = state.match_insensitive("AB");
     /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap().get_position().pos(), 2);
+    /// assert_eq!(result.unwrap().position().pos(), 2);
     ///
     /// state = pest::ParserState::new(input);
     /// result = state.match_insensitive("AC");
     /// assert!(result.is_err());
-    /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
+    /// assert_eq!(result.unwrap_err().position().pos(), 0);
     /// ```
     #[inline]
     pub fn match_insensitive(mut self: Box<Self>, string: &str) -> ParseResult<Box<Self>> {
@@ -546,12 +569,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
     /// let mut result = state.match_range('a'..'z');
     /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap().get_position().pos(), 1);
+    /// assert_eq!(result.unwrap().position().pos(), 1);
     ///
     /// state = pest::ParserState::new(input);
     /// result = state.match_range('A'..'Z');
     /// assert!(result.is_err());
-    /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
+    /// assert_eq!(result.unwrap_err().position().pos(), 0);
     /// ```
     #[inline]
     pub fn match_range(mut self: Box<Self>, range: Range<char>) -> ParseResult<Box<Self>> {
@@ -578,12 +601,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
     /// let mut result = state.skip(1);
     /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap().get_position().pos(), 1);
+    /// assert_eq!(result.unwrap().position().pos(), 1);
     ///
     /// state = pest::ParserState::new(input);
     /// result = state.skip(3);
     /// assert!(result.is_err());
-    /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
+    /// assert_eq!(result.unwrap_err().position().pos(), 0);
     /// ```
     #[inline]
     pub fn skip(mut self: Box<Self>, n: usize) -> ParseResult<Box<Self>> {
@@ -610,12 +633,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
     /// let mut result = state.skip_until("b");
     /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap().get_position().pos(), 1);
+    /// assert_eq!(result.unwrap().position().pos(), 1);
     ///
     /// state = pest::ParserState::new(input);
     /// result = state.skip_until("c");
     /// assert!(result.is_err());
-    /// assert_eq!(result.unwrap_err().get_position().pos(), 0);
+    /// assert_eq!(result.unwrap_err().position().pos(), 0);
     /// ```
     #[inline]
     pub fn skip_until(mut self: Box<Self>, string: &str) -> ParseResult<Box<Self>> {
@@ -731,7 +754,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             }
         };
 
-        let initial_pos = self.clone_position();
+        let initial_pos = self.position.clone();
 
         let result = f(self);
 
@@ -807,6 +830,145 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 }
                 Err(new_state)
             }
+        }
+    }
+
+    /// Evaluates the result of closure `f` and pushes the span of the input consumed from before
+    /// `f` is called to after `f` is called to the stack. Returns an `Ok(Box<ParserState>)` if
+    /// `f` is called successfully, `Err(Box<ParserState>)` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.stack_push( |state| state.match_string("a"));
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 1);
+    /// ```
+    #[inline]
+    pub fn stack_push<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    where
+        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
+    {
+        let start = self.position.clone();
+
+        let result = f(self);
+
+        match result {
+            Ok(mut state) => {
+                let end = state.position.clone();
+                state.stack.push(start.span(&end));
+                Ok(state)
+            }
+            Err(state) => Err(state)
+        }
+    }
+
+    /// Peeks the top of the stack and attempts to match the string. Returns an
+    /// `Ok(Box<ParserState>)` if the string is matched successfully, `Err(Box<ParserState>)`
+    /// otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "aa";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(
+    ///     |state| state.stack_peek()
+    /// );
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 2);
+    /// ```
+    #[inline]
+    pub fn stack_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
+        let string = self
+            .stack
+            .peek()
+            .expect("peek was called on empty stack")
+            .as_str();
+        self.match_string(string)
+    }
+
+    /// Pops the top of the stack and attempts to match the string. Returns an
+    /// `Ok(Box<ParserState>)` if the string is matched successfully, `Err(Box<ParserState>)`
+    /// otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "aa";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(
+    ///     |state| state.stack_pop()
+    /// );
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 2);
+    /// ```
+    #[inline]
+    pub fn stack_pop(self: Box<Self>) -> ParseResult<Box<Self>> {
+        let result_state= {
+            let string = self
+                .stack
+                .peek()
+                .expect("pop was called on empty stack")
+                .as_str();
+
+            self.match_string(string)
+        };
+
+        match result_state {
+            Ok(mut state) => {
+                state.stack.pop();
+                Ok(state)
+            }
+            Err(state) => Err(state)
+        }
+    }
+
+    /// Drops the top of the stack and returns `Ok(Box<ParserState>)` if there was a value to
+    /// drop. Otherwise, it returns `Err<Box<ParserState>)`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "aa";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(
+    ///     |state| state.stack_drop()
+    /// );
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 1);
+    /// ```
+    #[inline]
+    pub fn stack_drop(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+        match self.stack.pop() {
+            Some(_) => Ok(self),
+            None => Err(self),
         }
     }
 }
