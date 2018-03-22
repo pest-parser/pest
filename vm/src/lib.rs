@@ -149,41 +149,7 @@ impl Vm {
             Expr::RepMinMax(ref expr, min, max) => self.repeat(expr, Some(min), Some(max), state),
             Expr::Push(ref expr) => state.stack_push(|state| self.parse_expr(&*expr, state)),
             Expr::Skip(ref strings) => {
-                let new_pos = strings[1..].iter().fold(
-                    {
-                        let mut pos = state.clone_position();
-                        if pos.skip_until(&strings[0]) {
-                            Ok(pos)
-                        } else {
-                            Err(pos)
-                        }
-                    },
-                    |result, string| {
-                        let mut pos = state.clone_position();
-                        let new_result = if pos.skip_until(string) {
-                            Ok(pos)
-                        } else {
-                            Err(pos)
-                        };
-                        match (result, new_result) {
-                            (Ok(lhs), Ok(rhs)) => {
-                                if rhs.pos() < lhs.pos() {
-                                    Ok(rhs)
-                                } else {
-                                    Ok(lhs)
-                                }
-                            }
-                            (Ok(lhs), Err(_)) => Ok(lhs),
-                            (Err(_), Ok(rhs)) => Ok(rhs),
-                            (Err(lhs), Err(_)) => Err(lhs)
-                        }
-                    }
-                );
-
-                match new_pos {
-                    Ok(pos) => Ok(state.with_updated_position(pos)),
-                    Err(pos) => Err(state.with_updated_position(pos))
-                }
+                state.skip_strings(&strings.iter().map(|s| s.as_str()).collect::<Vec<&str>>())
             }
         }
     }

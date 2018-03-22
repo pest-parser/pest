@@ -649,6 +649,69 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Asks the `ParserState` to continue to skip until one of the given `strings` is found. If
+    /// the match is successful, this will return an `Ok` with the updated `Box<ParserState>`. If
+    /// failed, an `Err` with the updated `Box<ParserState>` is returned.
+    ///
+    /// # Examples
+    /// ```
+    /// # use pest;
+    ///
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "abcd";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.skip_strings(&["c", "d"]);
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 2);
+    /// ```
+    #[inline]
+    pub fn skip_strings(mut self: Box<Self>, strings: &[&str]) -> ParseResult<Box<Self>> {
+        let new_pos = strings[1..].iter().fold(
+            {
+                let mut pos = self.position.clone();
+                if pos.skip_until(strings[0]) {
+                    Ok(pos)
+                } else {
+                    Err(pos)
+                }
+            },
+            |result, string| {
+                let mut pos = self.position.clone();
+                let new_result = if pos.skip_until(string) {
+                    Ok(pos)
+                } else {
+                    Err(pos)
+                };
+                match (result, new_result) {
+                    (Ok(lhs), Ok(rhs)) => {
+                        if rhs.pos() < lhs.pos() {
+                            Ok(rhs)
+                        } else {
+                            Ok(lhs)
+                        }
+                    }
+                    (Ok(lhs), Err(_)) => Ok(lhs),
+                    (Err(_), Ok(rhs)) => Ok(rhs),
+                    (Err(lhs), Err(_)) => Err(lhs)
+                }
+            }
+        );
+
+        match new_pos {
+            Ok(pos) => {
+                self.position = pos;
+                Ok(self)
+            }
+            Err(pos) => {
+                self.position = pos;
+                Err(self)
+            }
+        }
+    }
+
     /// Asks the `ParserState` to match the start of the input. If the match is successful, this
     /// will return an `Ok` with the updated `Box<ParserState>`. If failed, an `Err` with the
     /// updated `Box<ParserState>` is returned.
@@ -894,8 +957,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn stack_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
-        let string = self
-            .stack
+        let string = self.stack
             .peek()
             .expect("peek was called on empty stack")
             .as_str();
@@ -925,9 +987,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn stack_pop(self: Box<Self>) -> ParseResult<Box<Self>> {
-        let result_state= {
-            let string = self
-                .stack
+        let result_state = {
+            let string = self.stack
                 .peek()
                 .expect("pop was called on empty stack")
                 .as_str();
@@ -968,7 +1029,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     pub fn stack_drop(mut self: Box<Self>) -> ParseResult<Box<Self>> {
         match self.stack.pop() {
             Some(_) => Ok(self),
-            None => Err(self),
+            None => Err(self)
         }
     }
 }
