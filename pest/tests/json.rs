@@ -10,9 +10,9 @@
 #[macro_use]
 extern crate pest;
 
-use pest::{Error, Parser, ParseResult, ParserState, state};
-use pest::iterators::{Pair, Pairs};
+use pest::{state, Error, ParseResult, Parser, ParserState};
 use pest::{Position, Span};
+use pest::iterators::{Pair, Pairs};
 use std::collections::HashMap;
 
 #[allow(dead_code, non_camel_case_types)]
@@ -31,7 +31,7 @@ enum Rule {
     int,
     exp,
     bool,
-    null,
+    null
 }
 
 struct JsonParser;
@@ -60,14 +60,13 @@ impl Parser<Rule> for JsonParser {
                             })
                         })
                         .and_then(|s| s.match_string("}"))
-                })
-                    .or_else(|s| {
-                        s.sequence(|s| {
-                            s.match_string("{")
-                                .and_then(|s| skip(s))
-                                .and_then(|s| s.match_string("}"))
-                        })
+                }).or_else(|s| {
+                    s.sequence(|s| {
+                        s.match_string("{")
+                            .and_then(|s| skip(s))
+                            .and_then(|s| s.match_string("}"))
                     })
+                })
             })
         }
 
@@ -101,14 +100,13 @@ impl Parser<Rule> for JsonParser {
                             })
                         })
                         .and_then(|s| s.match_string("]"))
-                })
-                    .or_else(|s| {
-                        s.sequence(|s| {
-                            s.match_string("[")
-                                .and_then(|s| skip(s))
-                                .and_then(|s| s.match_string("]"))
-                        })
+                }).or_else(|s| {
+                    s.sequence(|s| {
+                        s.match_string("[")
+                            .and_then(|s| skip(s))
+                            .and_then(|s| s.match_string("]"))
                     })
+                })
             })
         }
 
@@ -130,12 +128,9 @@ impl Parser<Rule> for JsonParser {
                         s.repeat(|s| {
                             escape(s).or_else(|s| {
                                 s.sequence(|s| {
-                                    s
-                                        .lookahead(false, |s| {
-                                            s.match_string("\"")
-                                                .or_else(|s| s.match_string("\\"))
-                                        })
-                                        .and_then(|s| s.skip(1))
+                                    s.lookahead(false, |s| {
+                                        s.match_string("\"").or_else(|s| s.match_string("\\"))
+                                    }).and_then(|s| s.skip(1))
                                 })
                             })
                         })
@@ -170,7 +165,8 @@ impl Parser<Rule> for JsonParser {
         }
 
         fn hex(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
-            state.match_range('0'..'9')
+            state
+                .match_range('0'..'9')
                 .or_else(|s| s.match_range('a'..'f'))
                 .or_else(|s| s.match_range('A'..'F'))
         }
@@ -209,9 +205,7 @@ impl Parser<Rule> for JsonParser {
                 s.match_string("E")
                     .or_else(|s| s.match_string("e"))
                     .and_then(|s| {
-                        s.optional(|s| {
-                            s.match_string("+").or_else(|s| s.match_string("-"))
-                        })
+                        s.optional(|s| s.match_string("+").or_else(|s| s.match_string("-")))
                     })
                     .and_then(|s| int(s))
             })
@@ -219,8 +213,7 @@ impl Parser<Rule> for JsonParser {
 
         fn bool(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
             state.rule(Rule::bool, |s| {
-                s.match_string("true")
-                    .or_else(|s| s.match_string("false"))
+                s.match_string("true").or_else(|s| s.match_string("false"))
             })
         }
 
@@ -263,7 +256,7 @@ enum Json<'i> {
     Number(f64),
     String(Span<'i>),
     Array(Vec<Json<'i>>),
-    Object(HashMap<Span<'i>, Json<'i>>),
+    Object(HashMap<Span<'i>, Json<'i>>)
 }
 
 fn consume(pair: Pair<Rule>) -> Json {

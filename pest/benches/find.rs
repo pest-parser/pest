@@ -36,12 +36,16 @@ fn repeated_skip(b: &mut Bencher) {
         let state: Box<ParserState<Rule>> = ParserState::new("aaaaaaaaab");
         state
             .sequence(|state| {
-                state.repeat(|state| {
-                    state.sequence(|state| {
-                        state.lookahead(false, |state| state.match_string("b"))
-                            .and_then(|state| state.skip(1))
+                state
+                    .repeat(|state| {
+                        state.sequence(|state| {
+                            state
+                                .lookahead(false, |state| state.match_string("b"))
+                                .and_then(|state| state.skip(1))
+                        })
                     })
-                }).and_then(|state| state.match_string("b"))
-            }).unwrap()
+                    .and_then(|state| state.match_string("b"))
+            })
+            .unwrap()
     });
 }

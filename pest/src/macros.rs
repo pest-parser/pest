@@ -342,14 +342,13 @@ pub mod tests {
             state(input, |state| {
                 state
                     .rule(Rule::a, |s| {
-                        s.skip(1).unwrap()
+                        s.skip(1)
+                            .unwrap()
                             .rule(Rule::b, |s| s.skip(1))
                             .unwrap()
                             .skip(1)
                     })
-                    .and_then(|s| {
-                        s.skip(1).unwrap().rule(Rule::c, |s| s.match_string("e"))
-                    })
+                    .and_then(|s| s.skip(1).unwrap().rule(Rule::c, |s| s.match_string("e")))
             })
         }
     }

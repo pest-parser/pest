@@ -11,7 +11,7 @@
 pub struct Rule {
     pub name: String,
     pub ty: RuleType,
-    pub expr: Expr,
+    pub expr: Expr
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -20,7 +20,7 @@ pub enum RuleType {
     Silent,
     Atomic,
     CompoundAtomic,
-    NonAtomic,
+    NonAtomic
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -58,17 +58,17 @@ pub enum Expr {
     /// Matches any expression until the strings in the `Vec` are found.
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
-    Push(Box<Expr>),
+    Push(Box<Expr>)
 }
 
 impl Expr {
     pub fn map_top_down<F>(self, mut f: F) -> Expr
     where
-        F: FnMut(Expr) -> Expr,
+        F: FnMut(Expr) -> Expr
     {
         pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
         where
-            F: FnMut(Expr) -> Expr,
+            F: FnMut(Expr) -> Expr
         {
             let expr = f(expr);
 
@@ -124,7 +124,7 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
-                expr => expr,
+                expr => expr
             }
         }
 
@@ -133,11 +133,11 @@ impl Expr {
 
     pub fn map_bottom_up<F>(self, mut f: F) -> Expr
     where
-        F: FnMut(Expr) -> Expr,
+        F: FnMut(Expr) -> Expr
     {
         pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
         where
-            F: FnMut(Expr) -> Expr,
+            F: FnMut(Expr) -> Expr
         {
             let mapped = match expr {
                 Expr::PosPred(expr) => {
@@ -191,7 +191,7 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
-                expr => expr,
+                expr => expr
             };
 
             f(mapped)
@@ -210,19 +210,17 @@ mod tests {
         let expr = Expr::Choice(
             Box::new(Expr::Seq(
                 Box::new(Expr::Ident("a".to_owned())),
-                Box::new(Expr::Str("b".to_owned())),
+                Box::new(Expr::Str("b".to_owned()))
             )),
-            Box::new(Expr::PosPred(Box::new(Expr::NegPred(Box::new(
-                Expr::Rep(Box::new(Expr::RepOnce(Box::new(Expr::Opt(Box::new(
-                    Expr::Choice(
-                        Box::new(Expr::Insens("c".to_owned())),
-                        Box::new(Expr::Push(Box::new(Expr::Range(
-                            "'d'".to_owned(),
-                            "'e'".to_owned(),
-                        )))),
-                    ),
-                )))))),
-            ))))),
+            Box::new(Expr::PosPred(Box::new(Expr::NegPred(Box::new(Expr::Rep(
+                Box::new(Expr::RepOnce(Box::new(Expr::Opt(Box::new(Expr::Choice(
+                    Box::new(Expr::Insens("c".to_owned())),
+                    Box::new(Expr::Push(Box::new(Expr::Range(
+                        "'d'".to_owned(),
+                        "'e'".to_owned()
+                    ))))
+                ))))))
+            ))))))
         );
 
         assert_eq!(

@@ -58,10 +58,9 @@
 
 extern crate memchr;
 
-
 pub use error::Error;
 pub use parser::Parser;
-pub use parser_state::{Atomicity, Lookahead, ParseResult, ParserState, state};
+pub use parser_state::{state, Atomicity, Lookahead, ParseResult, ParserState};
 pub use position::Position;
 pub use span::Span;
 use std::fmt::Debug;
@@ -89,4 +88,3 @@ mod token;
 pub trait RuleType: Copy + Debug + Eq + Hash + Ord {}
 
 impl<T: Copy + Debug + Eq + Hash + Ord> RuleType for T {}
-

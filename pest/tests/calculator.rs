@@ -10,7 +10,7 @@
 #[macro_use]
 extern crate pest;
 
-use pest::{Error, Parser, ParseResult, ParserState, state};
+use pest::{state, Error, ParseResult, Parser, ParserState};
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 
@@ -25,7 +25,7 @@ enum Rule {
     times,
     divide,
     modulus,
-    power,
+    power
 }
 
 struct CalculatorParser;
@@ -53,11 +53,12 @@ impl Parser<Rule> for CalculatorParser {
         }
 
         fn primary(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
-            state.sequence(|s| {
-                s.match_string("(")
-                    .and_then(|s| expression(s))
-                    .and_then(|s| s.match_string(")"))
-            })
+            state
+                .sequence(|s| {
+                    s.match_string("(")
+                        .and_then(|s| expression(s))
+                        .and_then(|s| s.match_string(")"))
+                })
                 .or_else(|s| number(s))
         }
 
@@ -80,7 +81,7 @@ impl Parser<Rule> for CalculatorParser {
             state.rule(Rule::plus, |s| s.match_string("+"))
         }
 
-        fn minus(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>>{
+        fn minus(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
             state.rule(Rule::minus, |s| s.match_string("-"))
         }
 

@@ -7,8 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::rc::Rc;
 use std::ops::Range;
+use std::rc::Rc;
 
 use RuleType;
 use error::Error;
@@ -91,7 +91,6 @@ where
 }
 
 impl<'i, R: RuleType> ParserState<'i, R> {
-
     /// Allocates a fresh `ParserState` object to the heap and returns the owned `Box`. This `Box`
     /// will be passed from closure to closure based on the needs of the specified `Parser`.
     ///
@@ -208,11 +207,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(pairs.len(), 1);
     /// ```
     #[inline]
-    pub fn rule<F>(
-        mut self: Box<Self>,
-        rule: R,
-        f: F
-    ) -> ParseResult<Box<Self>>
+    pub fn rule<F>(mut self: Box<Self>, rule: R, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
     {
@@ -250,7 +245,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     );
                 }
 
-                if new_state.lookahead == Lookahead::None && new_state.atomicity != Atomicity::Atomic {
+                if new_state.lookahead == Lookahead::None
+                    && new_state.atomicity != Atomicity::Atomic
+                {
                     // Storing the pair's index in the first token that was added before the closure was
                     // run.
                     let new_index = new_state.queue.len();
@@ -259,12 +256,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                         _ => unreachable!()
                     };
 
-                    let new_pos= new_state.position.pos();
+                    let new_pos = new_state.position.pos();
 
-                    new_state.queue.push(QueueableToken::End {
-                        rule,
-                        pos: new_pos
-                    });
+                    new_state
+                        .queue
+                        .push(QueueableToken::End { rule, pos: new_pos });
                 }
 
                 Ok(new_state)
@@ -280,7 +276,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     );
                 }
 
-                if new_state.lookahead == Lookahead::None && new_state.atomicity != Atomicity::Atomic {
+                if new_state.lookahead == Lookahead::None
+                    && new_state.atomicity != Atomicity::Atomic
+                {
                     new_state.queue.truncate(index);
                 }
 
@@ -758,7 +756,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 Err(state) => Ok(state)
             }
         }
-
     }
 
     /// Transformation which stops `Token`s from being generated according to `is_atomic`.

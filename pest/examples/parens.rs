@@ -2,7 +2,7 @@ extern crate pest;
 
 use std::io::{self, Write};
 
-use pest::{state, Error, Parser, ParserState, ParseResult};
+use pest::{state, Error, ParseResult, Parser, ParserState};
 use pest::iterators::Pairs;
 
 #[allow(dead_code, non_camel_case_types)]
@@ -18,9 +18,7 @@ struct ParenParser;
 impl Parser<Rule> for ParenParser {
     fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
         fn expr(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
-            state.sequence(|s| {
-                s.repeat(|s| paren(s)).and_then(|s| s.end_of_input())
-            })
+            state.sequence(|s| s.repeat(|s| paren(s)).and_then(|s| s.end_of_input()))
         }
 
         fn paren(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
@@ -30,21 +28,17 @@ impl Parser<Rule> for ParenParser {
                         .and_then(|s| {
                             s.optional(|s| {
                                 s.sequence(|s| {
-                                    s.lookahead(true, |s| {
-                                        s.match_string("(")
-                                    })
-                                    .and_then(|s| s.repeat(|s| paren(s)))
+                                    s.lookahead(true, |s| s.match_string("("))
+                                        .and_then(|s| s.repeat(|s| paren(s)))
                                 })
                             })
                         })
-                        .and_then(|s| {
-                            s.rule(Rule::paren_end, |s| s.match_string(")"))
-                        })
+                        .and_then(|s| s.rule(Rule::paren_end, |s| s.match_string(")")))
                 })
             })
         }
 
-        state(input,|state| match rule {
+        state(input, |state| match rule {
             Rule::expr => expr(state),
             Rule::paren => paren(state),
             _ => unreachable!()

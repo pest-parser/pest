@@ -78,10 +78,10 @@ impl<T: Clone> Stack<T> {
             match op {
                 &StackOp::Push(ref elem) => {
                     self.cache.push(elem.clone());
-                },
+                }
                 &StackOp::Pop => {
                     self.cache.pop();
-                },
+                }
                 &StackOp::Clear => {
                     self.cache.clear();
                 }
