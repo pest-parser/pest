@@ -663,12 +663,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "abcd";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.skip_strings(&["c", "d"]);
+    /// let mut result = state.skip_until_any(&["c", "d"]);
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().pos(), 2);
     /// ```
     #[inline]
-    pub fn skip_strings(mut self: Box<Self>, strings: &[&str]) -> ParseResult<Box<Self>> {
+    pub fn skip_until_any(mut self: Box<Self>, strings: &[&str]) -> ParseResult<Box<Self>> {
         let new_pos = strings[1..].iter().fold(
             {
                 let mut pos = self.position.clone();
