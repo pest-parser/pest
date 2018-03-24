@@ -34,7 +34,7 @@ impl<'i> Span<'i> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ``` ignore
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
@@ -53,7 +53,7 @@ impl<'i> Span<'i> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ``` ignore
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
@@ -72,7 +72,7 @@ impl<'i> Span<'i> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ``` ignore
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
@@ -92,7 +92,7 @@ impl<'i> Span<'i> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ``` ignore
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
@@ -112,7 +112,7 @@ impl<'i> Span<'i> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ``` ignore
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
@@ -135,7 +135,7 @@ impl<'i> Span<'i> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ``` ignore
     /// # use pest::Position;
     /// let input = "abc";
     /// let mut start = Position::from_start(input);

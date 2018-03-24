@@ -36,7 +36,6 @@ impl<'i> Position<'i> {
     ///
     /// ```
     /// # use pest::Position;
-    ///
     /// let start = Position::from_start("");
     /// assert_eq!(start.pos(), 0);
     /// ```
@@ -56,9 +55,6 @@ impl<'i> Position<'i> {
     /// let mut start = Position::from_start(input);
     ///
     /// assert_eq!(start.pos(), 0);
-    ///
-    /// start.match_string("ab");
-    /// assert_eq!(start.pos(), 2);
     /// ```
     #[inline]
     pub fn pos(&self) -> usize {
@@ -77,12 +73,10 @@ impl<'i> Position<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let mut end = start.clone();
-    /// end.match_string("ab");
-    /// let span = start.span(&end);
+    /// let span = start.span(&start.clone());
     ///
     /// assert_eq!(span.start(), 0);
-    /// assert_eq!(span.end(), 2);
+    /// assert_eq!(span.end(), 0);
     /// ```
     #[inline]
     pub fn span(&self, other: &Position<'i>) -> span::Span<'i> {
@@ -95,17 +89,6 @@ impl<'i> Position<'i> {
     }
 
     /// Returns the line - and column number pair of the current `Position`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "\na";
-    /// let mut pos = Position::from_start(input);
-    /// pos.match_string("\na");
-    ///
-    /// assert_eq!(pos.line_col(), (2, 2));
-    /// ```
     #[inline]
     pub fn line_col(&self) -> (usize, usize) {
         if self.pos > self.input.len() {
@@ -153,17 +136,6 @@ impl<'i> Position<'i> {
     }
 
     /// Returns the actual line of the input represented by the current `Position`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "\na";
-    /// let mut pos = Position::from_start(input);
-    /// pos.match_string("\na");
-    ///
-    /// assert_eq!(pos.line_of(), "a");
-    /// ```
     #[inline]
     pub fn line_of(&self) -> &str {
         if self.pos > self.input.len() {
@@ -221,38 +193,12 @@ impl<'i> Position<'i> {
     }
 
     /// Returns `true` when the `Position` points to the start of the input `&str`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    /// let mut end = start.clone();
-    /// end.match_string("ab");
-    ///
-    /// assert_eq!(start.at_start(), true);
-    /// assert_eq!(end.at_start(), false);
-    /// ```
     #[inline]
     pub fn at_start(&self) -> bool {
         self.pos == 0
     }
 
     /// Returns `true` when the `Position` points to the end of the input `&str`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    /// let mut end = start.clone();
-    /// end.match_string("ab");
-    ///
-    /// assert_eq!(start.at_end(), false);
-    /// assert_eq!(end.at_end(), true);
-    /// ```
     #[inline]
     pub fn at_end(&self) -> bool {
         self.pos == self.input.len()
@@ -260,24 +206,8 @@ impl<'i> Position<'i> {
 
     /// Skips `n` `char`s from the `Position` and returns `true` if the skip was possible or `false`
     /// otherwise. If the return value is `false`, `pos` will not be updated.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// let mut skipped_2 = start.clone();
-    /// assert_eq!(skipped_2.skip(2), true);
-    /// assert_eq!(skipped_2.pos(), 2);
-    ///
-    /// let mut skipped_3 = start.clone();
-    /// assert_eq!(skipped_3.skip(3), false);
-    /// assert_eq!(skipped_3.pos(), 0);
-    /// ```
     #[inline]
-    pub fn skip(&mut self, n: usize) -> bool {
+    pub(crate) fn skip(&mut self, n: usize) -> bool {
         let skipped = {
             let mut len = 0;
             // Position's pos is always a UTF-8 border.
@@ -300,28 +230,8 @@ impl<'i> Position<'i> {
 
     /// Skips until the first occurrence of `string`. If the `string` can not be found, this
     /// function will return `false` and its `pos` will not be updated.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// let mut skipped_a = start.clone();
-    /// assert_eq!(skipped_a.skip_until("a"), true);
-    /// assert_eq!(skipped_a.pos(), 0);
-    ///
-    /// let mut skipped_b = start.clone();
-    /// assert_eq!(skipped_b.skip_until("b"), true);
-    /// assert_eq!(skipped_b.pos(), 1);
-    ///
-    /// let mut skipped_c = start.clone();
-    /// assert_eq!(skipped_c.skip_until("c"), false);
-    /// assert_eq!(skipped_c.pos(), 0);
-    /// ```
     #[inline]
-    pub fn skip_until(&mut self, string: &str) -> bool {
+    pub(crate) fn skip_until(&mut self, string: &str) -> bool {
         let mut current = self.pos;
         let slice = string.as_bytes();
 
@@ -344,24 +254,8 @@ impl<'i> Position<'i> {
 
     /// Matches `string` from the `Position` and returns `true` if a match was made or `false`
     /// otherwise. If no match was made, `pos` will not be updated.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// let mut matched_ab = start.clone();
-    /// assert_eq!(matched_ab.match_string("ab"), true);
-    /// assert_eq!(matched_ab.pos(), 2);
-    ///
-    /// let mut matched_ac = start.clone();
-    /// assert_eq!(matched_ac.match_string("ac"), false);
-    /// assert_eq!(matched_ac.pos(), 0);
-    /// ```
     #[inline]
-    pub fn match_string(&mut self, string: &str) -> bool {
+    pub(crate) fn match_string(&mut self, string: &str) -> bool {
         let matched = {
             let to = self.pos + string.len();
 
@@ -382,24 +276,8 @@ impl<'i> Position<'i> {
 
     /// Case-insensitively matches `string` from the `Position` and returns `true` if a match was
     /// made or `false` otherwise. If no match was made, `pos` will not be updated.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// let mut matched_AB = start.clone();
-    /// assert_eq!(matched_AB.match_insensitive("AB"), true);
-    /// assert_eq!(matched_AB.pos(), 2);
-    ///
-    /// let mut matched_AC = start.clone();
-    /// assert_eq!(matched_AC.match_insensitive("AC"), false);
-    /// assert_eq!(matched_AC.pos(), 0);
-    /// ```
     #[inline]
-    pub fn match_insensitive(&mut self, string: &str) -> bool {
+    pub(crate) fn match_insensitive(&mut self, string: &str) -> bool {
         let matched = {
             // Matching is safe since, even if the string does not fall on UTF-8 borders, that
             // particular slice is only used for comparison which will be handled correctly.
@@ -423,24 +301,8 @@ impl<'i> Position<'i> {
 
     /// Matches `char` `range` from the `Position` and returns `true` if a match was made or `false`
     /// otherwise. If no match was made, `pos` will not be updated.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// let mut matched_a_z = start.clone();
-    /// assert_eq!(matched_a_z.match_range('a'..'z'), true);
-    /// assert_eq!(matched_a_z.pos(), 1);
-    ///
-    /// let mut matched_A_Z = start.clone();
-    /// assert_eq!(matched_A_Z.match_range('A'..'Z'), false);
-    /// assert_eq!(matched_A_Z.pos(), 0);
-    /// ```
     #[inline]
-    pub fn match_range(&mut self, range: Range<char>) -> bool {
+    pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
         let len = {
             // Cannot actually cause undefined behavior.
             let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };

@@ -56,11 +56,8 @@ pub struct ParserState<'i, R: RuleType> {
 ///
 /// ```
 /// # use pest;
-///
 /// let input = "";
-/// pest::state::<(), _>(input, |s| {
-///     Ok(s)
-/// }).unwrap();
+/// pest::state::<(), _>(input, |s| Ok(s)).unwrap();
 /// ```
 pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<'i, R>>
 where
@@ -97,7 +94,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// ```
     /// # use pest;
-    ///
     /// let input = "";
     /// let state: Box<pest::ParserState<&str>> = pest::ParserState::new(input);
     /// ```
@@ -120,7 +116,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
@@ -143,7 +138,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     /// # use pest;
     /// # use pest::Atomicity;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
@@ -167,7 +161,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
@@ -187,9 +180,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ``` ignore
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
@@ -411,7 +403,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
@@ -455,7 +446,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {
@@ -495,7 +485,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
@@ -527,7 +516,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
@@ -559,7 +547,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
@@ -591,7 +578,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
@@ -623,7 +609,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
@@ -655,7 +640,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
@@ -718,7 +702,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
@@ -749,7 +732,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
@@ -848,7 +830,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     ///
     /// ```
-    /// # use std::rc::Rc;
     /// # use pest::{self, Atomicity};
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -903,7 +884,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
@@ -941,7 +921,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
@@ -971,7 +950,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
@@ -1011,7 +989,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// ```
     /// # use pest;
-    ///
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}

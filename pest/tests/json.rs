@@ -11,7 +11,7 @@
 extern crate pest;
 
 use pest::{state, Error, ParseResult, Parser, ParserState};
-use pest::{Position, Span};
+use pest::Span;
 use pest::iterators::{Pair, Pairs};
 use std::collections::HashMap;
 
@@ -439,17 +439,6 @@ fn object() {
 #[test]
 fn ast() {
     let input = "{\"a\": [null, true, 3.4]}";
-    let mut start = Position::from_start(input);
-    start.skip(1);
-    let mut end = start.clone();
-    end.skip(3);
-    let span = start.span(&end);
-
-    let mut pairs = HashMap::new();
-    pairs.insert(
-        span,
-        Json::Array(vec![Json::Null, Json::Bool(true), Json::Number(3.4)])
-    );
 
     let ast = consume(
         JsonParser::parse(Rule::json, input)
@@ -458,5 +447,15 @@ fn ast() {
             .unwrap()
     );
 
-    assert_eq!(ast, Json::Object(pairs));
+    match ast {
+        Json::Object(pairs) => {
+            let vals: Vec<&Json> = pairs.values().collect();
+
+            assert_eq!(
+                **vals.get(0).unwrap(),
+                Json::Array(vec![Json::Null, Json::Bool(true), Json::Number(3.4)])
+            );
+        }
+        _ => {}
+    }
 }
