@@ -191,7 +191,8 @@ impl Vm {
 
                 let current = result.and_then(|state| {
                     state.lookahead(true, |state| {
-                        self.skip(state).and_then(|state| self.parse_expr(&*expr, state))
+                        self.skip(state)
+                            .and_then(|state| self.parse_expr(&*expr, state))
                     })
                 });
                 times += 1;
@@ -204,9 +205,8 @@ impl Vm {
                     }
                 }
 
-                result = self.skip(current.unwrap()).and_then(|state|
-                    self.parse_expr(&*expr, state)
-                );
+                result = self.skip(current.unwrap())
+                    .and_then(|state| self.parse_expr(&*expr, state));
             }
         })
     }
