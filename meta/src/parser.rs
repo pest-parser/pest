@@ -493,36 +493,36 @@ fn consume_expr<'i>(
     }
 
     let term = |pair: Pair<'i, Rule>| unaries(pair.into_inner().peekable(), climber);
-    let infix =
-        |lhs: Result<ParserNode<'i>, Vec<Error<'i, Rule>>>,
-         op: Pair<'i, Rule>,
-         rhs: Result<ParserNode<'i>, Vec<Error<'i, Rule>>>| match op.as_rule() {
-            Rule::sequence_operator => {
-                let lhs = lhs?;
-                let rhs = rhs?;
+    let infix = |lhs: Result<ParserNode<'i>, Vec<Error<'i, Rule>>>,
+                 op: Pair<'i, Rule>,
+                 rhs: Result<ParserNode<'i>, Vec<Error<'i, Rule>>>| match op.as_rule(
+    ) {
+        Rule::sequence_operator => {
+            let lhs = lhs?;
+            let rhs = rhs?;
 
-                let start = lhs.span.start_pos();
-                let end = rhs.span.end_pos();
+            let start = lhs.span.start_pos();
+            let end = rhs.span.end_pos();
 
-                Ok(ParserNode {
-                    expr: ParserExpr::Seq(Box::new(lhs), Box::new(rhs)),
-                    span: start.span(&end)
-                })
-            }
-            Rule::choice_operator => {
-                let lhs = lhs?;
-                let rhs = rhs?;
+            Ok(ParserNode {
+                expr: ParserExpr::Seq(Box::new(lhs), Box::new(rhs)),
+                span: start.span(&end)
+            })
+        }
+        Rule::choice_operator => {
+            let lhs = lhs?;
+            let rhs = rhs?;
 
-                let start = lhs.span.start_pos();
-                let end = rhs.span.end_pos();
+            let start = lhs.span.start_pos();
+            let end = rhs.span.end_pos();
 
-                Ok(ParserNode {
-                    expr: ParserExpr::Choice(Box::new(lhs), Box::new(rhs)),
-                    span: start.span(&end)
-                })
-            }
-            _ => unreachable!()
-        };
+            Ok(ParserNode {
+                expr: ParserExpr::Choice(Box::new(lhs), Box::new(rhs)),
+                span: start.span(&end)
+            })
+        }
+        _ => unreachable!()
+    };
 
     climber.climb(pairs, term, infix)
 }

@@ -38,7 +38,7 @@ impl<'i> Span<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let end = start.clone();
     /// let span = start.span(&end);
     ///
     /// assert_eq!(span.start(), 0);
@@ -56,10 +56,10 @@ impl<'i> Span<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let end = start.clone();
     /// let span = start.span(&end);
     ///
-    /// assert_eq!(span.end(), 2);
+    /// assert_eq!(span.end(), 0);
     /// ```
     #[inline]
     pub fn end(&self) -> usize {
@@ -74,7 +74,7 @@ impl<'i> Span<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let end = start.clone();
     /// let span = start.clone().span(&end);
     ///
     /// assert_eq!(span.start_pos(), start);
@@ -93,7 +93,7 @@ impl<'i> Span<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let end = start.clone();
     /// let span = start.span(&end);
     ///
     /// assert_eq!(span.end_pos(), end);
@@ -112,7 +112,7 @@ impl<'i> Span<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
+    /// let end = start.clone();
     /// let span = start.clone().span(&end);
     ///
     /// assert_eq!(span.split(), (start, end));
@@ -131,12 +131,16 @@ impl<'i> Span<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::Position;
-    /// let input = "abc";
-    /// let start = Position::from_start(input).skip(1).unwrap();
-    /// let end = start.clone().match_string("b").unwrap();
-    /// let span = start.span(&end);
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
     ///
+    /// let input = "abc";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input).skip(1).unwrap();
+    /// let start_pos = state.position().clone();
+    /// state = state.match_string("b").unwrap();
+    /// let span = start_pos.span(&state.position().clone());
     /// assert_eq!(span.as_str(), "b");
     /// ```
     #[inline]

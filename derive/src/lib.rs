@@ -164,6 +164,13 @@
 //!
 //!     where `e`, `e1`, and `e2` are expressions.
 //!
+//! Expressions can modify the stack only if they match the input. For example,
+//! if `e1` in the compound expression `e1 | e2` does not match the input, then
+//! it does not modify the stack, so `e2` sees the stack in the same state as
+//! `e1` did. Repetitions and optionals (`e*`, `e+`, `e{, n}`, `e{n,}`,
+//! `e{m,n}`, `e?`) can modify the stack each time `e` matches. The `!e` and `&e`
+//! expressions are a special case; they never modify the stack.
+//!
 //! ## Special rules
 //!
 //! Special rules can be called within the grammar. They are:
@@ -175,6 +182,7 @@
 //! * `eoi` - (end-of-input) matches only when a `Parser` has reached its end
 //! * `pop` - pops a string from the stack and matches it
 //! * `peek` - peeks a string from the stack and matches it
+//! * `drop` - drops the top of the stack (fails to match if the stack is empty)
 //!
 //! `whitespace` and `comment` should be defined manually if needed. All other rules cannot be
 //! overridden.
@@ -200,7 +208,7 @@
 //! a = { b ~ whitespace* ~ (comment ~ whitespace*)* ~ c }
 //! ```
 //!
-//! ## `push`, `pop`, and `peek`
+//! ## `push`, `pop`, `drop`, and `peek`
 //!
 //! `push(e)` simply pushes the captured string of the expression `e` down a stack. This stack can
 //! then later be used to match grammar based on its content with `pop` and `peek`.
@@ -221,6 +229,10 @@
 //! `pop` works the same way with the exception that it pops the string off of the stack if the
 //! the match worked. With the stack from above, if `pop` matches `"a"`, the stack will be mutated
 //! to `["b"]`.
+//!
+//! `drop` makes it possible to remove the string at the top of the stack
+//! without matching it. If the stack is nonempty, `drop` drops the top of the
+//! stack. If the stack is empty, then `drop` fails to match.
 //!
 //! ## `Rule`
 //!

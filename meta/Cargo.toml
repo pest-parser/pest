@@ -12,7 +12,7 @@ readme = "_README.md"
 
 [dependencies]
 maplit = "^0.1.5"
-pest = { path = "../pest", version = "^1.0" }
+pest = "^1.0"
 pest_derive = "^1.0"
 
 [badges]

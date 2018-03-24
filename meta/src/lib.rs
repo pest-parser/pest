@@ -7,23 +7,20 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+extern crate maplit;
 #[cfg(test)]
 #[macro_use]
 extern crate pest;
-
 #[cfg(not(test))]
 extern crate pest;
-
 #[macro_use]
 extern crate pest_derive;
 
-extern crate maplit;
+use std::fmt::Display;
 
 pub mod parser;
 pub mod ast;
 pub mod validator;
-
-use std::fmt::Display;
 
 pub fn unwrap_or_report<T, E>(result: Result<T, E>) -> T
 where

@@ -10,8 +10,7 @@
 #[macro_use]
 extern crate pest;
 
-use pest::{state, Error, Parser, ParserState};
-use pest::Position;
+use pest::{state, Error, ParseResult, Parser, ParserState};
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 
@@ -33,26 +32,19 @@ struct CalculatorParser;
 
 impl Parser<Rule> for CalculatorParser {
     fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
-        fn expression<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, Rule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(Rule::expression, pos, |state, pos| {
-                state.sequence(move |state| {
-                    pos.sequence(|pos| {
-                        primary(pos, state).and_then(|pos| {
-                            pos.repeat(|pos| {
-                                state.sequence(move |state| {
-                                    pos.sequence(|pos| {
-                                        plus(pos, state)
-                                            .or_else(|pos| minus(pos, state))
-                                            .or_else(|pos| times(pos, state))
-                                            .or_else(|pos| divide(pos, state))
-                                            .or_else(|pos| modulus(pos, state))
-                                            .or_else(|pos| power(pos, state))
-                                            .and_then(|pos| primary(pos, state))
-                                    })
-                                })
+        fn expression(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+            state.rule(Rule::expression, |s| {
+                s.sequence(|s| {
+                    primary(s).and_then(|s| {
+                        s.repeat(|s| {
+                            s.sequence(|s| {
+                                plus(s)
+                                    .or_else(|s| minus(s))
+                                    .or_else(|s| times(s))
+                                    .or_else(|s| divide(s))
+                                    .or_else(|s| modulus(s))
+                                    .or_else(|s| power(s))
+                                    .and_then(|s| primary(s))
                             })
                         })
                     })
@@ -60,34 +52,24 @@ impl Parser<Rule> for CalculatorParser {
             })
         }
 
-        fn primary<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, Rule>
-        ) -> Result<Position<'i>, Position<'i>> {
+        fn primary(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
             state
-                .sequence(move |state| {
-                    pos.sequence(|pos| {
-                        pos.match_string("(")
-                            .and_then(|pos| expression(pos, state))
-                            .and_then(|pos| pos.match_string(")"))
-                    })
+                .sequence(|s| {
+                    s.match_string("(")
+                        .and_then(|s| expression(s))
+                        .and_then(|s| s.match_string(")"))
                 })
-                .or_else(|pos| number(pos, state))
+                .or_else(|s| number(s))
         }
 
-        fn number<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, Rule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(Rule::number, pos, |state, pos| {
-                state.sequence(move |_| {
-                    pos.sequence(|pos| {
-                        pos.optional(|pos| pos.match_string("-")).and_then(|pos| {
-                            pos.match_string("0").or_else(|pos| {
-                                pos.sequence(|pos| {
-                                    pos.match_range('1'..'9')
-                                        .and_then(|pos| pos.repeat(|pos| pos.match_range('0'..'9')))
-                                })
+        fn number(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+            state.rule(Rule::number, |s| {
+                s.sequence(|s| {
+                    s.optional(|s| s.match_string("-")).and_then(|s| {
+                        s.match_string("0").or_else(|s| {
+                            s.sequence(|s| {
+                                s.match_range('1'..'9')
+                                    .and_then(|s| s.repeat(|s| s.match_range('0'..'9')))
                             })
                         })
                     })
@@ -95,58 +77,40 @@ impl Parser<Rule> for CalculatorParser {
             })
         }
 
-        fn plus<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, Rule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(Rule::plus, pos, |_, pos| pos.match_string("+"))
+        fn plus(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+            state.rule(Rule::plus, |s| s.match_string("+"))
         }
 
-        fn minus<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, Rule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(Rule::minus, pos, |_, pos| pos.match_string("-"))
+        fn minus(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+            state.rule(Rule::minus, |s| s.match_string("-"))
         }
 
-        fn times<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, Rule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(Rule::times, pos, |_, pos| pos.match_string("*"))
+        fn times(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+            state.rule(Rule::times, |s| s.match_string("*"))
         }
 
-        fn divide<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, Rule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(Rule::divide, pos, |_, pos| pos.match_string("/"))
+        fn divide(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+            state.rule(Rule::divide, |s| s.match_string("/"))
         }
 
-        fn modulus<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, Rule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(Rule::modulus, pos, |_, pos| pos.match_string("%"))
+        fn modulus(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+            state.rule(Rule::modulus, |s| s.match_string("%"))
         }
 
-        fn power<'i>(
-            pos: Position<'i>,
-            state: &mut ParserState<'i, Rule>
-        ) -> Result<Position<'i>, Position<'i>> {
-            state.rule(Rule::power, pos, |_, pos| pos.match_string("^"))
+        fn power(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+            state.rule(Rule::power, |s| s.match_string("^"))
         }
 
-        state(input, move |mut state, pos| match rule {
-            Rule::expression => expression(pos, &mut state),
-            Rule::primary => primary(pos, &mut state),
-            Rule::number => number(pos, &mut state),
-            Rule::plus => plus(pos, &mut state),
-            Rule::minus => minus(pos, &mut state),
-            Rule::times => times(pos, &mut state),
-            Rule::divide => divide(pos, &mut state),
-            Rule::modulus => modulus(pos, &mut state),
-            Rule::power => power(pos, &mut state)
+        state(input, |state| match rule {
+            Rule::expression => expression(state),
+            Rule::primary => primary(state),
+            Rule::number => number(state),
+            Rule::plus => plus(state),
+            Rule::minus => minus(state),
+            Rule::times => times(state),
+            Rule::divide => divide(state),
+            Rule::modulus => modulus(state),
+            Rule::power => power(state)
         })
     }
 }

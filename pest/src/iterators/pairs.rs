@@ -58,10 +58,10 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// }
     ///
     /// let input = "";
-    /// let pairs = pest::state(input, |state, pos| {
+    /// let pairs = pest::state(input, |state| {
     ///     // generating nested Token pair with Rule::b inside Rule::a
-    /// #     state.rule(Rule::a, pos, |state, pos| {
-    /// #         state.rule(Rule::b, pos, |_, p| Ok(p))
+    /// #     state.rule(Rule::a, |state| {
+    /// #         state.rule(Rule::b, |s| Ok(s))
     /// #     })
     /// }).unwrap();
     /// let tokens: Vec<_> = pairs.flatten().tokens().collect();
@@ -87,9 +87,9 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// }
     ///
     /// let input = "";
-    /// let pairs = pest::state(input, |state, pos| {
+    /// let pairs = pest::state(input, |state| {
     ///     // generating Token pair with Rule::a ...
-    /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
+    /// #     state.rule(Rule::a, |s| Ok(s))
     /// }).unwrap();
     /// let tokens: Vec<_> = pairs.tokens().collect();
     ///

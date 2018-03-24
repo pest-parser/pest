@@ -19,7 +19,7 @@ use memchr;
 use span;
 
 /// A `struct` containing a position that is tied to a `&str` which provides useful methods to
-/// manually parse it. This leads to an API largely based on the standard `Result`.
+/// manually parse it.
 pub struct Position<'i> {
     input: &'i [u8],
     pos: usize
@@ -36,8 +36,8 @@ impl<'i> Position<'i> {
     ///
     /// ```
     /// # use pest::Position;
-    ///
-    /// Position::from_start("");
+    /// let start = Position::from_start("");
+    /// assert_eq!(start.pos(), 0);
     /// ```
     #[inline]
     pub fn from_start(input: &'i str) -> Position<'i> {
@@ -52,10 +52,9 @@ impl<'i> Position<'i> {
     /// ```
     /// # use pest::Position;
     /// let input = "ab";
-    /// let start = Position::from_start(input);
+    /// let mut start = Position::from_start(input);
     ///
     /// assert_eq!(start.pos(), 0);
-    /// assert_eq!(start.match_string("ab").unwrap().pos(), 2);
     /// ```
     #[inline]
     pub fn pos(&self) -> usize {
@@ -74,11 +73,10 @@ impl<'i> Position<'i> {
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
-    /// let span = start.span(&end);
+    /// let span = start.span(&start.clone());
     ///
     /// assert_eq!(span.start(), 0);
-    /// assert_eq!(span.end(), 2);
+    /// assert_eq!(span.end(), 0);
     /// ```
     #[inline]
     pub fn span(&self, other: &Position<'i>) -> span::Span<'i> {
@@ -95,12 +93,16 @@ impl<'i> Position<'i> {
     /// # Examples
     ///
     /// ```
-    /// # use pest::Position;
-    /// let input = "\na";
-    /// let start = Position::from_start(input);
-    /// let pos = start.match_string("\na").unwrap();
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
     ///
-    /// assert_eq!(pos.line_col(), (2, 2));
+    /// let input = "\na";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.match_string("\na");
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().line_col(), (2, 2));
     /// ```
     #[inline]
     pub fn line_col(&self) -> (usize, usize) {
@@ -148,17 +150,21 @@ impl<'i> Position<'i> {
         line_col
     }
 
-    /// Returns the actual line of the current `Position`.
+    /// Returns the actual line of the input represented by the current `Position`.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use pest::Position;
-    /// let input = "\na";
-    /// let start = Position::from_start(input);
-    /// let pos = start.match_string("\na").unwrap();
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
     ///
-    /// assert_eq!(pos.line_of(), "a");
+    /// let input = "\na";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.match_string("\na");
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().line_of(), "a");
     /// ```
     #[inline]
     pub fn line_of(&self) -> &str {
@@ -216,67 +222,22 @@ impl<'i> Position<'i> {
         unsafe { str::from_utf8_unchecked(&self.input[start..end]) }
     }
 
-    /// Returns `Ok` with the current `Position` if it is at the start of its `&str` or `Err` of
-    /// the same `Position` otherwise.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
-    ///
-    /// assert_eq!(start.clone().at_start(), Ok(start));
-    /// assert_eq!(end.clone().at_start(), Err(end));
-    /// ```
+    /// Returns `true` when the `Position` points to the start of the input `&str`.
     #[inline]
-    pub fn at_start(self) -> Result<Position<'i>, Position<'i>> {
-        if self.pos == 0 {
-            Ok(self)
-        } else {
-            Err(self)
-        }
+    pub(crate) fn at_start(&self) -> bool {
+        self.pos == 0
     }
 
-    /// Returns `Ok` with the current `Position` if it is at the end of its `&str` or `Err` of the
-    /// same `Position` otherwise.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    /// let end = start.clone().match_string("ab").unwrap();
-    ///
-    /// assert_eq!(start.clone().at_end(), Err(start));
-    /// assert_eq!(end.clone().at_end(), Ok(end));
-    /// ```
+    /// Returns `true` when the `Position` points to the end of the input `&str`.
     #[inline]
-    pub fn at_end(self) -> Result<Position<'i>, Position<'i>> {
-        if self.pos == self.input.len() {
-            Ok(self)
-        } else {
-            Err(self)
-        }
+    pub(crate) fn at_end(&self) -> bool {
+        self.pos == self.input.len()
     }
 
-    /// Skips `n` `char`s from the `Position` and returns `Ok` with the new `Position` if the skip
-    /// was possible or `Err` with the current `Position` otherwise.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(start.clone().skip(2).unwrap().pos(), 2);
-    /// assert_eq!(start.clone().skip(3), Err(start));
-    /// ```
+    /// Skips `n` `char`s from the `Position` and returns `true` if the skip was possible or `false`
+    /// otherwise. If the return value is `false`, `pos` will not be updated.
     #[inline]
-    pub fn skip(mut self, n: usize) -> Result<Position<'i>, Position<'i>> {
+    pub(crate) fn skip(&mut self, n: usize) -> bool {
         let skipped = {
             let mut len = 0;
             // Position's pos is always a UTF-8 border.
@@ -286,7 +247,7 @@ impl<'i> Position<'i> {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
                 } else {
-                    return Err(self);
+                    return false;
                 }
             }
 
@@ -294,59 +255,37 @@ impl<'i> Position<'i> {
         };
 
         self.pos += skipped;
-        Ok(self)
+        true
     }
 
-    /// Skips until the first occurrence of `string`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(start.clone().skip_until("a").unwrap().pos(), 0);
-    /// assert_eq!(start.clone().skip_until("b").unwrap().pos(), 1);
-    /// assert_eq!(start.clone().skip_until("c"), Err(start));
-    /// ```
+    /// Skips until the first occurrence of `string`. If the `string` can not be found, this
+    /// function will return `false` and its `pos` will not be updated.
     #[inline]
-    pub fn skip_until(mut self, string: &str) -> Result<Position<'i>, Position<'i>> {
+    pub(crate) fn skip_until(&mut self, string: &str) -> bool {
         let mut current = self.pos;
         let slice = string.as_bytes();
 
         while let Some(pos) = memchr::memchr(slice[0], &self.input[current..]) {
             if slice.len() == 1 {
                 self.pos = current + pos;
-                return Ok(self);
+                return true;
             } else {
                 if slice == &self.input[current + pos..current + pos + slice.len()] {
                     self.pos = current + pos;
-                    return Ok(self);
+                    return true;
                 } else {
                     current += pos + 1;
                 }
             }
         }
 
-        Err(self)
+        false
     }
 
-    /// Matches `string` from the `Position` and returns `Ok` with the new `Position` if a match was
-    /// made or `Err` with the current `Position` otherwise.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(start.clone().match_string("ab").unwrap().pos(), 2);
-    /// assert_eq!(start.clone().match_string("ac"), Err(start));
-    /// ```
+    /// Matches `string` from the `Position` and returns `true` if a match was made or `false`
+    /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
-    pub fn match_string(mut self, string: &str) -> Result<Position<'i>, Position<'i>> {
+    pub(crate) fn match_string(&mut self, string: &str) -> bool {
         let matched = {
             let to = self.pos + string.len();
 
@@ -359,27 +298,16 @@ impl<'i> Position<'i> {
 
         if matched {
             self.pos += string.len();
-            Ok(self)
+            true
         } else {
-            Err(self)
+            false
         }
     }
 
-    /// Case-insensitively matches `string` from the `Position` and returns `Ok` with the new
-    /// `Position` if a match was made or `Err` with the current `Position` otherwise.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(start.clone().match_insensitive("AB").unwrap().pos(), 2);
-    /// assert_eq!(start.clone().match_insensitive("AC"), Err(start));
-    /// ```
+    /// Case-insensitively matches `string` from the `Position` and returns `true` if a match was
+    /// made or `false` otherwise. If no match was made, `pos` will not be updated.
     #[inline]
-    pub fn match_insensitive(mut self, string: &str) -> Result<Position<'i>, Position<'i>> {
+    pub(crate) fn match_insensitive(&mut self, string: &str) -> bool {
         let matched = {
             // Matching is safe since, even if the string does not fall on UTF-8 borders, that
             // particular slice is only used for comparison which will be handled correctly.
@@ -395,27 +323,16 @@ impl<'i> Position<'i> {
 
         if matched {
             self.pos += string.len();
-            Ok(self)
+            true
         } else {
-            Err(self)
+            false
         }
     }
 
-    /// Matches `char` `range` from the `Position` and returns `Ok` with the new `Position` if a
-    /// match was made or `Err` with the current `Position` otherwise.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(start.clone().match_range('a'..'z').unwrap().pos(), 1);
-    /// assert_eq!(start.clone().match_range('A'..'Z'), Err(start));
-    /// ```
+    /// Matches `char` `range` from the `Position` and returns `true` if a match was made or `false`
+    /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
-    pub fn match_range(mut self, range: Range<char>) -> Result<Position<'i>, Position<'i>> {
+    pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
         let len = {
             // Cannot actually cause undefined behavior.
             let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
@@ -434,202 +351,9 @@ impl<'i> Position<'i> {
         match len {
             Some(len) => {
                 self.pos += len;
-                Ok(self)
+                true
             }
-            None => Err(self)
-        }
-    }
-
-    /// Starts a sequence of transformations provided by `f` from the `Position`. It returns the
-    /// same `Result` returned by `f` in the case of an `Ok` or `Err` with the current `Position`
-    /// otherwise.
-    ///
-    /// This method is useful to parse sequences that only match together which usually come in the
-    /// form of chained `Result`s with
-    /// [`Result::and_then`](https://doc.rust-lang.org/std/result/enum.Result.html#method.and_then).
-    /// Such chains should always be wrapped up in
-    /// [`ParserState::sequence`](../struct.ParserState.html#method.sequence) if they can create
-    /// `Token`s before being wrapped in `Position::sequence`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(
-    ///     start.clone().sequence(|p| {
-    ///         p.match_string("a").and_then(|p| {
-    ///             p.match_string("b")
-    ///         })
-    ///     }).unwrap().pos(),
-    ///     2
-    /// );
-    /// assert_eq!(
-    ///     start.clone().sequence(|p| {
-    ///         p.match_string("a").and_then(|p| {
-    ///             p.match_string("c")
-    ///         })
-    ///     }),
-    ///     Err(start)
-    /// );
-    /// ```
-    #[inline]
-    pub fn sequence<F>(self, f: F) -> Result<Position<'i>, Position<'i>>
-    where
-        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
-    {
-        let initial_pos = self.pos;
-        let result = f(self);
-
-        match result {
-            Ok(pos) => Ok(pos),
-            Err(mut pos) => {
-                pos.pos = initial_pos;
-                Err(pos)
-            }
-        }
-    }
-
-    /// Starts a lookahead transformation provided by `f` from the `Position`. It returns `Ok` with
-    /// the current position if `f` also returns an `Ok ` or `Err` with the current `Position`
-    /// otherwise.
-    ///
-    /// If `is_positive` is `false`, it swaps the `Ok` and `Err` together, negating the `Result`. It
-    /// should always be wrapped up in
-    /// [`ParserState::lookahead`](../struct.ParserState.html#method.lookahead) if it can create
-    /// `Token`s before being wrapped in `Position::lookahead`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(
-    ///     start.clone().lookahead(true, |p| {
-    ///         p.match_string("ab")
-    ///     }),
-    ///     Ok(start.clone())
-    /// );
-    /// assert_eq!(
-    ///     start.clone().lookahead(true, |p| {
-    ///         p.match_string("ac")
-    ///     }),
-    ///     Err(start.clone())
-    /// );
-    /// assert_eq!(
-    ///     start.clone().lookahead(false, |p| {
-    ///         p.match_string("ac")
-    ///     }),
-    ///     Ok(start)
-    /// );
-    /// ```
-    #[inline]
-    pub fn lookahead<F>(self, is_positive: bool, f: F) -> Result<Position<'i>, Position<'i>>
-    where
-        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
-    {
-        let initial_pos = self.pos;
-        let result = f(self);
-
-        let result = match result {
-            Ok(mut pos) => {
-                pos.pos = initial_pos;
-                Ok(pos)
-            }
-            Err(mut pos) => {
-                pos.pos = initial_pos;
-                Err(pos)
-            }
-        };
-
-        if is_positive {
-            result
-        } else {
-            match result {
-                Ok(pos) => Err(pos),
-                Err(pos) => Ok(pos)
-            }
-        }
-    }
-
-    /// Optionally applies the transformation provided by `f` from the `Position`. It returns `Ok`
-    /// with the `Position` returned by `f` regardless of the `Result`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(
-    ///     start.clone().optional(|p| {
-    ///         p.match_string("a").and_then(|p| {
-    ///             p.match_string("b")
-    ///         })
-    ///     }).unwrap().pos(),
-    ///     2
-    /// );
-    /// assert_eq!(
-    ///     start.clone().sequence(|p| {
-    ///         p.match_string("a").and_then(|p| {
-    ///             p.match_string("c")
-    ///         })
-    ///     }),
-    ///     Err(start)
-    /// );
-    /// ```
-    #[inline]
-    pub fn optional<F>(self, f: F) -> Result<Position<'i>, Position<'i>>
-    where
-        F: FnOnce(Position<'i>) -> Result<Position<'i>, Position<'i>>
-    {
-        let result = f(self);
-
-        match result {
-            Ok(pos) | Err(pos) => Ok(pos)
-        }
-    }
-
-    /// Repeatedly applies the transformation provided by `f` from the `Position`. It returns `Ok`
-    /// with the first `Position` returned by `f` which is wrapped up in an `Err`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest::Position;
-    /// let input = "ab";
-    /// let start = Position::from_start(input);
-    ///
-    /// assert_eq!(
-    ///     start.clone().repeat(|p| {
-    ///         p.match_string("a")
-    ///     }).unwrap().pos(),
-    ///     1
-    /// );
-    /// assert_eq!(
-    ///     start.repeat(|p| {
-    ///         p.match_string("b")
-    ///     }).unwrap().pos(),
-    ///     0
-    /// );
-    /// ```
-    #[inline]
-    pub fn repeat<F>(self, mut f: F) -> Result<Position<'i>, Position<'i>>
-    where
-        F: FnMut(Position<'i>) -> Result<Position<'i>, Position<'i>>
-    {
-        let mut result = f(self);
-
-        loop {
-            match result {
-                Ok(pos) => result = f(pos),
-                Err(pos) => return Ok(pos)
-            };
+            None => false
         }
     }
 }
@@ -686,16 +410,16 @@ mod tests {
     #[test]
     fn empty() {
         let input = b"";
-        assert!(unsafe { new(input, 0) }.match_string("").is_ok());
-        assert!(!unsafe { new(input, 0) }.match_string("a").is_ok());
+        assert_eq!(unsafe { new(input, 0) }.match_string(""), true);
+        assert_eq!(!unsafe { new(input, 0) }.match_string("a"), true);
     }
 
     #[test]
     fn parts() {
         let input = b"asdasdf";
 
-        assert!(unsafe { new(input, 0) }.match_string("asd").is_ok());
-        assert!(unsafe { new(input, 3) }.match_string("asdf").is_ok());
+        assert_eq!(unsafe { new(input, 0) }.match_string("asd"), true);
+        assert_eq!(unsafe { new(input, 3) }.match_string("asdf"), true);
     }
 
     #[test]
@@ -752,8 +476,8 @@ mod tests {
     }
 
     fn measure_skip(input: &[u8], pos: usize, n: usize) -> Option<usize> {
-        let p = unsafe { new(input, pos) };
-        if let Ok(p) = p.skip(n) {
+        let mut p = unsafe { new(input, pos) };
+        if p.skip(n) {
             Some(p.pos - pos)
         } else {
             None
@@ -779,30 +503,42 @@ mod tests {
 
     #[test]
     fn skip_until() {
-        let input = b"ab ac";
+        let input = "ab ac";
+        let pos = Position::from_start(input);
 
-        assert_eq!(unsafe { new(input, 0) }.skip_until("a").unwrap().pos(), 0);
-        assert_eq!(unsafe { new(input, 0) }.skip_until("b").unwrap().pos(), 1);
-        assert_eq!(unsafe { new(input, 0) }.skip_until("ab").unwrap().pos(), 0);
-        assert_eq!(unsafe { new(input, 0) }.skip_until("ac").unwrap().pos(), 3);
+        let mut test_pos = pos.clone();
+        test_pos.skip_until("a");
+        assert_eq!(test_pos.pos(), 0);
+
+        test_pos = pos.clone();
+        test_pos.skip_until("b");
+        assert_eq!(test_pos.pos(), 1);
+
+        test_pos = pos.clone();
+        test_pos.skip_until("ab");
+        assert_eq!(test_pos.pos(), 0);
+
+        test_pos = pos.clone();
+        test_pos.skip_until("ac");
+        assert_eq!(test_pos.pos(), 3);
     }
 
     #[test]
     fn match_range() {
         let input = b"b";
 
-        assert!(unsafe { new(input, 0) }.match_range('a'..'c').is_ok());
-        assert!(unsafe { new(input, 0) }.match_range('b'..'b').is_ok());
-        assert!(!unsafe { new(input, 0) }.match_range('a'..'a').is_ok());
-        assert!(!unsafe { new(input, 0) }.match_range('c'..'c').is_ok());
-        assert!(unsafe { new(input, 0) }.match_range('a'..'嗨').is_ok());
+        assert_eq!(unsafe { new(input, 0) }.match_range('a'..'c'), true);
+        assert_eq!(unsafe { new(input, 0) }.match_range('b'..'b'), true);
+        assert_eq!(!unsafe { new(input, 0) }.match_range('a'..'a'), true);
+        assert_eq!(!unsafe { new(input, 0) }.match_range('c'..'c'), true);
+        assert_eq!(unsafe { new(input, 0) }.match_range('a'..'嗨'), true);
     }
 
     #[test]
     fn match_insensitive() {
         let input = b"AsdASdF";
 
-        assert!(unsafe { new(input, 0) }.match_insensitive("asd").is_ok());
-        assert!(unsafe { new(input, 3) }.match_insensitive("asdf").is_ok());
+        assert_eq!(unsafe { new(input, 0) }.match_insensitive("asd"), true);
+        assert_eq!(unsafe { new(input, 3) }.match_insensitive("asdf"), true);
     }
 }

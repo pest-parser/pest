@@ -55,9 +55,9 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// }
     ///
     /// let input = "";
-    /// let pair = pest::state(input, |state, pos| {
+    /// let pair = pest::state(input, |state| {
     ///     // generating Token pair with Rule::a ...
-    /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
+    /// #     state.rule(Rule::a, |s| Ok(s))
     /// }).unwrap().next().unwrap();
     ///
     /// assert_eq!(pair.as_rule(), Rule::a);
@@ -84,9 +84,9 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// }
     ///
     /// let input = "ab";
-    /// let pair = pest::state(input, |state, pos| {
+    /// let pair = pest::state(input, |state| {
     ///     // generating Token pair with Rule::ab ...
-    /// #     state.rule(Rule::ab, pos, |_, p| p.match_string("ab"))
+    /// #     state.rule(Rule::ab, |s| s.match_string("ab"))
     /// }).unwrap().next().unwrap();
     ///
     /// assert_eq!(pair.as_str(), "ab");
@@ -114,9 +114,9 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// }
     ///
     /// let input = "ab";
-    /// let pair = pest::state(input, |state, pos| {
+    /// let pair = pest::state(input, |state| {
     ///     // generating Token pair with Rule::ab ...
-    /// #     state.rule(Rule::ab, pos, |_, p| p.match_string("ab"))
+    /// #     state.rule(Rule::ab, |s| s.match_string("ab"))
     /// }).unwrap().next().unwrap();
     ///
     /// assert_eq!(pair.into_span().as_str(), "ab");
@@ -144,9 +144,9 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// }
     ///
     /// let input = "";
-    /// let pair = pest::state(input, |state, pos| {
+    /// let pair = pest::state(input, |state| {
     ///     // generating Token pair with Rule::a ...
-    /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
+    /// #     state.rule(Rule::a, |s| Ok(s))
     /// }).unwrap().next().unwrap();
     ///
     /// assert!(pair.into_inner().next().is_none());
@@ -172,9 +172,9 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// }
     ///
     /// let input = "";
-    /// let pair = pest::state(input, |state, pos| {
+    /// let pair = pest::state(input, |state| {
     ///     // generating Token pair with Rule::a ...
-    /// #     state.rule(Rule::a, pos, |_, p| Ok(p))
+    /// #     state.rule(Rule::a, |s| Ok(s))
     /// }).unwrap().next().unwrap();
     /// let tokens: Vec<_> = pair.tokens().collect();
     ///
