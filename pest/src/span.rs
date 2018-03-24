@@ -34,12 +34,11 @@ impl<'i> Span<'i> {
     ///
     /// # Examples
     ///
-    /// ``` ignore
+    /// ```
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let mut end = start.clone();
-    /// end.match_string("ab");
+    /// let end = start.clone();
     /// let span = start.span(&end);
     ///
     /// assert_eq!(span.start(), 0);
@@ -53,15 +52,14 @@ impl<'i> Span<'i> {
     ///
     /// # Examples
     ///
-    /// ``` ignore
+    /// ```
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let mut end = start.clone();
-    /// end.match_string("ab");
+    /// let end = start.clone();
     /// let span = start.span(&end);
     ///
-    /// assert_eq!(span.end(), 2);
+    /// assert_eq!(span.end(), 0);
     /// ```
     #[inline]
     pub fn end(&self) -> usize {
@@ -72,12 +70,11 @@ impl<'i> Span<'i> {
     ///
     /// # Examples
     ///
-    /// ``` ignore
+    /// ```
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let mut end = start.clone();
-    /// end.match_string("ab");
+    /// let end = start.clone();
     /// let span = start.clone().span(&end);
     ///
     /// assert_eq!(span.start_pos(), start);
@@ -92,12 +89,11 @@ impl<'i> Span<'i> {
     ///
     /// # Examples
     ///
-    /// ``` ignore
+    /// ```
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let mut end = start.clone();
-    /// end.match_string("ab");
+    /// let end = start.clone();
     /// let span = start.span(&end);
     ///
     /// assert_eq!(span.end_pos(), end);
@@ -112,12 +108,11 @@ impl<'i> Span<'i> {
     ///
     /// # Examples
     ///
-    /// ``` ignore
+    /// ```
     /// # use pest::Position;
     /// let input = "ab";
     /// let start = Position::from_start(input);
-    /// let mut end = start.clone();
-    /// end.match_string("ab");
+    /// let end = start.clone();
     /// let span = start.clone().span(&end);
     ///
     /// assert_eq!(span.split(), (start, end));
@@ -132,20 +127,6 @@ impl<'i> Span<'i> {
     }
 
     /// Captures a slice from the `&str` defined by the `Span`.
-    ///
-    /// # Examples
-    ///
-    /// ``` ignore
-    /// # use pest::Position;
-    /// let input = "abc";
-    /// let mut start = Position::from_start(input);
-    /// start.skip(1);
-    /// let mut end = start.clone();
-    /// end.match_string("b");
-    /// let span = start.span(&end);
-    ///
-    /// assert_eq!(span.as_str(), "b");
-    /// ```
     #[inline]
     pub fn as_str(&self) -> &'i str {
         // Span's start and end positions are always a UTF-8 borders.

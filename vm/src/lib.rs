@@ -187,25 +187,26 @@ impl Vm {
                     }
                 }
 
-                let original_pos = match result {
-                    Ok(ref state) => Ok(state.clone_position()),
-                    Err(ref state) => Err(state.clone_position())
-                };
+                let initial_result_is_err = result.is_err();
 
                 let current = result.and_then(|state| {
-                    self.skip(state)
-                        .and_then(|state| self.parse_expr(&*expr, state))
+                    state.lookahead(true, |state| {
+                        self.skip(state).and_then(|state| self.parse_expr(&*expr, state))
+                    })
                 });
                 times += 1;
 
                 if current.is_err() {
-                    return match original_pos {
-                        Ok(pos) => Ok(current.unwrap_err().with_updated_position(pos)),
-                        Err(pos) => Err(current.unwrap_err().with_updated_position(pos))
-                    };
+                    if initial_result_is_err {
+                        return Err(current.unwrap_err());
+                    } else {
+                        return Ok(current.unwrap_err());
+                    }
                 }
 
-                result = current;
+                result = self.skip(current.unwrap()).and_then(|state|
+                    self.parse_expr(&*expr, state)
+                );
             }
         })
     }

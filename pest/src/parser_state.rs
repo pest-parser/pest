@@ -153,53 +153,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         self.atomicity
     }
 
-    /// Returns a clone of the current `Position` of the `ParserState`. Ideally, this will likely
-    /// not be needed as manually manipulating the `Position` can lead to a future inconsistent
-    /// state.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest;
-    /// # #[allow(non_camel_case_types)]
-    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    /// enum Rule {
-    ///     ab
-    /// }
-    ///
-    /// let input = "ab";
-    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let position = state.clone_position();
-    /// assert_eq!(position.pos(), 0);
-    /// ```
-    pub fn clone_position(&self) -> Position<'i> {
-        self.position.clone()
-    }
-
-    /// Given a `Position`, replace the current `Position` of the `ParserState` with the new one.
-    ///
-    /// # Examples
-    ///
-    /// ``` ignore
-    /// # use pest;
-    /// # #[allow(non_camel_case_types)]
-    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    /// enum Rule {
-    ///     ab
-    /// }
-    ///
-    /// let input = "abcde";
-    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut position = state.clone_position();
-    /// position.skip(3);
-    /// state = state.with_updated_position(position);
-    /// assert_eq!(state.position().pos(), 3);
-    /// ```
-    pub fn with_updated_position(mut self: Box<Self>, position: Position<'i>) -> Box<Self> {
-        self.position = position;
-        self
-    }
-
     /// Wrapper needed to generate tokens. This will associate the `R` type rule to the closure
     /// meant to match the rule.
     ///
