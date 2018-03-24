@@ -44,9 +44,7 @@ pub struct ParserState<'i, R: RuleType> {
     pos_attempts: Vec<R>,
     neg_attempts: Vec<R>,
     attempt_pos: usize,
-    /// Specifies current atomicity
     atomicity: Atomicity,
-    /// Stack of `Span`s
     stack: Vec<Span<'i>>
 }
 
@@ -436,6 +434,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// `Box<ParserState>` is returned.
     ///
     /// # Examples
+    ///
     /// ```
     /// # use pest;
     /// # #[allow(non_camel_case_types)]
@@ -467,6 +466,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// `Err` with the updated `Box<ParserState>` is returned.
     ///
     /// # Examples
+    ///
     /// ```
     /// # use pest;
     /// # #[allow(non_camel_case_types)]
@@ -498,6 +498,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// `Err` with the updated `Box<ParserState>` is returned.
     ///
     /// # Examples
+    ///
     /// ```
     /// # use pest;
     /// # #[allow(non_camel_case_types)]
@@ -529,6 +530,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// `Box<ParserState>` is returned.
     ///
     /// # Examples
+    ///
     /// ```
     /// # use pest;
     /// # #[allow(non_camel_case_types)]
@@ -560,6 +562,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// `Err` with the updated `Box<ParserState>` is returned.
     ///
     /// # Examples
+    ///
     /// ```
     /// # use pest;
     /// # #[allow(non_camel_case_types)]
@@ -591,6 +594,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// failed, an `Err` with the updated `Box<ParserState>` is returned.
     ///
     /// # Examples
+    ///
     /// ```
     /// # use pest;
     /// # #[allow(non_camel_case_types)]
@@ -653,6 +657,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// updated `Box<ParserState>` is returned.
     ///
     /// # Examples
+    ///
     /// ```
     /// # use pest;
     /// # #[allow(non_camel_case_types)]
@@ -683,6 +688,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// `Box<ParserState>` is returned.
     ///
     /// # Examples
+    ///
     /// ```
     /// # use pest;
     /// # #[allow(non_camel_case_types)]
@@ -936,7 +942,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     /// Drops the top of the stack and returns `Ok(Box<ParserState>)` if there was a value to
-    /// drop. Otherwise, it returns `Err<Box<ParserState>)`.
+    /// drop. Otherwise, it returns `Err(Box<ParserState>)`.
     ///
     /// # Examples
     ///

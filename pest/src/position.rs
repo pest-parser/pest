@@ -89,6 +89,21 @@ impl<'i> Position<'i> {
     }
 
     /// Returns the line - and column number pair of the current `Position`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "\na";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.match_string("\na");
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().line_col(), (2, 2));
+    /// ```
     #[inline]
     pub fn line_col(&self) -> (usize, usize) {
         if self.pos > self.input.len() {
@@ -136,6 +151,21 @@ impl<'i> Position<'i> {
     }
 
     /// Returns the actual line of the input represented by the current `Position`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "\na";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.match_string("\na");
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().line_of(), "a");
+    /// ```
     #[inline]
     pub fn line_of(&self) -> &str {
         if self.pos > self.input.len() {
@@ -194,13 +224,13 @@ impl<'i> Position<'i> {
 
     /// Returns `true` when the `Position` points to the start of the input `&str`.
     #[inline]
-    pub fn at_start(&self) -> bool {
+    pub(crate) fn at_start(&self) -> bool {
         self.pos == 0
     }
 
     /// Returns `true` when the `Position` points to the end of the input `&str`.
     #[inline]
-    pub fn at_end(&self) -> bool {
+    pub(crate) fn at_end(&self) -> bool {
         self.pos == self.input.len()
     }
 

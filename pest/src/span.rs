@@ -127,6 +127,22 @@ impl<'i> Span<'i> {
     }
 
     /// Captures a slice from the `&str` defined by the `Span`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "abc";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input).skip(1).unwrap();
+    /// let start_pos = state.position().clone();
+    /// state = state.match_string("b").unwrap();
+    /// let span = start_pos.span(&state.position().clone());
+    /// assert_eq!(span.as_str(), "b");
+    /// ```
     #[inline]
     pub fn as_str(&self) -> &'i str {
         // Span's start and end positions are always a UTF-8 borders.

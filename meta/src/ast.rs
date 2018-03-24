@@ -53,9 +53,9 @@ pub enum Expr {
     RepMin(Box<Expr>, u32),
     /// Matches an expression at most a number of times, e.g. `e{,n}`
     RepMax(Box<Expr>, u32),
-    /// Matches an expression at range of times, e.g. `e{m, n}`
+    /// Matches an expression a number of times within a range, e.g. `e{m, n}`
     RepMinMax(Box<Expr>, u32, u32),
-    /// Continues to match expressions until one of the strings in the `Vec` is found.
+    /// Continues to match expressions until one of the strings in the `Vec` is found
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<Expr>)
