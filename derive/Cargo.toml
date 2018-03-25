@@ -1,7 +1,7 @@
 [package]
 name = "pest_derive"
 description = "pest's derive macro"
-version = "1.0.6"
+version = "2.0.0"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
@@ -15,8 +15,8 @@ name = "pest_derive"
 proc-macro = true
 
 [dependencies]
-pest = { path = "../pest", version = "^1.0" }
-pest_meta = { path = "../meta", version = "^1.0" }
+pest = { path = "../pest", version = "^2.0" }
+pest_meta = { path = "../meta", version = "^2.0" }
 quote = "^0.3"
 syn = "^0.11"
 

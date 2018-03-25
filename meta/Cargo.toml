@@ -1,7 +1,7 @@
 [package]
 name = "pest_meta"
 description = "pest meta language parser and validator"
-version = "1.0.6"
+version = "2.0.0"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
@@ -12,6 +12,7 @@ readme = "_README.md"
 
 [dependencies]
 maplit = "^0.1.5"
+# TODO: When we get 2.0.0 out, this will have to be bumped as well.
 pest = "^1.0"
 pest_derive = "^1.0"
 
