@@ -1,7 +1,7 @@
 [package]
 name = "pest_meta"
 description = "pest meta language parser and validator"
-version = "1.0.6"
+version = "2.0.0"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
