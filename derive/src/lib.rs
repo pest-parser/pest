@@ -256,8 +256,7 @@ use std::io::{self, Read};
 use std::path::Path;
 
 use proc_macro::TokenStream;
-use quote::Ident;
-use syn::{Attribute, Lit, MetaItem};
+use syn::{Attribute, DeriveInput, Ident, Lit, Meta};
 
 mod generator;
 mod optimizer;
@@ -267,9 +266,7 @@ use pest_meta::parser::{self, Rule};
 
 #[proc_macro_derive(Parser, attributes(grammar))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
-    let source = input.to_string();
-
-    let (name, path) = parse_derive(source);
+    let (name, path) = parse_derive(input);
 
     let root = env::var("CARGO_MANIFEST_DIR").unwrap_or(".".into());
     let path = Path::new(&root).join("src/").join(&path);
@@ -322,7 +319,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
     let optimized = optimizer::optimize(ast);
     let generated = generator::generate(name, optimized, defaults);
 
-    generated.as_ref().parse().unwrap()
+    generated.into()
 }
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
@@ -332,20 +329,21 @@ fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     Ok(string)
 }
 
-fn parse_derive(source: String) -> (Ident, String) {
-    let ast = syn::parse_derive_input(&source).unwrap();
-    let name = Ident::new(ast.ident.as_ref());
+fn parse_derive(input: TokenStream) -> (Ident, String) {
+    let ast: DeriveInput = syn::parse(input).unwrap();
 
-    let grammar: Vec<_> = ast.attrs
+    let name = ast.ident;
+
+    let grammar: Vec<&Attribute> = ast.attrs
         .iter()
-        .filter(|attr| match attr.value {
-            MetaItem::NameValue(ref ident, _) => format!("{}", ident) == "grammar",
+        .filter(|attr| match attr.interpret_meta() {
+            Some(Meta::NameValue(name_value)) => name_value.ident.to_string() == "grammar",
             _ => false
         })
         .collect();
 
     let filename = match grammar.len() {
-        0 => panic!("a grammar file needs to be provided with the #[grammar(\"...\")] attribute"),
+        0 => panic!("a grammar file needs to be provided with the #[grammar = \"...\"] attribute"),
         1 => get_filename(grammar[0]),
         _ => panic!("only 1 grammar file can be provided")
     };
@@ -354,20 +352,20 @@ fn parse_derive(source: String) -> (Ident, String) {
 }
 
 fn get_filename(attr: &Attribute) -> String {
-    if let MetaItem::NameValue(_, ref lit) = attr.value {
-        if let &Lit::Str(ref string, _) = lit {
-            string.clone()
-        } else {
-            panic!("grammar attribute must be a string")
-        }
-    } else {
-        unreachable!();
+    match attr.interpret_meta() {
+        Some(Meta::NameValue(name_value)) => match name_value.lit {
+            Lit::Str(filename) => filename.value(),
+            _ => panic!("grammar attribute must be a string")
+        },
+        _ => panic!("grammar attribute must be of the form `grammar = \"...\"`")
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::parse_derive;
+    use proc_macro::TokenStream;
+    use std::str::FromStr;
 
     #[test]
     fn derive_ok() {
@@ -376,8 +374,8 @@ mod tests {
             #[grammar = \"myfile.pest\"]
             pub struct MyParser<'a, T>;
         ";
-        let (_, filename) = parse_derive(definition.to_owned());
-
+        let tokens = TokenStream::from_str(definition).unwrap();
+        let (_, filename) = parse_derive(tokens);
         assert_eq!(filename, "myfile.pest");
     }
 
@@ -390,7 +388,8 @@ mod tests {
             #[grammar = \"myfile2.pest\"]
             pub struct MyParser<'a, T>;
         ";
-        parse_derive(definition.to_owned());
+        let tokens = TokenStream::from_str(definition).unwrap();
+        parse_derive(tokens);
     }
 
     #[test]
@@ -401,6 +400,7 @@ mod tests {
             #[grammar = 1]
             pub struct MyParser<'a, T>;
         ";
-        parse_derive(definition.to_owned());
+        let tokens = TokenStream::from_str(definition).unwrap();
+        parse_derive(tokens);
     }
 }
