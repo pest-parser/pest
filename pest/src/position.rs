@@ -282,6 +282,25 @@ impl<'i> Position<'i> {
         false
     }
 
+    /// Skips until the one of the given `strings` is found. If none of the `strings` can be found,
+    /// this function will return `false` and its `pos` will not be updated.
+    #[inline]
+    pub(crate) fn skip_until_any(&mut self, strings: &[&str]) -> bool {
+        let mut current_pos = self.pos;
+
+        while current_pos < self.input.len() {
+            for slice in strings.iter().map(|s| s.as_bytes()) {
+                if slice == &self.input[current_pos..current_pos + slice.len()] {
+                    self.pos = current_pos;
+                    return true;
+                }
+            }
+            current_pos += 1;
+        }
+
+        false
+    }
+
     /// Matches `string` from the `Position` and returns `true` if a match was made or `false`
     /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
