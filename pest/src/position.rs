@@ -263,7 +263,7 @@ impl<'i> Position<'i> {
         self.skip_until_any(&[string])
     }
 
-    /// Skips until the one of the given `strings` is found. If none of the `strings` can be found,
+    /// Skips until one of the given `strings` is found. If none of the `strings` can be found,
     /// this function will return `false` and its `pos` will not be updated.
     #[inline]
     pub(crate) fn skip_until_any(&mut self, strings: &[&str]) -> bool {
@@ -543,6 +543,10 @@ mod tests {
         test_pos = pos.clone();
         test_pos.skip_until_any(&["ac", "z"]);
         assert_eq!(test_pos.pos(), 3);
+
+        test_pos = pos.clone();
+        assert!(!test_pos.skip_until_any(&["z"]));
+        assert_eq!(test_pos.pos(), 0);
     }
 
     #[test]
