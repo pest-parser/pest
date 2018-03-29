@@ -9,7 +9,8 @@
 
 use std::collections::HashMap;
 
-use quote::{Ident, Tokens};
+use quote::Tokens;
+use syn::Ident;
 
 use ast::*;
 
@@ -118,8 +119,7 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
 }
 
 fn generate_enum(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
-    let rules = rules.iter().map(|rule| Ident::new(rule.name.as_str()));
-
+    let rules = rules.iter().map(|rule| Ident::from(rule.name.as_str()));
     if uses_eoi {
         quote! {
             #[allow(dead_code, non_camel_case_types)]
@@ -141,12 +141,10 @@ fn generate_enum(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
 }
 
 fn generate_patterns(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
-    let mut tokens = Tokens::new();
-
-    let mut rules: Vec<_> = rules
+    let mut rules: Vec<Tokens> = rules
         .iter()
         .map(|rule| {
-            let rule = Ident::new(rule.name.as_str());
+            let rule = Ident::from(rule.name.as_str());
             quote! {
                 Rule::#rule => rules::#rule(state)
             }
@@ -159,13 +157,13 @@ fn generate_patterns(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
         });
     }
 
-    tokens.append_separated(rules.iter(), ",");
-
-    tokens
+    quote! {
+        #( #rules ),*
+    }
 }
 
 fn generate_rule(rule: Rule) -> Tokens {
-    let name = Ident::new(rule.name);
+    let name = Ident::from(rule.name);
     let expr = if { rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic } {
         generate_expr_atomic(rule.expr)
     } else {
@@ -304,42 +302,25 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
 fn generate_expr(expr: Expr) -> Tokens {
     match expr {
         Expr::Str(string) => {
-            let mut tokens = quote! {
-                state.match_string
-            };
-
-            tokens.append("(");
-            tokens.append(format!("\"{}\"", string));
-            tokens.append(")");
-
-            tokens
+            quote! {
+                state.match_string(#string)
+            }
         }
         Expr::Insens(string) => {
-            let mut tokens = quote! {
-                state.match_insensitive
-            };
-
-            tokens.append("(");
-            tokens.append(format!("\"{}\"", string));
-            tokens.append(")");
-
-            tokens
+            quote! {
+                state.match_insensitive(#string)
+            }
         }
         Expr::Range(start, end) => {
-            let mut tokens = quote! {
-                state.match_range
-            };
+            let start = start.chars().next().unwrap();
+            let end = end.chars().next().unwrap();
 
-            tokens.append("(");
-            tokens.append(format!("'{}'", start));
-            tokens.append("..");
-            tokens.append(format!("'{}'", end));
-            tokens.append(")");
-
-            tokens
+            quote! {
+                state.match_range(#start..#end)
+            }
         }
         Expr::Ident(ident) => {
-            let ident = Ident::new(ident);
+            let ident = Ident::from(ident);
             quote! { self::#ident(state) }
         }
         Expr::PosPred(expr) => {
@@ -452,42 +433,25 @@ fn generate_expr(expr: Expr) -> Tokens {
 fn generate_expr_atomic(expr: Expr) -> Tokens {
     match expr {
         Expr::Str(string) => {
-            let mut tokens = quote! {
-                state.match_string
-            };
-
-            tokens.append("(");
-            tokens.append(format!("\"{}\"", string));
-            tokens.append(")");
-
-            tokens
+            quote! {
+                state.match_string(#string)
+            }
         }
         Expr::Insens(string) => {
-            let mut tokens = quote! {
-                state.match_insensitive
-            };
-
-            tokens.append("(");
-            tokens.append(format!("\"{}\"", string));
-            tokens.append(")");
-
-            tokens
+            quote! {
+                state.match_insensitive(#string)
+            }
         }
         Expr::Range(start, end) => {
-            let mut tokens = quote! {
-                state.match_range
-            };
+            let start = start.chars().next().unwrap();
+            let end = end.chars().next().unwrap();
 
-            tokens.append("(");
-            tokens.append(format!("'{}'", start));
-            tokens.append("..");
-            tokens.append(format!("'{}'", end));
-            tokens.append(")");
-
-            tokens
+            quote! {
+                state.match_range(#start..#end)
+            }
         }
         Expr::Ident(ident) => {
-            let ident = Ident::new(ident);
+            let ident = Ident::from(ident);
             quote! { self::#ident(state) }
         }
         Expr::PosPred(expr) => {
@@ -569,24 +533,8 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             }
         }
         Expr::Skip(strings) => {
-            let mut string_tokens = quote! {
-                let strings =
-            };
-
-            string_tokens.append("[");
-
-            for string in &strings[..strings.len() - 1] {
-                string_tokens.append(format!("\"{}\"", string));
-                string_tokens.append(",");
-            }
-
-            string_tokens.append(format!("\"{}\"", strings[strings.len() - 1]));
-
-            string_tokens.append("]");
-            string_tokens.append(";");
-
             quote! {
-                #string_tokens
+                let strings = [#(#strings),*];
 
                 state.skip_until_any(&strings)
             }
@@ -901,7 +849,7 @@ mod tests {
 
     #[test]
     fn generate_complete() {
-        let name = Ident::new("MyParser");
+        let name = Ident::from("MyParser");
         let rules = vec![
             Rule {
                 name: "a".to_owned(),

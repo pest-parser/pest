@@ -7,6 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use std::char;
 use std::iter::Peekable;
 
 use pest::{Error, Parser};
@@ -277,14 +278,14 @@ fn consume_expr<'i>(
                         span: pair.clone().into_span()
                     },
                     Rule::string => {
-                        let string = pair.as_str();
+                        let string = unescape(pair.as_str()).expect("incorrect string literal");
                         ParserNode {
                             expr: ParserExpr::Str(string[1..string.len() - 1].to_owned()),
                             span: pair.clone().into_span()
                         }
                     }
                     Rule::insensitive_string => {
-                        let string = pair.as_str();
+                        let string = unescape(pair.as_str()).expect("incorrect string literal");
                         ParserNode {
                             expr: ParserExpr::Insens(string[2..string.len() - 1].to_owned()),
                             span: pair.clone().into_span()
@@ -293,11 +294,11 @@ fn consume_expr<'i>(
                     Rule::range => {
                         let mut pairs = pair.into_inner();
                         let pair = pairs.next().unwrap();
-                        let start = pair.as_str();
+                        let start = unescape(pair.as_str()).expect("incorrect char literal");
                         let start_pos = pair.clone().into_span().start_pos();
                         pairs.next();
                         let pair = pairs.next().unwrap();
-                        let end = pair.as_str();
+                        let end = unescape(pair.as_str()).expect("incorrect char literal");
                         let end_pos = pair.clone().into_span().end_pos();
 
                         ParserNode {
@@ -525,6 +526,62 @@ fn consume_expr<'i>(
     };
 
     climber.climb(pairs, term, infix)
+}
+
+fn unescape(string: &str) -> Option<String> {
+    let mut result = String::new();
+    let mut chars = string.chars();
+
+    loop {
+        match chars.next() {
+            Some('\\') => match chars.next()? {
+                '"' => result.push('"'),
+                '\\' => result.push('\\'),
+                'r' => result.push('\r'),
+                'n' => result.push('\n'),
+                't' => result.push('\t'),
+                '0' => result.push('\0'),
+                '\'' => result.push('\''),
+                'x' => {
+                    let string: String = chars.clone().take(2).collect();
+
+                    if string.len() != 2 {
+                        return None;
+                    }
+
+                    for _ in 0..string.len() {
+                        chars.next()?;
+                    }
+
+                    let value = u8::from_str_radix(&string, 16).ok()?;
+
+                    result.push(char::from(value));
+                }
+                'u' => {
+                    if chars.next()? != '{' {
+                        return None;
+                    }
+
+                    let string: String = chars.clone().take_while(|c| *c != '}').collect();
+
+                    if string.len() < 2 || 6 < string.len() {
+                        return None;
+                    }
+
+                    for _ in 0..string.len() + 1 {
+                        chars.next()?;
+                    }
+
+                    let value = u32::from_str_radix(&string, 16).ok()?;
+
+                    result.push(char::from_u32(value)?);
+                }
+                _ => return None
+            },
+            Some(c) => result.push(c),
+            None => return Some(result)
+        };
+    }
 }
 
 #[cfg(test)]
@@ -1114,5 +1171,98 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn unescape_all() {
+        let string = r"a\nb\x55c\u{111}d";
+
+        assert_eq!(unescape(string), Some("a\nb\x55c\u{111}d".to_owned()));
+    }
+
+    #[test]
+    fn unescape_empty_escape() {
+        let string = r"\";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_wrong_escape() {
+        let string = r"\w";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_backslash() {
+        let string = "\\\\";
+        assert_eq!(unescape(string), Some("\\".to_owned()));
+    }
+
+    #[test]
+    fn unescape_return() {
+        let string = "\\r";
+        assert_eq!(unescape(string), Some("\r".to_owned()));
+    }
+
+    #[test]
+    fn unescape_tab() {
+        let string = "\\t";
+        assert_eq!(unescape(string), Some("\t".to_owned()));
+    }
+
+    #[test]
+    fn unescape_null() {
+        let string = "\\0";
+        assert_eq!(unescape(string), Some("\0".to_owned()));
+    }
+
+    #[test]
+    fn unescape_single_quote() {
+        let string = "\\'";
+        assert_eq!(unescape(string), Some("\'".to_owned()));
+    }
+
+    #[test]
+    fn unescape_wrong_byte() {
+        let string = r"\xfg";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_short_byte() {
+        let string = r"\xf";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_no_open_brace_unicode() {
+        let string = r"\u11";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_no_close_brace_unicode() {
+        let string = r"\u{11";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_short_unicode() {
+        let string = r"\u{1}";
+
+        assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn unescape_long_unicode() {
+        let string = r"\u{1111111}";
+
+        assert_eq!(unescape(string), None);
     }
 }

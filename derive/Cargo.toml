@@ -17,8 +17,8 @@ proc-macro = true
 [dependencies]
 pest = { path = "../pest", version = "^2.0" }
 pest_meta = { path = "../meta", version = "^2.0" }
-quote = "^0.3"
-syn = "^0.11"
+quote = "^0.4"
+syn = "^0.12"
 
 [badges]
 codecov = { repository = "pest-parser/pest" }
