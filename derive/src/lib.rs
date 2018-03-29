@@ -266,7 +266,8 @@ use pest_meta::parser::{self, Rule};
 
 #[proc_macro_derive(Parser, attributes(grammar))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
-    let (name, path) = parse_derive(input);
+    let ast: DeriveInput = syn::parse(input).unwrap();
+    let (name, path) = parse_derive(ast);
 
     let root = env::var("CARGO_MANIFEST_DIR").unwrap_or(".".into());
     let path = Path::new(&root).join("src/").join(&path);
@@ -329,9 +330,7 @@ fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     Ok(string)
 }
 
-fn parse_derive(input: TokenStream) -> (Ident, String) {
-    let ast: DeriveInput = syn::parse(input).unwrap();
-
+fn parse_derive(ast: DeriveInput) -> (Ident, String) {
     let name = ast.ident;
 
     let grammar: Vec<&Attribute> = ast.attrs
@@ -364,8 +363,7 @@ fn get_filename(attr: &Attribute) -> String {
 #[cfg(test)]
 mod tests {
     use super::parse_derive;
-    use proc_macro::TokenStream;
-    use std::str::FromStr;
+    use syn;
 
     #[test]
     fn derive_ok() {
@@ -374,8 +372,8 @@ mod tests {
             #[grammar = \"myfile.pest\"]
             pub struct MyParser<'a, T>;
         ";
-        let tokens = TokenStream::from_str(definition).unwrap();
-        let (_, filename) = parse_derive(tokens);
+        let ast = syn::parse_str(definition).unwrap();
+        let (_, filename) = parse_derive(ast);
         assert_eq!(filename, "myfile.pest");
     }
 
@@ -388,8 +386,8 @@ mod tests {
             #[grammar = \"myfile2.pest\"]
             pub struct MyParser<'a, T>;
         ";
-        let tokens = TokenStream::from_str(definition).unwrap();
-        parse_derive(tokens);
+        let ast = syn::parse_str(definition).unwrap();
+        parse_derive(ast);
     }
 
     #[test]
@@ -400,7 +398,7 @@ mod tests {
             #[grammar = 1]
             pub struct MyParser<'a, T>;
         ";
-        let tokens = TokenStream::from_str(definition).unwrap();
-        parse_derive(tokens);
+        let ast = syn::parse_str(definition).unwrap();
+        parse_derive(ast);
     }
 }
