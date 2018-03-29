@@ -14,8 +14,6 @@ use std::ops::Range;
 use std::ptr;
 use std::str;
 
-use memchr;
-
 use span;
 
 /// A `struct` containing a position that is tied to a `&str` which provides useful methods to
@@ -262,24 +260,7 @@ impl<'i> Position<'i> {
     /// function will return `false` and its `pos` will not be updated.
     #[inline]
     pub(crate) fn skip_until(&mut self, string: &str) -> bool {
-        let mut current = self.pos;
-        let slice = string.as_bytes();
-
-        while let Some(pos) = memchr::memchr(slice[0], &self.input[current..]) {
-            if slice.len() == 1 {
-                self.pos = current + pos;
-                return true;
-            } else {
-                if slice == &self.input[current + pos..current + pos + slice.len()] {
-                    self.pos = current + pos;
-                    return true;
-                } else {
-                    current += pos + 1;
-                }
-            }
-        }
-
-        false
+        self.skip_until_any(&[string])
     }
 
     /// Skips until the one of the given `strings` is found. If none of the `strings` can be found,
