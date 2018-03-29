@@ -543,6 +543,28 @@ mod tests {
     }
 
     #[test]
+    fn skip_until_any() {
+        let input = "ab ac";
+        let pos = Position::from_start(input);
+
+        let mut test_pos = pos.clone();
+        test_pos.skip_until_any(&["a", "b"]);
+        assert_eq!(test_pos.pos(), 0);
+
+        test_pos = pos.clone();
+        test_pos.skip_until_any(&["b"]);
+        assert_eq!(test_pos.pos(), 1);
+
+        test_pos = pos.clone();
+        test_pos.skip_until_any(&["ab"]);
+        assert_eq!(test_pos.pos(), 0);
+
+        test_pos = pos.clone();
+        test_pos.skip_until_any(&["ac", "z"]);
+        assert_eq!(test_pos.pos(), 3);
+    }
+
+    #[test]
     fn match_range() {
         let input = b"b";
 
