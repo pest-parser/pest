@@ -1195,6 +1195,36 @@ mod tests {
     }
 
     #[test]
+    fn unescape_backslash() {
+        let string = "\\\\";
+        assert_eq!(unescape(string), Some("\\".to_owned()));
+    }
+
+    #[test]
+    fn unescape_return() {
+        let string = "\\r";
+        assert_eq!(unescape(string), Some("\r".to_owned()));
+    }
+
+    #[test]
+    fn unescape_tab() {
+        let string = "\\t";
+        assert_eq!(unescape(string), Some("\t".to_owned()));
+    }
+
+    #[test]
+    fn unescape_null() {
+        let string = "\\0";
+        assert_eq!(unescape(string), Some("\0".to_owned()));
+    }
+
+    #[test]
+    fn unescape_single_quote() {
+        let string = "\\'";
+        assert_eq!(unescape(string), Some("\'".to_owned()));
+    }
+
+    #[test]
     fn unescape_wrong_byte() {
         let string = r"\xfg";
 
