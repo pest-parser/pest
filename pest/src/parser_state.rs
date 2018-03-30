@@ -609,46 +609,10 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn skip_until_any(mut self: Box<Self>, strings: &[&str]) -> ParseResult<Box<Self>> {
-        let new_pos = strings[1..].iter().fold(
-            {
-                let mut pos = self.position.clone();
-                if pos.skip_until(strings[0]) {
-                    Ok(pos)
-                } else {
-                    Err(pos)
-                }
-            },
-            |result, string| {
-                let mut pos = self.position.clone();
-                let new_result = if pos.skip_until(string) {
-                    Ok(pos)
-                } else {
-                    Err(pos)
-                };
-                match (result, new_result) {
-                    (Ok(lhs), Ok(rhs)) => {
-                        if rhs.pos() < lhs.pos() {
-                            Ok(rhs)
-                        } else {
-                            Ok(lhs)
-                        }
-                    }
-                    (Ok(lhs), Err(_)) => Ok(lhs),
-                    (Err(_), Ok(rhs)) => Ok(rhs),
-                    (Err(lhs), Err(_)) => Err(lhs)
-                }
-            }
-        );
-
-        match new_pos {
-            Ok(pos) => {
-                self.position = pos;
-                Ok(self)
-            }
-            Err(pos) => {
-                self.position = pos;
-                Err(self)
-            }
+        if self.position.skip_until_any(strings) {
+            Ok(self)
+        } else {
+            Err(self)
         }
     }
 

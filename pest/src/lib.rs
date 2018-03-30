@@ -56,8 +56,6 @@
 
 #![doc(html_root_url = "https://docs.rs/pest")]
 
-extern crate memchr;
-
 pub use error::Error;
 pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, ParseResult, ParserState};

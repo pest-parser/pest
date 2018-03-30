@@ -14,8 +14,6 @@ use std::ops::Range;
 use std::ptr;
 use std::str;
 
-use memchr;
-
 use span;
 
 /// A `struct` containing a position that is tied to a `&str` which provides useful methods to
@@ -262,21 +260,23 @@ impl<'i> Position<'i> {
     /// function will return `false` and its `pos` will not be updated.
     #[inline]
     pub(crate) fn skip_until(&mut self, string: &str) -> bool {
-        let mut current = self.pos;
-        let slice = string.as_bytes();
+        self.skip_until_any(&[string])
+    }
 
-        while let Some(pos) = memchr::memchr(slice[0], &self.input[current..]) {
-            if slice.len() == 1 {
-                self.pos = current + pos;
-                return true;
-            } else {
-                if slice == &self.input[current + pos..current + pos + slice.len()] {
-                    self.pos = current + pos;
+    /// Skips until one of the given `strings` is found. If none of the `strings` can be found,
+    /// this function will return `false` and its `pos` will not be updated.
+    #[inline]
+    pub(crate) fn skip_until_any(&mut self, strings: &[&str]) -> bool {
+        let mut current_pos = self.pos;
+
+        while current_pos < self.input.len() {
+            for slice in strings.iter().map(|s| s.as_bytes()) {
+                if slice == &self.input[current_pos..current_pos + slice.len()] {
+                    self.pos = current_pos;
                     return true;
-                } else {
-                    current += pos + 1;
                 }
             }
+            current_pos += 1;
         }
 
         false
@@ -521,6 +521,32 @@ mod tests {
         test_pos = pos.clone();
         test_pos.skip_until("ac");
         assert_eq!(test_pos.pos(), 3);
+    }
+
+    #[test]
+    fn skip_until_any() {
+        let input = "ab ac";
+        let pos = Position::from_start(input);
+
+        let mut test_pos = pos.clone();
+        test_pos.skip_until_any(&["a", "b"]);
+        assert_eq!(test_pos.pos(), 0);
+
+        test_pos = pos.clone();
+        test_pos.skip_until_any(&["b"]);
+        assert_eq!(test_pos.pos(), 1);
+
+        test_pos = pos.clone();
+        test_pos.skip_until_any(&["ab"]);
+        assert_eq!(test_pos.pos(), 0);
+
+        test_pos = pos.clone();
+        test_pos.skip_until_any(&["ac", "z"]);
+        assert_eq!(test_pos.pos(), 3);
+
+        test_pos = pos.clone();
+        assert!(!test_pos.skip_until_any(&["z"]));
+        assert_eq!(test_pos.pos(), 0);
     }
 
     #[test]
