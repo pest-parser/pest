@@ -189,8 +189,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         if self.lookahead == Lookahead::None && self.atomicity != Atomicity::Atomic {
             // Pair's position will only be known after running the closure.
             self.queue.push(QueueableToken::Start {
-                pair: 0,
-                pos: actual_pos
+                end_token_index: 0,
+                input_pos: actual_pos
             });
         }
 
@@ -217,7 +217,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     // run.
                     let new_index = new_state.queue.len();
                     match new_state.queue[index] {
-                        QueueableToken::Start { ref mut pair, .. } => *pair = new_index,
+                        QueueableToken::Start { ref mut end_token_index, .. } => *end_token_index = new_index,
                         _ => unreachable!()
                     };
 
@@ -225,7 +225,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
                     new_state
                         .queue
-                        .push(QueueableToken::End { rule, pos: new_pos });
+                        .push(QueueableToken::End { start_token_index: index, rule, input_pos: new_pos });
                 }
 
                 Ok(new_state)

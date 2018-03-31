@@ -21,7 +21,6 @@ use token::Token;
 pub struct Tokens<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i [u8],
-    index: usize,
     start: usize,
     end: usize
 }
@@ -35,23 +34,16 @@ pub fn new<R: RuleType>(
     Tokens {
         queue,
         input,
-        index: 0,
         start,
         end
     }
 }
 
-impl<'i, R: RuleType> Iterator for Tokens<'i, R> {
-    type Item = Token<'i, R>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index == self.end {
-            return None;
-        }
-
-        let token = match self.queue[self.index] {
-            QueueableToken::Start { pair, pos } => {
-                let rule = match self.queue[pair] {
+impl<'i, R: RuleType> Tokens<'i, R> {
+    fn create_token(&self, index: usize) -> Token<'i, R> {
+        match self.queue[index] {
+            QueueableToken::Start { end_token_index, input_pos } => {
+                let rule = match self.queue[end_token_index] {
                     QueueableToken::End { rule, .. } => rule,
                     _ => unreachable!()
                 };
@@ -59,20 +51,62 @@ impl<'i, R: RuleType> Iterator for Tokens<'i, R> {
                 Token::Start {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::new(self.input, pos) }
+                    pos: unsafe { position::new(self.input, input_pos) }
                 }
             }
-            QueueableToken::End { rule, pos } => {
+            QueueableToken::End { rule, input_pos, .. } => {
                 Token::End {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::new(self.input, pos) }
+                    pos: unsafe { position::new(self.input, input_pos) }
                 }
             }
-        };
+        }
+    }
+}
 
-        self.index += 1;
+impl<'i, R: RuleType> Iterator for Tokens<'i, R> {
+    type Item = Token<'i, R>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.start >= self.end {
+            return None;
+        }
+
+        let token = self.create_token(self.start);
+
+        self.start += 1;
 
         Some(token)
+    }
+}
+
+impl<'i, R: RuleType> DoubleEndedIterator for Tokens<'i, R> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.end <= self.start {
+            return None;
+        }
+
+        let token = self.create_token(self.end - 1);
+
+        self.end -= 1;
+
+        Some(token)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Token;
+    use super::super::super::Parser;
+    use super::super::super::macros::tests::*;
+
+    #[test]
+    fn double_ended_iter_for_tokens() {
+        let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
+        let mut tokens = pairs.clone().tokens().collect::<Vec<Token<Rule>>>();
+        tokens.reverse();
+        let reverse_tokens = pairs.tokens().rev().collect::<Vec<Token<Rule>>>();
+        assert_eq!(tokens, reverse_tokens);
     }
 }
