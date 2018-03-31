@@ -267,16 +267,15 @@ impl<'i> Position<'i> {
     /// this function will return `false` and its `pos` will not be updated.
     #[inline]
     pub(crate) fn skip_until_any(&mut self, strings: &[&str]) -> bool {
-        let mut current_pos = self.pos;
-
-        while current_pos < self.input.len() {
+        for from in self.pos..self.input.len() {
             for slice in strings.iter().map(|s| s.as_bytes()) {
-                if slice == &self.input[current_pos..current_pos + slice.len()] {
-                    self.pos = current_pos;
+                let to = from + slice.len();
+
+                if to <= self.input.len() && slice == &self.input[from..to] {
+                    self.pos = from;
                     return true;
                 }
             }
-            current_pos += 1;
         }
 
         false
@@ -546,6 +545,10 @@ mod tests {
 
         test_pos = pos.clone();
         assert!(!test_pos.skip_until_any(&["z"]));
+        assert_eq!(test_pos.pos(), 0);
+
+        test_pos = pos.clone();
+        assert!(!test_pos.skip_until_any(&["zzz"]));
         assert_eq!(test_pos.pos(), 0);
     }
 
