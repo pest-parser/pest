@@ -102,7 +102,14 @@ impl<'i, R: RuleType> Pairs<'i, R> {
 
     fn pair(&self) -> usize {
         match self.queue[self.start] {
-            QueueableToken::Start { pair, .. } => pair,
+            QueueableToken::Start { end_token_index, .. } => end_token_index,
+            _ => unreachable!()
+        }
+    }
+
+    fn pair_from_end(&self) -> usize {
+        match self.queue[self.end - 1] {
+            QueueableToken::End { start_token_index, .. } => start_token_index,
             _ => unreachable!()
         }
     }
@@ -119,6 +126,20 @@ impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
         let pair = pair::new(Rc::clone(&self.queue), self.input, self.start);
 
         self.start = self.pair() + 1;
+
+        Some(pair)
+    }
+}
+
+impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.end <= self.start {
+            return None;
+        }
+
+        self.end = self.pair_from_end();
+
+        let pair = pair::new(Rc::clone(&self.queue), self.input, self.end);
 
         Some(pair)
     }
@@ -193,6 +214,24 @@ mod tests {
         assert_eq!(
             format!("{}", pairs),
             "[a(0, 3, [b(1, 2)]), c(4, 5)]".to_owned()
+        );
+    }
+
+    #[test]
+    fn iter_for_pairs() {
+        let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
+        assert_eq!(
+            pairs.map(|p| p.as_rule()).collect::<Vec<Rule>>(),
+            vec![Rule::a, Rule::c]
+        );
+    }
+
+    #[test]
+    fn double_ended_iter_for_pairs() {
+        let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
+        assert_eq!(
+            pairs.rev().map(|p| p.as_rule()).collect::<Vec<Rule>>(),
+            vec![Rule::c, Rule::a]
         );
     }
 }

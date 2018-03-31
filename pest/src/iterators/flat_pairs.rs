@@ -69,13 +69,21 @@ impl<'i, R: RuleType> FlatPairs<'i, R> {
     fn next_start(&mut self) {
         self.start += 1;
 
-        while self.start < self.end && !self.is_start() {
+        while self.start < self.end && !self.is_start(self.start) {
             self.start += 1;
         }
     }
 
-    fn is_start(&self) -> bool {
-        match self.queue[self.start] {
+    fn next_start_from_end(&mut self) {
+        self.end -= 1;
+
+        while self.end >= self.start && !self.is_start(self.end) {
+            self.end -= 1;
+        }
+    }
+
+    fn is_start(&self, index: usize) -> bool {
+        match self.queue[index] {
             QueueableToken::Start { .. } => true,
             QueueableToken::End { .. } => false
         }
@@ -93,6 +101,20 @@ impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
         let pair = pair::new(Rc::clone(&self.queue), self.input, self.start);
 
         self.next_start();
+
+        Some(pair)
+    }
+}
+
+impl<'i, R: RuleType> DoubleEndedIterator for FlatPairs<'i, R> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.end <= self.start {
+            return None;
+        }
+
+        self.next_start_from_end();
+
+        let pair = pair::new(Rc::clone(&self.queue), self.input, self.end);
 
         Some(pair)
     }
@@ -116,5 +138,30 @@ impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
             start: self.start,
             end: self.end
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::super::Parser;
+    use super::super::super::macros::tests::*;
+
+    #[test]
+    fn iter_for_flat_pairs() {
+        let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
+
+        assert_eq!(
+            pairs.flatten().map(|p| p.as_rule()).collect::<Vec<Rule>>(),
+            vec![Rule::a, Rule::b, Rule::c]
+        );
+    }
+
+    #[test]
+    fn double_ended_iter_for_flat_pairs() {
+        let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
+        assert_eq!(
+            pairs.flatten().rev().map(|p| p.as_rule()).collect::<Vec<Rule>>(),
+            vec![Rule::c, Rule::b, Rule::a]
+        );
     }
 }
