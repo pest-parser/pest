@@ -73,6 +73,7 @@ mod parser_state;
 mod position;
 pub mod prec_climber;
 mod span;
+mod stack;
 mod token;
 
 /// A `trait` which parser rules must implement.

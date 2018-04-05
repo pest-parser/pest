@@ -15,6 +15,7 @@ use error::Error;
 use iterators::{pairs, QueueableToken};
 use position::{self, Position};
 use span::Span;
+use stack::Stack;
 
 /// An `enum` specifying the current lookahead status of a `ParserState`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -45,7 +46,7 @@ pub struct ParserState<'i, R: RuleType> {
     neg_attempts: Vec<R>,
     attempt_pos: usize,
     atomicity: Atomicity,
-    stack: Vec<Span<'i>>
+    stack: Stack<Span<'i>>
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -104,7 +105,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             neg_attempts: vec![],
             attempt_pos: 0,
             atomicity: Atomicity::NonAtomic,
-            stack: vec![]
+            stack: Stack::new()
         })
     }
 
@@ -827,7 +828,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     #[inline]
     pub fn stack_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
         let string = self.stack
-            .last()
+            .peek()
             .expect("peek was called on empty stack")
             .as_str();
         self.match_string(string)
@@ -857,7 +858,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     pub fn stack_pop(self: Box<Self>) -> ParseResult<Box<Self>> {
         let result_state = {
             let string = self.stack
-                .last()
+                .peek()
                 .expect("pop was called on empty stack")
                 .as_str();
 
