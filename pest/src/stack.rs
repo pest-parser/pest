@@ -7,42 +7,94 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+/// Implementation of a `Stack` which maintains an log of `StackOp`s in order to rewind the stack
+/// to a previous state.
+
+use std::fmt::Debug;
+
 #[derive(Debug)]
-pub struct Stack<T> {
-    stack: Vec<T>
+pub struct Stack<T: Clone + Debug> {
+    ops: Vec<StackOp<T>>,
+    cache: Vec<T>,
+    snapshots: Vec<usize>,
+    current_snapshot: usize
 }
 
-impl<T> Stack<T> {
+impl<T: Clone + Debug> Stack<T> {
+    /// Creates a new `Stack`.
     pub fn new() -> Self {
         Stack {
-            stack: vec![]
+            ops: vec![],
+            cache: vec![],
+            snapshots: vec![],
+            current_snapshot: 0
         }
     }
 
     /// Returns `true` if the stack is currently empty.
     pub fn is_empty(&self) -> bool {
-        self.stack.is_empty()
+        self.cache.is_empty()
     }
 
     /// Returns the top-most `&T` in the `Stack`.
     pub fn peek(&self) -> Option<&T> {
-        self.stack.last()
+        self.cache.last()
     }
 
     /// Pushes a `T` onto the `Stack`.
     pub fn push(&mut self, elem: T) {
-        self.stack.push(elem);
+        self.ops.push(StackOp::Push(elem.clone()));
+        self.cache.push(elem);
     }
 
     /// Pops the top-most `T` from the `Stack`.
     pub fn pop(&mut self) -> Option<T> {
-        self.stack.pop()
+        let popped = self.cache.pop();
+        if let Some(val) = popped.clone() {
+            self.ops.push(StackOp::Pop(val));
+        }
+        popped
     }
 
-    /// Clears all the values from the `Stack`.
-    pub fn clear(&mut self) {
-        self.stack.clear();
+    /// Takes a snapshot of the current `Stack`.
+    pub fn snapshot(&mut self) {
+        let ops_index = self.ops.len();
+        if ops_index > self.current_snapshot {
+            self.snapshots.push(ops_index);
+            self.current_snapshot = ops_index;
+        }
     }
+
+    /// Rewinds the `Stack` to the most recent `snapshot()`. If no `snapshot()` has been taken, this
+    /// function will do nothing.
+    pub fn backtrack(&mut self) {
+        if let Some(ops_index) = self.snapshots.pop() {
+            self.rewind_to(ops_index);
+            self.ops.truncate(ops_index);
+            self.current_snapshot = self.ops.len();
+        }
+    }
+
+    // Rewind the stack to a particular index
+    fn rewind_to(&mut self, index: usize) {
+        let ops_to_rewind = &self.ops[index..];
+        for op in ops_to_rewind.iter().rev() {
+            match op {
+                &StackOp::Push(_) => {
+                    self.cache.pop();
+                },
+                &StackOp::Pop(ref elem) => {
+                    self.cache.push(elem.clone());
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+enum StackOp<T> {
+    Push(T),
+    Pop(T)
 }
 
 #[cfg(test)]
@@ -82,51 +134,42 @@ mod test {
         stack.push(3);
         assert!(!stack.is_empty());
         assert_eq!(stack.peek(), Some(&3));
-        assert_eq!(stack.stack.len(), 3);
+
+        // Take a snapshot of the current stack
+        // [0, 2, 3]
+        stack.snapshot();
+
+        // [0, 2]
+        assert_eq!(stack.pop(), Some(3));
+        assert!(!stack.is_empty());
+        assert_eq!(stack.peek(), Some(&2));
+
+        // Take a snapshot of the current stack
+        // [0, 2]
+        stack.snapshot();
+
+        // [0]
+        assert_eq!(stack.pop(), Some(2));
+        assert!(!stack.is_empty());
+        assert_eq!(stack.peek(), Some(&0));
 
         // []
-        assert!(!stack.is_empty());
-        stack.clear();
+        assert_eq!(stack.pop(), Some(0));
         assert!(stack.is_empty());
 
+        // Test backtracking
+        // [0, 2]
+        stack.backtrack();
+        assert_eq!(stack.pop(), Some(2));
+        assert_eq!(stack.pop(), Some(0));
+        assert_eq!(stack.pop(), None);
 
-//        // Take a snapshot of the current stack
-//        // [0, 2, 3]
-//        stack.snapshot();
-//
-//        // [0, 2]
-//        assert_eq!(stack.pop(), Some(3));
-//        assert!(!stack.is_empty());
-//        assert_eq!(stack.peek(), Some(&2));
-//
-//        // Take a snapshot of the current stack
-//        // [0, 2]
-//        stack.snapshot();
-//
-//        // [0]
-//        assert_eq!(stack.pop(), Some(2));
-//        assert!(!stack.is_empty());
-//        assert_eq!(stack.peek(), Some(&0));
-//
-//        // []
-//        assert_eq!(stack.pop(), Some(0));
-//        assert!(stack.is_empty());
-//        assert_eq!(stack.peek(), None);
-//        assert_eq!(stack.pop(), None);
-//
-//        // Test backtracking
-//        // [0, 2]
-//        stack.backtrack();
-//        assert_eq!(stack.pop(), Some(2));
-//        assert_eq!(stack.pop(), Some(0));
-//        assert_eq!(stack.pop(), None);
-//
-//        // Test backtracking
-//        // [0, 2, 3]
-//        stack.backtrack();
-//        assert_eq!(stack.pop(), Some(3));
-//        assert_eq!(stack.pop(), Some(2));
-//        assert_eq!(stack.pop(), Some(0));
-//        assert_eq!(stack.pop(), None);
+        // Test backtracking
+        // [0, 2, 3]
+        stack.backtrack();
+        assert_eq!(stack.pop(), Some(3));
+        assert_eq!(stack.pop(), Some(2));
+        assert_eq!(stack.pop(), Some(0));
+        assert_eq!(stack.pop(), None);
     }
 }
