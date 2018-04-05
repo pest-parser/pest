@@ -155,7 +155,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
     pub fn into_inner(self) -> Pairs<'i, R> {
         let pair = self.pair();
 
-        pairs::new(self.queue, self.input, self.start + 1, pair - 1)
+        pairs::new(self.queue, self.input, self.start + 1, pair)
     }
 
     /// Converts the `Pair` into a `TokenIterator`.
@@ -252,5 +252,20 @@ impl<'i, R: Hash> Hash for Pair<'i, R> {
         (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
         (self.input as *const [u8]).hash(state);
         self.start.hash(state);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use parser::Parser;
+    use macros::tests::*;
+
+    #[test]
+    fn pair_into_inner() {
+        let pair = AbcParser::parse(Rule::a, "abcde").unwrap().next().unwrap(); // the tokens a(b())
+
+        let pairs = pair.into_inner(); // the tokens b()
+
+        assert_eq!(2, pairs.tokens().count());
     }
 }
