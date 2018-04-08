@@ -76,6 +76,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     pest_keywords.insert("peek");
     pest_keywords.insert("pop");
     pest_keywords.insert("push");
+    pest_keywords.insert("skip");
     pest_keywords.insert("soi");
 
     let mut predefined = HashSet::new();
