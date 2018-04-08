@@ -256,17 +256,10 @@ impl<'i> Position<'i> {
         true
     }
 
-    /// Skips until the first occurrence of `string`. If the `string` can not be found, this
-    /// function will return `false` and its `pos` will not be updated.
-    #[inline]
-    pub(crate) fn skip_until(&mut self, string: &str) -> bool {
-        self.skip_until_any(&[string])
-    }
-
     /// Skips until one of the given `strings` is found. If none of the `strings` can be found,
     /// this function will return `false` and its `pos` will not be updated.
     #[inline]
-    pub(crate) fn skip_until_any(&mut self, strings: &[&str]) -> bool {
+    pub(crate) fn skip_until(&mut self, strings: &[&str]) -> bool {
         for from in self.pos..self.input.len() {
             for slice in strings.iter().map(|s| s.as_bytes()) {
                 let to = from + slice.len();
@@ -506,49 +499,27 @@ mod tests {
         let pos = Position::from_start(input);
 
         let mut test_pos = pos.clone();
-        test_pos.skip_until("a");
+        test_pos.skip_until(&["a", "b"]);
         assert_eq!(test_pos.pos(), 0);
 
         test_pos = pos.clone();
-        test_pos.skip_until("b");
+        test_pos.skip_until(&["b"]);
         assert_eq!(test_pos.pos(), 1);
 
         test_pos = pos.clone();
-        test_pos.skip_until("ab");
+        test_pos.skip_until(&["ab"]);
         assert_eq!(test_pos.pos(), 0);
 
         test_pos = pos.clone();
-        test_pos.skip_until("ac");
-        assert_eq!(test_pos.pos(), 3);
-    }
-
-    #[test]
-    fn skip_until_any() {
-        let input = "ab ac";
-        let pos = Position::from_start(input);
-
-        let mut test_pos = pos.clone();
-        test_pos.skip_until_any(&["a", "b"]);
-        assert_eq!(test_pos.pos(), 0);
-
-        test_pos = pos.clone();
-        test_pos.skip_until_any(&["b"]);
-        assert_eq!(test_pos.pos(), 1);
-
-        test_pos = pos.clone();
-        test_pos.skip_until_any(&["ab"]);
-        assert_eq!(test_pos.pos(), 0);
-
-        test_pos = pos.clone();
-        test_pos.skip_until_any(&["ac", "z"]);
+        test_pos.skip_until(&["ac", "z"]);
         assert_eq!(test_pos.pos(), 3);
 
         test_pos = pos.clone();
-        assert!(!test_pos.skip_until_any(&["z"]));
+        assert!(!test_pos.skip_until(&["z"]));
         assert_eq!(test_pos.pos(), 0);
 
         test_pos = pos.clone();
-        assert!(!test_pos.skip_until_any(&["zzz"]));
+        assert!(!test_pos.skip_until(&["zzz"]));
         assert_eq!(test_pos.pos(), 0);
     }
 

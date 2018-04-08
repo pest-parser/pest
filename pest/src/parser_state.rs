@@ -557,38 +557,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Asks the `ParserState` to skip until the first occurrence of `string`. If the match is
-    /// successful, this will return an `Ok` with the updated `Box<ParserState>`. If failed, an
-    /// `Err` with the updated `Box<ParserState>` is returned.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest;
-    /// # #[allow(non_camel_case_types)]
-    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    /// enum Rule {}
-    ///
-    /// let input = "ab";
-    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.skip_until("b");
-    /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap().position().pos(), 1);
-    ///
-    /// state = pest::ParserState::new(input);
-    /// result = state.skip_until("c");
-    /// assert!(result.is_err());
-    /// assert_eq!(result.unwrap_err().position().pos(), 0);
-    /// ```
-    #[inline]
-    pub fn skip_until(mut self: Box<Self>, string: &str) -> ParseResult<Box<Self>> {
-        if self.position.skip_until(string) {
-            Ok(self)
-        } else {
-            Err(self)
-        }
-    }
-
     /// Asks the `ParserState` to continue to skip until one of the given `strings` is found. If
     /// the match is successful, this will return an `Ok` with the updated `Box<ParserState>`. If
     /// failed, an `Err` with the updated `Box<ParserState>` is returned.
@@ -603,13 +571,13 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "abcd";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.skip_until_any(&["c", "d"]);
+    /// let mut result = state.skip_until(&["c", "d"]);
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().pos(), 2);
     /// ```
     #[inline]
-    pub fn skip_until_any(mut self: Box<Self>, strings: &[&str]) -> ParseResult<Box<Self>> {
-        if self.position.skip_until_any(strings) {
+    pub fn skip_until(mut self: Box<Self>, strings: &[&str]) -> ParseResult<Box<Self>> {
+        if self.position.skip_until(strings) {
             Ok(self)
         } else {
             Err(self)

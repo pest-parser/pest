@@ -536,7 +536,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             quote! {
                 let strings = [#(#strings),*];
 
-                state.skip_until_any(&strings)
+                state.skip_until(&strings)
             }
         }
         Expr::Push(expr) => {
@@ -707,7 +707,7 @@ mod tests {
             quote! {
                 let strings = ["a", "b"];
 
-                state.skip_until_any(&strings)
+                state.skip_until(&strings)
             }
         );
     }
