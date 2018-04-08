@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use ast::*;
+use pest_meta::ast::*;
 
 pub fn rotate(rule: Rule) -> Rule {
     fn rotate_internal(expr: Expr) -> Expr {

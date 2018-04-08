@@ -261,7 +261,7 @@ use syn::{Attribute, DeriveInput, Ident, Lit, Meta};
 mod generator;
 mod optimizer;
 
-use pest_meta::{ast, unwrap_or_report, validator};
+use pest_meta::{unwrap_or_report, validator};
 use pest_meta::parser::{self, Rule};
 
 #[proc_macro_derive(Parser, attributes(grammar))]

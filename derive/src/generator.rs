@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use quote::Tokens;
 use syn::Ident;
 
-use ast::*;
+use pest_meta::ast::*;
 
 pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
     let mut predefined = HashMap::new();
