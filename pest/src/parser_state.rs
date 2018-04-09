@@ -377,22 +377,19 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap().position().pos(), 0);
     /// ```
     #[inline]
-    pub fn repeat<F>(mut self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
+    pub fn repeat<F>(self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
     where
         F: FnMut(Box<Self>) -> ParseResult<Box<Self>>
     {
-        self.stack.snapshot();
-        let mut result = f(self);
+        let mut result = f(self.checkpoint());
 
         loop {
             match result {
-                Ok(mut state) => {
-                    state.stack.snapshot();
-                    result = f(state)
+                Ok(state) => {
+                    result = f(state.checkpoint())
                 },
-                Err(mut state) => {
-                    state.stack.backtrack();
-                    return Ok(state)
+                Err(state) => {
+                    return Ok(state.restore())
                 }
             };
         }
@@ -426,18 +423,16 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// ```
     #[inline]
-    pub fn optional<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    pub fn optional<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
     {
-        self.stack.snapshot();
-        let result = f(self);
+        let result = f(self.checkpoint());
 
         match result {
             Ok(state) => Ok(state),
-            Err(mut state) => {
-                state.stack.backtrack();
-                Ok(state)
+            Err(state) => {
+                Ok(state.restore())
             }
         }
     }
@@ -911,5 +906,19 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             Some(_) => Ok(self),
             None => Err(self)
         }
+    }
+
+    // Mark the current state as a checkpoint and return the `Box`.
+    #[inline]
+    pub(crate) fn checkpoint(mut self: Box<Self>) -> Box<Self> {
+        self.stack.snapshot();
+        self
+    }
+
+    // Restore the current state to the most recent checkpoint.
+    #[inline]
+    pub(crate) fn restore(mut self: Box<Self>) -> Box<Self> {
+        self.stack.rewind();
+        self
     }
 }

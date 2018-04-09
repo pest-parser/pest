@@ -67,7 +67,7 @@ impl<T: Clone + Debug> Stack<T> {
 
     /// Rewinds the `Stack` to the most recent `snapshot()`. If no `snapshot()` has been taken, this
     /// function will do nothing.
-    pub fn backtrack(&mut self) {
+    pub fn rewind(&mut self) {
         if let Some(ops_index) = self.snapshots.pop() {
             self.rewind_to(ops_index);
             self.ops.truncate(ops_index);
@@ -159,14 +159,14 @@ mod test {
 
         // Test backtracking
         // [0, 2]
-        stack.backtrack();
+        stack.rewind();
         assert_eq!(stack.pop(), Some(2));
         assert_eq!(stack.pop(), Some(0));
         assert_eq!(stack.pop(), None);
 
         // Test backtracking
         // [0, 2, 3]
-        stack.backtrack();
+        stack.rewind();
         assert_eq!(stack.pop(), Some(3));
         assert_eq!(stack.pop(), Some(2));
         assert_eq!(stack.pop(), Some(0));
