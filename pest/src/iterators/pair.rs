@@ -123,6 +123,35 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// ```
     #[inline]
     pub fn into_span(self) -> Span<'i> {
+        // into_span was here first, so it is left in for backwards compatibility
+        self.as_span()
+    }
+
+    /// Returns the `Span` defined by the `Pair`, **without** consuming it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     ab
+    /// }
+    ///
+    /// let input = "ab";
+    /// let pair = pest::state(input, |state| {
+    ///     // generating Token pair with Rule::ab ...
+    /// #     state.rule(Rule::ab, |s| s.match_string("ab"))
+    /// }).unwrap().next().unwrap();
+    ///
+    /// assert_eq!(pair.as_span().as_str(), "ab");
+    /// // pair is still available for use because it was not consumed
+    /// assert_eq!(pair.as_span().start(), 0);
+    /// ```
+    #[inline]
+    pub fn as_span(&self) -> Span<'i> {
         let start = self.pos(self.start);
         let end = self.pos(self.pair());
 
