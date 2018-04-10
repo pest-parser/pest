@@ -46,13 +46,13 @@ fn consume(pair: Pair<Rule>) -> Json {
                 _ => unreachable!()
             },
             Rule::number => Json::Number(pair.as_str().parse().unwrap()),
-            Rule::string => Json::String(pair.into_span()),
+            Rule::string => Json::String(pair.as_span()),
             Rule::array => Json::Array(pair.into_inner().map(value).collect()),
             Rule::object => {
                 let pairs = pair.into_inner().map(|pos| {
                     let mut pair = pos.into_inner();
 
-                    let key = pair.next().unwrap().into_span();
+                    let key = pair.next().unwrap().as_span();
                     let value = value(pair.next().unwrap());
 
                     (key, value)

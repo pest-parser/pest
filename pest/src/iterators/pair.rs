@@ -102,6 +102,8 @@ impl<'i, R: RuleType> Pair<'i, R> {
 
     /// Returns the `Span` defined by the `Pair`, consuming it.
     ///
+    /// **Deprecated.** Please use `as_span` instead.
+    ///
     /// # Examples
     ///
     /// ```
@@ -122,8 +124,8 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// assert_eq!(pair.into_span().as_str(), "ab");
     /// ```
     #[inline]
+    #[deprecated(since="1.0.7", note="Please use `as_span` instead")]
     pub fn into_span(self) -> Span<'i> {
-        // into_span was here first, so it is left in for backwards compatibility
         self.as_span()
     }
 
@@ -147,8 +149,6 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// }).unwrap().next().unwrap();
     ///
     /// assert_eq!(pair.as_span().as_str(), "ab");
-    /// // pair is still available for use because it was not consumed
-    /// assert_eq!(pair.as_span().start(), 0);
     /// ```
     #[inline]
     pub fn as_span(&self) -> Span<'i> {
@@ -236,7 +236,7 @@ impl<'i, R: RuleType> fmt::Debug for Pair<'i, R> {
             f,
             "Pair {{ rule: {:?}, span: {:?}, inner: {:?} }}",
             self.as_rule(),
-            self.clone().into_span(),
+            self.clone().as_span(),
             self.clone().into_inner()
         )
     }
