@@ -102,6 +102,8 @@ impl<'i, R: RuleType> Pair<'i, R> {
 
     /// Returns the `Span` defined by the `Pair`, consuming it.
     ///
+    /// **Deprecated.** Please use `as_span` instead.
+    ///
     /// # Examples
     ///
     /// ```
@@ -122,7 +124,34 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// assert_eq!(pair.into_span().as_str(), "ab");
     /// ```
     #[inline]
+    #[deprecated(since="2.0.0", note="Please use `as_span` instead")]
     pub fn into_span(self) -> Span<'i> {
+        self.as_span()
+    }
+
+    /// Returns the `Span` defined by the `Pair`, **without** consuming it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     ab
+    /// }
+    ///
+    /// let input = "ab";
+    /// let pair = pest::state(input, |state| {
+    ///     // generating Token pair with Rule::ab ...
+    /// #     state.rule(Rule::ab, |s| s.match_string("ab"))
+    /// }).unwrap().next().unwrap();
+    ///
+    /// assert_eq!(pair.as_span().as_str(), "ab");
+    /// ```
+    #[inline]
+    pub fn as_span(&self) -> Span<'i> {
         let start = self.pos(self.start);
         let end = self.pos(self.pair());
 
@@ -207,7 +236,7 @@ impl<'i, R: RuleType> fmt::Debug for Pair<'i, R> {
             f,
             "Pair {{ rule: {:?}, span: {:?}, inner: {:?} }}",
             self.as_rule(),
-            self.clone().into_span(),
+            self.clone().as_span(),
             self.clone().into_inner()
         )
     }
