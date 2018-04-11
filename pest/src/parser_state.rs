@@ -218,15 +218,20 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     // run.
                     let new_index = new_state.queue.len();
                     match new_state.queue[index] {
-                        QueueableToken::Start { ref mut end_token_index, .. } => *end_token_index = new_index,
+                        QueueableToken::Start {
+                            ref mut end_token_index,
+                            ..
+                        } => *end_token_index = new_index,
                         _ => unreachable!()
                     };
 
                     let new_pos = new_state.position.pos();
 
-                    new_state
-                        .queue
-                        .push(QueueableToken::End { start_token_index: index, rule, input_pos: new_pos });
+                    new_state.queue.push(QueueableToken::End {
+                        start_token_index: index,
+                        rule,
+                        input_pos: new_pos
+                    });
                 }
 
                 Ok(new_state)
@@ -385,12 +390,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         loop {
             match result {
-                Ok(state) => {
-                    result = f(state.checkpoint())
-                },
-                Err(state) => {
-                    return Ok(state.restore())
-                }
+                Ok(state) => result = f(state.checkpoint()),
+                Err(state) => return Ok(state.restore())
             };
         }
     }
@@ -420,20 +421,52 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///     s.match_string("ac")
     /// });
     /// assert!(result.is_ok());
-    ///
     /// ```
     #[inline]
     pub fn optional<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
     {
-        let result = f(self.checkpoint());
-
-        match result {
+        match f(self.checkpoint()) {
             Ok(state) => Ok(state),
-            Err(state) => {
-                Ok(state.restore())
-            }
+            Err(state) => Ok(state.restore())
+        }
+    }
+
+    /// Wrapper for use around subsequent `.or_else` invocations in order to provide checkpoint
+    /// and restore capabilities for choices.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     ab
+    /// }
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let result = state.choice(|s| {
+    ///     s.match_string("ab")
+    /// });
+    /// assert!(result.is_ok());
+    ///
+    /// state = pest::ParserState::new(input);
+    /// let result = state.choice(|s| {
+    ///     s.match_string("ac")
+    /// });
+    /// assert!(result.is_err());
+    /// ```
+    #[inline]
+    pub fn choice<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    where
+        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
+    {
+        match f(self.checkpoint()) {
+            Ok(state) => Ok(state),
+            Err(state) => Err(state.restore())
         }
     }
 

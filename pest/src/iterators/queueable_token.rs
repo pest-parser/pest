@@ -15,6 +15,13 @@
 //     and can easily be stored instead of recomputed
 #[derive(Debug)]
 pub enum QueueableToken<R> {
-    Start { end_token_index: usize, input_pos: usize },
-    End { start_token_index: usize, rule: R, input_pos: usize }
+    Start {
+        end_token_index: usize,
+        input_pos: usize
+    },
+    End {
+        start_token_index: usize,
+        rule: R,
+        input_pos: usize
+    }
 }

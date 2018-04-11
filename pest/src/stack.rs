@@ -9,7 +9,6 @@
 
 /// Implementation of a `Stack` which maintains an log of `StackOp`s in order to rewind the stack
 /// to a previous state.
-
 use std::fmt::Debug;
 
 #[derive(Debug)]
@@ -82,7 +81,7 @@ impl<T: Clone + Debug> Stack<T> {
             match op {
                 &StackOp::Push(_) => {
                     self.cache.pop();
-                },
+                }
                 &StackOp::Pop(ref elem) => {
                     self.cache.push(elem.clone());
                 }

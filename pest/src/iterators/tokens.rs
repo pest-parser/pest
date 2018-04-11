@@ -42,7 +42,10 @@ pub fn new<R: RuleType>(
 impl<'i, R: RuleType> Tokens<'i, R> {
     fn create_token(&self, index: usize) -> Token<'i, R> {
         match self.queue[index] {
-            QueueableToken::Start { end_token_index, input_pos } => {
+            QueueableToken::Start {
+                end_token_index,
+                input_pos
+            } => {
                 let rule = match self.queue[end_token_index] {
                     QueueableToken::End { rule, .. } => rule,
                     _ => unreachable!()
@@ -54,7 +57,9 @@ impl<'i, R: RuleType> Tokens<'i, R> {
                     pos: unsafe { position::new(self.input, input_pos) }
                 }
             }
-            QueueableToken::End { rule, input_pos, .. } => {
+            QueueableToken::End {
+                rule, input_pos, ..
+            } => {
                 Token::End {
                     rule,
                     // QueueableTokens are safely created.
