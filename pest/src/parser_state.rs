@@ -951,7 +951,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     // Restore the current state to the most recent checkpoint.
     #[inline]
     pub(crate) fn restore(mut self: Box<Self>) -> Box<Self> {
-        self.stack.rewind();
+        self.stack.restore();
         self
     }
 }
