@@ -9,17 +9,15 @@
 
 /// Implementation of a `Stack` which maintains an log of `StackOp`s in order to rewind the stack
 /// to a previous state.
-use std::fmt::Debug;
-
 #[derive(Debug)]
-pub struct Stack<T: Clone + Debug> {
+pub struct Stack<T: Clone> {
     ops: Vec<StackOp<T>>,
     cache: Vec<T>,
     snapshots: Vec<usize>,
     current_snapshot: usize
 }
 
-impl<T: Clone + Debug> Stack<T> {
+impl<T: Clone> Stack<T> {
     /// Creates a new `Stack`.
     pub fn new() -> Self {
         Stack {
@@ -49,8 +47,8 @@ impl<T: Clone + Debug> Stack<T> {
     /// Pops the top-most `T` from the `Stack`.
     pub fn pop(&mut self) -> Option<T> {
         let popped = self.cache.pop();
-        if let Some(val) = popped.clone() {
-            self.ops.push(StackOp::Pop(val));
+        if let Some(ref val) = popped {
+            self.ops.push(StackOp::Pop(val.clone()));
         }
         popped
     }
