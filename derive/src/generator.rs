@@ -379,10 +379,10 @@ fn generate_expr(expr: Expr) -> Tokens {
             tail.push(generate_expr(current));
 
             quote! {
-                state.choice(|state| #head)
+                #head
                 #(
                     .or_else(|state| {
-                        state.choice(|state| #tail)
+                        #tail
                     })
                 )*
             }
@@ -508,10 +508,10 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             tail.push(generate_expr_atomic(current));
 
             quote! {
-                state.choice(|state| #head)
+                #head
                 #(
                     .or_else(|state| {
-                        state.choice(|state| #tail)
+                        #tail
                     })
                 )*
             }
@@ -662,12 +662,12 @@ mod tests {
         assert_eq!(
             generate_expr(expr),
             quote! {
-                state.choice(|state| state.match_string("a")).or_else(|state| {
-                    state.choice(|state| state.match_string("b"))
+                state.match_string("a").or_else(|state| {
+                    state.match_string("b")
                 }).or_else(|state| {
-                    state.choice(|state| state.match_string("c"))
+                    state.match_string("c")
                 }).or_else(|state| {
-                    state.choice(|state| state.match_string("d"))
+                    state.match_string("d")
                 })
             }
         );
@@ -689,12 +689,12 @@ mod tests {
         assert_eq!(
             generate_expr_atomic(expr),
             quote! {
-                state.choice(|state| state.match_string("a")).or_else(|state| {
-                    state.choice(|state| state.match_string("b"))
+                state.match_string("a").or_else(|state| {
+                    state.match_string("b")
                 }).or_else(|state| {
-                    state.choice(|state| state.match_string("c"))
+                    state.match_string("c")
                 }).or_else(|state| {
-                    state.choice(|state| state.match_string("d"))
+                    state.match_string("d")
                 })
             }
         );
@@ -747,9 +747,9 @@ mod tests {
             state.repeat(|state| {
                 state.sequence(|state| {
                     self::skip(state).and_then(|state| {
-                        state.choice(|state| state.match_string("c"))
+                        state.match_string("c")
                             .or_else(|state| {
-                                state.choice(|state| state.match_string("d"))
+                                state.match_string("d")
                             })
                      })
                 })
@@ -758,8 +758,8 @@ mod tests {
         assert_eq!(
             generate_expr(expr),
             quote! {
-                state.choice(|state| self::a(state)).or_else(|state| {
-                    state.choice(|state| state.sequence(|state| {
+                self::a(state).or_else(|state| {
+                    state.sequence(|state| {
                         state.match_range('a'..'b').and_then(|state| {
                             self::skip(state)
                         }).and_then(|state| {
@@ -783,9 +783,9 @@ mod tests {
                                 state.optional(|state| {
                                     state.sequence(|state| {
                                         state.optional(|state| {
-                                            state.choice(|state| state.match_string("c"))
+                                            state.match_string("c")
                                             .or_else(|state| {
-                                                state.choice(|state| state.match_string("d"))
+                                                state.match_string("d")
                                             }).and_then(|state| {
                                                 #repeat
                                             })
@@ -794,7 +794,7 @@ mod tests {
                                 })
                             })
                         })
-                    }))
+                    })
                 })
             }
         );
@@ -823,8 +823,8 @@ mod tests {
         assert_eq!(
             generate_expr_atomic(expr),
             quote! {
-                state.choice(|state| self::a(state)).or_else(|state| {
-                    state.choice(|state| state.sequence(|state| {
+                self::a(state).or_else(|state| {
+                    state.sequence(|state| {
                         state.match_range('a'..'b').and_then(|state| {
                             state.lookahead(false, |state| {
                                 state.repeat(|state| {
@@ -835,15 +835,15 @@ mod tests {
                             state.lookahead(true, |state| {
                                 state.optional(|state| {
                                     state.repeat(|state| {
-                                        state.choice(|state| state.match_string("c"))
+                                        state.match_string("c")
                                            .or_else(|state| {
-                                            state.choice(|state| state.match_string("d"))
+                                            state.match_string("d")
                                         })
                                     })
                                 })
                             })
                         })
-                    }))
+                    })
                 })
             }
         );

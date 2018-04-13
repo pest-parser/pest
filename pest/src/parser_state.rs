@@ -386,12 +386,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnMut(Box<Self>) -> ParseResult<Box<Self>>
     {
-        let mut result = f(self.checkpoint());
+        let mut result = f(self);
 
         loop {
             match result {
-                Ok(state) => result = f(state.checkpoint()),
-                Err(state) => return Ok(state.restore())
+                Ok(state) => result = f(state),
+                Err(state) => return Ok(state)
             };
         }
     }
@@ -427,46 +427,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
     {
-        match f(self.checkpoint()) {
-            Ok(state) => Ok(state),
-            Err(state) => Ok(state.restore())
-        }
-    }
-
-    /// Wrapper for use around subsequent `.or_else` invocations in order to provide checkpoint
-    /// and restore capabilities for choices.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// /// # use pest;
-    /// # #[allow(non_camel_case_types)]
-    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    /// enum Rule {
-    ///     ab
-    /// }
-    ///
-    /// let input = "ab";
-    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let result = state.choice(|s| {
-    ///     s.match_string("ab")
-    /// });
-    /// assert!(result.is_ok());
-    ///
-    /// state = pest::ParserState::new(input);
-    /// let result = state.choice(|s| {
-    ///     s.match_string("ac")
-    /// });
-    /// assert!(result.is_err());
-    /// ```
-    #[inline]
-    pub fn choice<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
-    where
-        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
-    {
-        match f(self.checkpoint()) {
-            Ok(state) => Ok(state),
-            Err(state) => Err(state.restore())
+        match f(self) {
+            Ok(state) | Err(state) => Ok(state)
         }
     }
 
@@ -938,6 +900,19 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         match self.stack.pop() {
             Some(_) => Ok(self),
             None => Err(self)
+        }
+    }
+
+    ///
+    ///
+    #[inline]
+    pub fn restore_on_err<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    where
+        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
+    {
+        match f(self.checkpoint()) {
+            Ok(state) => Ok(state),
+            Err(state) => Err(state.restore())
         }
     }
 
