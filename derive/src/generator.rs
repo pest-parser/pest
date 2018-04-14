@@ -10,11 +10,11 @@
 use std::collections::HashMap;
 
 use quote::Tokens;
-use syn::Ident;
+use syn::{Generics, Ident};
 
 use pest_meta::ast::*;
 
-pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
+pub fn generate(name: Ident, generics: &Generics, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
     let mut predefined = HashMap::new();
     predefined.insert(
         "any",
@@ -87,8 +87,10 @@ pub fn generate(name: Ident, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
             .map(|name| predefined.get(name).unwrap().clone())
     );
 
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     let parser_impl = quote! {
-        impl ::pest::Parser<Rule> for #name {
+        impl #impl_generics ::pest::Parser<Rule> for #name #ty_generics #where_clause {
             fn parse<'i>(
                 rule: Rule,
                 input: &'i str
@@ -850,6 +852,7 @@ mod tests {
     #[test]
     fn generate_complete() {
         let name = Ident::from("MyParser");
+        let generics = Generics::default();
         let rules = vec![
             Rule {
                 name: "a".to_owned(),
@@ -860,7 +863,7 @@ mod tests {
         let defaults = vec!["any"];
 
         assert_eq!(
-            generate(name, rules, defaults),
+            generate(name, &generics, rules, defaults),
             quote! {
                 #[allow(dead_code, non_camel_case_types)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

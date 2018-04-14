@@ -256,7 +256,7 @@ use std::io::{self, Read};
 use std::path::Path;
 
 use proc_macro::TokenStream;
-use syn::{Attribute, DeriveInput, Ident, Lit, Meta};
+use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 
 mod generator;
 mod optimizer;
@@ -267,7 +267,7 @@ use pest_meta::parser::{self, Rule};
 #[proc_macro_derive(Parser, attributes(grammar))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
-    let (name, path) = parse_derive(ast);
+    let (name, generics, path) = parse_derive(ast);
 
     let root = env::var("CARGO_MANIFEST_DIR").unwrap_or(".".into());
     let path = Path::new(&root).join("src/").join(&path);
@@ -318,7 +318,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
     let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
-    let generated = generator::generate(name, optimized, defaults);
+    let generated = generator::generate(name, &generics, optimized, defaults);
 
     generated.into()
 }
@@ -330,8 +330,9 @@ fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     Ok(string)
 }
 
-fn parse_derive(ast: DeriveInput) -> (Ident, String) {
+fn parse_derive(ast: DeriveInput) -> (Ident, Generics, String) {
     let name = ast.ident;
+    let generics = ast.generics;
 
     let grammar: Vec<&Attribute> = ast.attrs
         .iter()
@@ -347,7 +348,7 @@ fn parse_derive(ast: DeriveInput) -> (Ident, String) {
         _ => panic!("only 1 grammar file can be provided")
     };
 
-    (name, filename)
+    (name, generics, filename)
 }
 
 fn get_filename(attr: &Attribute) -> String {
@@ -373,7 +374,7 @@ mod tests {
             pub struct MyParser<'a, T>;
         ";
         let ast = syn::parse_str(definition).unwrap();
-        let (_, filename) = parse_derive(ast);
+        let (_, _, filename) = parse_derive(ast);
         assert_eq!(filename, "myfile.pest");
     }
 
