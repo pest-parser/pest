@@ -58,15 +58,25 @@ pub enum Expr {
     /// Continues to match expressions until one of the strings in the `Vec` is found
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
-    Push(Box<Expr>)
+    Push(Box<Expr>),
+
+    /// Internal Exprs
+
+    /// If the wrapped expression errors, return the parser state to where it was prior to
+    /// running the closure
+    RestoreOnErr(Box<Expr>)
 }
 
 impl Expr {
+    pub fn iter_top_down(&self) -> ExprTopDownIterator {
+        ExprTopDownIterator::new(self)
+    }
+
     pub fn map_top_down<F>(self, mut f: F) -> Expr
     where
         F: FnMut(Expr) -> Expr
     {
-        pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
+        fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
         where
             F: FnMut(Expr) -> Expr
         {
@@ -135,7 +145,7 @@ impl Expr {
     where
         F: FnMut(Expr) -> Expr
     {
-        pub fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
+        fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
         where
             F: FnMut(Expr) -> Expr
         {
@@ -201,9 +211,85 @@ impl Expr {
     }
 }
 
+pub struct ExprTopDownIterator {
+    current: Option<Expr>,
+    next: Option<Expr>,
+    right_branches: Vec<Expr>
+}
+
+impl ExprTopDownIterator {
+    pub fn new(expr: &Expr) -> Self {
+        let mut iter = ExprTopDownIterator {
+            current: None,
+            next: None,
+            right_branches: vec![]
+        };
+        iter.iterate_expr(expr.clone());
+        iter
+    }
+
+    fn iterate_expr(&mut self, expr: Expr) {
+        self.current = Some(expr.clone());
+        match expr {
+            Expr::Seq(lhs, rhs) => {
+                self.right_branches.push(*rhs);
+                self.next = Some(*lhs);
+            }
+            Expr::Choice(lhs, rhs) => {
+                self.right_branches.push(*rhs);
+                self.next = Some(*lhs);
+            },
+            Expr::PosPred(expr) |
+            Expr::NegPred(expr) |
+            Expr::Rep(expr) |
+            Expr::RepOnce(expr) |
+            Expr::RepExact(expr, _) |
+            Expr::RepMin(expr, _) |
+            Expr::RepMax(expr, _) |
+            Expr::RepMinMax(expr, _, _) |
+            Expr::Opt(expr) |
+            Expr::Push(expr) => {
+                self.next = Some(*expr);
+            }
+            _ => {
+                self.next = None;
+            }
+        }
+    }
+}
+
+impl Iterator for ExprTopDownIterator {
+    type Item = Expr;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let result = self.current.take();
+
+        if let Some(expr) = self.next.take() {
+            self.iterate_expr(expr);
+        } else if let Some(expr) = self.right_branches.pop() {
+            self.iterate_expr(expr);
+        }
+
+        result
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn top_down_iterator() {
+        let expr = Expr::Choice(
+            Box::new(Expr::Str(String::from("a"))),
+            Box::new(Expr::Str(String::from("b")))
+        );
+        let mut top_down = expr.clone().iter_top_down();
+        assert_eq!(top_down.next(), Some(expr));
+        assert_eq!(top_down.next(), Some(Expr::Str(String::from("a"))));
+        assert_eq!(top_down.next(), Some(Expr::Str(String::from("b"))));
+        assert_eq!(top_down.next(), None);
+    }
 
     #[test]
     fn identity() {

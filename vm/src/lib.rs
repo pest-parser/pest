@@ -137,7 +137,10 @@ impl Vm {
             Expr::RepMinMax(ref expr, min, max) => self.repeat(expr, Some(min), Some(max), state),
             Expr::Push(ref expr) => state.stack_push(|state| self.parse_expr(&*expr, state)),
             Expr::Skip(ref strings) => {
-                state.skip_until(&strings.iter().map(|s| s.as_str()).collect::<Vec<&str>>())
+                state.skip_until(&strings.iter().map(|state| state.as_str()).collect::<Vec<&str>>())
+            },
+            Expr::RestoreOnErr(ref expr) => {
+                state.restore_on_err(|state| self.parse_expr(&*expr, state))
             }
         }
     }

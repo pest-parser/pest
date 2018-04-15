@@ -421,11 +421,14 @@ fn generate_expr(expr: Expr) -> Tokens {
             let expr = generate_expr(*expr);
 
             quote! {
-                {
-                    state.stack_push(|state| {
-                        #expr
-                    })
-                }
+                state.stack_push(|state| #expr)
+            }
+        }
+        Expr::RestoreOnErr(expr) => {
+            let expr = generate_expr(*expr);
+
+            quote! {
+                state.restore_on_err(|state| #expr)
             }
         }
         _ => unreachable!()
@@ -545,11 +548,14 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
             let expr = generate_expr_atomic(*expr);
 
             quote! {
-                {
-                    state.stack_push(|state| {
-                        #expr
-                    })
-                }
+                state.stack_push(|state| #expr)
+            }
+        },
+        Expr::RestoreOnErr(expr) => {
+            let expr = generate_expr_atomic(*expr);
+
+            quote! {
+                state.restore_on_err(|state| #expr)
             }
         }
         _ => unreachable!()

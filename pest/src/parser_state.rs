@@ -903,8 +903,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    ///
-    ///
+    /// Restores the original state of the `ParserState` when `f` returns an `Err`.
     #[inline]
     pub fn restore_on_err<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where

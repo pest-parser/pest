@@ -7,6 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use std::collections::HashMap;
 use pest_meta::ast::*;
 
 mod concatenator;
@@ -15,7 +16,11 @@ mod rotater;
 mod skipper;
 mod unroller;
 
+mod restorer;
+
 pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
+    let rules_to_exprs = populate_rules_to_exprs(&rules);
+
     rules
         .into_iter()
         .map(rotater::rotate)
@@ -23,7 +28,16 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
         .map(unroller::unroll)
         .map(concatenator::concatenate)
         .map(factorizer::factor)
+        .map(|rule| restorer::restore_on_err(rule, &rules_to_exprs))
         .collect()
+}
+
+fn populate_rules_to_exprs(rules: &[Rule]) -> HashMap<String, Expr> {
+    let mut rules_to_exprs = HashMap::new();
+    for rule in rules.iter() {
+        rules_to_exprs.insert(rule.name.clone(), rule.expr.clone());
+    }
+    rules_to_exprs
 }
 
 #[cfg(test)]
