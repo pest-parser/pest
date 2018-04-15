@@ -12,11 +12,10 @@ use pest_meta::ast::*;
 
 mod concatenator;
 mod factorizer;
+mod restorer;
 mod rotater;
 mod skipper;
 mod unroller;
-
-mod restorer;
 
 pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
     let rules_to_exprs = populate_rules_to_exprs(&rules);
@@ -33,11 +32,7 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<Rule> {
 }
 
 fn populate_rules_to_exprs(rules: &[Rule]) -> HashMap<String, Expr> {
-    let mut rules_to_exprs = HashMap::new();
-    for rule in rules.iter() {
-        rules_to_exprs.insert(rule.name.clone(), rule.expr.clone());
-    }
-    rules_to_exprs
+    rules.iter().map(|r| (r.name.clone(), r.expr.clone())).collect()
 }
 
 #[cfg(test)]
