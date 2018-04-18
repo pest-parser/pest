@@ -146,21 +146,21 @@
 //!
 //! 2. Non-terminals
 //!
-//!     | Non-terminal | Usage                                                      |
-//!     |--------------|------------------------------------------------------------|
-//!     | `(e)`        | matches `e`                                                |
-//!     | `e1 ~ e2`    | matches the sequence `e1` `e2`                             |
-//!     | `e1 | e2`    | matches either `e1` or `e2`                                |
-//!     | `e*`         | matches `e` zero or more times                             |
-//!     | `e+`         | matches `e` one or more times                              |
-//!     | `e{n}`       | matches `e` exactly `n` times                              |
-//!     | `e{, n}`     | matches `e` at most `n` times                              |
-//!     | `e{n,} `     | matches `e` at least `n` times                             |
-//!     | `e{m, n}`    | matches `e` between `m` and `n` times inclusively          |
-//!     | `e?`         | optionally matches `e`                                     |
-//!     | `&e`         | matches `e` without making progress                        |
-//!     | `!e`         | matches if `e` doesn't match without making progress       |
-//!     | `push(e)`    | matches `e` and pushes it's captured string down the stack |
+//!     | Non-terminal          | Usage                                                      |
+//!     |-----------------------|------------------------------------------------------------|
+//!     | `(e)`                 | matches `e`                                                |
+//!     | `e1 ~ e2`             | matches the sequence `e1` `e2`                             |
+//!     | <code>e1 \| e2</code> | matches either `e1` or `e2`                                |
+//!     | `e*`                  | matches `e` zero or more times                             |
+//!     | `e+`                  | matches `e` one or more times                              |
+//!     | `e{n}`                | matches `e` exactly `n` times                              |
+//!     | `e{, n}`              | matches `e` at most `n` times                              |
+//!     | `e{n,} `              | matches `e` at least `n` times                             |
+//!     | `e{m, n}`             | matches `e` between `m` and `n` times inclusively          |
+//!     | `e?`                  | optionally matches `e`                                     |
+//!     | `&e`                  | matches `e` without making progress                        |
+//!     | `!e`                  | matches if `e` doesn't match without making progress       |
+//!     | `push(e)`             | matches `e` and pushes it's captured string down the stack |
 //!
 //!     where `e`, `e1`, and `e2` are expressions.
 //!
