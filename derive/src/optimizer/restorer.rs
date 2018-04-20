@@ -26,23 +26,6 @@ pub fn restore_on_err(rule: Rule, rules_to_exprs: &HashMap<String, Expr>) -> Rul
     }
 }
 
-fn child_modifies_state(expr: &Expr, rules_to_exprs: &HashMap<String, Expr>) -> bool {
-    expr.iter_top_down().any(|expr| {
-        match expr {
-            Expr::Push(_) => true,
-            Expr::Ident(ref s) if s == "pop" => true,
-            Expr::Ident(ref name) => {
-                let mut map = rules_to_exprs.clone();
-                match map.remove(name) {
-                    Some(rule_expr) => child_modifies_state(&rule_expr, &map),
-                    None => false
-                }
-            },
-            _ => false
-        }
-    })
-}
-
 fn wrap_branching_exprs(expr: Expr, rules_to_exprs: &HashMap<String, Expr>) -> Expr {
     match expr {
         Expr::Opt(expr) => {
@@ -74,4 +57,21 @@ fn wrap_branching_exprs(expr: Expr, rules_to_exprs: &HashMap<String, Expr>) -> E
         }
         _ => expr
     }
+}
+
+fn child_modifies_state(expr: &Expr, rules_to_exprs: &HashMap<String, Expr>) -> bool {
+    expr.iter_top_down().any(|expr| {
+        match expr {
+            Expr::Push(_) => true,
+            Expr::Ident(ref s) if s == "pop" => true,
+            Expr::Ident(ref name) => {
+                let mut map = rules_to_exprs.clone();
+                match map.remove(name) {
+                    Some(rule_expr) => child_modifies_state(&rule_expr, &map),
+                    None => false
+                }
+            },
+            _ => false
+        }
+    })
 }
