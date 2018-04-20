@@ -75,3 +75,84 @@ fn child_modifies_state(expr: &Expr, rules_to_exprs: &HashMap<String, Expr>) -> 
         }
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::*;
+
+    #[test]
+    fn restore_no_stack_children() {
+        let rules = vec![
+            Rule {
+                name: "rule".to_owned(),
+                ty: RuleType::Normal,
+                expr: Expr::Opt(Box::new(Expr::Str(String::from("a"))))
+            },
+        ];
+
+        let rules_to_map = &populate_rules_to_exprs(&rules);
+
+        assert_eq!(restore_on_err(rules[0].clone(), rules_to_map), rules[0].clone());
+    }
+
+    #[test]
+    fn restore_with_child_stack_ops() {
+        let rules = vec![
+            Rule {
+                name: "rule".to_owned(),
+                ty: RuleType::Normal,
+                expr: Expr::Rep(
+                    Box::new(Expr::Push(
+                        Box::new(Expr::Str(String::from("a")))
+                    ))
+                )
+            },
+        ];
+
+        let restored = Rule {
+            name: "rule".to_owned(),
+            ty: RuleType::Normal,
+            expr: Expr::Rep(
+                Box::new(Expr::RestoreOnErr(Box::new(Expr::Push(
+                    Box::new(Expr::Str(String::from("a")))
+                )))
+            ))
+        };
+
+        let rules_to_map = &populate_rules_to_exprs(&rules);
+
+        assert_eq!(restore_on_err(rules[0].clone(), rules_to_map), restored);
+    }
+
+    #[test]
+    fn restore_choice_branch_with_and_branch_without() {
+        let rules = vec![
+            Rule {
+                name: "rule".to_owned(),
+                ty: RuleType::Normal,
+                expr: Expr::Choice(
+                    Box::new(Expr::Push(
+                        Box::new(Expr::Str(String::from("a")))
+                    )),
+                    Box::new(Expr::Str(String::from("a")))
+                )
+            },
+        ];
+
+        let restored = Rule {
+            name: "rule".to_owned(),
+            ty: RuleType::Normal,
+            expr: Expr::Choice(
+                Box::new(Expr::RestoreOnErr(Box::new(Expr::Push(
+                    Box::new(Expr::Str(String::from("a")))
+                )))),
+                Box::new(Expr::Str(String::from("a")))
+            )
+        };
+
+        let rules_to_map = &populate_rules_to_exprs(&rules);
+
+        assert_eq!(restore_on_err(rules[0].clone(), rules_to_map), restored);
+    }
+}
