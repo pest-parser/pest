@@ -719,3 +719,16 @@ fn repeat_mutate_stack() {
         ]
     };
 }
+
+#[test]
+fn checkpoint_restore() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "a",
+        rule: Rule::checkpoint_restore,
+        tokens: [
+            checkpoint_restore(0, 1, [eoi(1, 1)])
+        ]
+    };
+}
+

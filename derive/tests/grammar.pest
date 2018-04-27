@@ -38,5 +38,6 @@ repeat_mutate_stack = { (push('a'..'c') ~ ",")* ~ pop ~ pop ~ pop }
 peek_ = { push(range) ~ push(range) ~ peek ~ peek }
 pop_ = { push(range) ~ push(range) ~ pop ~ pop }
 pop_fail = { push(range) ~ !pop ~ range ~ pop }
+checkpoint_restore = ${ push("") ~ (push("a") ~ "b" ~ pop | pop ~ "a") ~ eoi }
 whitespace = _{ " " }
 comment = _{ "$"+ }
