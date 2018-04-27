@@ -29,6 +29,7 @@ impl<T: Clone> Stack<T> {
     }
 
     /// Returns `true` if the stack is currently empty.
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.cache.is_empty()
     }

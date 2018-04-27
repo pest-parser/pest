@@ -707,3 +707,15 @@ fn pop_fail() {
         ]
     };
 }
+
+#[test]
+fn repeat_mutate_stack() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "a,b,c,cba",
+        rule: Rule::repeat_mutate_stack,
+        tokens: [
+            repeat_mutate_stack(0, 9)
+        ]
+    };
+}
