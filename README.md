@@ -164,10 +164,12 @@ extern crate pest_derive;
 
 * [pest_meta](https://github.com/pest-parser/pest/blob/master/meta/src/grammar.pest) (bootstrapped)
 * [brain](https://github.com/brain-lang/brain)
+* [Chelone](https://github.com/Aaronepower/chelone)
 * [comrak](https://github.com/kivikakk/comrak)
 * [graphql-parser](https://github.com/Keats/graphql-parser)
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
 * [Huia](https://gitlab.com/huia-lang/huia-compiler)
+* [py_literal](https://github.com/jturner314/py_literal)
 * [rouler](https://github.com/jarcane/rouler)
 * [RuSh](https://github.com/lwandrebeck/RuSh)
 * [rs_pbrt](https://github.com/wahn/rs_pbrt)
