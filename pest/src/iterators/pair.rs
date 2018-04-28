@@ -124,7 +124,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// assert_eq!(pair.into_span().as_str(), "ab");
     /// ```
     #[inline]
-    #[deprecated(since="2.0.0", note="Please use `as_span` instead")]
+    #[deprecated(since = "2.0.0", note = "Please use `as_span` instead")]
     pub fn into_span(self) -> Span<'i> {
         self.as_span()
     }

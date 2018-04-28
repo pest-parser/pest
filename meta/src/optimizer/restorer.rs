@@ -8,116 +8,114 @@
 // modified, or distributed except according to those terms.
 use std::collections::HashMap;
 
-use ast::*;
+use optimizer::*;
 
-pub fn restore_on_err(rule: Rule, rules_to_exprs: &HashMap<String, Expr>) -> Rule {
+pub fn restore_on_err(
+    rule: OptimizedRule,
+    rules_to_exprs: &HashMap<String, OptimizedExpr>
+) -> OptimizedRule {
     match rule {
-        Rule { name, ty, expr } => {
-            let expr = expr.map_bottom_up(|expr| {
-                wrap_branching_exprs(expr, rules_to_exprs)
-            });
+        OptimizedRule { name, ty, expr } => {
+            let expr = expr.map_bottom_up(|expr| wrap_branching_exprs(expr, rules_to_exprs));
 
-            Rule {
-                name,
-                ty,
-                expr
-            }
+            OptimizedRule { name, ty, expr }
         }
     }
 }
 
-fn wrap_branching_exprs(expr: Expr, rules_to_exprs: &HashMap<String, Expr>) -> Expr {
+fn wrap_branching_exprs(
+    expr: OptimizedExpr,
+    rules_to_exprs: &HashMap<String, OptimizedExpr>
+) -> OptimizedExpr {
     match expr {
-        Expr::Opt(expr) => {
+        OptimizedExpr::Opt(expr) => {
             if child_modifies_state(&expr, rules_to_exprs) {
-                Expr::Opt(Box::new(Expr::RestoreOnErr(expr)))
+                OptimizedExpr::Opt(Box::new(OptimizedExpr::RestoreOnErr(expr)))
             } else {
-                Expr::Opt(expr)
+                OptimizedExpr::Opt(expr)
             }
         }
-        Expr::Choice(lhs, rhs) => {
+        OptimizedExpr::Choice(lhs, rhs) => {
             let wrapped_lhs = if child_modifies_state(&lhs, rules_to_exprs) {
-                Box::new(Expr::RestoreOnErr(lhs))
+                Box::new(OptimizedExpr::RestoreOnErr(lhs))
             } else {
                 lhs
             };
             let wrapped_rhs = if child_modifies_state(&rhs, rules_to_exprs) {
-                Box::new(Expr::RestoreOnErr(rhs))
+                Box::new(OptimizedExpr::RestoreOnErr(rhs))
             } else {
                 rhs
             };
-            Expr::Choice(wrapped_lhs, wrapped_rhs)
+            OptimizedExpr::Choice(wrapped_lhs, wrapped_rhs)
         }
-        Expr::Rep(expr) => {
+        OptimizedExpr::Rep(expr) => {
             if child_modifies_state(&expr, rules_to_exprs) {
-                Expr::Rep(Box::new(Expr::RestoreOnErr(expr)))
+                OptimizedExpr::Rep(Box::new(OptimizedExpr::RestoreOnErr(expr)))
             } else {
-                Expr::Rep(expr)
+                OptimizedExpr::Rep(expr)
             }
         }
         _ => expr
     }
 }
 
-fn child_modifies_state(expr: &Expr, rules_to_exprs: &HashMap<String, Expr>) -> bool {
-    expr.iter_top_down().any(|expr| {
-        match expr {
-            Expr::Push(_) => true,
-            Expr::Ident(ref s) if s == "pop" => true,
-            Expr::Ident(ref name) => {
-                let mut map = rules_to_exprs.clone();
-                match map.remove(name) {
-                    Some(rule_expr) => child_modifies_state(&rule_expr, &map),
-                    None => false
-                }
-            },
-            _ => false
+fn child_modifies_state(
+    expr: &OptimizedExpr,
+    rules_to_exprs: &HashMap<String, OptimizedExpr>
+) -> bool {
+    expr.iter_top_down().any(|expr| match expr {
+        OptimizedExpr::Push(_) => true,
+        OptimizedExpr::Ident(ref s) if s == "pop" => true,
+        OptimizedExpr::Ident(ref name) => {
+            let mut map = rules_to_exprs.clone();
+            match map.remove(name) {
+                Some(rule_expr) => child_modifies_state(&rule_expr, &map),
+                None => false
+            }
         }
+        _ => false
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::*;
+    use optimizer::OptimizedExpr::*;
 
     #[test]
     fn restore_no_stack_children() {
         let rules = vec![
-            Rule {
+            OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Normal,
-                expr: Expr::Opt(Box::new(Expr::Str(String::from("a"))))
+                expr: Opt(Box::new(Str(String::from("a"))))
             },
         ];
 
         let rules_to_map = &populate_rules_to_exprs(&rules);
 
-        assert_eq!(restore_on_err(rules[0].clone(), rules_to_map), rules[0].clone());
+        assert_eq!(
+            restore_on_err(rules[0].clone(), rules_to_map),
+            rules[0].clone()
+        );
     }
 
     #[test]
     fn restore_with_child_stack_ops() {
         let rules = vec![
-            Rule {
+            OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Normal,
-                expr: Expr::Rep(
-                    Box::new(Expr::Push(
-                        Box::new(Expr::Str(String::from("a")))
-                    ))
-                )
+                expr: Rep(Box::new(Push(Box::new(Str(String::from("a"))))))
             },
         ];
 
-        let restored = Rule {
+        let restored = OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
-            expr: Expr::Rep(
-                Box::new(Expr::RestoreOnErr(Box::new(Expr::Push(
-                    Box::new(Expr::Str(String::from("a")))
-                )))
-            ))
+            expr: Rep(Box::new(RestoreOnErr(Box::new(Push(Box::new(Str(
+                String::from("a")
+            )))))))
         };
 
         let rules_to_map = &populate_rules_to_exprs(&rules);
@@ -128,26 +126,24 @@ mod tests {
     #[test]
     fn restore_choice_branch_with_and_branch_without() {
         let rules = vec![
-            Rule {
+            OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Normal,
-                expr: Expr::Choice(
-                    Box::new(Expr::Push(
-                        Box::new(Expr::Str(String::from("a")))
-                    )),
-                    Box::new(Expr::Str(String::from("a")))
+                expr: Choice(
+                    Box::new(Push(Box::new(Str(String::from("a"))))),
+                    Box::new(Str(String::from("a")))
                 )
             },
         ];
 
-        let restored = Rule {
+        let restored = OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
-            expr: Expr::Choice(
-                Box::new(Expr::RestoreOnErr(Box::new(Expr::Push(
-                    Box::new(Expr::Str(String::from("a")))
-                )))),
-                Box::new(Expr::Str(String::from("a")))
+            expr: Choice(
+                Box::new(RestoreOnErr(Box::new(Push(Box::new(Str(String::from(
+                    "a"
+                ))))))),
+                Box::new(Str(String::from("a")))
             )
         };
 

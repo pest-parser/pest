@@ -58,13 +58,7 @@ pub enum Expr {
     /// Continues to match expressions until one of the strings in the `Vec` is found
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
-    Push(Box<Expr>),
-
-    /// Internal Exprs
-
-    /// If the wrapped expression errors, return the parser state to where it was prior to
-    /// running the closure
-    RestoreOnErr(Box<Expr>)
+    Push(Box<Expr>)
 }
 
 impl Expr {
@@ -238,17 +232,17 @@ impl ExprTopDownIterator {
             Expr::Choice(lhs, rhs) => {
                 self.right_branches.push(*rhs);
                 self.next = Some(*lhs);
-            },
-            Expr::PosPred(expr) |
-            Expr::NegPred(expr) |
-            Expr::Rep(expr) |
-            Expr::RepOnce(expr) |
-            Expr::RepExact(expr, _) |
-            Expr::RepMin(expr, _) |
-            Expr::RepMax(expr, _) |
-            Expr::RepMinMax(expr, _, _) |
-            Expr::Opt(expr) |
-            Expr::Push(expr) => {
+            }
+            Expr::PosPred(expr)
+            | Expr::NegPred(expr)
+            | Expr::Rep(expr)
+            | Expr::RepOnce(expr)
+            | Expr::RepExact(expr, _)
+            | Expr::RepMin(expr, _)
+            | Expr::RepMax(expr, _)
+            | Expr::RepMinMax(expr, ..)
+            | Expr::Opt(expr)
+            | Expr::Push(expr) => {
                 self.next = Some(*expr);
             }
             _ => {

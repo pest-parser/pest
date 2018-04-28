@@ -731,4 +731,3 @@ fn checkpoint_restore() {
         ]
     };
 }
-
