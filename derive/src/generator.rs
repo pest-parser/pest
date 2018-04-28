@@ -21,6 +21,55 @@ pub fn generate(
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>
 ) -> Tokens {
+    let uses_eoi = defaults.iter().any(|name| *name == "eoi");
+
+    let predefined = generate_predefined_rules();
+    let rule_enum = generate_enum(&rules, uses_eoi);
+    let patterns = generate_patterns(&rules, uses_eoi);
+    let skip = generate_skip(&rules);
+
+    let mut rules: Vec<_> = rules.into_iter().map(|rule| generate_rule(rule)).collect();
+    rules.extend(
+        defaults
+            .into_iter()
+            .map(|name| predefined.get(name).unwrap().clone())
+    );
+
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    let parser_impl = quote! {
+        impl #impl_generics ::pest::Parser<Rule> for #name #ty_generics #where_clause {
+            fn parse<'i>(
+                rule: Rule,
+                input: &'i str
+            ) -> ::std::result::Result<
+                ::pest::iterators::Pairs<'i, Rule>,
+                ::pest::Error<'i, Rule>
+            > {
+                mod rules {
+                    use super::Rule;
+
+                    #( #rules )*
+                    #skip
+                }
+
+                ::pest::state(input, |state| {
+                    match rule {
+                        #patterns
+                    }
+                })
+            }
+        }
+    };
+
+    quote! {
+        #rule_enum
+        #parser_impl
+    }
+}
+
+// Note: All predefined rules should be validated as pest keywords in meta/src/validator.rs.
+fn generate_predefined_rules() -> HashMap<&'static str, Tokens> {
     let mut predefined = HashMap::new();
     predefined.insert(
         "any",
@@ -79,51 +128,7 @@ pub fn generate(
             }
         }
     );
-
-    let uses_eoi = defaults.iter().any(|name| *name == "eoi");
-
-    let rule_enum = generate_enum(&rules, uses_eoi);
-    let patterns = generate_patterns(&rules, uses_eoi);
-    let skip = generate_skip(&rules);
-
-    let mut rules: Vec<_> = rules.into_iter().map(|rule| generate_rule(rule)).collect();
-    rules.extend(
-        defaults
-            .into_iter()
-            .map(|name| predefined.get(name).unwrap().clone())
-    );
-
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-    let parser_impl = quote! {
-        impl #impl_generics ::pest::Parser<Rule> for #name #ty_generics #where_clause {
-            fn parse<'i>(
-                rule: Rule,
-                input: &'i str
-            ) -> ::std::result::Result<
-                ::pest::iterators::Pairs<'i, Rule>,
-                ::pest::Error<'i, Rule>
-            > {
-                mod rules {
-                    use super::Rule;
-
-                    #( #rules )*
-                    #skip
-                }
-
-                ::pest::state(input, |state| {
-                    match rule {
-                        #patterns
-                    }
-                })
-            }
-        }
-    };
-
-    quote! {
-        #rule_enum
-        #parser_impl
-    }
+    predefined
 }
 
 fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
