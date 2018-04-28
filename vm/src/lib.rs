@@ -130,7 +130,21 @@ impl Vm {
             OptimizedExpr::Choice(ref lhs, ref rhs) => self.parse_expr(lhs, state)
                 .or_else(|state| self.parse_expr(rhs, state)),
             OptimizedExpr::Opt(ref expr) => state.optional(|state| self.parse_expr(expr, state)),
-            OptimizedExpr::Rep(ref expr) => self.repeat(expr, None, None, state),
+            OptimizedExpr::Rep(ref expr) => state.sequence(|state| {
+                state.optional(|state| {
+                    self.parse_expr(expr, state).and_then(|state| {
+                        state.repeat(|state| {
+                            state.sequence(|state| {
+                                self.skip(
+                                    state
+                                ).and_then(|state| {
+                                    self.parse_expr(expr, state)
+                                })
+                            })
+                        })
+                    })
+                })
+            }),
             OptimizedExpr::Push(ref expr) => state.stack_push(|state| self.parse_expr(expr, state)),
             OptimizedExpr::Skip(ref strings) => state.skip_until(&strings
                 .iter()
@@ -140,65 +154,6 @@ impl Vm {
                 state.restore_on_err(|state| self.parse_expr(expr, state))
             }
         }
-    }
-
-    fn repeat<'a, 'i>(
-        &'a self,
-        expr: &'a OptimizedExpr,
-        min: Option<u32>,
-        max: Option<u32>,
-        state: Box<ParserState<'i, &'a str>>
-    ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
-        state.sequence(|state| {
-            let mut result = match min {
-                Some(min) if min > 0 => {
-                    let mut result = self.parse_expr(expr, state);
-
-                    for _ in 2..min + 1 {
-                        result = result.and_then(|state| {
-                            self.skip(state)
-                                .and_then(|state| self.parse_expr(expr, state))
-                        });
-                    }
-
-                    result
-                }
-                _ => state.optional(|state| self.parse_expr(expr, state))
-            };
-
-            let mut times = 1;
-
-            loop {
-                if let Some(max) = max {
-                    if times >= max {
-                        return result;
-                    }
-                }
-
-                let initial_result_is_err = result.is_err();
-
-                let current = result.and_then(|state| {
-                    state.lookahead(true, |state| {
-                        self.skip(state)
-                            .and_then(|state| self.parse_expr(expr, state))
-                    })
-                });
-                times += 1;
-
-                if current.is_err() {
-                    if initial_result_is_err {
-                        return Err(current.unwrap_err());
-                    } else {
-                        return Ok(current.unwrap_err());
-                    }
-                }
-
-                result = current.and_then(|state| {
-                    self.skip(state)
-                        .and_then(|state| self.parse_expr(expr, state))
-                });
-            }
-        })
     }
 
     fn skip<'a, 'i>(
