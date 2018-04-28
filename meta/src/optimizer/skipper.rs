@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use pest_meta::ast::*;
+use ast::*;
 
 pub fn skip(rule: Rule) -> Rule {
     fn populate_choices(expr: Expr, mut choices: Vec<String>) -> Option<Expr> {

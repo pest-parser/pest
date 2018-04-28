@@ -20,6 +20,7 @@ use std::fmt::Display;
 
 pub mod parser;
 pub mod ast;
+pub mod optimizer;
 pub mod validator;
 
 pub fn unwrap_or_report<T, E>(result: Result<T, E>) -> T

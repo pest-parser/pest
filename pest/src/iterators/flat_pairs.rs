@@ -160,7 +160,11 @@ mod tests {
     fn double_ended_iter_for_flat_pairs() {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
         assert_eq!(
-            pairs.flatten().rev().map(|p| p.as_rule()).collect::<Vec<Rule>>(),
+            pairs
+                .flatten()
+                .rev()
+                .map(|p| p.as_rule())
+                .collect::<Vec<Rule>>(),
             vec![Rule::c, Rule::b, Rule::a]
         );
     }

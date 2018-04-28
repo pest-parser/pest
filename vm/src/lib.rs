@@ -12,18 +12,19 @@ extern crate pest_meta;
 
 use pest::{Atomicity, Error, ParseResult, ParserState};
 use pest::iterators::Pairs;
-use pest_meta::ast::{Expr, Rule, RuleType};
+use pest_meta::ast::RuleType;
+use pest_meta::optimizer::{OptimizedExpr, OptimizedRule};
 
 use std::collections::HashMap;
 
 mod macros;
 
 pub struct Vm {
-    rules: HashMap<String, Rule>
+    rules: HashMap<String, OptimizedRule>
 }
 
 impl Vm {
-    pub fn new(rules: Vec<Rule>) -> Vm {
+    pub fn new(rules: Vec<OptimizedRule>) -> Vm {
         let rules = rules.into_iter().map(|r| (r.name.clone(), r)).collect();
         Vm { rules }
     }
@@ -102,49 +103,48 @@ impl Vm {
 
     fn parse_expr<'a, 'i>(
         &'a self,
-        expr: &'a Expr,
+        expr: &'a OptimizedExpr,
         state: Box<ParserState<'i, &'a str>>
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match *expr {
-            Expr::Str(ref string) => state.match_string(string),
-            Expr::Insens(ref string) => state.match_insensitive(string),
-            Expr::Range(ref start, ref end) => {
+            OptimizedExpr::Str(ref string) => state.match_string(string),
+            OptimizedExpr::Insens(ref string) => state.match_insensitive(string),
+            OptimizedExpr::Range(ref start, ref end) => {
                 let start = start.chars().next().expect("empty char literal");
                 let end = end.chars().next().expect("empty char literal");
 
                 state.match_range(start..end)
             }
-            Expr::Ident(ref name) => self.parse_rule(name, state),
-            Expr::PosPred(ref expr) => {
-                state.lookahead(true, |state| self.parse_expr(&*expr, state))
+            OptimizedExpr::Ident(ref name) => self.parse_rule(name, state),
+            OptimizedExpr::PosPred(ref expr) => {
+                state.lookahead(true, |state| self.parse_expr(expr, state))
             }
-            Expr::NegPred(ref expr) => {
-                state.lookahead(false, |state| self.parse_expr(&*expr, state))
+            OptimizedExpr::NegPred(ref expr) => {
+                state.lookahead(false, |state| self.parse_expr(expr, state))
             }
-            Expr::Seq(ref lhs, ref rhs) => state.sequence(|state| {
-                self.parse_expr(&*lhs, state)
+            OptimizedExpr::Seq(ref lhs, ref rhs) => state.sequence(|state| {
+                self.parse_expr(lhs, state)
                     .and_then(|state| self.skip(state))
-                    .and_then(|state| self.parse_expr(&*rhs, state))
+                    .and_then(|state| self.parse_expr(rhs, state))
             }),
-            Expr::Choice(ref lhs, ref rhs) => self.parse_expr(&*lhs, state)
-                .or_else(|state| self.parse_expr(&*rhs, state)),
-            Expr::Opt(ref expr) => state.optional(|state| self.parse_expr(&*expr, state)),
-            Expr::Rep(ref expr) => self.repeat(expr, None, None, state),
-            Expr::RepOnce(ref expr) => self.repeat(expr, Some(1), None, state),
-            Expr::RepExact(ref expr, num) => self.repeat(expr, Some(num), Some(num), state),
-            Expr::RepMin(ref expr, min) => self.repeat(expr, Some(min), None, state),
-            Expr::RepMax(ref expr, max) => self.repeat(expr, None, Some(max), state),
-            Expr::RepMinMax(ref expr, min, max) => self.repeat(expr, Some(min), Some(max), state),
-            Expr::Push(ref expr) => state.stack_push(|state| self.parse_expr(&*expr, state)),
-            Expr::Skip(ref strings) => {
-                state.skip_until(&strings.iter().map(|s| s.as_str()).collect::<Vec<&str>>())
+            OptimizedExpr::Choice(ref lhs, ref rhs) => self.parse_expr(lhs, state)
+                .or_else(|state| self.parse_expr(rhs, state)),
+            OptimizedExpr::Opt(ref expr) => state.optional(|state| self.parse_expr(expr, state)),
+            OptimizedExpr::Rep(ref expr) => self.repeat(expr, None, None, state),
+            OptimizedExpr::Push(ref expr) => state.stack_push(|state| self.parse_expr(expr, state)),
+            OptimizedExpr::Skip(ref strings) => state.skip_until(&strings
+                .iter()
+                .map(|state| state.as_str())
+                .collect::<Vec<&str>>()),
+            OptimizedExpr::RestoreOnErr(ref expr) => {
+                state.restore_on_err(|state| self.parse_expr(expr, state))
             }
         }
     }
 
     fn repeat<'a, 'i>(
         &'a self,
-        expr: &'a Expr,
+        expr: &'a OptimizedExpr,
         min: Option<u32>,
         max: Option<u32>,
         state: Box<ParserState<'i, &'a str>>
@@ -152,18 +152,18 @@ impl Vm {
         state.sequence(|state| {
             let mut result = match min {
                 Some(min) if min > 0 => {
-                    let mut result = self.parse_expr(&*expr, state);
+                    let mut result = self.parse_expr(expr, state);
 
                     for _ in 2..min + 1 {
                         result = result.and_then(|state| {
                             self.skip(state)
-                                .and_then(|state| self.parse_expr(&*expr, state))
+                                .and_then(|state| self.parse_expr(expr, state))
                         });
                     }
 
                     result
                 }
-                _ => state.optional(|state| self.parse_expr(&*expr, state))
+                _ => state.optional(|state| self.parse_expr(expr, state))
             };
 
             let mut times = 1;
@@ -180,7 +180,7 @@ impl Vm {
                 let current = result.and_then(|state| {
                     state.lookahead(true, |state| {
                         self.skip(state)
-                            .and_then(|state| self.parse_expr(&*expr, state))
+                            .and_then(|state| self.parse_expr(expr, state))
                     })
                 });
                 times += 1;
@@ -193,8 +193,10 @@ impl Vm {
                     }
                 }
 
-                result = self.skip(current.unwrap())
-                    .and_then(|state| self.parse_expr(&*expr, state));
+                result = current.and_then(|state| {
+                    self.skip(state)
+                        .and_then(|state| self.parse_expr(expr, state))
+                });
             }
         })
     }

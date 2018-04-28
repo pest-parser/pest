@@ -15,6 +15,7 @@ use error::Error;
 use iterators::{pairs, QueueableToken};
 use position::{self, Position};
 use span::Span;
+use stack::Stack;
 
 /// An `enum` specifying the current lookahead status of a `ParserState`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -45,7 +46,7 @@ pub struct ParserState<'i, R: RuleType> {
     neg_attempts: Vec<R>,
     attempt_pos: usize,
     atomicity: Atomicity,
-    stack: Vec<Span<'i>>
+    stack: Stack<Span<'i>>
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -104,7 +105,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             neg_attempts: vec![],
             attempt_pos: 0,
             atomicity: Atomicity::NonAtomic,
-            stack: vec![]
+            stack: Stack::new()
         })
     }
 
@@ -217,15 +218,20 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     // run.
                     let new_index = new_state.queue.len();
                     match new_state.queue[index] {
-                        QueueableToken::Start { ref mut end_token_index, .. } => *end_token_index = new_index,
+                        QueueableToken::Start {
+                            ref mut end_token_index,
+                            ..
+                        } => *end_token_index = new_index,
                         _ => unreachable!()
                     };
 
                     let new_pos = new_state.position.pos();
 
-                    new_state
-                        .queue
-                        .push(QueueableToken::End { start_token_index: index, rule, input_pos: new_pos });
+                    new_state.queue.push(QueueableToken::End {
+                        start_token_index: index,
+                        rule,
+                        input_pos: new_pos
+                    });
                 }
 
                 Ok(new_state)
@@ -415,16 +421,13 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///     s.match_string("ac")
     /// });
     /// assert!(result.is_ok());
-    ///
     /// ```
     #[inline]
     pub fn optional<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
     {
-        let result = f(self);
-
-        match result {
+        match f(self) {
             Ok(state) | Err(state) => Ok(state)
         }
     }
@@ -691,18 +694,18 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         let initial_pos = self.position.clone();
 
-        let result = f(self);
+        let result = f(self.checkpoint());
 
         let result_state = match result {
             Ok(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
-                Ok(new_state)
+                Ok(new_state.restore())
             }
             Err(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
-                Err(new_state)
+                Err(new_state.restore())
             }
         };
 
@@ -827,7 +830,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     #[inline]
     pub fn stack_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
         let string = self.stack
-            .last()
+            .peek()
             .expect("peek was called on empty stack")
             .as_str();
         self.match_string(string)
@@ -857,7 +860,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     pub fn stack_pop(self: Box<Self>) -> ParseResult<Box<Self>> {
         let result_state = {
             let string = self.stack
-                .last()
+                .peek()
                 .expect("pop was called on empty stack")
                 .as_str();
 
@@ -898,5 +901,31 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             Some(_) => Ok(self),
             None => Err(self)
         }
+    }
+
+    /// Restores the original state of the `ParserState` when `f` returns an `Err`.
+    #[inline]
+    pub fn restore_on_err<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    where
+        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>
+    {
+        match f(self.checkpoint()) {
+            Ok(state) => Ok(state),
+            Err(state) => Err(state.restore())
+        }
+    }
+
+    // Mark the current state as a checkpoint and return the `Box`.
+    #[inline]
+    pub(crate) fn checkpoint(mut self: Box<Self>) -> Box<Self> {
+        self.stack.snapshot();
+        self
+    }
+
+    // Restore the current state to the most recent checkpoint.
+    #[inline]
+    pub(crate) fn restore(mut self: Box<Self>) -> Box<Self> {
+        self.stack.restore();
+        self
     }
 }

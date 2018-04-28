@@ -259,9 +259,8 @@ use proc_macro::TokenStream;
 use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 
 mod generator;
-mod optimizer;
 
-use pest_meta::{unwrap_or_report, validator};
+use pest_meta::{optimizer, unwrap_or_report, validator};
 use pest_meta::parser::{self, Rule};
 
 #[proc_macro_derive(Parser, attributes(grammar))]

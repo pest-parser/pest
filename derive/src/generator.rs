@@ -13,8 +13,14 @@ use quote::Tokens;
 use syn::{Generics, Ident};
 
 use pest_meta::ast::*;
+use pest_meta::optimizer::*;
 
-pub fn generate(name: Ident, generics: &Generics, rules: Vec<Rule>, defaults: Vec<&str>) -> Tokens {
+pub fn generate(
+    name: Ident,
+    generics: &Generics,
+    rules: Vec<OptimizedRule>,
+    defaults: Vec<&str>
+) -> Tokens {
     let mut predefined = HashMap::new();
     predefined.insert(
         "any",
@@ -120,7 +126,7 @@ pub fn generate(name: Ident, generics: &Generics, rules: Vec<Rule>, defaults: Ve
     }
 }
 
-fn generate_enum(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
+fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
     let rules = rules.iter().map(|rule| Ident::from(rule.name.as_str()));
     if uses_eoi {
         quote! {
@@ -142,7 +148,7 @@ fn generate_enum(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
     }
 }
 
-fn generate_patterns(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
+fn generate_patterns(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
     let mut rules: Vec<Tokens> = rules
         .iter()
         .map(|rule| {
@@ -164,7 +170,7 @@ fn generate_patterns(rules: &Vec<Rule>, uses_eoi: bool) -> Tokens {
     }
 }
 
-fn generate_rule(rule: Rule) -> Tokens {
+fn generate_rule(rule: OptimizedRule) -> Tokens {
     let name = Ident::from(rule.name);
     let expr = if { rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic } {
         generate_expr_atomic(rule.expr)
@@ -235,7 +241,7 @@ fn generate_rule(rule: Rule) -> Tokens {
     }
 }
 
-fn generate_skip(rules: &Vec<Rule>) -> Tokens {
+fn generate_skip(rules: &Vec<OptimizedRule>) -> Tokens {
     let whitespace = rules.iter().any(|rule| rule.name == "whitespace");
     let comment = rules.iter().any(|rule| rule.name == "comment");
 
@@ -301,19 +307,19 @@ fn generate_skip(rules: &Vec<Rule>) -> Tokens {
     }
 }
 
-fn generate_expr(expr: Expr) -> Tokens {
+fn generate_expr(expr: OptimizedExpr) -> Tokens {
     match expr {
-        Expr::Str(string) => {
+        OptimizedExpr::Str(string) => {
             quote! {
                 state.match_string(#string)
             }
         }
-        Expr::Insens(string) => {
+        OptimizedExpr::Insens(string) => {
             quote! {
                 state.match_insensitive(#string)
             }
         }
-        Expr::Range(start, end) => {
+        OptimizedExpr::Range(start, end) => {
             let start = start.chars().next().unwrap();
             let end = end.chars().next().unwrap();
 
@@ -321,11 +327,11 @@ fn generate_expr(expr: Expr) -> Tokens {
                 state.match_range(#start..#end)
             }
         }
-        Expr::Ident(ident) => {
+        OptimizedExpr::Ident(ident) => {
             let ident = Ident::from(ident);
             quote! { self::#ident(state) }
         }
-        Expr::PosPred(expr) => {
+        OptimizedExpr::PosPred(expr) => {
             let expr = generate_expr(*expr);
 
             quote! {
@@ -334,7 +340,7 @@ fn generate_expr(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::NegPred(expr) => {
+        OptimizedExpr::NegPred(expr) => {
             let expr = generate_expr(*expr);
 
             quote! {
@@ -343,12 +349,12 @@ fn generate_expr(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::Seq(lhs, rhs) => {
+        OptimizedExpr::Seq(lhs, rhs) => {
             let head = generate_expr(*lhs);
             let mut tail = vec![];
             let mut current = *rhs;
 
-            while let Expr::Seq(lhs, rhs) = current {
+            while let OptimizedExpr::Seq(lhs, rhs) = current {
                 tail.push(generate_expr(*lhs));
                 current = *rhs;
             }
@@ -367,12 +373,12 @@ fn generate_expr(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::Choice(lhs, rhs) => {
+        OptimizedExpr::Choice(lhs, rhs) => {
             let head = generate_expr(*lhs);
             let mut tail = vec![];
             let mut current = *rhs;
 
-            while let Expr::Choice(lhs, rhs) = current {
+            while let OptimizedExpr::Choice(lhs, rhs) = current {
                 tail.push(generate_expr(*lhs));
                 current = *rhs;
             }
@@ -387,7 +393,7 @@ fn generate_expr(expr: Expr) -> Tokens {
                 )*
             }
         }
-        Expr::Opt(expr) => {
+        OptimizedExpr::Opt(expr) => {
             let expr = generate_expr(*expr);
 
             quote! {
@@ -396,7 +402,7 @@ fn generate_expr(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::Rep(expr) => {
+        OptimizedExpr::Rep(expr) => {
             let expr = generate_expr(*expr);
 
             quote! {
@@ -417,34 +423,43 @@ fn generate_expr(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::Push(expr) => {
+        OptimizedExpr::Skip(strings) => {
+            quote! {
+                let strings = [#(#strings),*];
+
+                state.skip_until(&strings)
+            }
+        }
+        OptimizedExpr::Push(expr) => {
             let expr = generate_expr(*expr);
 
             quote! {
-                {
-                    state.stack_push(|state| {
-                        #expr
-                    })
-                }
+                state.stack_push(|state| #expr)
             }
         }
-        _ => unreachable!()
+        OptimizedExpr::RestoreOnErr(expr) => {
+            let expr = generate_expr(*expr);
+
+            quote! {
+                state.restore_on_err(|state| #expr)
+            }
+        }
     }
 }
 
-fn generate_expr_atomic(expr: Expr) -> Tokens {
+fn generate_expr_atomic(expr: OptimizedExpr) -> Tokens {
     match expr {
-        Expr::Str(string) => {
+        OptimizedExpr::Str(string) => {
             quote! {
                 state.match_string(#string)
             }
         }
-        Expr::Insens(string) => {
+        OptimizedExpr::Insens(string) => {
             quote! {
                 state.match_insensitive(#string)
             }
         }
-        Expr::Range(start, end) => {
+        OptimizedExpr::Range(start, end) => {
             let start = start.chars().next().unwrap();
             let end = end.chars().next().unwrap();
 
@@ -452,11 +467,11 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                 state.match_range(#start..#end)
             }
         }
-        Expr::Ident(ident) => {
+        OptimizedExpr::Ident(ident) => {
             let ident = Ident::from(ident);
             quote! { self::#ident(state) }
         }
-        Expr::PosPred(expr) => {
+        OptimizedExpr::PosPred(expr) => {
             let expr = generate_expr_atomic(*expr);
 
             quote! {
@@ -465,7 +480,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::NegPred(expr) => {
+        OptimizedExpr::NegPred(expr) => {
             let expr = generate_expr_atomic(*expr);
 
             quote! {
@@ -474,12 +489,12 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::Seq(lhs, rhs) => {
+        OptimizedExpr::Seq(lhs, rhs) => {
             let head = generate_expr_atomic(*lhs);
             let mut tail = vec![];
             let mut current = *rhs;
 
-            while let Expr::Seq(lhs, rhs) = current {
+            while let OptimizedExpr::Seq(lhs, rhs) = current {
                 tail.push(generate_expr_atomic(*lhs));
                 current = *rhs;
             }
@@ -496,12 +511,12 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::Choice(lhs, rhs) => {
+        OptimizedExpr::Choice(lhs, rhs) => {
             let head = generate_expr_atomic(*lhs);
             let mut tail = vec![];
             let mut current = *rhs;
 
-            while let Expr::Choice(lhs, rhs) = current {
+            while let OptimizedExpr::Choice(lhs, rhs) = current {
                 tail.push(generate_expr_atomic(*lhs));
                 current = *rhs;
             }
@@ -516,7 +531,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                 )*
             }
         }
-        Expr::Opt(expr) => {
+        OptimizedExpr::Opt(expr) => {
             let expr = generate_expr_atomic(*expr);
 
             quote! {
@@ -525,7 +540,7 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::Rep(expr) => {
+        OptimizedExpr::Rep(expr) => {
             let expr = generate_expr_atomic(*expr);
 
             quote! {
@@ -534,25 +549,27 @@ fn generate_expr_atomic(expr: Expr) -> Tokens {
                 })
             }
         }
-        Expr::Skip(strings) => {
+        OptimizedExpr::Skip(strings) => {
             quote! {
                 let strings = [#(#strings),*];
 
                 state.skip_until(&strings)
             }
         }
-        Expr::Push(expr) => {
+        OptimizedExpr::Push(expr) => {
             let expr = generate_expr_atomic(*expr);
 
             quote! {
-                {
-                    state.stack_push(|state| {
-                        #expr
-                    })
-                }
+                state.stack_push(|state| #expr)
             }
         }
-        _ => unreachable!()
+        OptimizedExpr::RestoreOnErr(expr) => {
+            let expr = generate_expr_atomic(*expr);
+
+            quote! {
+                state.restore_on_err(|state| #expr)
+            }
+        }
     }
 }
 
@@ -563,10 +580,10 @@ mod tests {
     #[test]
     fn rule_enum_simple() {
         let rules = vec![
-            Rule {
+            OptimizedRule {
                 name: "f".to_owned(),
                 ty: RuleType::Normal,
-                expr: Expr::Ident("g".to_owned())
+                expr: OptimizedExpr::Ident("g".to_owned())
             },
         ];
 
@@ -584,13 +601,13 @@ mod tests {
 
     #[test]
     fn sequence() {
-        let expr = Expr::Seq(
-            Box::new(Expr::Str("a".to_owned())),
-            Box::new(Expr::Seq(
-                Box::new(Expr::Str("b".to_owned())),
-                Box::new(Expr::Seq(
-                    Box::new(Expr::Str("c".to_owned())),
-                    Box::new(Expr::Str("d".to_owned()))
+        let expr = OptimizedExpr::Seq(
+            Box::new(OptimizedExpr::Str("a".to_owned())),
+            Box::new(OptimizedExpr::Seq(
+                Box::new(OptimizedExpr::Str("b".to_owned())),
+                Box::new(OptimizedExpr::Seq(
+                    Box::new(OptimizedExpr::Str("c".to_owned())),
+                    Box::new(OptimizedExpr::Str("d".to_owned()))
                 ))
             ))
         );
@@ -619,13 +636,13 @@ mod tests {
 
     #[test]
     fn sequence_atomic() {
-        let expr = Expr::Seq(
-            Box::new(Expr::Str("a".to_owned())),
-            Box::new(Expr::Seq(
-                Box::new(Expr::Str("b".to_owned())),
-                Box::new(Expr::Seq(
-                    Box::new(Expr::Str("c".to_owned())),
-                    Box::new(Expr::Str("d".to_owned()))
+        let expr = OptimizedExpr::Seq(
+            Box::new(OptimizedExpr::Str("a".to_owned())),
+            Box::new(OptimizedExpr::Seq(
+                Box::new(OptimizedExpr::Str("b".to_owned())),
+                Box::new(OptimizedExpr::Seq(
+                    Box::new(OptimizedExpr::Str("c".to_owned())),
+                    Box::new(OptimizedExpr::Str("d".to_owned()))
                 ))
             ))
         );
@@ -648,13 +665,13 @@ mod tests {
 
     #[test]
     fn choice() {
-        let expr = Expr::Choice(
-            Box::new(Expr::Str("a".to_owned())),
-            Box::new(Expr::Choice(
-                Box::new(Expr::Str("b".to_owned())),
-                Box::new(Expr::Choice(
-                    Box::new(Expr::Str("c".to_owned())),
-                    Box::new(Expr::Str("d".to_owned()))
+        let expr = OptimizedExpr::Choice(
+            Box::new(OptimizedExpr::Str("a".to_owned())),
+            Box::new(OptimizedExpr::Choice(
+                Box::new(OptimizedExpr::Str("b".to_owned())),
+                Box::new(OptimizedExpr::Choice(
+                    Box::new(OptimizedExpr::Str("c".to_owned())),
+                    Box::new(OptimizedExpr::Str("d".to_owned()))
                 ))
             ))
         );
@@ -675,13 +692,13 @@ mod tests {
 
     #[test]
     fn choice_atomic() {
-        let expr = Expr::Choice(
-            Box::new(Expr::Str("a".to_owned())),
-            Box::new(Expr::Choice(
-                Box::new(Expr::Str("b".to_owned())),
-                Box::new(Expr::Choice(
-                    Box::new(Expr::Str("c".to_owned())),
-                    Box::new(Expr::Str("d".to_owned()))
+        let expr = OptimizedExpr::Choice(
+            Box::new(OptimizedExpr::Str("a".to_owned())),
+            Box::new(OptimizedExpr::Choice(
+                Box::new(OptimizedExpr::Str("b".to_owned())),
+                Box::new(OptimizedExpr::Choice(
+                    Box::new(OptimizedExpr::Str("c".to_owned())),
+                    Box::new(OptimizedExpr::Str("d".to_owned()))
                 ))
             ))
         );
@@ -702,7 +719,7 @@ mod tests {
 
     #[test]
     fn skip() {
-        let expr = Expr::Skip(vec!["a".to_owned(), "b".to_owned()]);
+        let expr = OptimizedExpr::Skip(vec!["a".to_owned(), "b".to_owned()]);
 
         assert_eq!(
             generate_expr_atomic(expr),
@@ -716,20 +733,20 @@ mod tests {
 
     #[test]
     fn expr_complex() {
-        let expr = Expr::Choice(
-            Box::new(Expr::Ident("a".to_owned())),
-            Box::new(Expr::Seq(
-                Box::new(Expr::Range("a".to_owned(), "b".to_owned())),
-                Box::new(Expr::Seq(
-                    Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Insens(
-                        "b".to_owned()
-                    )))))),
-                    Box::new(Expr::PosPred(Box::new(Expr::Opt(Box::new(Expr::Rep(
-                        Box::new(Expr::Choice(
-                            Box::new(Expr::Str("c".to_owned())),
-                            Box::new(Expr::Str("d".to_owned()))
-                        ))
-                    ))))))
+        let expr = OptimizedExpr::Choice(
+            Box::new(OptimizedExpr::Ident("a".to_owned())),
+            Box::new(OptimizedExpr::Seq(
+                Box::new(OptimizedExpr::Range("a".to_owned(), "b".to_owned())),
+                Box::new(OptimizedExpr::Seq(
+                    Box::new(OptimizedExpr::NegPred(Box::new(OptimizedExpr::Rep(
+                        Box::new(OptimizedExpr::Insens("b".to_owned()))
+                    )))),
+                    Box::new(OptimizedExpr::PosPred(Box::new(OptimizedExpr::Opt(
+                        Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Choice(
+                            Box::new(OptimizedExpr::Str("c".to_owned())),
+                            Box::new(OptimizedExpr::Str("d".to_owned()))
+                        ))))
+                    ))))
                 ))
             ))
         );
@@ -747,9 +764,10 @@ mod tests {
             state.repeat(|state| {
                 state.sequence(|state| {
                     self::skip(state).and_then(|state| {
-                        state.match_string("c").or_else(|state| {
-                            state.match_string("d")
-                        })
+                        state.match_string("c")
+                            .or_else(|state| {
+                                state.match_string("d")
+                            })
                      })
                 })
             })
@@ -782,11 +800,10 @@ mod tests {
                                 state.optional(|state| {
                                     state.sequence(|state| {
                                         state.optional(|state| {
-                                            state.match_string("c").or_else(
-                                                |state| {
-                                                    state.match_string("d")
-                                                }
-                                            ).and_then(|state| {
+                                            state.match_string("c")
+                                            .or_else(|state| {
+                                                state.match_string("d")
+                                            }).and_then(|state| {
                                                 #repeat
                                             })
                                         })
@@ -802,20 +819,20 @@ mod tests {
 
     #[test]
     fn expr_complex_atomic() {
-        let expr = Expr::Choice(
-            Box::new(Expr::Ident("a".to_owned())),
-            Box::new(Expr::Seq(
-                Box::new(Expr::Range("a".to_owned(), "b".to_owned())),
-                Box::new(Expr::Seq(
-                    Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Insens(
-                        "b".to_owned()
-                    )))))),
-                    Box::new(Expr::PosPred(Box::new(Expr::Opt(Box::new(Expr::Rep(
-                        Box::new(Expr::Choice(
-                            Box::new(Expr::Str("c".to_owned())),
-                            Box::new(Expr::Str("d".to_owned()))
-                        ))
-                    ))))))
+        let expr = OptimizedExpr::Choice(
+            Box::new(OptimizedExpr::Ident("a".to_owned())),
+            Box::new(OptimizedExpr::Seq(
+                Box::new(OptimizedExpr::Range("a".to_owned(), "b".to_owned())),
+                Box::new(OptimizedExpr::Seq(
+                    Box::new(OptimizedExpr::NegPred(Box::new(OptimizedExpr::Rep(
+                        Box::new(OptimizedExpr::Insens("b".to_owned()))
+                    )))),
+                    Box::new(OptimizedExpr::PosPred(Box::new(OptimizedExpr::Opt(
+                        Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Choice(
+                            Box::new(OptimizedExpr::Str("c".to_owned())),
+                            Box::new(OptimizedExpr::Str("d".to_owned()))
+                        ))))
+                    ))))
                 ))
             ))
         );
@@ -854,10 +871,10 @@ mod tests {
         let name = Ident::from("MyParser");
         let generics = Generics::default();
         let rules = vec![
-            Rule {
+            OptimizedRule {
                 name: "a".to_owned(),
                 ty: RuleType::Silent,
-                expr: Expr::Str("b".to_owned())
+                expr: OptimizedExpr::Str("b".to_owned())
             },
         ];
         let defaults = vec!["any"];

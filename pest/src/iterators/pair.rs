@@ -124,7 +124,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// assert_eq!(pair.into_span().as_str(), "ab");
     /// ```
     #[inline]
-    #[deprecated(since="2.0.0", note="Please use `as_span` instead")]
+    #[deprecated(since = "2.0.0", note = "Please use `as_span` instead")]
     pub fn into_span(self) -> Span<'i> {
         self.as_span()
     }
@@ -218,14 +218,18 @@ impl<'i, R: RuleType> Pair<'i, R> {
 
     fn pair(&self) -> usize {
         match self.queue[self.start] {
-            QueueableToken::Start { end_token_index, .. } => end_token_index,
+            QueueableToken::Start {
+                end_token_index, ..
+            } => end_token_index,
             _ => unreachable!()
         }
     }
 
     fn pos(&self, index: usize) -> usize {
         match self.queue[index] {
-            QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } => input_pos
+            QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } => {
+                input_pos
+            }
         }
     }
 }
@@ -286,8 +290,8 @@ impl<'i, R: Hash> Hash for Pair<'i, R> {
 
 #[cfg(test)]
 mod tests {
-    use parser::Parser;
     use macros::tests::*;
+    use parser::Parser;
 
     #[test]
     fn pair_into_inner() {

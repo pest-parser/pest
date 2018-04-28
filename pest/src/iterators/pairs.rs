@@ -102,14 +102,18 @@ impl<'i, R: RuleType> Pairs<'i, R> {
 
     fn pair(&self) -> usize {
         match self.queue[self.start] {
-            QueueableToken::Start { end_token_index, .. } => end_token_index,
+            QueueableToken::Start {
+                end_token_index, ..
+            } => end_token_index,
             _ => unreachable!()
         }
     }
 
     fn pair_from_end(&self) -> usize {
         match self.queue[self.end - 1] {
-            QueueableToken::End { start_token_index, .. } => start_token_index,
+            QueueableToken::End {
+                start_token_index, ..
+            } => start_token_index,
             _ => unreachable!()
         }
     }

@@ -12,7 +12,7 @@ extern crate pest_meta;
 #[macro_use]
 extern crate pest_vm;
 
-use pest_meta::parser;
+use pest_meta::{optimizer, parser};
 use pest_meta::parser::Rule;
 use pest_vm::Vm;
 
@@ -20,7 +20,8 @@ const GRAMMAR: &'static str = include_str!("grammar.pest");
 
 fn vm() -> Vm {
     let pairs = parser::parse(Rule::grammar_rules, GRAMMAR).unwrap();
-    Vm::new(parser::consume_rules(pairs).unwrap())
+    let ast = parser::consume_rules(pairs).unwrap();
+    Vm::new(optimizer::optimize(ast))
 }
 
 #[test]
@@ -711,6 +712,30 @@ fn pop_fail() {
                 range(0, 1),
                 range(1, 2)
             ])
+        ]
+    };
+}
+
+#[test]
+fn repeat_mutate_stack() {
+    parses_to! {
+        parser: vm(),
+        input: "a,b,c,cba",
+        rule: "repeat_mutate_stack",
+        tokens: [
+            repeat_mutate_stack(0, 9)
+        ]
+    };
+}
+
+#[test]
+fn checkpoint_restore() {
+    parses_to! {
+        parser: vm(),
+        input: "a",
+        rule: "checkpoint_restore",
+        tokens: [
+            checkpoint_restore(0, 1, [eoi(1, 1)])
         ]
     };
 }
