@@ -8,7 +8,7 @@
 // modified, or distributed except according to those terms.
 use std::collections::HashMap;
 
-use pest_meta::ast::*;
+use ast::*;
 
 pub fn restore_on_err(rule: Rule, rules_to_exprs: &HashMap<String, Expr>) -> Rule {
     match rule {

@@ -116,31 +116,31 @@ impl Vm {
             }
             Expr::Ident(ref name) => self.parse_rule(name, state),
             Expr::PosPred(ref expr) => {
-                state.lookahead(true, |state| self.parse_expr(&*expr, state))
+                state.lookahead(true, |state| self.parse_expr(expr, state))
             }
             Expr::NegPred(ref expr) => {
-                state.lookahead(false, |state| self.parse_expr(&*expr, state))
+                state.lookahead(false, |state| self.parse_expr(expr, state))
             }
             Expr::Seq(ref lhs, ref rhs) => state.sequence(|state| {
-                self.parse_expr(&*lhs, state)
+                self.parse_expr(lhs, state)
                     .and_then(|state| self.skip(state))
-                    .and_then(|state| self.parse_expr(&*rhs, state))
+                    .and_then(|state| self.parse_expr(rhs, state))
             }),
-            Expr::Choice(ref lhs, ref rhs) => self.parse_expr(&*lhs, state)
-                .or_else(|state| self.parse_expr(&*rhs, state)),
-            Expr::Opt(ref expr) => state.optional(|state| self.parse_expr(&*expr, state)),
+            Expr::Choice(ref lhs, ref rhs) => self.parse_expr(lhs, state)
+                .or_else(|state| self.parse_expr(rhs, state)),
+            Expr::Opt(ref expr) => state.optional(|state| self.parse_expr(expr, state)),
             Expr::Rep(ref expr) => self.repeat(expr, None, None, state),
             Expr::RepOnce(ref expr) => self.repeat(expr, Some(1), None, state),
             Expr::RepExact(ref expr, num) => self.repeat(expr, Some(num), Some(num), state),
             Expr::RepMin(ref expr, min) => self.repeat(expr, Some(min), None, state),
             Expr::RepMax(ref expr, max) => self.repeat(expr, None, Some(max), state),
             Expr::RepMinMax(ref expr, min, max) => self.repeat(expr, Some(min), Some(max), state),
-            Expr::Push(ref expr) => state.stack_push(|state| self.parse_expr(&*expr, state)),
+            Expr::Push(ref expr) => state.stack_push(|state| self.parse_expr(expr, state)),
             Expr::Skip(ref strings) => {
                 state.skip_until(&strings.iter().map(|state| state.as_str()).collect::<Vec<&str>>())
             },
             Expr::RestoreOnErr(ref expr) => {
-                state.restore_on_err(|state| self.parse_expr(&*expr, state))
+                state.restore_on_err(|state| self.parse_expr(expr, state))
             }
         }
     }
@@ -155,18 +155,18 @@ impl Vm {
         state.sequence(|state| {
             let mut result = match min {
                 Some(min) if min > 0 => {
-                    let mut result = self.parse_expr(&*expr, state);
+                    let mut result = self.parse_expr(expr, state);
 
                     for _ in 2..min + 1 {
                         result = result.and_then(|state| {
                             self.skip(state)
-                                .and_then(|state| self.parse_expr(&*expr, state))
+                                .and_then(|state| self.parse_expr(expr, state))
                         });
                     }
 
                     result
                 }
-                _ => state.optional(|state| self.parse_expr(&*expr, state))
+                _ => state.optional(|state| self.parse_expr(expr, state))
             };
 
             let mut times = 1;
@@ -183,7 +183,7 @@ impl Vm {
                 let current = result.and_then(|state| {
                     state.lookahead(true, |state| {
                         self.skip(state)
-                            .and_then(|state| self.parse_expr(&*expr, state))
+                            .and_then(|state| self.parse_expr(expr, state))
                     })
                 });
                 times += 1;
@@ -196,8 +196,10 @@ impl Vm {
                     }
                 }
 
-                result = self.skip(current.unwrap())
-                    .and_then(|state| self.parse_expr(&*expr, state));
+                result = current.and_then(|state| {
+                    self.skip(state)
+                        .and_then(|state| self.parse_expr(expr, state))
+                });
             }
         })
     }

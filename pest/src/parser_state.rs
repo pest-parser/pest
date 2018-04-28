@@ -694,18 +694,18 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         let initial_pos = self.position.clone();
 
-        let result = f(self);
+        let result = f(self.checkpoint());
 
         let result_state = match result {
             Ok(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
-                Ok(new_state)
+                Ok(new_state.restore())
             }
             Err(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
-                Err(new_state)
+                Err(new_state.restore())
             }
         };
 

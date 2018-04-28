@@ -8,7 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use std::collections::HashMap;
-use pest_meta::ast::*;
+use ast::*;
 
 mod concatenator;
 mod factorizer;
