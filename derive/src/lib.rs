@@ -258,6 +258,8 @@ use std::path::Path;
 use proc_macro::TokenStream;
 use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 
+#[macro_use]
+mod macros;
 mod generator;
 
 use pest_meta::{optimizer, unwrap_or_report, validator};

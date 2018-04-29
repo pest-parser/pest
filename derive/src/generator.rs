@@ -23,7 +23,7 @@ pub fn generate(
 ) -> Tokens {
     let uses_eoi = defaults.iter().any(|name| *name == "eoi");
 
-    let predefined = generate_predefined_rules();
+    let builtins = generate_builtin_rules();
     let rule_enum = generate_enum(&rules, uses_eoi);
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
@@ -32,7 +32,7 @@ pub fn generate(
     rules.extend(
         defaults
             .into_iter()
-            .map(|name| predefined.get(name).unwrap().clone())
+            .map(|name| builtins.get(name).unwrap().clone())
     );
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -69,66 +69,21 @@ pub fn generate(
 }
 
 // Note: All predefined rules should be validated as pest keywords in meta/src/validator.rs.
-fn generate_predefined_rules() -> HashMap<&'static str, Tokens> {
-    let mut predefined = HashMap::new();
-    predefined.insert(
-        "any",
-        quote! {
-            #[inline]
-            #[allow(dead_code)]
-            fn any(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.skip(1)
-            }
-        }
+fn generate_builtin_rules() -> HashMap<&'static str, Tokens> {
+    let mut builtins = HashMap::new();
+
+    insert_public_builtin!(
+        builtins,
+        eoi,
+        state.rule(Rule::eoi, |state| state.end_of_input())
     );
-    predefined.insert(
-        "eoi",
-        quote! {
-            #[inline]
-            pub fn eoi(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.rule(Rule::eoi, |state| {
-                    state.end_of_input()
-                })
-            }
-        }
-    );
-    predefined.insert(
-        "soi",
-        quote! {
-            #[inline]
-            fn soi(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.start_of_input()
-            }
-        }
-    );
-    predefined.insert(
-        "peek",
-        quote! {
-            #[inline]
-            fn peek(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.stack_peek()
-            }
-        }
-    );
-    predefined.insert(
-        "pop",
-        quote! {
-            #[inline]
-            fn pop(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.stack_pop()
-            }
-        }
-    );
-    predefined.insert(
-        "drop",
-        quote! {
-            #[inline]
-            fn drop(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.stack_drop()
-            }
-        }
-    );
-    predefined
+    insert_builtin!(builtins, any, state.skip(1));
+    insert_builtin!(builtins, soi, state.start_of_input());
+    insert_builtin!(builtins, peek, state.stack_peek());
+    insert_builtin!(builtins, pop, state.stack_pop());
+    insert_builtin!(builtins, drop, state.stack_drop());
+
+    builtins
 }
 
 fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {

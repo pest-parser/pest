@@ -80,13 +80,13 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     pest_keywords.insert("skip");
     pest_keywords.insert("soi");
 
-    let mut predefined = HashSet::new();
-    predefined.insert("any");
-    predefined.insert("drop");
-    predefined.insert("eoi");
-    predefined.insert("peek");
-    predefined.insert("pop");
-    predefined.insert("soi");
+    let mut builtins = HashSet::new();
+    builtins.insert("any");
+    builtins.insert("drop");
+    builtins.insert("eoi");
+    builtins.insert("peek");
+    builtins.insert("pop");
+    builtins.insert("soi");
 
     let definitions: Vec<_> = pairs
         .clone()
@@ -110,7 +110,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     errors.extend(validate_rust_keywords(&definitions, &rust_keywords));
     errors.extend(validate_pest_keywords(&definitions, &pest_keywords));
     errors.extend(validate_already_defined(&definitions));
-    errors.extend(validate_undefined(&definitions, &called_rules, &predefined));
+    errors.extend(validate_undefined(&definitions, &called_rules, &builtins));
 
     if errors.len() > 0 {
         return Err(errors);
@@ -187,7 +187,7 @@ pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<'i
 pub fn validate_undefined<'i>(
     definitions: &Vec<Span<'i>>,
     called_rules: &Vec<Span<'i>>,
-    predefined: &HashSet<&str>
+    builtins: &HashSet<&str>
 ) -> Vec<Error<'i, Rule>> {
     let mut errors = vec![];
     let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
@@ -195,7 +195,7 @@ pub fn validate_undefined<'i>(
     for rule in called_rules {
         let name = rule.as_str();
 
-        if !definitions.contains(name) && !predefined.contains(name) {
+        if !definitions.contains(name) && !builtins.contains(name) {
             errors.push(Error::CustomErrorSpan {
                 message: format!("rule {} is undefined", name),
                 span: rule.clone()
