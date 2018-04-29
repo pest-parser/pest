@@ -73,5 +73,6 @@ exp     = @{ ("E" | "e") ~ ("+" | "-")? ~ int }
 boolean = { "true" | "false" }
 
 newline    = _{ "\n" | "\r\n" }
-whitespace = _{ " " | "\t" | newline }
-comment    = _{ "#" ~ (!newline ~ any)* }
+
+WHITESPACE = _{ " " | "\t" | newline }
+COMMENT    = _{ "#" ~ (!newline ~ any)* }

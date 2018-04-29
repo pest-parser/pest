@@ -24,6 +24,7 @@ macro_rules! generate_rule {
         quote! {
             #[inline]
             #[allow(dead_code)]
+            #[allow(non_snake_case)]
             fn $name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 $pattern
             }
@@ -36,6 +37,7 @@ macro_rules! generate_public_rule {
         quote! {
             #[inline]
             #[allow(dead_code)]
+            #[allow(non_snake_case)]
             pub fn $name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 $pattern
             }

@@ -30,4 +30,4 @@ bool = { "true" | "false" }
 
 null = { "null" }
 
-whitespace = _{ " " | "\t" | "\r" | "\n" }
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

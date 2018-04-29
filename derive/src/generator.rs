@@ -135,7 +135,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
     let expr = if { rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic } {
         generate_expr_atomic(rule.expr)
     } else {
-        if name == "whitespace" || name == "comment" {
+        if name == "WHITESPACE" || name == "COMMENT" {
             let atomic = generate_expr_atomic(rule.expr);
 
             quote! {
@@ -152,6 +152,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         RuleType::Normal => quote! {
             #[inline]
             #[allow(unused_variables)]
+            #[allow(non_snake_case)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.rule(Rule::#name, |state| {
                     #expr
@@ -161,6 +162,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         RuleType::Silent => quote! {
             #[inline]
             #[allow(unused_variables)]
+            #[allow(non_snake_case)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 #expr
             }
@@ -168,6 +170,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         RuleType::Atomic => quote! {
             #[inline]
             #[allow(unused_variables)]
+            #[allow(non_snake_case)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.rule(Rule::#name, |state| {
                     state.atomic(::pest::Atomicity::Atomic, |state| {
@@ -179,6 +182,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         RuleType::CompoundAtomic => quote! {
             #[inline]
             #[allow(unused_variables)]
+            #[allow(non_snake_case)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.atomic(::pest::Atomicity::CompoundAtomic, |state| {
                     state.rule(Rule::#name, |state| {
@@ -190,6 +194,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         RuleType::NonAtomic => quote! {
             #[inline]
             #[allow(unused_variables)]
+            #[allow(non_snake_case)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.atomic(::pest::Atomicity::NonAtomic, |state| {
                     state.rule(Rule::#name, |state| {
@@ -202,8 +207,8 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
 }
 
 fn generate_skip(rules: &Vec<OptimizedRule>) -> Tokens {
-    let whitespace = rules.iter().any(|rule| rule.name == "whitespace");
-    let comment = rules.iter().any(|rule| rule.name == "comment");
+    let whitespace = rules.iter().any(|rule| rule.name == "WHITESPACE");
+    let comment = rules.iter().any(|rule| rule.name == "COMMENT");
 
     match (whitespace, comment) {
         (false, false) => generate_rule!(skip, Ok(state)),
@@ -211,7 +216,7 @@ fn generate_skip(rules: &Vec<OptimizedRule>) -> Tokens {
             skip,
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
                 state.repeat(|state| {
-                    whitespace(state)
+                    WHITESPACE(state)
                 })
             } else {
                 Ok(state)
@@ -221,7 +226,7 @@ fn generate_skip(rules: &Vec<OptimizedRule>) -> Tokens {
             skip,
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
                 state.repeat(|state| {
-                    comment(state)
+                    COMMENT(state)
                 })
             } else {
                 Ok(state)
@@ -232,13 +237,13 @@ fn generate_skip(rules: &Vec<OptimizedRule>) -> Tokens {
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
                 state.sequence(|state| {
                     state.repeat(|state| {
-                        whitespace(state)
+                        WHITESPACE(state)
                     }).and_then(|state| {
                         state.repeat(|state| {
                             state.sequence(|state| {
-                                comment(state).and_then(|state| {
+                                COMMENT(state).and_then(|state| {
                                     state.repeat(|state| {
-                                        whitespace(state)
+                                        WHITESPACE(state)
                                     })
                                 })
                             })
@@ -846,18 +851,21 @@ mod tests {
 
                             #[inline]
                             #[allow(unused_variables)]
+                            #[allow(non_snake_case)]
                             pub fn a(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 state.match_string("b")
                             }
 
                             #[inline]
                             #[allow(dead_code)]
+                            #[allow(non_snake_case)]
                             fn any(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 state.skip(1)
                             }
 
                             #[inline]
                             #[allow(dead_code)]
+                            #[allow(non_snake_case)]
                             fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 Ok(state)
                             }

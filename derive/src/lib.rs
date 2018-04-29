@@ -92,7 +92,7 @@
 //!     a =  { "a" }
 //!     b = @{ a ~ "b" }
 //!
-//!     whitespace = _{ " " }
+//!     WHITESPACE = _{ " " }
 //!     ```
 //!
 //!     Parsing `"ab"` produces the token pair `b()`, while `"a   b"` produces an error.
@@ -106,7 +106,7 @@
 //!     a =  { "a" }
 //!     b = ${ a ~ "b" }
 //!
-//!     whitespace = _{ " " }
+//!     WHITESPACE = _{ " " }
 //!     ```
 //!
 //!     Parsing `"ab"` produces the token pairs `b(a())`, while `"a   b"` produces an error.
@@ -121,7 +121,7 @@
 //!     b = !{ a ~ "b" }
 //!     c = @{ b }
 //!
-//!     whitespace = _{ " " }
+//!     WHITESPACE = _{ " " }
 //!     ```
 //!
 //!     Parsing both `"ab"` and `"a   b"` produce the token pairs `c(a())`.
@@ -175,8 +175,8 @@
 //!
 //! Special rules can be called within the grammar. They are:
 //!
-//! * `whitespace` - gets run between rules and sub-rules
-//! * `comment` - gets run between rules and sub-rules
+//! * `WHITESPACE` - gets run between rules and sub-rules
+//! * `COMMENT` - gets run between rules and sub-rules
 //! * `any` - matches exactly one `char`
 //! * `soi` - (start-of-input) matches only when a `Parser` is still at the starting position
 //! * `eoi` - (end-of-input) matches only when a `Parser` has reached its end
@@ -184,10 +184,10 @@
 //! * `peek` - peeks a string from the stack and matches it
 //! * `drop` - drops the top of the stack (fails to match if the stack is empty)
 //!
-//! `whitespace` and `comment` should be defined manually if needed. All other rules cannot be
+//! `WHITESPACE` and `COMMENT` should be defined manually if needed. All other rules cannot be
 //! overridden.
 //!
-//! ## `whitespace` and `comment`
+//! ## `WHITESPACE` and `COMMENT`
 //!
 //! When defined, these rules get matched automatically in sequences (`~`) and repetitions
 //! (`*`, `+`) between expressions. Atomic rules and those rules called by atomic rules are exempt
@@ -196,7 +196,7 @@
 //! These rules should be defined so as to match one whitespace character and one comment only since
 //! they are run in repetitions.
 //!
-//! If both `whitespace` and `comment` are defined, this grammar:
+//! If both `WHITESPACE` and `COMMENT` are defined, this grammar:
 //!
 //! ```ignore
 //! a = { b ~ c }
@@ -205,7 +205,7 @@
 //! is effectively transformed into this one behind the scenes:
 //!
 //! ```ignore
-//! a = { b ~ whitespace* ~ (comment ~ whitespace*)* ~ c }
+//! a = { b ~ WHITESPACE* ~ (COMMENT ~ WHITESPACE*)* ~ c }
 //! ```
 //!
 //! ## `push`, `pop`, `drop`, and `peek`
