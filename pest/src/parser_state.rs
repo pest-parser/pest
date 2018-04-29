@@ -903,7 +903,29 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Restores the original state of the `ParserState` when `f` returns an `Err`.
+    /// Restores the original state of the `ParserState` when `f` returns an `Err`. Currently,
+    /// this method only restores the stack.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.restore_on_err( |state| state.stack_push( |state|
+    ///     state.match_string("a")).and_then( |state| state.match_string("a"))
+    /// );
+    ///
+    /// assert!(result.is_err());
+    ///
+    /// // Since the the rule doesn't match, the "a" pushed to the stack will be removed.
+    /// let catch_panic = std::panic::catch_unwind(|| result.unwrap_err().stack_pop());
+    /// assert!(catch_panic.is_err());
+    /// ```
     #[inline]
     pub fn restore_on_err<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where

@@ -23,7 +23,7 @@ impl<T: Clone> Stack<T> {
         Stack {
             ops: vec![],
             cache: vec![],
-            snapshots: vec![],
+            snapshots: vec![0],
             current_snapshot: 0
         }
     }
