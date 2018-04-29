@@ -23,7 +23,7 @@ impl<T: Clone> Stack<T> {
         Stack {
             ops: vec![],
             cache: vec![],
-            snapshots: vec![],
+            snapshots: vec![0],
             current_snapshot: 0
         }
     }
@@ -98,6 +98,19 @@ enum StackOp<T> {
 #[cfg(test)]
 mod test {
     use super::Stack;
+
+    #[test]
+    fn snapshot_with_empty() {
+        let mut stack = Stack::new();
+
+        stack.snapshot();
+        // []
+        assert!(stack.is_empty());
+        // [0]
+        stack.push(0);
+        stack.restore();
+        assert!(stack.is_empty());
+    }
 
     #[test]
     fn stack_ops() {
