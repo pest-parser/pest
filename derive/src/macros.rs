@@ -9,24 +9,36 @@
 
 macro_rules! insert_builtin {
     ($builtin: expr, $name: ident, $pattern: expr) => {
-        $builtin.insert(stringify!($name), quote! {
-            #[inline]
-            #[allow(dead_code)]
-            fn $name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                $pattern
-            }
-        });
+        $builtin.insert(stringify!($name), generate_rule!($name, $pattern));
     };
 }
 
 macro_rules! insert_public_builtin {
     ($builtin: expr, $name: ident, $pattern: expr) => {
-        $builtin.insert(stringify!($name), quote! {
+        $builtin.insert(stringify!($name), generate_public_rule!($name, $pattern));
+    };
+}
+
+macro_rules! generate_rule {
+    ($name: ident, $pattern: expr) => {
+        quote! {
+            #[inline]
+            #[allow(dead_code)]
+            fn $name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                $pattern
+            }
+        }
+    }
+}
+
+macro_rules! generate_public_rule {
+    ($name: ident, $pattern: expr) => {
+        quote! {
             #[inline]
             #[allow(dead_code)]
             pub fn $name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 $pattern
             }
-        });
-    };
+        }
+    }
 }

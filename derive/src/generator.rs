@@ -206,64 +206,49 @@ fn generate_skip(rules: &Vec<OptimizedRule>) -> Tokens {
     let comment = rules.iter().any(|rule| rule.name == "comment");
 
     match (whitespace, comment) {
-        (false, false) => quote! {
-            #[inline]
-            #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+        (false, false) => generate_rule!(skip, Ok(state)),
+        (true, false) => generate_rule!(
+            skip,
+            if state.atomicity() == ::pest::Atomicity::NonAtomic {
+                state.repeat(|state| {
+                    whitespace(state)
+                })
+            } else {
                 Ok(state)
             }
-        },
-        (true, false) => quote! {
-            #[inline]
-            #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                if state.atomicity() == ::pest::Atomicity::NonAtomic {
+        ),
+        (false, true) => generate_rule!(
+            skip,
+            if state.atomicity() == ::pest::Atomicity::NonAtomic {
+                state.repeat(|state| {
+                    comment(state)
+                })
+            } else {
+                Ok(state)
+            }
+        ),
+        (true, true) => generate_rule!(
+            skip,
+            if state.atomicity() == ::pest::Atomicity::NonAtomic {
+                state.sequence(|state| {
                     state.repeat(|state| {
                         whitespace(state)
-                    })
-                } else {
-                    Ok(state)
-                }
-            }
-        },
-        (false, true) => quote! {
-            #[inline]
-            #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                if state.atomicity() == ::pest::Atomicity::NonAtomic {
-                    state.repeat(|state| {
-                        comment(state)
-                    })
-                } else {
-                    Ok(state)
-                }
-            }
-        },
-        (true, true) => quote! {
-            #[inline]
-            #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                if state.atomicity() == ::pest::Atomicity::NonAtomic {
-                    state.sequence(|state| {
+                    }).and_then(|state| {
                         state.repeat(|state| {
-                            whitespace(state)
-                        }).and_then(|state| {
-                            state.repeat(|state| {
-                                state.sequence(|state| {
-                                    comment(state).and_then(|state| {
-                                        state.repeat(|state| {
-                                            whitespace(state)
-                                        })
+                            state.sequence(|state| {
+                                comment(state).and_then(|state| {
+                                    state.repeat(|state| {
+                                        whitespace(state)
                                     })
                                 })
                             })
                         })
                     })
-                } else {
-                    Ok(state)
-                }
+                })
+            } else {
+                Ok(state)
             }
-        }
+        )
     }
 }
 
