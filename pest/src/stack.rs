@@ -100,6 +100,19 @@ mod test {
     use super::Stack;
 
     #[test]
+    fn snapshot_with_empty() {
+        let mut stack = Stack::new();
+
+        stack.snapshot();
+        // []
+        assert!(stack.is_empty());
+        // [0]
+        stack.push(0);
+        stack.restore();
+        assert!(stack.is_empty());
+    }
+
+    #[test]
     fn stack_ops() {
         let mut stack = Stack::new();
 

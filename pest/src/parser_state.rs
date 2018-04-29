@@ -916,8 +916,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "ab";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.restore_on_err( |state| state.stack_push( |state|
-    ///     state.match_string("a")).and_then( |state| state.match_string("a"))
+    /// let mut result = state.restore_on_err(|state| state.stack_push(|state|
+    ///     state.match_string("a")).and_then(|state| state.match_string("a"))
     /// );
     ///
     /// assert!(result.is_err());

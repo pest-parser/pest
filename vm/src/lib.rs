@@ -135,11 +135,8 @@ impl Vm {
                     self.parse_expr(expr, state).and_then(|state| {
                         state.repeat(|state| {
                             state.sequence(|state| {
-                                self.skip(
-                                    state
-                                ).and_then(|state| {
-                                    self.parse_expr(expr, state)
-                                })
+                                self.skip(state)
+                                    .and_then(|state| self.parse_expr(expr, state))
                             })
                         })
                     })
