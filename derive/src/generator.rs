@@ -21,7 +21,7 @@ pub fn generate(
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>
 ) -> Tokens {
-    let uses_eoi = defaults.iter().any(|name| *name == "eoi");
+    let uses_eoi = defaults.iter().any(|name| *name == "EOI");
 
     let builtins = generate_builtin_rules();
     let rule_enum = generate_enum(&rules, uses_eoi);
@@ -74,14 +74,48 @@ fn generate_builtin_rules() -> HashMap<&'static str, Tokens> {
 
     insert_public_builtin!(
         builtins,
-        eoi,
-        state.rule(Rule::eoi, |state| state.end_of_input())
+        EOI,
+        state.rule(Rule::EOI, |state| state.end_of_input())
     );
-    insert_builtin!(builtins, any, state.skip(1));
-    insert_builtin!(builtins, soi, state.start_of_input());
-    insert_builtin!(builtins, peek, state.stack_peek());
-    insert_builtin!(builtins, pop, state.stack_pop());
-    insert_builtin!(builtins, drop, state.stack_drop());
+    insert_builtin!(builtins, ANY, state.skip(1));
+    insert_builtin!(builtins, SOI, state.start_of_input());
+    insert_builtin!(builtins, PEEK, state.stack_peek());
+    insert_builtin!(builtins, POP, state.stack_pop());
+    insert_builtin!(builtins, DROP, state.stack_drop());
+    insert_builtin!(builtins, DIGIT, state.match_range('0'..'9'));
+    insert_builtin!(builtins, NONZERO_DIGIT, state.match_range('1'..'9'));
+    insert_builtin!(builtins, BIN_DIGIT, state.match_range('0'..'1'));
+    insert_builtin!(builtins, OCT_DIGIT, state.match_range('0'..'7'));
+    insert_builtin!(
+        builtins,
+        HEX_DIGIT,
+        state.match_range('0'..'9')
+            .or_else(|state| state.match_range('a'..'f'))
+            .or_else(|state| state.match_range('A'..'F'))
+    );
+    insert_builtin!(builtins, ALPHA_LOWER, state.match_range('a'..'z'));
+    insert_builtin!(builtins, ALPHA_UPPER, state.match_range('A'..'Z'));
+    insert_builtin!(
+        builtins,
+        ALPHA,
+        state.match_range('a'..'z')
+            .or_else(|state| state.match_range('A'..'Z'))
+    );
+    insert_builtin!(
+        builtins,
+        ALPHANUMERIC,
+        state.match_range('a'..'z')
+            .or_else(|state| state.match_range('A'..'Z'))
+            .or_else(|state| state.match_range('0'..'9'))
+    );
+    insert_builtin!(builtins, ASCII, state.match_range('\x00'..'\x7f'));
+    insert_builtin!(
+        builtins,
+        NEWLINE,
+        state.match_string("\n")
+            .or_else(|state| state.match_string("\r\n"))
+            .or_else(|state| state.match_string("\r"))
+    );
 
     builtins
 }
@@ -93,7 +127,7 @@ fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
             #[allow(dead_code, non_camel_case_types)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
             pub enum Rule {
-                eoi,
+                EOI,
                 #( #rules ),*
             }
         }
@@ -121,7 +155,7 @@ fn generate_patterns(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
 
     if uses_eoi {
         rules.push(quote! {
-            Rule::eoi => rules::eoi(state)
+            Rule::EOI => rules::EOI(state)
         });
     }
 
@@ -827,7 +861,7 @@ mod tests {
                 expr: OptimizedExpr::Str("b".to_owned())
             },
         ];
-        let defaults = vec!["any"];
+        let defaults = vec!["ANY"];
 
         assert_eq!(
             generate(name, &generics, rules, defaults),
@@ -859,7 +893,7 @@ mod tests {
                             #[inline]
                             #[allow(dead_code)]
                             #[allow(non_snake_case)]
-                            fn any(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                            fn ANY(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 state.skip(1)
                             }
 

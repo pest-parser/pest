@@ -735,7 +735,7 @@ fn checkpoint_restore() {
         input: "a",
         rule: "checkpoint_restore",
         tokens: [
-            checkpoint_restore(0, 1, [eoi(1, 1)])
+            checkpoint_restore(0, 1, [EOI(1, 1)])
         ]
     };
 }

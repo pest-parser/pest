@@ -160,7 +160,7 @@
 //!     | `e?`                  | optionally matches `e`                                     |
 //!     | `&e`                  | matches `e` without making progress                        |
 //!     | `!e`                  | matches if `e` doesn't match without making progress       |
-//!     | `push(e)`             | matches `e` and pushes it's captured string down the stack |
+//!     | `PUSH(e)`             | matches `e` and pushes it's captured string down the stack |
 //!
 //!     where `e`, `e1`, and `e2` are expressions.
 //!
@@ -175,14 +175,25 @@
 //!
 //! Special rules can be called within the grammar. They are:
 //!
-//! * `WHITESPACE` - gets run between rules and sub-rules
-//! * `COMMENT` - gets run between rules and sub-rules
-//! * `any` - matches exactly one `char`
-//! * `soi` - (start-of-input) matches only when a `Parser` is still at the starting position
-//! * `eoi` - (end-of-input) matches only when a `Parser` has reached its end
-//! * `pop` - pops a string from the stack and matches it
-//! * `peek` - peeks a string from the stack and matches it
-//! * `drop` - drops the top of the stack (fails to match if the stack is empty)
+//! * `WHITESPACE` - runs between rules and sub-rules
+//! * `COMMENT` - runs between rules and sub-rules
+//! * `ANY` - matches exactly one `char`
+//! * `SOI` - (start-of-input) matches only when a `Parser` is still at the starting position
+//! * `EOI` - (end-of-input) matches only when a `Parser` has reached its end
+//! * `POP` - pops a string from the stack and matches it
+//! * `PEEK` - peeks a string from the stack and matches it
+//! * `DROP` - drops the top of the stack (fails to match if the stack is empty)
+//! * `DIGIT` - matches a numeric character from 0..9
+//! * `NONZERO_DIGIT` - matches a numeric character from 1..9
+//! * `BIN_DIGIT` - matches a numeric character from 0..1
+//! * `OCT_DIGIT` - matches a numeric character from 0..7
+//! * `HEX_DIGIT` - matches a numeric character from 0..9 or a..f or A..F
+//! * `ALPHA_LOWER` - matches a character from a..z
+//! * `ALPHA_UPPER` - matches a character from A..Z
+//! * `ALPHA` - matches a character from a..z or A..Z
+//! * `ALPHANUMERIC` - matches a character from a..z or A..Z or 0..9
+//! * `ASCII` - matches a character from \x00..\x7f
+//! * `NEWLINE` - matches either "\n" or "\r\n" or "\r"
 //!
 //! `WHITESPACE` and `COMMENT` should be defined manually if needed. All other rules cannot be
 //! overridden.
@@ -208,16 +219,16 @@
 //! a = { b ~ WHITESPACE* ~ (COMMENT ~ WHITESPACE*)* ~ c }
 //! ```
 //!
-//! ## `push`, `pop`, `drop`, and `peek`
+//! ## `PUSH`, `POP`, `DROP`, and `PEEK`
 //!
-//! `push(e)` simply pushes the captured string of the expression `e` down a stack. This stack can
-//! then later be used to match grammar based on its content with `pop` and `peek`.
+//! `PUSH(e)` simply pushes the captured string of the expression `e` down a stack. This stack can
+//! then later be used to match grammar based on its content with `POP` and `PEEK`.
 //!
-//! `peek` always matches the string at the top of stack. So, if the stack contains `["a", "b"]`,
+//! `PEEK` always matches the string at the top of stack. So, if the stack contains `["a", "b"]`,
 //! the this grammar:
 //!
 //! ```ignore
-//! a = { peek }
+//! a = { PEEK }
 //! ```
 //!
 //! is effectively transformed into at parse time:
@@ -226,13 +237,13 @@
 //! a = { "a" }
 //! ```
 //!
-//! `pop` works the same way with the exception that it pops the string off of the stack if the
-//! the match worked. With the stack from above, if `pop` matches `"a"`, the stack will be mutated
+//! `POP` works the same way with the exception that it pops the string off of the stack if the
+//! the match worked. With the stack from above, if `POP` matches `"a"`, the stack will be mutated
 //! to `["b"]`.
 //!
-//! `drop` makes it possible to remove the string at the top of the stack
-//! without matching it. If the stack is nonempty, `drop` drops the top of the
-//! stack. If the stack is empty, then `drop` fails to match.
+//! `DROP` makes it possible to remove the string at the top of the stack
+//! without matching it. If the stack is nonempty, `DROP` drops the top of the
+//! stack. If the stack is empty, then `DROP` fails to match.
 //!
 //! ## `Rule`
 //!
@@ -289,7 +300,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
             file_name,
             error.renamed_rules(|rule| match *rule {
                 Rule::grammar_rule => "rule".to_owned(),
-                Rule::_push => "push".to_owned(),
+                Rule::_push => "PUSH".to_owned(),
                 Rule::assignment_operator => "`=`".to_owned(),
                 Rule::silent_modifier => "`_`".to_owned(),
                 Rule::atomic_modifier => "`@`".to_owned(),

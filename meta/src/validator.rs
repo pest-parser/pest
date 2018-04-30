@@ -71,22 +71,33 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     rust_keywords.insert("yield");
 
     let mut pest_keywords = HashSet::new();
-    pest_keywords.insert("any");
-    pest_keywords.insert("drop");
-    pest_keywords.insert("eoi");
-    pest_keywords.insert("peek");
-    pest_keywords.insert("pop");
-    pest_keywords.insert("push");
+    pest_keywords.insert("ANY");
+    pest_keywords.insert("DROP");
+    pest_keywords.insert("EOI");
+    pest_keywords.insert("PEEK");
+    pest_keywords.insert("POP");
+    pest_keywords.insert("PUSH");
     pest_keywords.insert("skip");
-    pest_keywords.insert("soi");
+    pest_keywords.insert("SOI");
 
     let mut builtins = HashSet::new();
-    builtins.insert("any");
-    builtins.insert("drop");
-    builtins.insert("eoi");
-    builtins.insert("peek");
-    builtins.insert("pop");
-    builtins.insert("soi");
+    builtins.insert("ANY");
+    builtins.insert("DROP");
+    builtins.insert("EOI");
+    builtins.insert("PEEK");
+    builtins.insert("POP");
+    builtins.insert("SOI");
+    builtins.insert("DIGIT");
+    builtins.insert("NONZERO_DIGIT");
+    builtins.insert("BIN_DIGIT");
+    builtins.insert("OCT_DIGIT");
+    builtins.insert("HEX_DIGIT");
+    builtins.insert("ALPHA_LOWER");
+    builtins.insert("ALPHA_UPPER");
+    builtins.insert("ALPHA");
+    builtins.insert("ALPHANUMERIC");
+    builtins.insert("ASCII");
+    builtins.insert("NEWLINE");
 
     let definitions: Vec<_> = pairs
         .clone()
@@ -475,12 +486,12 @@ mod tests {
 
  --> 1:1
   |
-1 | any = { \"a\" }
+1 | ANY = { \"a\" }
   | ^-^
   |
-  = any is a pest keyword")]
+  = ANY is a pest keyword")]
     fn pest_keyword() {
-        let input = "any = { \"a\" }";
+        let input = "ANY = { \"a\" }";
         unwrap_or_report(validate_pairs(
             PestParser::parse(Rule::grammar_rules, input).unwrap()
         ));

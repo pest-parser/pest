@@ -44,16 +44,16 @@ impl Vm {
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match rule {
             "any" => return state.skip(1),
-            "eoi" => return state.rule("eoi", |state| state.end_of_input()),
-            "soi" => return state.start_of_input(),
-            "peek" => return state.stack_peek(),
-            "pop" => return state.stack_pop(),
-            "drop" => return state.stack_drop(),
+            "EOI" => return state.rule("EOI", |state| state.end_of_input()),
+            "SOI" => return state.start_of_input(),
+            "PEEK" => return state.stack_peek(),
+            "POP" => return state.stack_pop(),
+            "DROP" => return state.stack_drop(),
             _ => ()
         };
 
         if let Some(rule) = self.rules.get(rule) {
-            if &rule.name == "whitespace" || &rule.name == "comment" {
+            if &rule.name == "WHITESPACE" || &rule.name == "COMMENT" {
                 match rule.ty {
                     RuleType::Normal => state.rule(&rule.name, |state| {
                         state.atomic(Atomicity::Atomic, |state| {
@@ -158,29 +158,29 @@ impl Vm {
         state: Box<ParserState<'i, &'a str>>
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match (
-            self.rules.contains_key("whitespace"),
-            self.rules.contains_key("comment")
+            self.rules.contains_key("WHITESPACE"),
+            self.rules.contains_key("COMMENT")
         ) {
             (false, false) => Ok(state),
             (true, false) => if state.atomicity() == Atomicity::NonAtomic {
-                state.repeat(|state| self.parse_rule("whitespace", state))
+                state.repeat(|state| self.parse_rule("WHITESPACE", state))
             } else {
                 Ok(state)
             },
             (false, true) => if state.atomicity() == Atomicity::NonAtomic {
-                state.repeat(|state| self.parse_rule("comment", state))
+                state.repeat(|state| self.parse_rule("COMMENT", state))
             } else {
                 Ok(state)
             },
             (true, true) => if state.atomicity() == Atomicity::NonAtomic {
                 state.sequence(|state| {
                     state
-                        .repeat(|state| self.parse_rule("whitespace", state))
+                        .repeat(|state| self.parse_rule("WHITESPACE", state))
                         .and_then(|state| {
                             state.repeat(|state| {
                                 state.sequence(|state| {
-                                    self.parse_rule("comment", state).and_then(|state| {
-                                        state.repeat(|state| self.parse_rule("whitespace", state))
+                                    self.parse_rule("COMMENT", state).and_then(|state| {
+                                        state.repeat(|state| self.parse_rule("WHITESPACE", state))
                                     })
                                 })
                             })
