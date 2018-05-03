@@ -183,17 +183,6 @@
 //! * `POP` - pops a string from the stack and matches it
 //! * `PEEK` - peeks a string from the stack and matches it
 //! * `DROP` - drops the top of the stack (fails to match if the stack is empty)
-//! * `DIGIT` - matches a numeric character from 0..9
-//! * `NONZERO_DIGIT` - matches a numeric character from 1..9
-//! * `BIN_DIGIT` - matches a numeric character from 0..1
-//! * `OCT_DIGIT` - matches a numeric character from 0..7
-//! * `HEX_DIGIT` - matches a numeric character from 0..9 or a..f or A..F
-//! * `ALPHA_LOWER` - matches a character from a..z
-//! * `ALPHA_UPPER` - matches a character from A..Z
-//! * `ALPHA` - matches a character from a..z or A..Z
-//! * `ALPHANUMERIC` - matches a character from a..z or A..Z or 0..9
-//! * `ASCII` - matches a character from \x00..\x7f
-//! * `NEWLINE` - matches either "\n" or "\r\n" or "\r"
 //!
 //! `WHITESPACE` and `COMMENT` should be defined manually if needed. All other rules cannot be
 //! overridden.
@@ -249,6 +238,22 @@
 //!
 //! All rules defined or used in the grammar populate a generated `enum` called `Rule`. This
 //! implements `pest`'s `RuleType` and can be used throughout the API.
+//!
+//! ## `Built-in rules`
+//!
+//! Pest also comes with a number of built-in rules for convenience. They are:
+//!
+//! * `DIGIT` - matches a numeric character from 0..9
+//! * `NONZERO_DIGIT` - matches a numeric character from 1..9
+//! * `BIN_DIGIT` - matches a numeric character from 0..1
+//! * `OCT_DIGIT` - matches a numeric character from 0..7
+//! * `HEX_DIGIT` - matches a numeric character from 0..9 or a..f or A..F
+//! * `ALPHA_LOWER` - matches a character from a..z
+//! * `ALPHA_UPPER` - matches a character from A..Z
+//! * `ALPHA` - matches a character from a..z or A..Z
+//! * `ALPHANUMERIC` - matches a character from a..z or A..Z or 0..9
+//! * `ASCII` - matches a character from \x00..\x7f
+//! * `NEWLINE` - matches either "\n" or "\r\n" or "\r"
 
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
 #![recursion_limit = "256"]
