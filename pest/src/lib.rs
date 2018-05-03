@@ -56,7 +56,6 @@
 
 #![doc(html_root_url = "https://docs.rs/pest")]
 
-pub use error::Error;
 pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, ParseResult, ParserState};
 pub use position::Position;
@@ -65,7 +64,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 pub use token::Token;
 
-mod error;
+pub mod error;
 pub mod iterators;
 mod macros;
 mod parser;

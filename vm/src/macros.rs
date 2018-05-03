@@ -196,17 +196,21 @@ macro_rules! fails_with {
             let vm = $parser;
             let error = vm.parse($rule, $string).unwrap_err();
 
-            match error {
-                ::pest::Error::ParsingError { positives, negatives, pos } => {
+            match error.variant {
+                ::pest::error::ErrorVariant::ParsingError { positives, negatives } => {
                     let positives: Vec<&str> = $positives;
                     let negatives: Vec<&str> = $negatives;
 
                     assert_eq!(positives, positives);
                     assert_eq!(negatives, negatives);
-                    assert_eq!(pos.pos(), $pos);
                 }
                 _ => unreachable!()
             };
+
+            match error.location {
+                ::pest::error::InputLocation::Pos(pos) => assert_eq!(pos, $pos),
+                _ => unreachable!()
+            }
         }
     };
 }

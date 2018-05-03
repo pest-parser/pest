@@ -10,7 +10,8 @@
 extern crate pest;
 extern crate pest_meta;
 
-use pest::{Atomicity, Error, ParseResult, ParserState};
+use pest::{Atomicity, ParseResult, ParserState};
+use pest::error::Error;
 use pest::iterators::Pairs;
 use pest_meta::ast::RuleType;
 use pest_meta::optimizer::{OptimizedExpr, OptimizedRule};
@@ -33,7 +34,7 @@ impl Vm {
         &'a self,
         rule: &'a str,
         input: &'i str
-    ) -> Result<Pairs<'i, &str>, Error<'i, &str>> {
+    ) -> Result<Pairs<'i, &str>, Error<&str>> {
         pest::state(input, |state| self.parse_rule(rule, state))
     }
 
