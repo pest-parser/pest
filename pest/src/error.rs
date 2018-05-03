@@ -243,35 +243,64 @@ impl<R: RuleType> Error<R> {
     pub(crate) fn format(&self) -> String {
         let spacing = self.spacing();
 
-        let mut result = format!("{}--> {}:{}\n", spacing, self.start.0, self.start.1);
-        result.push_str(&format!("{} |\n", spacing));
-
-        let underlined = self.underline();
-
         if let (Some(end), Some(ref continued_line)) = (self.end, &self.continued_line) {
-            result.push_str(&format!("{:1$} | ", self.start.0, spacing.len()));
-            result.push_str(&format!("{}\n", self.line));
-
-            if end.0 - self.start.0 > 1 {
-                result.push_str(&format!("{} | ...\n", spacing));
+            let has_line_gap = end.0 - self.start.0 > 1;
+            if has_line_gap {
+                format!(
+                    "{s    }--> {ls}:{c}\n\
+                     {s    } |\n\
+                     {ls:w$} | {line}\n\
+                     {s    } | ...\n\
+                     {le:w$} | {continued_line}\n\
+                     {s    } | {underline}\n\
+                     {s    } |\n\
+                     {s    } = {message}",
+                    s = spacing,
+                    w = spacing.len(),
+                    ls = self.start.0,
+                    le = end.0,
+                    c = self.start.1,
+                    line = self.line,
+                    continued_line = continued_line,
+                    underline = self.underline(),
+                    message = self.message()
+                )
+            } else {
+                format!(
+                    "{s    }--> {ls}:{c}\n\
+                     {s    } |\n\
+                     {ls:w$} | {line}\n\
+                     {le:w$} | {continued_line}\n\
+                     {s    } | {underline}\n\
+                     {s    } |\n\
+                     {s    } = {message}",
+                    s = spacing,
+                    w = spacing.len(),
+                    ls = self.start.0,
+                    le = end.0,
+                    c = self.start.1,
+                    line = self.line,
+                    continued_line = continued_line,
+                    underline = self.underline(),
+                    message = self.message()
+                )
             }
-
-            result.push_str(&format!("{:1$} | ", end.0, spacing.len()));
-            result.push_str(&format!("{}\n", continued_line));
-            result.push_str(&format!("{} | {}\n", spacing, underlined));
-
-            result.push_str(&format!("{} |\n", spacing));
-            result.push_str(&format!("{} = {}", spacing, self.message()));
         } else {
-            result.push_str(&format!("{} | ", self.start.0));
-            result.push_str(&format!("{}\n", self.line));
-            result.push_str(&format!("{} | {}\n", spacing, underlined));
-
-            result.push_str(&format!("{} |\n", spacing));
-            result.push_str(&format!("{} = {}", spacing, self.message()));
+            format!(
+                "{s}--> {l}:{c}\n\
+                 {s} |\n\
+                 {l} | {line}\n\
+                 {s} | {underline}\n\
+                 {s} |\n\
+                 {s} = {message}",
+                s = spacing,
+                l = self.start.0,
+                c = self.start.1,
+                line = self.line,
+                underline = self.underline(),
+                message = self.message()
+            )
         }
-
-        result
     }
 }
 
