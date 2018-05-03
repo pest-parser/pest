@@ -243,7 +243,7 @@ impl<R: RuleType> Error<R> {
     pub(crate) fn format(&self) -> String {
         let spacing = self.spacing();
 
-        if let (Some(end), Some(ref continued_line)) = (self.end, &self.continued_line) {
+        if let (Some(end), &Some(ref continued_line)) = (self.end, &self.continued_line) {
             let has_line_gap = end.0 - self.start.0 > 1;
             if has_line_gap {
                 format!(
