@@ -248,32 +248,28 @@ impl<R: RuleType> Error<R> {
 
         let underlined = self.underline();
 
-        if let Some(end) = self.end {
-            if let Some(ref continued_line) = self.continued_line {
-                result.push_str(&format!("{:1$} | ", self.start.0, spacing.len()));
-                result.push_str(&format!("{}\n", self.line));
+        if let (Some(end), Some(ref continued_line)) = (self.end, &self.continued_line) {
+            result.push_str(&format!("{:1$} | ", self.start.0, spacing.len()));
+            result.push_str(&format!("{}\n", self.line));
 
-                if end.0 - self.start.0 > 1 {
-                    result.push_str(&format!("{} | ...\n", spacing));
-                }
-
-                result.push_str(&format!("{:1$} | ", end.0, spacing.len()));
-                result.push_str(&format!("{}\n", continued_line));
-                result.push_str(&format!("{} | {}\n", spacing, underlined));
-
-                result.push_str(&format!("{} |\n", spacing));
-                result.push_str(&format!("{} = {}", spacing, self.message()));
-
-                return result;
+            if end.0 - self.start.0 > 1 {
+                result.push_str(&format!("{} | ...\n", spacing));
             }
+
+            result.push_str(&format!("{:1$} | ", end.0, spacing.len()));
+            result.push_str(&format!("{}\n", continued_line));
+            result.push_str(&format!("{} | {}\n", spacing, underlined));
+
+            result.push_str(&format!("{} |\n", spacing));
+            result.push_str(&format!("{} = {}", spacing, self.message()));
+        } else {
+            result.push_str(&format!("{} | ", self.start.0));
+            result.push_str(&format!("{}\n", self.line));
+            result.push_str(&format!("{} | {}\n", spacing, underlined));
+
+            result.push_str(&format!("{} |\n", spacing));
+            result.push_str(&format!("{} = {}", spacing, self.message()));
         }
-
-        result.push_str(&format!("{} | ", self.start.0));
-        result.push_str(&format!("{}\n", self.line));
-        result.push_str(&format!("{} | {}\n", spacing, underlined));
-
-        result.push_str(&format!("{} |\n", spacing));
-        result.push_str(&format!("{} = {}", spacing, self.message()));
 
         result
     }
