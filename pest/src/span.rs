@@ -152,7 +152,11 @@ impl<'i> Span<'i> {
 
 impl<'i> fmt::Debug for Span<'i> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Span {{ start: {}, end: {} }}", self.start, self.end)
+        f.debug_struct("Span")
+            .field("str", &self.as_str())
+            .field("start", &self.start)
+            .field("end", &self.end)
+            .finish()
     }
 }
 

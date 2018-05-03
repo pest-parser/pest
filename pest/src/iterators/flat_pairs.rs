@@ -122,11 +122,9 @@ impl<'i, R: RuleType> DoubleEndedIterator for FlatPairs<'i, R> {
 
 impl<'i, R: RuleType> fmt::Debug for FlatPairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "FlatPairs {{ pairs: {:?} }}",
-            self.clone().collect::<Vec<_>>()
-        )
+        f.debug_struct("FlatPairs")
+            .field("pairs", &self.clone().collect::<Vec<_>>())
+            .finish()
     }
 }
 

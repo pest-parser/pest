@@ -7,6 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use std::fmt;
 use std::rc::Rc;
 
 use super::queueable_token::QueueableToken;
@@ -17,7 +18,7 @@ use token::Token;
 /// A `struct` containing `Token`s. It is returned by either
 /// [`Pair::into_iter`](struct.Pair.html#method.into_iter) or
 /// [`Pairs::into_iter`](struct.Pairs.html#method.into_iter)
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Tokens<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i [u8],
@@ -97,6 +98,12 @@ impl<'i, R: RuleType> DoubleEndedIterator for Tokens<'i, R> {
         self.end -= 1;
 
         Some(token)
+    }
+}
+
+impl<'i, R: RuleType> fmt::Debug for Tokens<'i, R> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_list().entries(self.clone()).finish()
     }
 }
 

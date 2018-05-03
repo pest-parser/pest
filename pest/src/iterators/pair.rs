@@ -236,13 +236,11 @@ impl<'i, R: RuleType> Pair<'i, R> {
 
 impl<'i, R: RuleType> fmt::Debug for Pair<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Pair {{ rule: {:?}, span: {:?}, inner: {:?} }}",
-            self.as_rule(),
-            self.clone().as_span(),
-            self.clone().into_inner()
-        )
+        f.debug_struct("Pair")
+            .field("rule", &self.as_rule())
+            .field("span", &self.as_span())
+            .field("inner", &self.clone().into_inner().collect::<Vec<_>>())
+            .finish()
     }
 }
 

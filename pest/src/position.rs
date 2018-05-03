@@ -352,7 +352,7 @@ impl<'i> Position<'i> {
 
 impl<'i> fmt::Debug for Position<'i> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Position {{ pos: {} }}", self.pos)
+        f.debug_struct("Position").field("pos", &self.pos).finish()
     }
 }
 

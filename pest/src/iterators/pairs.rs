@@ -151,11 +151,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
 
 impl<'i, R: RuleType> fmt::Debug for Pairs<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Pairs {{ pairs: {:?} }}",
-            self.clone().collect::<Vec<_>>()
-        )
+        f.debug_list().entries(self.clone()).finish()
     }
 }
 
@@ -201,13 +197,13 @@ mod tests {
 
         assert_eq!(
             format!("{:?}", pairs),
-            "Pairs { pairs: [\
-             Pair { rule: a, span: Span { start: 0, end: 3 }, inner: Pairs { pairs: [\
-             Pair { rule: b, span: Span { start: 1, end: 2 }, \
-             inner: Pairs { pairs: [] } }] } }, \
-             Pair { rule: c, span: Span { start: 4, end: 5 }, \
-             inner: Pairs { pairs: [] } }] }"
-                .to_owned()
+            "[\
+                Pair { rule: a, span: Span { str: \"abc\", start: 0, end: 3 }, inner: [\
+                    Pair { rule: b, span: Span { str: \"b\", start: 1, end: 2 }, inner: [] }\
+                ] }, \
+                Pair { rule: c, span: Span { str: \"e\", start: 4, end: 5 }, inner: [] }\
+            ]"
+        .to_owned()
         );
     }
 
