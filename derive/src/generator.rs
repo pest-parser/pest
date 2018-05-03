@@ -68,7 +68,7 @@ pub fn generate(
     }
 }
 
-// Note: All predefined rules should be validated as pest keywords in meta/src/validator.rs.
+// Note: All builtin rules should be validated as pest keywords in meta/src/validator.rs.
 fn generate_builtin_rules() -> HashMap<&'static str, Tokens> {
     let mut builtins = HashMap::new();
 
@@ -185,8 +185,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
     match rule.ty {
         RuleType::Normal => quote! {
             #[inline]
-            #[allow(unused_variables)]
-            #[allow(non_snake_case)]
+            #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.rule(Rule::#name, |state| {
                     #expr
@@ -195,16 +194,14 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         },
         RuleType::Silent => quote! {
             #[inline]
-            #[allow(unused_variables)]
-            #[allow(non_snake_case)]
+            #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 #expr
             }
         },
         RuleType::Atomic => quote! {
             #[inline]
-            #[allow(unused_variables)]
-            #[allow(non_snake_case)]
+            #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.rule(Rule::#name, |state| {
                     state.atomic(::pest::Atomicity::Atomic, |state| {
@@ -215,8 +212,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         },
         RuleType::CompoundAtomic => quote! {
             #[inline]
-            #[allow(unused_variables)]
-            #[allow(non_snake_case)]
+            #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.atomic(::pest::Atomicity::CompoundAtomic, |state| {
                     state.rule(Rule::#name, |state| {
@@ -227,8 +223,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         },
         RuleType::NonAtomic => quote! {
             #[inline]
-            #[allow(unused_variables)]
-            #[allow(non_snake_case)]
+            #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.atomic(::pest::Atomicity::NonAtomic, |state| {
                     state.rule(Rule::#name, |state| {
@@ -884,22 +879,19 @@ mod tests {
                         use super::Rule;
 
                             #[inline]
-                            #[allow(unused_variables)]
-                            #[allow(non_snake_case)]
+                            #[allow(non_snake_case, unused_variables)]
                             pub fn a(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 state.match_string("b")
                             }
 
                             #[inline]
-                            #[allow(dead_code)]
-                            #[allow(non_snake_case)]
+                            #[allow(dead_code, non_snake_case, unused_variables)]
                             fn ANY(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 state.skip(1)
                             }
 
                             #[inline]
-                            #[allow(dead_code)]
-                            #[allow(non_snake_case)]
+                            #[allow(dead_code, non_snake_case, unused_variables)]
                             fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 Ok(state)
                             }
