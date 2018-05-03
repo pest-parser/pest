@@ -311,7 +311,7 @@ mod tests {
                         Box::new(Expr::Str("a".to_owned())),
                         Box::new(Expr::Str("b".to_owned()))
                     )))),
-                    Box::new(Expr::Ident("any".to_owned()))
+                    Box::new(Expr::Ident("ANY".to_owned()))
                 )))
             },
         ];

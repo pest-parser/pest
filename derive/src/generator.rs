@@ -21,9 +21,9 @@ pub fn generate(
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>
 ) -> Tokens {
-    let uses_eoi = defaults.iter().any(|name| *name == "eoi");
+    let uses_eoi = defaults.iter().any(|name| *name == "EOI");
 
-    let predefined = generate_predefined_rules();
+    let builtins = generate_builtin_rules();
     let rule_enum = generate_enum(&rules, uses_eoi);
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
@@ -32,7 +32,7 @@ pub fn generate(
     rules.extend(
         defaults
             .into_iter()
-            .map(|name| predefined.get(name).unwrap().clone())
+            .map(|name| builtins.get(name).unwrap().clone())
     );
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -68,67 +68,56 @@ pub fn generate(
     }
 }
 
-// Note: All predefined rules should be validated as pest keywords in meta/src/validator.rs.
-fn generate_predefined_rules() -> HashMap<&'static str, Tokens> {
-    let mut predefined = HashMap::new();
-    predefined.insert(
-        "any",
-        quote! {
-            #[inline]
-            #[allow(dead_code)]
-            fn any(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.skip(1)
-            }
-        }
+// Note: All builtin rules should be validated as pest keywords in meta/src/validator.rs.
+fn generate_builtin_rules() -> HashMap<&'static str, Tokens> {
+    let mut builtins = HashMap::new();
+
+    insert_public_builtin!(
+        builtins,
+        EOI,
+        state.rule(Rule::EOI, |state| state.end_of_input())
     );
-    predefined.insert(
-        "eoi",
-        quote! {
-            #[inline]
-            pub fn eoi(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.rule(Rule::eoi, |state| {
-                    state.end_of_input()
-                })
-            }
-        }
+    insert_builtin!(builtins, ANY, state.skip(1));
+    insert_builtin!(builtins, SOI, state.start_of_input());
+    insert_builtin!(builtins, PEEK, state.stack_peek());
+    insert_builtin!(builtins, POP, state.stack_pop());
+    insert_builtin!(builtins, DROP, state.stack_drop());
+    insert_builtin!(builtins, DIGIT, state.match_range('0'..'9'));
+    insert_builtin!(builtins, NONZERO_DIGIT, state.match_range('1'..'9'));
+    insert_builtin!(builtins, BIN_DIGIT, state.match_range('0'..'1'));
+    insert_builtin!(builtins, OCT_DIGIT, state.match_range('0'..'7'));
+    insert_builtin!(
+        builtins,
+        HEX_DIGIT,
+        state.match_range('0'..'9')
+            .or_else(|state| state.match_range('a'..'f'))
+            .or_else(|state| state.match_range('A'..'F'))
     );
-    predefined.insert(
-        "soi",
-        quote! {
-            #[inline]
-            fn soi(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.start_of_input()
-            }
-        }
+    insert_builtin!(builtins, ALPHA_LOWER, state.match_range('a'..'z'));
+    insert_builtin!(builtins, ALPHA_UPPER, state.match_range('A'..'Z'));
+    insert_builtin!(
+        builtins,
+        ALPHA,
+        state.match_range('a'..'z')
+            .or_else(|state| state.match_range('A'..'Z'))
     );
-    predefined.insert(
-        "peek",
-        quote! {
-            #[inline]
-            fn peek(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.stack_peek()
-            }
-        }
+    insert_builtin!(
+        builtins,
+        ALPHANUMERIC,
+        state.match_range('a'..'z')
+            .or_else(|state| state.match_range('A'..'Z'))
+            .or_else(|state| state.match_range('0'..'9'))
     );
-    predefined.insert(
-        "pop",
-        quote! {
-            #[inline]
-            fn pop(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.stack_pop()
-            }
-        }
+    insert_builtin!(builtins, ASCII, state.match_range('\x00'..'\x7f'));
+    insert_builtin!(
+        builtins,
+        NEWLINE,
+        state.match_string("\n")
+            .or_else(|state| state.match_string("\r\n"))
+            .or_else(|state| state.match_string("\r"))
     );
-    predefined.insert(
-        "drop",
-        quote! {
-            #[inline]
-            fn drop(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                state.stack_drop()
-            }
-        }
-    );
-    predefined
+
+    builtins
 }
 
 fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
@@ -138,7 +127,7 @@ fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
             #[allow(dead_code, non_camel_case_types)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
             pub enum Rule {
-                eoi,
+                EOI,
                 #( #rules ),*
             }
         }
@@ -166,7 +155,7 @@ fn generate_patterns(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
 
     if uses_eoi {
         rules.push(quote! {
-            Rule::eoi => rules::eoi(state)
+            Rule::EOI => rules::EOI(state)
         });
     }
 
@@ -180,7 +169,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
     let expr = if { rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic } {
         generate_expr_atomic(rule.expr)
     } else {
-        if name == "whitespace" || name == "comment" {
+        if name == "WHITESPACE" || name == "COMMENT" {
             let atomic = generate_expr_atomic(rule.expr);
 
             quote! {
@@ -196,7 +185,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
     match rule.ty {
         RuleType::Normal => quote! {
             #[inline]
-            #[allow(unused_variables)]
+            #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.rule(Rule::#name, |state| {
                     #expr
@@ -205,14 +194,14 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         },
         RuleType::Silent => quote! {
             #[inline]
-            #[allow(unused_variables)]
+            #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 #expr
             }
         },
         RuleType::Atomic => quote! {
             #[inline]
-            #[allow(unused_variables)]
+            #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.rule(Rule::#name, |state| {
                     state.atomic(::pest::Atomicity::Atomic, |state| {
@@ -223,7 +212,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         },
         RuleType::CompoundAtomic => quote! {
             #[inline]
-            #[allow(unused_variables)]
+            #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.atomic(::pest::Atomicity::CompoundAtomic, |state| {
                     state.rule(Rule::#name, |state| {
@@ -234,7 +223,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         },
         RuleType::NonAtomic => quote! {
             #[inline]
-            #[allow(unused_variables)]
+            #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.atomic(::pest::Atomicity::NonAtomic, |state| {
                     state.rule(Rule::#name, |state| {
@@ -247,68 +236,53 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
 }
 
 fn generate_skip(rules: &Vec<OptimizedRule>) -> Tokens {
-    let whitespace = rules.iter().any(|rule| rule.name == "whitespace");
-    let comment = rules.iter().any(|rule| rule.name == "comment");
+    let whitespace = rules.iter().any(|rule| rule.name == "WHITESPACE");
+    let comment = rules.iter().any(|rule| rule.name == "COMMENT");
 
     match (whitespace, comment) {
-        (false, false) => quote! {
-            #[inline]
-            #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+        (false, false) => generate_rule!(skip, Ok(state)),
+        (true, false) => generate_rule!(
+            skip,
+            if state.atomicity() == ::pest::Atomicity::NonAtomic {
+                state.repeat(|state| {
+                    WHITESPACE(state)
+                })
+            } else {
                 Ok(state)
             }
-        },
-        (true, false) => quote! {
-            #[inline]
-            #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                if state.atomicity() == ::pest::Atomicity::NonAtomic {
-                    state.repeat(|state| {
-                        whitespace(state)
-                    })
-                } else {
-                    Ok(state)
-                }
+        ),
+        (false, true) => generate_rule!(
+            skip,
+            if state.atomicity() == ::pest::Atomicity::NonAtomic {
+                state.repeat(|state| {
+                    COMMENT(state)
+                })
+            } else {
+                Ok(state)
             }
-        },
-        (false, true) => quote! {
-            #[inline]
-            #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                if state.atomicity() == ::pest::Atomicity::NonAtomic {
+        ),
+        (true, true) => generate_rule!(
+            skip,
+            if state.atomicity() == ::pest::Atomicity::NonAtomic {
+                state.sequence(|state| {
                     state.repeat(|state| {
-                        comment(state)
-                    })
-                } else {
-                    Ok(state)
-                }
-            }
-        },
-        (true, true) => quote! {
-            #[inline]
-            #[allow(dead_code)]
-            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                if state.atomicity() == ::pest::Atomicity::NonAtomic {
-                    state.sequence(|state| {
+                        WHITESPACE(state)
+                    }).and_then(|state| {
                         state.repeat(|state| {
-                            whitespace(state)
-                        }).and_then(|state| {
-                            state.repeat(|state| {
-                                state.sequence(|state| {
-                                    comment(state).and_then(|state| {
-                                        state.repeat(|state| {
-                                            whitespace(state)
-                                        })
+                            state.sequence(|state| {
+                                COMMENT(state).and_then(|state| {
+                                    state.repeat(|state| {
+                                        WHITESPACE(state)
                                     })
                                 })
                             })
                         })
                     })
-                } else {
-                    Ok(state)
-                }
+                })
+            } else {
+                Ok(state)
             }
-        }
+        )
     }
 }
 
@@ -882,7 +856,7 @@ mod tests {
                 expr: OptimizedExpr::Str("b".to_owned())
             },
         ];
-        let defaults = vec!["any"];
+        let defaults = vec!["ANY"];
 
         assert_eq!(
             generate(name, &generics, rules, defaults),
@@ -905,19 +879,19 @@ mod tests {
                         use super::Rule;
 
                             #[inline]
-                            #[allow(unused_variables)]
+                            #[allow(non_snake_case, unused_variables)]
                             pub fn a(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 state.match_string("b")
                             }
 
                             #[inline]
-                            #[allow(dead_code)]
-                            fn any(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                            #[allow(dead_code, non_snake_case, unused_variables)]
+                            fn ANY(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 state.skip(1)
                             }
 
                             #[inline]
-                            #[allow(dead_code)]
+                            #[allow(dead_code, non_snake_case, unused_variables)]
                             fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                                 Ok(state)
                             }

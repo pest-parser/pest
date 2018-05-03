@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-json = { soi ~ (object | array) ~ eoi }
+json = { SOI ~ (object | array) ~ EOI }
 
 object = { "{" ~ pair ~ ("," ~ pair)* ~ "}" | "{" ~ "}" }
 pair   = { string ~ ":" ~ value }
@@ -17,17 +17,16 @@ array = { "[" ~ value ~ ("," ~ value)* ~ "]" | "[" ~ "]" }
 value = { string | number | object | array | bool | null }
 
 string  = @{ "\"" ~ inner ~ "\"" }
-inner   = @{ (!("\"" | "\\") ~ any)* ~ (escape ~ inner)? }
+inner   = @{ (!("\"" | "\\") ~ ANY)* ~ (escape ~ inner)? }
 escape  = @{ "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | unicode) }
-unicode = @{ "u" ~ hex{4} }
-hex     = { '0'..'9' | 'a'..'f' | 'A'..'F' }
+unicode = @{ "u" ~ HEX_DIGIT{4} }
 
-number = @{ "-"? ~ int ~ ("." ~ '0'..'9'+ ~ exp? | exp)? }
-int    = @{ "0" | '1'..'9' ~ '0'..'9'* }
-exp    = @{ ("E" | "e") ~ ("+" | "-")? ~ '0'..'9'+ }
+number = @{ "-"? ~ int ~ ("." ~ DIGIT+ ~ exp? | exp)? }
+int    = @{ "0" | NONZERO_DIGIT ~ DIGIT* }
+exp    = @{ ("E" | "e") ~ ("+" | "-")? ~ DIGIT+ }
 
 bool = { "true" | "false" }
 
 null = { "null" }
 
-whitespace = _{ " " | "\t" | "\r" | "\n" }
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

@@ -71,22 +71,33 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     rust_keywords.insert("yield");
 
     let mut pest_keywords = HashSet::new();
-    pest_keywords.insert("any");
-    pest_keywords.insert("drop");
-    pest_keywords.insert("eoi");
-    pest_keywords.insert("peek");
-    pest_keywords.insert("pop");
-    pest_keywords.insert("push");
+    pest_keywords.insert("ANY");
+    pest_keywords.insert("DROP");
+    pest_keywords.insert("EOI");
+    pest_keywords.insert("PEEK");
+    pest_keywords.insert("POP");
+    pest_keywords.insert("PUSH");
     pest_keywords.insert("skip");
-    pest_keywords.insert("soi");
+    pest_keywords.insert("SOI");
 
-    let mut predefined = HashSet::new();
-    predefined.insert("any");
-    predefined.insert("drop");
-    predefined.insert("eoi");
-    predefined.insert("peek");
-    predefined.insert("pop");
-    predefined.insert("soi");
+    let mut builtins = HashSet::new();
+    builtins.insert("ANY");
+    builtins.insert("DROP");
+    builtins.insert("EOI");
+    builtins.insert("PEEK");
+    builtins.insert("POP");
+    builtins.insert("SOI");
+    builtins.insert("DIGIT");
+    builtins.insert("NONZERO_DIGIT");
+    builtins.insert("BIN_DIGIT");
+    builtins.insert("OCT_DIGIT");
+    builtins.insert("HEX_DIGIT");
+    builtins.insert("ALPHA_LOWER");
+    builtins.insert("ALPHA_UPPER");
+    builtins.insert("ALPHA");
+    builtins.insert("ALPHANUMERIC");
+    builtins.insert("ASCII");
+    builtins.insert("NEWLINE");
 
     let definitions: Vec<_> = pairs
         .clone()
@@ -110,7 +121,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     errors.extend(validate_rust_keywords(&definitions, &rust_keywords));
     errors.extend(validate_pest_keywords(&definitions, &pest_keywords));
     errors.extend(validate_already_defined(&definitions));
-    errors.extend(validate_undefined(&definitions, &called_rules, &predefined));
+    errors.extend(validate_undefined(&definitions, &called_rules, &builtins));
 
     if errors.len() > 0 {
         return Err(errors);
@@ -187,7 +198,7 @@ pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<'i
 pub fn validate_undefined<'i>(
     definitions: &Vec<Span<'i>>,
     called_rules: &Vec<Span<'i>>,
-    predefined: &HashSet<&str>
+    builtins: &HashSet<&str>
 ) -> Vec<Error<'i, Rule>> {
     let mut errors = vec![];
     let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
@@ -195,7 +206,7 @@ pub fn validate_undefined<'i>(
     for rule in called_rules {
         let name = rule.as_str();
 
-        if !definitions.contains(name) && !predefined.contains(name) {
+        if !definitions.contains(name) && !builtins.contains(name) {
             errors.push(Error::CustomErrorSpan {
                 message: format!("rule {} is undefined", name),
                 span: rule.clone()
@@ -475,12 +486,12 @@ mod tests {
 
  --> 1:1
   |
-1 | any = { \"a\" }
+1 | ANY = { \"a\" }
   | ^-^
   |
-  = any is a pest keyword")]
+  = ANY is a pest keyword")]
     fn pest_keyword() {
-        let input = "any = { \"a\" }";
+        let input = "ANY = { \"a\" }";
         unwrap_or_report(validate_pairs(
             PestParser::parse(Rule::grammar_rules, input).unwrap()
         ));

@@ -92,7 +92,7 @@
 //!     a =  { "a" }
 //!     b = @{ a ~ "b" }
 //!
-//!     whitespace = _{ " " }
+//!     WHITESPACE = _{ " " }
 //!     ```
 //!
 //!     Parsing `"ab"` produces the token pair `b()`, while `"a   b"` produces an error.
@@ -106,7 +106,7 @@
 //!     a =  { "a" }
 //!     b = ${ a ~ "b" }
 //!
-//!     whitespace = _{ " " }
+//!     WHITESPACE = _{ " " }
 //!     ```
 //!
 //!     Parsing `"ab"` produces the token pairs `b(a())`, while `"a   b"` produces an error.
@@ -121,7 +121,7 @@
 //!     b = !{ a ~ "b" }
 //!     c = @{ b }
 //!
-//!     whitespace = _{ " " }
+//!     WHITESPACE = _{ " " }
 //!     ```
 //!
 //!     Parsing both `"ab"` and `"a   b"` produce the token pairs `c(a())`.
@@ -160,7 +160,7 @@
 //!     | `e?`                  | optionally matches `e`                                     |
 //!     | `&e`                  | matches `e` without making progress                        |
 //!     | `!e`                  | matches if `e` doesn't match without making progress       |
-//!     | `push(e)`             | matches `e` and pushes it's captured string down the stack |
+//!     | `PUSH(e)`             | matches `e` and pushes it's captured string down the stack |
 //!
 //!     where `e`, `e1`, and `e2` are expressions.
 //!
@@ -175,19 +175,19 @@
 //!
 //! Special rules can be called within the grammar. They are:
 //!
-//! * `whitespace` - gets run between rules and sub-rules
-//! * `comment` - gets run between rules and sub-rules
-//! * `any` - matches exactly one `char`
-//! * `soi` - (start-of-input) matches only when a `Parser` is still at the starting position
-//! * `eoi` - (end-of-input) matches only when a `Parser` has reached its end
-//! * `pop` - pops a string from the stack and matches it
-//! * `peek` - peeks a string from the stack and matches it
-//! * `drop` - drops the top of the stack (fails to match if the stack is empty)
+//! * `WHITESPACE` - runs between rules and sub-rules
+//! * `COMMENT` - runs between rules and sub-rules
+//! * `ANY` - matches exactly one `char`
+//! * `SOI` - (start-of-input) matches only when a `Parser` is still at the starting position
+//! * `EOI` - (end-of-input) matches only when a `Parser` has reached its end
+//! * `POP` - pops a string from the stack and matches it
+//! * `PEEK` - peeks a string from the stack and matches it
+//! * `DROP` - drops the top of the stack (fails to match if the stack is empty)
 //!
-//! `whitespace` and `comment` should be defined manually if needed. All other rules cannot be
+//! `WHITESPACE` and `COMMENT` should be defined manually if needed. All other rules cannot be
 //! overridden.
 //!
-//! ## `whitespace` and `comment`
+//! ## `WHITESPACE` and `COMMENT`
 //!
 //! When defined, these rules get matched automatically in sequences (`~`) and repetitions
 //! (`*`, `+`) between expressions. Atomic rules and those rules called by atomic rules are exempt
@@ -196,7 +196,7 @@
 //! These rules should be defined so as to match one whitespace character and one comment only since
 //! they are run in repetitions.
 //!
-//! If both `whitespace` and `comment` are defined, this grammar:
+//! If both `WHITESPACE` and `COMMENT` are defined, this grammar:
 //!
 //! ```ignore
 //! a = { b ~ c }
@@ -205,19 +205,19 @@
 //! is effectively transformed into this one behind the scenes:
 //!
 //! ```ignore
-//! a = { b ~ whitespace* ~ (comment ~ whitespace*)* ~ c }
+//! a = { b ~ WHITESPACE* ~ (COMMENT ~ WHITESPACE*)* ~ c }
 //! ```
 //!
-//! ## `push`, `pop`, `drop`, and `peek`
+//! ## `PUSH`, `POP`, `DROP`, and `PEEK`
 //!
-//! `push(e)` simply pushes the captured string of the expression `e` down a stack. This stack can
-//! then later be used to match grammar based on its content with `pop` and `peek`.
+//! `PUSH(e)` simply pushes the captured string of the expression `e` down a stack. This stack can
+//! then later be used to match grammar based on its content with `POP` and `PEEK`.
 //!
-//! `peek` always matches the string at the top of stack. So, if the stack contains `["a", "b"]`,
+//! `PEEK` always matches the string at the top of stack. So, if the stack contains `["a", "b"]`,
 //! the this grammar:
 //!
 //! ```ignore
-//! a = { peek }
+//! a = { PEEK }
 //! ```
 //!
 //! is effectively transformed into at parse time:
@@ -226,18 +226,34 @@
 //! a = { "a" }
 //! ```
 //!
-//! `pop` works the same way with the exception that it pops the string off of the stack if the
-//! the match worked. With the stack from above, if `pop` matches `"a"`, the stack will be mutated
+//! `POP` works the same way with the exception that it pops the string off of the stack if the
+//! the match worked. With the stack from above, if `POP` matches `"a"`, the stack will be mutated
 //! to `["b"]`.
 //!
-//! `drop` makes it possible to remove the string at the top of the stack
-//! without matching it. If the stack is nonempty, `drop` drops the top of the
-//! stack. If the stack is empty, then `drop` fails to match.
+//! `DROP` makes it possible to remove the string at the top of the stack
+//! without matching it. If the stack is nonempty, `DROP` drops the top of the
+//! stack. If the stack is empty, then `DROP` fails to match.
 //!
 //! ## `Rule`
 //!
 //! All rules defined or used in the grammar populate a generated `enum` called `Rule`. This
 //! implements `pest`'s `RuleType` and can be used throughout the API.
+//!
+//! ## `Built-in rules`
+//!
+//! Pest also comes with a number of built-in rules for convenience. They are:
+//!
+//! * `DIGIT` - matches a numeric character from 0..9
+//! * `NONZERO_DIGIT` - matches a numeric character from 1..9
+//! * `BIN_DIGIT` - matches a numeric character from 0..1
+//! * `OCT_DIGIT` - matches a numeric character from 0..7
+//! * `HEX_DIGIT` - matches a numeric character from 0..9 or a..f or A..F
+//! * `ALPHA_LOWER` - matches a character from a..z
+//! * `ALPHA_UPPER` - matches a character from A..Z
+//! * `ALPHA` - matches a character from a..z or A..Z
+//! * `ALPHANUMERIC` - matches a character from a..z or A..Z or 0..9
+//! * `ASCII` - matches a character from \x00..\x7f
+//! * `NEWLINE` - matches either "\n" or "\r\n" or "\r"
 
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
 #![recursion_limit = "256"]
@@ -258,6 +274,8 @@ use std::path::Path;
 use proc_macro::TokenStream;
 use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 
+#[macro_use]
+mod macros;
 mod generator;
 
 use pest_meta::{optimizer, unwrap_or_report, validator};
@@ -287,7 +305,7 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
             file_name,
             error.renamed_rules(|rule| match *rule {
                 Rule::grammar_rule => "rule".to_owned(),
-                Rule::_push => "push".to_owned(),
+                Rule::_push => "PUSH".to_owned(),
                 Rule::assignment_operator => "`=`".to_owned(),
                 Rule::silent_modifier => "`_`".to_owned(),
                 Rule::atomic_modifier => "`@`".to_owned(),

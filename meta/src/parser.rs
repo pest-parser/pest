@@ -779,7 +779,7 @@ mod tests {
     fn push() {
         parses_to! {
             parser: PestParser,
-            input: "push ( a )",
+            input: "PUSH ( a )",
             rule: Rule::_push,
             tokens: [
                 _push(0, 10, [
@@ -1132,7 +1132,7 @@ mod tests {
     #[test]
     fn ast() {
         let input =
-            "rule = _{ a{1} ~ \"a\"{3,} ~ b{, 2} ~ \"b\"{1, 2} | !(^\"c\" | push('d'..'e'))?* }";
+            "rule = _{ a{1} ~ \"a\"{3,} ~ b{, 2} ~ \"b\"{1, 2} | !(^\"c\" | PUSH('d'..'e'))?* }";
 
         let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs).unwrap();

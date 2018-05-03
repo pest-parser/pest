@@ -66,9 +66,9 @@ number = @{ '0'..'9'+ }
 
 comma = { "," }
 
-_push = { "push" ~ opening_paren ~ expression ~ closing_paren }
+_push = { "PUSH" ~ opening_paren ~ expression ~ closing_paren }
 
-identifier = @{ !"push" ~ ("_" | alpha) ~ ("_" | alpha_num)* }
+identifier = @{ !"PUSH" ~ ("_" | alpha) ~ ("_" | alpha_num)* }
 alpha      = _{ 'a'..'z' | 'A'..'Z' }
 alpha_num  = _{ alpha | '0'..'9' }
 
