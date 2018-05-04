@@ -10,7 +10,8 @@
 #[macro_use]
 extern crate pest;
 
-use pest::{state, Error, ParseResult, Parser, ParserState};
+use pest::{state, ParseResult, Parser, ParserState};
+use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 

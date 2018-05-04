@@ -2,7 +2,8 @@ extern crate pest;
 
 use std::io::{self, Write};
 
-use pest::{state, Error, ParseResult, Parser, ParserState};
+use pest::{state, ParseResult, Parser, ParserState};
+use pest::error::Error;
 use pest::iterators::Pairs;
 
 #[allow(dead_code, non_camel_case_types)]

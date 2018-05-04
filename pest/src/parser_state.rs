@@ -11,7 +11,7 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use RuleType;
-use error::Error;
+use error::{Error, ErrorVariant};
 use iterators::{pairs, QueueableToken};
 use position::{self, Position};
 use span::Span;
@@ -58,7 +58,7 @@ pub struct ParserState<'i, R: RuleType> {
 /// let input = "";
 /// pest::state::<(), _>(input, |s| Ok(s)).unwrap();
 /// ```
-pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<'i, R>>
+pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<R>>
 where
     F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>
 {
@@ -75,12 +75,13 @@ where
             state.neg_attempts.sort();
             state.neg_attempts.dedup();
 
-            Err(Error::ParsingError {
-                positives: state.pos_attempts.clone(),
-                negatives: state.neg_attempts.clone(),
-                // All attempted positions were legal.
-                pos: unsafe { position::new(input.as_bytes(), state.attempt_pos) }
-            })
+            Err(Error::new_from_pos(
+                ErrorVariant::ParsingError {
+                    positives: state.pos_attempts.clone(),
+                    negatives: state.neg_attempts.clone()
+                },
+                unsafe { position::new(input.as_bytes(), state.attempt_pos) }
+            ))
         }
     }
 }

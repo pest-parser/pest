@@ -44,7 +44,7 @@ pub fn generate(
                 input: &'i str
             ) -> ::std::result::Result<
                 ::pest::iterators::Pairs<'i, Rule>,
-                ::pest::Error<'i, Rule>
+                ::pest::error::Error<Rule>
             > {
                 mod rules {
                     use super::Rule;
@@ -873,7 +873,7 @@ mod tests {
                     input: &'i str
                 ) -> ::std::result::Result<
                     ::pest::iterators::Pairs<'i, Rule>,
-                    ::pest::Error<'i, Rule>
+                    ::pest::error::Error<Rule>
                 > {
                     mod rules {
                         use super::Rule;
