@@ -858,23 +858,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap().position().pos(), 2);
     /// ```
     #[inline]
-    pub fn stack_pop(self: Box<Self>) -> ParseResult<Box<Self>> {
-        let result_state = {
-            let string = self.stack
-                .peek()
-                .expect("pop was called on empty stack")
-                .as_str();
-
-            self.match_string(string)
-        };
-
-        match result_state {
-            Ok(mut state) => {
-                state.stack.pop();
-                Ok(state)
-            }
-            Err(state) => Err(state)
-        }
+    pub fn stack_pop(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+        let string = self.stack
+            .pop()
+            .expect("pop was called on empty stack")
+            .as_str();
+        self.match_string(string)
     }
 
     /// Drops the top of the stack and returns `Ok(Box<ParserState>)` if there was a value to
