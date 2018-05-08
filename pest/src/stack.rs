@@ -56,7 +56,9 @@ impl<T: Clone> Stack<T> {
 
     /// Dump the full state of the stack
     pub fn get_state(&self) -> Vec<T> {
-        self.cache.clone()
+        let mut stack = self.cache.clone();
+        stack.reverse();
+        stack
     }
 
     /// Takes a snapshot of the current `Stack`.
@@ -125,7 +127,7 @@ mod test {
         stack.push(1);
         stack.push(2);
 
-        assert_eq!(stack.get_state(), vec![0, 1, 2])
+        assert_eq!(stack.get_state(), vec![2, 1, 0])
     }
 
     #[test]

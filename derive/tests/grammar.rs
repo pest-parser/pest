@@ -679,6 +679,21 @@ fn peek() {
 }
 
 #[test]
+fn peek_all() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "0110",
+        rule: Rule::peek_all,
+        tokens: [
+            peek_all(0, 4, [
+                range(0, 1),
+                range(1, 2)
+            ])
+        ]
+    };
+}
+
+#[test]
 fn pop() {
     parses_to! {
         parser: GrammarParser,
@@ -686,6 +701,21 @@ fn pop() {
         rule: Rule::pop_,
         tokens: [
             pop_(0, 4, [
+                range(0, 1),
+                range(1, 2)
+            ])
+        ]
+    };
+}
+
+#[test]
+fn pop_all() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "0110",
+        rule: Rule::pop_all,
+        tokens: [
+            pop_all(0, 4, [
                 range(0, 1),
                 range(1, 2)
             ])
