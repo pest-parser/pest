@@ -866,6 +866,61 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         self.match_string(string)
     }
 
+    /// Matches the full state of the stack.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "aaaa";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(|state| {
+    ///     state.stack_push( |state| state.match_string("a"))
+    /// }).and_then(|state| state.stack_match_peek());
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 4);
+    /// ```
+    #[inline]
+    pub fn stack_match_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
+        let spans = self.stack.get_state();
+        let string = spans.iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<&str>>()
+            .join("");
+        self.match_string(&string)
+    }
+
+    /// Matches the full state of the stack. This method will clear the stack as it evaluates.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "aaaa";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(|state| {
+    ///     state.stack_push( |state| state.match_string("a"))
+    /// }).and_then(|state| state.stack_match_peek());
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 4);
+    /// ```
+    #[inline]
+    pub fn stack_match_pop(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+        let mut strings = Vec::new();
+        while self.stack.peek().is_some() {
+            strings.push(self.stack.pop().unwrap().as_str())
+        }
+        self.match_string(&strings.join(""))
+    }
+
     /// Drops the top of the stack and returns `Ok(Box<ParserState>)` if there was a value to
     /// drop. Otherwise, it returns `Err(Box<ParserState>)`.
     ///

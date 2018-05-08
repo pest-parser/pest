@@ -54,6 +54,11 @@ impl<T: Clone> Stack<T> {
         popped
     }
 
+    /// Dump the full state of the stack
+    pub fn get_state(&self) -> Vec<T> {
+        self.cache.clone()
+    }
+
     /// Takes a snapshot of the current `Stack`.
     pub fn snapshot(&mut self) {
         let ops_index = self.ops.len();
@@ -110,6 +115,17 @@ mod test {
         stack.push(0);
         stack.restore();
         assert!(stack.is_empty());
+    }
+
+    #[test]
+    fn get_state() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+        stack.push(1);
+        stack.push(2);
+
+        assert_eq!(stack.get_state(), vec![0, 1, 2])
     }
 
     #[test]
