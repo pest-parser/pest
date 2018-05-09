@@ -886,8 +886,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn stack_match_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
-        let spans = self.stack.get_state();
-        let string = spans.iter()
+        let string = self.stack.iter()
             .map(|s| s.as_str())
             .collect::<Vec<&str>>()
             .join("");

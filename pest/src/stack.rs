@@ -6,6 +6,8 @@
 // license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
+use std::iter::Rev;
+use std::slice::Iter;
 
 /// Implementation of a `Stack` which maintains an log of `StackOp`s in order to rewind the stack
 /// to a previous state.
@@ -54,11 +56,9 @@ impl<T: Clone> Stack<T> {
         popped
     }
 
-    /// Dump the full state of the stack
-    pub fn get_state(&self) -> Vec<T> {
-        let mut stack = self.cache.clone();
-        stack.reverse();
-        stack
+    /// Returns an iterator to the current state of the cache in fifo order.
+    pub fn iter(&self) -> Rev<Iter<T>> {
+        self.cache.iter().rev()
     }
 
     /// Takes a snapshot of the current `Stack`.
@@ -120,14 +120,14 @@ mod test {
     }
 
     #[test]
-    fn get_state() {
+    fn iter() {
         let mut stack = Stack::new();
 
         stack.push(0);
         stack.push(1);
         stack.push(2);
 
-        assert_eq!(stack.get_state(), vec![2, 1, 0])
+        assert_eq!(stack.iter().collect::<Vec<&i32>>(), vec![&2, &1, &0])
     }
 
     #[test]
