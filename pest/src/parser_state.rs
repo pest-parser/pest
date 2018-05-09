@@ -785,7 +785,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "ab";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push( |state| state.match_string("a"));
+    /// let mut result = state.stack_push(|state| state.match_string("a"));
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().pos(), 1);
     /// ```
@@ -822,7 +822,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "aa";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(
+    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(
     ///     |state| state.stack_peek()
     /// );
     /// assert!(result.is_ok());
@@ -851,7 +851,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "aa";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(
+    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(
     ///     |state| state.stack_pop()
     /// );
     /// assert!(result.is_ok());
@@ -878,8 +878,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "aaaa";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(|state| {
-    ///     state.stack_push( |state| state.match_string("a"))
+    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(|state| {
+    ///     state.stack_push(|state| state.match_string("a"))
     /// }).and_then(|state| state.stack_match_peek());
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().pos(), 4);
@@ -906,8 +906,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "aaaa";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(|state| {
-    ///     state.stack_push( |state| state.match_string("a"))
+    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(|state| {
+    ///     state.stack_push(|state| state.match_string("a"))
     /// }).and_then(|state| state.stack_match_peek());
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().pos(), 4);
@@ -934,7 +934,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "aa";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(
+    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(
     ///     |state| state.stack_drop()
     /// );
     /// assert!(result.is_ok());
