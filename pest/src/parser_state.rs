@@ -889,7 +889,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         let string = self.stack.iter()
             .map(|s| s.as_str())
             .collect::<Vec<&str>>()
-            .join("");
+            .concat();
         self.match_string(&string)
     }
 
@@ -917,7 +917,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         while self.stack.peek().is_some() {
             strings.push(self.stack.pop().unwrap().as_str())
         }
-        self.match_string(&strings.join(""))
+        self.match_string(&strings.concat())
     }
 
     /// Drops the top of the stack and returns `Ok(Box<ParserState>)` if there was a value to
