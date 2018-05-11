@@ -75,7 +75,9 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     pest_keywords.insert("DROP");
     pest_keywords.insert("EOI");
     pest_keywords.insert("PEEK");
+    pest_keywords.insert("PEEK_ALL");
     pest_keywords.insert("POP");
+    pest_keywords.insert("POP_ALL");
     pest_keywords.insert("PUSH");
     pest_keywords.insert("skip");
     pest_keywords.insert("SOI");
@@ -85,7 +87,9 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     builtins.insert("DROP");
     builtins.insert("EOI");
     builtins.insert("PEEK");
+    builtins.insert("PEEK_ALL");
     builtins.insert("POP");
+    builtins.insert("POP_ALL");
     builtins.insert("SOI");
     builtins.insert("DIGIT");
     builtins.insert("NONZERO_DIGIT");

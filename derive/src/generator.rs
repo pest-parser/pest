@@ -80,7 +80,9 @@ fn generate_builtin_rules() -> HashMap<&'static str, Tokens> {
     insert_builtin!(builtins, ANY, state.skip(1));
     insert_builtin!(builtins, SOI, state.start_of_input());
     insert_builtin!(builtins, PEEK, state.stack_peek());
+    insert_builtin!(builtins, PEEK_ALL, state.stack_match_peek());
     insert_builtin!(builtins, POP, state.stack_pop());
+    insert_builtin!(builtins, POP_ALL, state.stack_match_pop());
     insert_builtin!(builtins, DROP, state.stack_drop());
     insert_builtin!(builtins, DIGIT, state.match_range('0'..'9'));
     insert_builtin!(builtins, NONZERO_DIGIT, state.match_range('1'..'9'));

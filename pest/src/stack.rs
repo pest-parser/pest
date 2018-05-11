@@ -54,6 +54,11 @@ impl<T: Clone> Stack<T> {
         popped
     }
 
+    /// Returns an iterator to the current state of the cache in fifo order.
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.cache.iter().rev()
+    }
+
     /// Takes a snapshot of the current `Stack`.
     pub fn snapshot(&mut self) {
         let ops_index = self.ops.len();
@@ -110,6 +115,17 @@ mod test {
         stack.push(0);
         stack.restore();
         assert!(stack.is_empty());
+    }
+
+    #[test]
+    fn iter() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+        stack.push(1);
+        stack.push(2);
+
+        assert_eq!(stack.iter().collect::<Vec<&i32>>(), vec![&2, &1, &0]);
     }
 
     #[test]

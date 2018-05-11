@@ -785,7 +785,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "ab";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push( |state| state.match_string("a"));
+    /// let mut result = state.stack_push(|state| state.match_string("a"));
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().pos(), 1);
     /// ```
@@ -822,7 +822,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "aa";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(
+    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(
     ///     |state| state.stack_peek()
     /// );
     /// assert!(result.is_ok());
@@ -851,29 +851,89 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "aa";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(
+    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(
     ///     |state| state.stack_pop()
     /// );
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().pos(), 2);
     /// ```
     #[inline]
-    pub fn stack_pop(self: Box<Self>) -> ParseResult<Box<Self>> {
-        let result_state = {
-            let string = self.stack
-                .peek()
-                .expect("pop was called on empty stack")
-                .as_str();
+    pub fn stack_pop(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+        let string = self.stack
+            .pop()
+            .expect("pop was called on empty stack")
+            .as_str();
+        self.match_string(string)
+    }
 
-            self.match_string(string)
-        };
+    /// Matches the full state of the stack.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "aaaa";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(|state| {
+    ///     state.stack_push(|state| state.match_string("a"))
+    /// }).and_then(|state| state.stack_match_peek());
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 4);
+    /// ```
+    #[inline]
+    pub fn stack_match_peek(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+        let mut position = self.position.clone();
+        let result = self.stack.iter().all(|span| {
+            position.match_string(span.as_str())
+        });
 
-        match result_state {
-            Ok(mut state) => {
-                state.stack.pop();
-                Ok(state)
+        if result {
+            self.position = position;
+            Ok(self)
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Matches the full state of the stack. This method will clear the stack as it evaluates.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "aaaa";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(|state| {
+    ///     state.stack_push(|state| state.match_string("a"))
+    /// }).and_then(|state| state.stack_match_peek());
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 4);
+    /// ```
+    #[inline]
+    pub fn stack_match_pop(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+        let mut position = self.position.clone();
+        let mut result = true;
+        while self.stack.peek().is_some() {
+            let span = self.stack.pop().unwrap();
+            result = position.match_string(span.as_str());
+            if !result {
+                break;
             }
-            Err(state) => Err(state)
+        }
+
+        if result {
+            self.position = position;
+            Ok(self)
+        } else {
+            Err(self)
         }
     }
 
@@ -890,7 +950,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// let input = "aa";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push( |state| state.match_string("a")).and_then(
+    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(
     ///     |state| state.stack_drop()
     /// );
     /// assert!(result.is_ok());

@@ -181,7 +181,9 @@
 //! * `SOI` - (start-of-input) matches only when a `Parser` is still at the starting position
 //! * `EOI` - (end-of-input) matches only when a `Parser` has reached its end
 //! * `POP` - pops a string from the stack and matches it
+//! * `POP_ALL` - pops the entire state of the stack and matches it
 //! * `PEEK` - peeks a string from the stack and matches it
+//! * `PEEK_ALL` - peeks the entire state of the stack and matches it
 //! * `DROP` - drops the top of the stack (fails to match if the stack is empty)
 //!
 //! `WHITESPACE` and `COMMENT` should be defined manually if needed. All other rules cannot be

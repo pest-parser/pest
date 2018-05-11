@@ -36,7 +36,9 @@ repeat_max = { string{, 2} }
 repeat_max_atomic = @{ string{, 2} }
 repeat_mutate_stack = { (PUSH('a'..'c') ~ ",")* ~ POP ~ POP ~ POP }
 peek_ = { PUSH(range) ~ PUSH(range) ~ PEEK ~ PEEK }
+peek_all = { PUSH(range) ~ PUSH(range) ~ PEEK_ALL }
 pop_ = { PUSH(range) ~ PUSH(range) ~ POP ~ POP }
+pop_all = { PUSH(range) ~ PUSH(range) ~ POP_ALL }
 pop_fail = { PUSH(range) ~ !POP ~ range ~ POP }
 checkpoint_restore = ${ PUSH("") ~ (PUSH("a") ~ "b" ~ POP | POP ~ "a") ~ EOI }
 
