@@ -885,12 +885,19 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap().position().pos(), 4);
     /// ```
     #[inline]
-    pub fn stack_match_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
-        let string = self.stack.iter()
-            .map(|s| s.as_str())
-            .collect::<Vec<&str>>()
-            .concat();
-        self.match_string(&string)
+    pub fn stack_match_peek(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+        let mut position = self.position.clone();
+        let result = self.stack.iter().all(|span| {
+            position.match_string(span.as_str())
+        });
+
+        self.position = position;
+
+        if result {
+            Ok(self)
+        } else {
+            Err(self)
+        }
     }
 
     /// Matches the full state of the stack. This method will clear the stack as it evaluates.
@@ -913,11 +920,23 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn stack_match_pop(mut self: Box<Self>) -> ParseResult<Box<Self>> {
-        let mut strings = Vec::new();
+        let mut position = self.position.clone();
+        let mut result = true;
         while self.stack.peek().is_some() {
-            strings.push(self.stack.pop().unwrap().as_str())
+            let span = self.stack.pop().unwrap();
+            result = position.match_string(span.as_str());
+            if !result {
+                break;
+            }
         }
-        self.match_string(&strings.concat())
+
+        self.position = position;
+
+        if result {
+            Ok(self)
+        } else {
+            Err(self)
+        }
     }
 
     /// Drops the top of the stack and returns `Ok(Box<ParserState>)` if there was a value to
