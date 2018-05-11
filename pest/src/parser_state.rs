@@ -891,9 +891,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             position.match_string(span.as_str())
         });
 
-        self.position = position;
-
         if result {
+            self.position = position;
             Ok(self)
         } else {
             Err(self)
@@ -930,9 +929,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             }
         }
 
-        self.position = position;
-
         if result {
+            self.position = position;
             Ok(self)
         } else {
             Err(self)
