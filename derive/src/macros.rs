@@ -19,26 +19,64 @@ macro_rules! insert_public_builtin {
     };
 }
 
+#[cfg(not(feature = "no_std"))]
 macro_rules! generate_rule {
     ($name: ident, $pattern: expr) => {
         quote! {
             #[inline]
             #[allow(dead_code, non_snake_case, unused_variables)]
-            fn $name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+            fn $name(
+                state: Box<::pest::ParserState<Rule>>
+            ) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 $pattern
             }
         }
     }
 }
 
-macro_rules! generate_public_rule {
+#[cfg(feature = "no_std")]
+macro_rules! generate_rule {
     ($name: ident, $pattern: expr) => {
         quote! {
             #[inline]
             #[allow(dead_code, non_snake_case, unused_variables)]
-            pub fn $name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+            fn $name(
+                state: alloc::boxed::Box<::pest::ParserState<Rule>>
+            ) -> ::pest::ParseResult<alloc::boxed::Box<::pest::ParserState<Rule>>> {
                 $pattern
             }
         }
     }
 }
+
+
+#[cfg(not(feature = "no_std"))]
+macro_rules! generate_public_rule {
+    ($name: ident, $pattern: expr) => {
+        quote! {
+            #[inline]
+            #[allow(dead_code, non_snake_case, unused_variables)]
+            pub fn $name(
+                state: Box<::pest::ParserState<Rule>>
+            )  -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                $pattern
+            }
+        }
+    }
+}
+
+#[cfg(feature = "no_std")]
+macro_rules! generate_public_rule {
+    ($name: ident, $pattern: expr) => {
+        quote! {
+            #[inline]
+            #[allow(dead_code, non_snake_case, unused_variables)]
+            pub fn $name(
+                state: alloc::boxed::Box<::pest::ParserState<Rule>>
+            )  -> ::pest::ParseResult<alloc::boxed::Box<::pest::ParserState<Rule>>> {
+                $pattern
+            }
+        }
+    }
+}
+

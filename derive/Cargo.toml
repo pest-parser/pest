@@ -24,3 +24,6 @@ syn = "^0.13"
 codecov = { repository = "pest-parser/pest" }
 maintenance = { status = "actively-developed" }
 travis-ci = { repository = "pest-parser/pest" }
+
+[features]
+no_std = []

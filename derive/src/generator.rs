@@ -37,12 +37,18 @@ pub fn generate(
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
+    #[cfg(feature = "no_std")]
+    let result = quote! { ::core::result::Result };
+
+    #[cfg(not(feature = "no_std"))]
+    let result = quote! { ::std::result::Result };
+
     let parser_impl = quote! {
         impl #impl_generics ::pest::Parser<Rule> for #name #ty_generics #where_clause {
             fn parse<'i>(
                 rule: Rule,
                 input: &'i str
-            ) -> ::std::result::Result<
+            ) -> #result<
                 ::pest::iterators::Pairs<'i, Rule>,
                 ::pest::error::Error<Rule>
             > {
@@ -184,11 +190,17 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         }
     };
 
+    #[cfg(not(feature = "no_std"))]
+    let box_ty = quote! { Box };
+
+    #[cfg(feature = "no_std")]
+    let box_ty = quote! { ::alloc::boxed::Box };
+
     match rule.ty {
         RuleType::Normal => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
                 state.rule(Rule::#name, |state| {
                     #expr
                 })
@@ -197,14 +209,14 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         RuleType::Silent => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
                 #expr
             }
         },
         RuleType::Atomic => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
                 state.rule(Rule::#name, |state| {
                     state.atomic(::pest::Atomicity::Atomic, |state| {
                         #expr
@@ -215,7 +227,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         RuleType::CompoundAtomic => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
                 state.atomic(::pest::Atomicity::CompoundAtomic, |state| {
                     state.rule(Rule::#name, |state| {
                         #expr
@@ -226,7 +238,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
         RuleType::NonAtomic => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
                 state.atomic(::pest::Atomicity::NonAtomic, |state| {
                     state.rule(Rule::#name, |state| {
                         #expr
@@ -860,6 +872,12 @@ mod tests {
         ];
         let defaults = vec!["ANY"];
 
+        #[cfg(feature = "no_std")]
+        let result = quote! { ::core::result::Result };
+
+        #[cfg(not(feature = "no_std"))]
+        let result = quote! { ::std::result::Result };
+
         assert_eq!(
             generate(name, &generics, rules, defaults),
             quote! {
@@ -873,7 +891,7 @@ mod tests {
                 fn parse<'i>(
                     rule: Rule,
                     input: &'i str
-                ) -> ::std::result::Result<
+                ) -> #result<
                     ::pest::iterators::Pairs<'i, Rule>,
                     ::pest::error::Error<Rule>
                 > {
