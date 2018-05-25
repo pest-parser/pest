@@ -13,6 +13,8 @@ use std::cmp;
 use std::error;
 use std::fmt;
 use std::mem;
+#[cfg(feature = "no_std")]
+use alloc::{String, borrow::ToOwned, vec::Vec, slice::SliceConcatExt};
 
 use RuleType;
 use position::Position;

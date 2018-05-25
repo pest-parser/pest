@@ -12,6 +12,8 @@ use std::hash::{Hash, Hasher};
 use std::ptr;
 use std::rc::Rc;
 use std::str;
+#[cfg(feature = "no_std")]
+use alloc::{vec::Vec, slice::SliceConcatExt};
 
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;

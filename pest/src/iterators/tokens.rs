@@ -9,6 +9,8 @@
 
 use std::fmt;
 use std::rc::Rc;
+#[cfg(feature = "no_std")]
+use alloc::vec::Vec;
 
 use super::queueable_token::QueueableToken;
 use RuleType;

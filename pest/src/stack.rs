@@ -7,6 +7,9 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+#[cfg(feature = "no_std")]
+use alloc::vec::Vec;
+
 /// Implementation of a `Stack` which maintains an log of `StackOp`s in order to rewind the stack
 /// to a previous state.
 #[derive(Debug)]
