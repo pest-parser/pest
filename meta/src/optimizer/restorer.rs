@@ -65,7 +65,7 @@ fn child_modifies_state(
 ) -> bool {
     expr.iter_top_down().any(|expr| match expr {
         OptimizedExpr::Push(_) => true,
-        OptimizedExpr::Ident(ref s) if s == "pop" => true,
+        OptimizedExpr::Ident(ref s) if s == "POP" => true,
         OptimizedExpr::Ident(ref name) => {
             let mut map = rules_to_exprs.clone();
             match map.remove(name) {
