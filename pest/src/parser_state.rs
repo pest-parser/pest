@@ -9,6 +9,8 @@
 
 use std::ops::Range;
 use std::rc::Rc;
+#[cfg(feature = "no_std")]
+use alloc::{boxed::Box, vec::Vec};
 
 use RuleType;
 use error::{Error, ErrorVariant};

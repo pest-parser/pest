@@ -56,6 +56,34 @@
 
 #![doc(html_root_url = "https://docs.rs/pest")]
 
+#![cfg_attr(feature = "no_std", no_std)]
+#![cfg_attr(feature = "no_std", feature(alloc))]
+#![cfg_attr(feature = "no_std", feature(slice_concat_ext))]
+
+#![cfg(feature = "no_std")]
+#[cfg_attr(feature = "no_std", macro_use)]
+extern crate alloc;
+
+#[cfg(feature = "no_std")]
+mod std {
+    pub use alloc::*;
+    pub use core::*;
+    pub use core::{fmt, str};
+
+    /// Cheap-ish knockoff of std::erorr. Just does what we need it to, nothing more.
+    pub mod error {
+        pub trait Error {
+            fn description(&self) -> &str;
+        }
+    }
+
+    pub mod collections {
+        pub use alloc::*;
+    }
+}
+
+
+
 pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, ParseResult, ParserState};
 pub use position::Position;

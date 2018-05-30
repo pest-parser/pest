@@ -11,6 +11,8 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ptr;
 use std::rc::Rc;
+#[cfg(feature = "no_std")]
+use alloc::{vec::Vec, slice::SliceConcatExt};
 
 use super::flat_pairs::{self, FlatPairs};
 use super::pair::{self, Pair};
