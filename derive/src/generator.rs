@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use quote::Tokens;
+use proc_macro2::{Span, TokenStream};
 use syn::{Generics, Ident};
 
 use pest_meta::ast::*;
@@ -20,7 +20,7 @@ pub fn generate(
     generics: &Generics,
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>
-) -> Tokens {
+) -> TokenStream {
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
 
     let builtins = generate_builtin_rules();
@@ -69,7 +69,7 @@ pub fn generate(
 }
 
 // Note: All builtin rules should be validated as pest keywords in meta/src/validator.rs.
-fn generate_builtin_rules() -> HashMap<&'static str, Tokens> {
+fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     let mut builtins = HashMap::new();
 
     insert_public_builtin!(
@@ -122,8 +122,8 @@ fn generate_builtin_rules() -> HashMap<&'static str, Tokens> {
     builtins
 }
 
-fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
-    let rules = rules.iter().map(|rule| Ident::from(rule.name.as_str()));
+fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> TokenStream {
+    let rules = rules.iter().map(|rule| Ident::new(rule.name.as_str(), Span::call_site()));
     if uses_eoi {
         quote! {
             #[allow(dead_code, non_camel_case_types)]
@@ -144,11 +144,11 @@ fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
     }
 }
 
-fn generate_patterns(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
-    let mut rules: Vec<Tokens> = rules
+fn generate_patterns(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> TokenStream {
+    let mut rules: Vec<TokenStream> = rules
         .iter()
         .map(|rule| {
-            let rule = Ident::from(rule.name.as_str());
+            let rule = Ident::new(rule.name.as_str(), Span::call_site());
             quote! {
                 Rule::#rule => rules::#rule(state)
             }
@@ -166,8 +166,8 @@ fn generate_patterns(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> Tokens {
     }
 }
 
-fn generate_rule(rule: OptimizedRule) -> Tokens {
-    let name = Ident::from(rule.name);
+fn generate_rule(rule: OptimizedRule) -> TokenStream {
+    let name = Ident::new(&rule.name, Span::call_site());
     let expr = if { rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic } {
         generate_expr_atomic(rule.expr)
     } else {
@@ -237,7 +237,7 @@ fn generate_rule(rule: OptimizedRule) -> Tokens {
     }
 }
 
-fn generate_skip(rules: &Vec<OptimizedRule>) -> Tokens {
+fn generate_skip(rules: &Vec<OptimizedRule>) -> TokenStream {
     let whitespace = rules.iter().any(|rule| rule.name == "WHITESPACE");
     let comment = rules.iter().any(|rule| rule.name == "COMMENT");
 
@@ -288,7 +288,7 @@ fn generate_skip(rules: &Vec<OptimizedRule>) -> Tokens {
     }
 }
 
-fn generate_expr(expr: OptimizedExpr) -> Tokens {
+fn generate_expr(expr: OptimizedExpr) -> TokenStream {
     match expr {
         OptimizedExpr::Str(string) => {
             quote! {
@@ -309,7 +309,7 @@ fn generate_expr(expr: OptimizedExpr) -> Tokens {
             }
         }
         OptimizedExpr::Ident(ident) => {
-            let ident = Ident::from(ident);
+            let ident = Ident::new(&ident, Span::call_site());
             quote! { self::#ident(state) }
         }
         OptimizedExpr::PosPred(expr) => {
@@ -428,7 +428,7 @@ fn generate_expr(expr: OptimizedExpr) -> Tokens {
     }
 }
 
-fn generate_expr_atomic(expr: OptimizedExpr) -> Tokens {
+fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
     match expr {
         OptimizedExpr::Str(string) => {
             quote! {
@@ -449,7 +449,7 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> Tokens {
             }
         }
         OptimizedExpr::Ident(ident) => {
-            let ident = Ident::from(ident);
+            let ident = Ident::new(&ident, Span::call_site());
             quote! { self::#ident(state) }
         }
         OptimizedExpr::PosPred(expr) => {
@@ -569,14 +569,14 @@ mod tests {
         ];
 
         assert_eq!(
-            generate_enum(&rules, false),
+            generate_enum(&rules, false).to_string(),
             quote! {
                 #[allow(dead_code, non_camel_case_types)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
                     f
                 }
-            }
+            }.to_string()
         );
     }
 
@@ -594,7 +594,7 @@ mod tests {
         );
 
         assert_eq!(
-            generate_expr(expr),
+            generate_expr(expr).to_string(),
             quote! {
                 state.sequence(|state| {
                     state.match_string("a").and_then(|state| {
@@ -611,7 +611,7 @@ mod tests {
                         state.match_string("d")
                     })
                 })
-            }
+            }.to_string()
         );
     }
 
@@ -629,7 +629,7 @@ mod tests {
         );
 
         assert_eq!(
-            generate_expr_atomic(expr),
+            generate_expr_atomic(expr).to_string(),
             quote! {
                 state.sequence(|state| {
                     state.match_string("a").and_then(|state| {
@@ -640,7 +640,7 @@ mod tests {
                         state.match_string("d")
                     })
                 })
-            }
+            }.to_string()
         );
     }
 
@@ -658,7 +658,7 @@ mod tests {
         );
 
         assert_eq!(
-            generate_expr(expr),
+            generate_expr(expr).to_string(),
             quote! {
                 state.match_string("a").or_else(|state| {
                     state.match_string("b")
@@ -667,7 +667,7 @@ mod tests {
                 }).or_else(|state| {
                     state.match_string("d")
                 })
-            }
+            }.to_string()
         );
     }
 
@@ -685,7 +685,7 @@ mod tests {
         );
 
         assert_eq!(
-            generate_expr_atomic(expr),
+            generate_expr_atomic(expr).to_string(),
             quote! {
                 state.match_string("a").or_else(|state| {
                     state.match_string("b")
@@ -694,7 +694,7 @@ mod tests {
                 }).or_else(|state| {
                     state.match_string("d")
                 })
-            }
+            }.to_string()
         );
     }
 
@@ -703,12 +703,12 @@ mod tests {
         let expr = OptimizedExpr::Skip(vec!["a".to_owned(), "b".to_owned()]);
 
         assert_eq!(
-            generate_expr_atomic(expr),
+            generate_expr_atomic(expr).to_string(),
             quote! {
                 let strings = ["a", "b"];
 
                 state.skip_until(&strings)
-            }
+            }.to_string()
         );
     }
 
@@ -754,7 +754,7 @@ mod tests {
             })
         };
         assert_eq!(
-            generate_expr(expr),
+            generate_expr(expr).to_string(),
             quote! {
                 self::a(state).or_else(|state| {
                     state.sequence(|state| {
@@ -794,7 +794,7 @@ mod tests {
                         })
                     })
                 })
-            }
+            }.to_string()
         );
     }
 
@@ -819,7 +819,7 @@ mod tests {
         );
 
         assert_eq!(
-            generate_expr_atomic(expr),
+            generate_expr_atomic(expr).to_string(),
             quote! {
                 self::a(state).or_else(|state| {
                     state.sequence(|state| {
@@ -843,13 +843,13 @@ mod tests {
                         })
                     })
                 })
-            }
+            }.to_string()
         );
     }
 
     #[test]
     fn generate_complete() {
-        let name = Ident::from("MyParser");
+        let name = Ident::new("MyParser", Span::call_site());
         let generics = Generics::default();
         let rules = vec![
             OptimizedRule {
@@ -861,7 +861,7 @@ mod tests {
         let defaults = vec!["ANY"];
 
         assert_eq!(
-            generate(name, &generics, rules, defaults),
+            generate(name, &generics, rules, defaults).to_string(),
             quote! {
                 #[allow(dead_code, non_camel_case_types)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -906,7 +906,7 @@ mod tests {
                         })
                     }
                 }
-            }
+            }.to_string()
         );
     }
 }
