@@ -10,6 +10,9 @@ categories = ["parsing"]
 license = "MIT/Apache-2.0"
 readme = "_README.md"
 
+[dependencies]
+regex = "1"
+
 [badges]
 codecov = { repository = "pest-parser/pest" }
 maintenance = { status = "actively-developed" }

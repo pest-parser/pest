@@ -35,7 +35,7 @@ non_atomic_modifier      = { "!" }
 expression =  { term ~ (infix_operator ~ term)* }
 term       =  { prefix_operator* ~ node ~ postfix_operator* }
 node       = _{ opening_paren ~ expression ~ closing_paren | terminal }
-terminal   = _{ _push | identifier | string | insensitive_string | range }
+terminal   = _{ _push | regex | identifier | string | insensitive_string | range }
 
 prefix_operator  = _{ positive_predicate_operator | negative_predicate_operator }
 infix_operator   = _{ sequence_operator | choice_operator }
@@ -76,6 +76,7 @@ string             = ${ quote ~ inner_str ~ quote }
 insensitive_string =  { "^" ~ string }
 range              =  { character ~ range_operator ~ character }
 character          = ${ single_quote ~ inner_chr ~ single_quote }
+regex              = ${ regex_head ~ inner_regex ~ regex_tail }
 
 inner_str = @{ (!("\"" | "\\") ~ any)* ~ (escape ~ inner_str)? }
 inner_chr = @{ escape | any }
@@ -83,6 +84,10 @@ escape    = @{ "\\" ~ ("\"" | "\\" | "r" | "n" | "t" | "0" | "'" | code | unicod
 code      = @{ "x" ~ hex_digit{2} }
 unicode   = @{ "u" ~ opening_brace ~ hex_digit{2, 6} ~ closing_brace }
 hex_digit = @{ '0'..'9' | 'a'..'f' | 'A'..'F' }
+
+regex_head  = @{ "r" ~ push("#"*) ~ "\"" }
+inner_regex = @{ (!("\"" ~ peek) ~ any)* }
+regex_tail  = @{ "\"" ~ pop }
 
 quote          = { "\"" }
 single_quote   = { "'" }

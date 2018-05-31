@@ -529,6 +529,14 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    pub fn match_regex(mut self: Box<Self>, regex: &::regex::Regex) -> ParseResult<Box<Self>> {
+        if self.position.match_regex(regex) {
+            Ok(self)
+        } else {
+            Err(self)
+        }
+    }
+
     /// Asks the `ParserState` to skip `n` `char`s. If the match is successful, this will return an
     /// `Ok` with the updated `Box<ParserState>`. If failed, an `Err` with the updated
     /// `Box<ParserState>` is returned.

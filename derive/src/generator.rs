@@ -22,8 +22,12 @@ pub fn generate(
     defaults: Vec<&str>
 ) -> TokenStream {
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
+    let uses_regex = rules.iter().any(|rule|
+        if let OptimizedExpr::Regex(_) = rule.expr { true } else { false }
+    );
 
     let builtins = generate_builtin_rules();
+    let regexes = generate_regexes(uses_regex);
     let rule_enum = generate_enum(&rules, uses_eoi);
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
@@ -64,7 +68,27 @@ pub fn generate(
 
     quote! {
         #rule_enum
+        #regexes
         #parser_impl
+    }
+}
+
+fn generate_regexes(uses_regex: bool) -> TokenStream {
+    if uses_regex {
+        let regexes = ::optimizer::REGEXES.read().unwrap();
+        let mut regexes: Vec<(&String, &u32)> = regexes.iter().collect();
+        regexes.sort_unstable_by_key(|pair| pair.1);
+        let regexes: Vec<&String> = regexes.iter().map(|pair| pair.0).collect();
+        let size = regexes.len();
+        quote! {
+            lazy_static! {
+                static ref REGEXES: [::regex::Regex; #size] = [
+                    #(::regex::Regex::new(#regexes).unwrap())*
+                ];
+            }
+        }
+    } else {
+        quote!{}
     }
 }
 
@@ -300,6 +324,12 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
                 state.match_insensitive(#string)
             }
         }
+        OptimizedExpr::Regex(idx) => {
+            let idx = idx as usize;
+            quote! {
+                state.match_regex(&REGEXES[#idx])
+            }
+        }
         OptimizedExpr::Range(start, end) => {
             let start = start.chars().next().unwrap();
             let end = end.chars().next().unwrap();
@@ -438,6 +468,12 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
         OptimizedExpr::Insens(string) => {
             quote! {
                 state.match_insensitive(#string)
+            }
+        }
+        OptimizedExpr::Regex(idx) => {
+            let idx = idx as usize;
+            quote! {
+                state.match_regex(&REGEXES[#idx])
             }
         }
         OptimizedExpr::Range(start, end) => {
@@ -869,16 +905,16 @@ mod tests {
                     a
                 }
 
-            impl ::pest::Parser<Rule> for MyParser {
-                fn parse<'i>(
-                    rule: Rule,
-                    input: &'i str
-                ) -> ::std::result::Result<
-                    ::pest::iterators::Pairs<'i, Rule>,
-                    ::pest::error::Error<Rule>
-                > {
-                    mod rules {
-                        use super::Rule;
+                impl ::pest::Parser<Rule> for MyParser {
+                    fn parse<'i>(
+                        rule: Rule,
+                        input: &'i str
+                    ) -> ::std::result::Result<
+                        ::pest::iterators::Pairs<'i, Rule>,
+                        ::pest::error::Error<Rule>
+                    > {
+                        mod rules {
+                            use super::Rule;
 
                             #[inline]
                             #[allow(non_snake_case, unused_variables)]

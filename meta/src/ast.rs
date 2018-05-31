@@ -29,6 +29,8 @@ pub enum Expr {
     Str(String),
     /// Matches an exact string, case insensitively (ASCII only), e.g. `^"a"`
     Insens(String),
+    /// Matches a string satisfying a regex, e.g. `r"\p{XID_START}\p{XID_CONTINUE}*"`
+    Regex(String),
     /// Matches one character in the range, e.g. `'a'..'z'`
     Range(String, String),
     /// Matches the rule with the given name, e.g. `a`

@@ -11,6 +11,11 @@
 extern crate pest;
 #[macro_use]
 extern crate pest_derive;
+extern crate regex;
+#[macro_use]
+extern crate lazy_static;
+
+const _GRAMMAR: &str = include_str!("grammar.pest");
 
 #[derive(Parser)]
 #[grammar = "../tests/grammar.pest"]
@@ -269,6 +274,18 @@ fn optional_empty() {
             optional(0, 0)
         ]
     };
+}
+
+#[test]
+fn regex() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "نامهای",
+        rule: Rule::regex,
+        tokens: [
+            regex(0, 12)
+        ]
+    }
 }
 
 #[test]

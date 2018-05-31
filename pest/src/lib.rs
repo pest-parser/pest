@@ -56,6 +56,8 @@
 
 #![doc(html_root_url = "https://docs.rs/pest")]
 
+extern crate regex;
+
 pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, ParseResult, ParserState};
 pub use position::Position;

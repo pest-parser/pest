@@ -35,11 +35,31 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<OptimizedRule> {
         .collect()
 }
 
+use std::sync::RwLock;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+static REGEX_INDEX: AtomicUsize = AtomicUsize::new(0);
+lazy_static! {
+    pub static ref REGEXES: RwLock<HashMap<String, u32>> = RwLock::new(HashMap::new());
+}
+
 fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
     fn to_optimized(expr: Expr) -> OptimizedExpr {
         match expr {
             Expr::Str(string) => OptimizedExpr::Str(string),
             Expr::Insens(string) => OptimizedExpr::Insens(string),
+            Expr::Regex(string) => {
+                let regexes = REGEXES.read().unwrap();
+                if regexes.contains_key(&string) {
+                    OptimizedExpr::Regex(regexes[&string])
+                } else {
+                    drop(regexes);
+                    let mut regexes = REGEXES.write().unwrap();
+                    let index = REGEX_INDEX.fetch_add(1, Ordering::AcqRel) as u32;
+                    regexes.insert(string, index);
+                    OptimizedExpr::Regex(index)
+                }
+            }
             Expr::Range(start, end) => OptimizedExpr::Range(start, end),
             Expr::Ident(ident) => OptimizedExpr::Ident(ident),
             Expr::PosPred(expr) => OptimizedExpr::PosPred(Box::new(to_optimized(*expr))),
@@ -83,6 +103,7 @@ pub struct OptimizedRule {
 pub enum OptimizedExpr {
     Str(String),
     Insens(String),
+    Regex(u32),
     Range(String, String),
     Ident(String),
     PosPred(Box<OptimizedExpr>),
