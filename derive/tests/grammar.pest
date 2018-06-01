@@ -23,6 +23,7 @@ sequence_nested = { string ~ string }
 sequence_compound_nested = ${ sequence_nested }
 choice = { string | range }
 optional = { string? }
+regex = { r"\p{XID_START}\p{XID_CONTINUE}*" }
 repeat = { string* }
 repeat_atomic = @{ string* }
 repeat_once = { string+ }

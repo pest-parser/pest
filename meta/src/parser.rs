@@ -18,6 +18,8 @@ use pest::prec_climber::{Assoc, Operator, PrecClimber};
 use ast::{Expr, Rule as AstRule, RuleType};
 use validator;
 
+static _GRAMMAR: &str = include_str!("grammar.pest");
+
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
 pub struct PestParser;
@@ -109,6 +111,7 @@ impl<'i> ParserNode<'i> {
 pub enum ParserExpr<'i> {
     Str(String),
     Insens(String),
+    Regex(String),
     Range(String, String),
     Ident(String),
     PosPred(Box<ParserNode<'i>>),
@@ -139,6 +142,7 @@ fn convert_node<'i>(node: ParserNode<'i>) -> Expr {
     match node.expr {
         ParserExpr::Str(string) => Expr::Str(string),
         ParserExpr::Insens(string) => Expr::Insens(string),
+        ParserExpr::Regex(string) => Expr::Regex(string),
         ParserExpr::Range(start, end) => Expr::Range(start, end),
         ParserExpr::Ident(ident) => Expr::Ident(ident),
         ParserExpr::PosPred(node) => Expr::PosPred(Box::new(convert_node(*node))),
@@ -288,6 +292,13 @@ fn consume_expr<'i>(
                         let string = unescape(pair.as_str()).expect("incorrect string literal");
                         ParserNode {
                             expr: ParserExpr::Insens(string[2..string.len() - 1].to_owned()),
+                            span: pair.clone().into_span()
+                        }
+                    }
+                    Rule::regex => {
+                        let re = pair.clone().into_inner().skip(1).next().unwrap().as_str();
+                        ParserNode {
+                            expr: ParserExpr::Regex(String::from(r"\A") + re),
                             span: pair.clone().into_span()
                         }
                     }
@@ -824,6 +835,22 @@ mod tests {
     }
 
     #[test]
+    fn regex() {
+        parses_to!(
+            parser: PestParser,
+            input: r###"r##"[+-]?(\d+(\.\d+)?|\.\d+)([eE][+-]?\d+)?"##"###,
+            rule: Rule::regex,
+            tokens: [
+                regex(0, 46, [
+                    regex_head(0, 4),
+                    inner_regex(4, 43),
+                    regex_tail(43, 46),
+                ])
+            ]
+        )
+    }
+
+    #[test]
     fn insensitive_string() {
         parses_to! {
             parser: PestParser,
@@ -986,14 +1013,7 @@ mod tests {
             input: "a = { b ~ }",
             rule: Rule::grammar_rules,
             positives: vec![
-                Rule::opening_paren,
-                Rule::positive_predicate_operator,
-                Rule::negative_predicate_operator,
-                Rule::_push,
-                Rule::identifier,
-                Rule::insensitive_string,
-                Rule::quote,
-                Rule::single_quote
+                Rule::term
             ],
             negatives: vec![],
             pos: 10
@@ -1053,6 +1073,7 @@ mod tests {
                 Rule::_push,
                 Rule::identifier,
                 Rule::insensitive_string,
+                Rule::regex_head,
                 Rule::quote,
                 Rule::single_quote
             ],

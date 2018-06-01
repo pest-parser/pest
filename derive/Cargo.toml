@@ -21,6 +21,10 @@ proc-macro2 = "^0.4.4"
 quote = "^0.6.3"
 syn = "^0.14.1"
 
+[dev-dependencies]
+regex = "1"
+lazy_static = "1"
+
 [badges]
 codecov = { repository = "pest-parser/pest" }
 maintenance = { status = "actively-developed" }

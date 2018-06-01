@@ -348,6 +348,18 @@ impl<'i> Position<'i> {
             None => false
         }
     }
+
+    pub(crate) fn match_regex(&mut self, regex: &::regex::Regex) -> bool {
+        // guaranteed to be valid UTF-8
+        let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
+        match regex.find(slice) {
+            Some(hit) => {
+                self.pos += hit.end();
+                true
+            }
+            None => false
+        }
+    }
 }
 
 impl<'i> fmt::Debug for Position<'i> {
