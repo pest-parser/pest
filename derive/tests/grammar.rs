@@ -773,3 +773,15 @@ fn unicode() {
         ]
     }
 }
+
+#[test]
+fn shadowing() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "shadows builtin",
+        rule: Rule::Symbol,
+        tokens: [
+            Symbol(0, 15)
+        ]
+    }
+}
