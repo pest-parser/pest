@@ -1,1 +1,4 @@
 comment: off
+
+ignore:
+ - pest/src/unicode/*
