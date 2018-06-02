@@ -276,6 +276,7 @@ impl<'i> Position<'i> {
 
     /// Matches the char at the `Position` against a filter function and returns `true` if a match
     /// was made. If no match was made, returns `false` and `pos` will not be updated.
+    #[inline]
     pub(crate) fn match_char_by<F>(&mut self, f: F) -> bool
     where F: FnOnce(char) -> bool
     {

@@ -436,6 +436,28 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// Asks the `ParserState` to match a single character based on a filter function.
     /// If the match is successful, this will return an `Ok` with the updated `Box<ParserState>`.
     /// If failed, an `Err` with the updated `Box<ParserState>` is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "ab";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let result = state.match_char_by(|c| c.is_ascii());
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 1);
+    ///
+    /// let input = "❤";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let result = state.match_char_by(|c| c.is_ascii());
+    /// assert!(result.is_err());
+    /// assert_eq!(result.unwrap_err().position().pos(), 0);
+    /// ```
+    #[inline]
     pub fn match_char_by<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where F: FnOnce(char) -> bool
     {
