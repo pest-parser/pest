@@ -14,6 +14,7 @@ use pest::Span;
 use pest::iterators::Pairs;
 
 use parser::{ParserExpr, ParserNode, ParserRule, Rule};
+use UNICODE_PROPERTY_NAMES;
 
 pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Error<'i, Rule>>> {
     let mut rust_keywords = HashSet::new();
@@ -102,7 +103,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     builtins.insert("ALPHANUMERIC");
     builtins.insert("ASCII");
     builtins.insert("NEWLINE");
-    builtins.extend(::UNICODE_PROPERTY_NAMES);
+    builtins.extend(UNICODE_PROPERTY_NAMES);
 
     let definitions: Vec<_> = pairs
         .clone()

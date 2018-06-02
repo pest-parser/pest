@@ -10,10 +10,11 @@
 use std::collections::HashMap;
 
 use proc_macro2::{Span, TokenStream};
-use syn::{Generics, Ident};
+use syn::{self, Generics, Ident};
 
 use pest_meta::ast::*;
 use pest_meta::optimizer::*;
+use pest_meta::UNICODE_PROPERTY_NAMES;
 
 pub fn generate(
     name: Ident,
@@ -120,8 +121,8 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
             .or_else(|state| state.match_string("\r"))
     );
 
-    for property in ::pest_meta::UNICODE_PROPERTY_NAMES {
-        let property_ident: ::syn::Ident = ::syn::parse_str(property).unwrap();
+    for property in UNICODE_PROPERTY_NAMES {
+        let property_ident: Ident = syn::parse_str(property).unwrap();
         // insert manually for #property substitution
         builtins.insert(property, quote! {
             #[inline]
