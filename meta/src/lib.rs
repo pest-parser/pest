@@ -38,3 +38,26 @@ where
         )
     })
 }
+
+#[doc(hidden)]
+pub static UNICODE_PROPERTY_NAMES: &[&str] = &[
+    /* binary */ "ASCII_Hex_Digit", "Alphabetic", "Bidi_Control", "Case_Ignorable", "Cased",
+    "Changes_When_Casefolded", "Changes_When_Casemapped", "Changes_When_Lowercased",
+    "Changes_When_Titlecased", "Changes_When_Uppercased", "Dash", "Default_Ignorable_Code_Point",
+    "Deprecated", "Diacritic", "Extender", "Grapheme_Base", "Grapheme_Extend", "Grapheme_Link",
+    "Hex_Digit", "Hyphen", "IDS_Binary_Operator", "IDS_Trinary_Operator", "ID_Continue", "ID_Start",
+    "Ideographic", "Join_Control", "Logical_Order_Exception", "Lowercase", "Math",
+    "Noncharacter_Code_Point", "Other_Alphabetic", "Other_Default_Ignorable_Code_Point",
+    "Other_Grapheme_Extend", "Other_ID_Continue", "Other_ID_Start", "Other_Lowercase", "Other_Math",
+    "Other_Uppercase", "Pattern_Syntax", "Pattern_White_Space", "Prepended_Concatenation_Mark",
+    "Quotation_Mark", "Radical", "Regional_Indicator", "Sentence_Terminal", "Soft_Dotted",
+    "Terminal_Punctuation", "Unified_Ideograph", "Uppercase", "Variation_Selector", "White_Space",
+    "XID_Continue", "XID_Start", /* category */ "Cased_Letter", "Close_Punctuation",
+    "Connector_Punctuation", "Control", "Currency_Symbol", "Dash_Punctuation", "Decimal_Number",
+    "Enclosing_Mark", "Final_Punctuation", "Format", "Initial_Punctuation", "Letter",
+    "Letter_Number", "Line_Separator", "Lowercase_Letter", "Mark", "Math_Symbol", "Modifier_Letter",
+    "Modifier_Symbol", "Nonspacing_Mark", "Number", "Open_Punctuation", "Other", "Other_Letter",
+    "Other_Number", "Other_Punctuation", "Other_Symbol", "Paragraph_Separator", "Private_Use",
+    "Punctuation", "Separator", "Space_Separator", "Spacing_Mark", "Surrogate", "Symbol",
+    "Titlecase_Letter", "Unassigned", "Uppercase_Letter",
+];

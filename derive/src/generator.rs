@@ -68,7 +68,8 @@ pub fn generate(
     }
 }
 
-// Note: All builtin rules should be validated as pest keywords in meta/src/validator.rs.
+// Note: All builtin rules should be validated as pest builtins in meta/src/validator.rs.
+// Some should also be keywords.
 fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     let mut builtins = HashMap::new();
 
@@ -118,6 +119,18 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
             .or_else(|state| state.match_string("\r\n"))
             .or_else(|state| state.match_string("\r"))
     );
+
+    for property in ::pest_meta::UNICODE_PROPERTY_NAMES {
+        let property_ident: ::syn::Ident = ::syn::parse_str(property).unwrap();
+        // insert manually for #property substitution
+        builtins.insert(property, quote! {
+            #[inline]
+            #[allow(dead_code, non_snake_case, unused_variables)]
+            fn #property_ident(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                state.match_char_by(::pest::unicode::#property_ident)
+            }
+        }.into());
+    }
 
     builtins
 }

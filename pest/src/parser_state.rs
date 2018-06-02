@@ -433,6 +433,19 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Asks the `ParserState` to match a single character based on a filter function.
+    /// If the match is successful, this will return an `Ok` with the updated `Box<ParserState>`.
+    /// If failed, an `Err` with the updated `Box<ParserState>` is returned.
+    pub fn match_char_by<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    where F: FnOnce(char) -> bool
+    {
+        if self.position.match_char_by(f) {
+            Ok(self)
+        } else {
+            Err(self)
+        }
+    }
+
     /// Asks the `ParserState` to match the given `string`. If the match is successful, this will
     /// return an `Ok` with the updated `Box<ParserState>`. If failed, an `Err` with the updated
     /// `Box<ParserState>` is returned.

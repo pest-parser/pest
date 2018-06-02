@@ -102,6 +102,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     builtins.insert("ALPHANUMERIC");
     builtins.insert("ASCII");
     builtins.insert("NEWLINE");
+    builtins.extend(::UNICODE_PROPERTY_NAMES);
 
     let definitions: Vec<_> = pairs
         .clone()

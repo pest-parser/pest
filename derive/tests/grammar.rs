@@ -761,3 +761,15 @@ fn checkpoint_restore() {
         ]
     };
 }
+
+#[test]
+fn unicode() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "نامهای",
+        rule: Rule::unicode,
+        tokens: [
+            unicode(0, 12)
+        ]
+    }
+}
