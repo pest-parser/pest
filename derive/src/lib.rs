@@ -245,15 +245,15 @@
 //!
 //! Pest also comes with a number of built-in rules for convenience. They are:
 //!
-//! * `DIGIT` - matches a numeric character from 0..9
-//! * `NONZERO_DIGIT` - matches a numeric character from 1..9
-//! * `BIN_DIGIT` - matches a numeric character from 0..1
-//! * `OCT_DIGIT` - matches a numeric character from 0..7
-//! * `HEX_DIGIT` - matches a numeric character from 0..9 or a..f or A..F
-//! * `ALPHA_LOWER` - matches a character from a..z
-//! * `ALPHA_UPPER` - matches a character from A..Z
-//! * `ALPHA` - matches a character from a..z or A..Z
-//! * `ALPHANUMERIC` - matches a character from a..z or A..Z or 0..9
+//! * `ASCII_DIGIT` - matches a numeric character from 0..9
+//! * `ASCII_NONZERO_DIGIT` - matches a numeric character from 1..9
+//! * `ASCII_BIN_DIGIT` - matches a numeric character from 0..1
+//! * `ASCII_OCT_DIGIT` - matches a numeric character from 0..7
+//! * `ASCII_HEX_DIGIT` - matches a numeric character from 0..9 or a..f or A..F
+//! * `ASCII_ALPHA_LOWER` - matches a character from a..z
+//! * `ASCII_ALPHA_UPPER` - matches a character from A..Z
+//! * `ASCII_ALPHA` - matches a character from a..z or A..Z
+//! * `ASCII_ALPHANUMERIC` - matches a character from a..z or A..Z or 0..9
 //! * `ASCII` - matches a character from \x00..\x7f
 //! * `NEWLINE` - matches either "\n" or "\r\n" or "\r"
 

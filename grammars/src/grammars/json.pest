@@ -19,11 +19,11 @@ value = { string | number | object | array | bool | null }
 string  = @{ "\"" ~ inner ~ "\"" }
 inner   = @{ (!("\"" | "\\") ~ ANY)* ~ (escape ~ inner)? }
 escape  = @{ "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | unicode) }
-unicode = @{ "u" ~ HEX_DIGIT{4} }
+unicode = @{ "u" ~ ASCII_HEX_DIGIT{4} }
 
-number = @{ "-"? ~ int ~ ("." ~ DIGIT+ ~ exp? | exp)? }
-int    = @{ "0" | NONZERO_DIGIT ~ DIGIT* }
-exp    = @{ ("E" | "e") ~ ("+" | "-")? ~ DIGIT+ }
+number = @{ "-"? ~ int ~ ("." ~ ASCII_DIGIT+ ~ exp? | exp)? }
+int    = @{ "0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
+exp    = @{ ("E" | "e") ~ ("+" | "-")? ~ ASCII_DIGIT+ }
 
 bool = { "true" | "false" }
 

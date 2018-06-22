@@ -86,28 +86,29 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     insert_builtin!(builtins, POP, state.stack_pop());
     insert_builtin!(builtins, POP_ALL, state.stack_match_pop());
     insert_builtin!(builtins, DROP, state.stack_drop());
-    insert_builtin!(builtins, DIGIT, state.match_range('0'..'9'));
-    insert_builtin!(builtins, NONZERO_DIGIT, state.match_range('1'..'9'));
-    insert_builtin!(builtins, BIN_DIGIT, state.match_range('0'..'1'));
-    insert_builtin!(builtins, OCT_DIGIT, state.match_range('0'..'7'));
+
+    insert_builtin!(builtins, ASCII_DIGIT, state.match_range('0'..'9'));
+    insert_builtin!(builtins, ASCII_NONZERO_DIGIT, state.match_range('1'..'9'));
+    insert_builtin!(builtins, ASCII_BIN_DIGIT, state.match_range('0'..'1'));
+    insert_builtin!(builtins, ASCII_OCT_DIGIT, state.match_range('0'..'7'));
     insert_builtin!(
         builtins,
-        HEX_DIGIT,
+        ASCII_HEX_DIGIT,
         state.match_range('0'..'9')
             .or_else(|state| state.match_range('a'..'f'))
             .or_else(|state| state.match_range('A'..'F'))
     );
-    insert_builtin!(builtins, ALPHA_LOWER, state.match_range('a'..'z'));
-    insert_builtin!(builtins, ALPHA_UPPER, state.match_range('A'..'Z'));
+    insert_builtin!(builtins, ASCII_ALPHA_LOWER, state.match_range('a'..'z'));
+    insert_builtin!(builtins, ASCII_ALPHA_UPPER, state.match_range('A'..'Z'));
     insert_builtin!(
         builtins,
-        ALPHA,
+        ASCII_ALPHA,
         state.match_range('a'..'z')
             .or_else(|state| state.match_range('A'..'Z'))
     );
     insert_builtin!(
         builtins,
-        ALPHANUMERIC,
+        ASCII_ALPHANUMERIC,
         state.match_range('a'..'z')
             .or_else(|state| state.match_range('A'..'Z'))
             .or_else(|state| state.match_range('0'..'9'))
