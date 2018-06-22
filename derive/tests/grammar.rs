@@ -761,3 +761,27 @@ fn checkpoint_restore() {
         ]
     };
 }
+
+#[test]
+fn unicode() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "نامهای",
+        rule: Rule::unicode,
+        tokens: [
+            unicode(0, 12)
+        ]
+    }
+}
+
+#[test]
+fn shadowing() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "shadows builtin",
+        rule: Rule::Symbol,
+        tokens: [
+            Symbol(0, 15)
+        ]
+    }
+}

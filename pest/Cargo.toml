@@ -14,3 +14,6 @@ readme = "_README.md"
 codecov = { repository = "pest-parser/pest" }
 maintenance = { status = "actively-developed" }
 travis-ci = { repository = "pest-parser/pest" }
+
+[dependencies]
+ucd-trie = "0.1.1"

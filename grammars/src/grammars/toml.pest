@@ -34,7 +34,7 @@ inline_table = { "{" ~ pair ~ ("," ~ pair)* ~ ","? ~ "}" | "{" ~ "}" }
 
 array = { "[" ~ value ~ ("," ~ value)* ~ ","? ~ "]" | "[" ~ "]" }
 
-identifier = { (ALPHANUMERIC | "_" | "-")+ }
+identifier = { (ASCII_ALPHANUMERIC | "_" | "-")+ }
 
 multi_line_string  = @{ "\"\"\"" ~ inner ~ "\"\"\"" }
 string             = @{ "\"" ~ inner ~ "\"" }
@@ -43,7 +43,7 @@ multi_line_literal = @{ "'''" ~ (!"'''" ~ ANY)* ~ "'''" }
 literal            = @{ "'" ~ (!"'" ~ ANY)* ~ "'" }
 
 escape  = @{ "\\" ~ ("b" | "t" | "n" | "f" | "r" | "\"" | "\\" | unicode | NEWLINE)? }
-unicode = @{ "u" ~ HEX_DIGIT{4} | "U" ~ HEX_DIGIT{8} }
+unicode = @{ "u" ~ ASCII_HEX_DIGIT{4} | "U" ~ ASCII_HEX_DIGIT{8} }
 
 date_time       = ${ full_date ~ "T" ~ full_time }
 local_date_time = ${ full_date ~ "T" ~ partial_time }
@@ -52,20 +52,20 @@ partial_time = ${ time_hour ~ ":" ~ time_minute ~ ":" ~ time_second ~ time_secfr
 full_date    = ${ date_fullyear ~ "-" ~ date_month ~ "-" ~ date_mday }
 full_time    = ${ partial_time ~ time_offset }
 
-date_fullyear = @{ DIGIT{4} }
-date_month    = @{ DIGIT{2} }
-date_mday     = @{ DIGIT{2} }
+date_fullyear = @{ ASCII_DIGIT{4} }
+date_month    = @{ ASCII_DIGIT{2} }
+date_mday     = @{ ASCII_DIGIT{2} }
 
-time_hour    = @{ DIGIT{2} }
-time_minute  = @{ DIGIT{2} }
-time_second  = @{ DIGIT{2} }
-time_secfrac = @{ "." ~ DIGIT+ }
+time_hour    = @{ ASCII_DIGIT{2} }
+time_minute  = @{ ASCII_DIGIT{2} }
+time_second  = @{ ASCII_DIGIT{2} }
+time_secfrac = @{ "." ~ ASCII_DIGIT+ }
 time_offset  = ${ "Z" | ("+" | "-") ~ time_hour ~ ":" ~ time_minute }
 
 integer = @{ ("+" | "-")? ~ int }
 float   = @{ ("+" | "-")? ~ int ~ ("." ~ digits ~ exp? | exp)? }
-int     = @{ "0" | (NONZERO_DIGIT ~ digits?) }
-digits  = @{ (DIGIT | ("_" ~ DIGIT))+ }
+int     = @{ "0" | (ASCII_NONZERO_DIGIT ~ digits?) }
+digits  = @{ (ASCII_DIGIT | ("_" ~ ASCII_DIGIT))+ }
 exp     = @{ ("E" | "e") ~ ("+" | "-")? ~ int }
 
 boolean = { "true" | "false" }

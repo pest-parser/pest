@@ -56,6 +56,8 @@
 
 #![doc(html_root_url = "https://docs.rs/pest")]
 
+extern crate ucd_trie;
+
 pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, ParseResult, ParserState};
 pub use position::Position;
@@ -74,6 +76,8 @@ pub mod prec_climber;
 mod span;
 mod stack;
 mod token;
+#[doc(hidden)]
+pub mod unicode;
 
 /// A `trait` which parser rules must implement.
 ///

@@ -10,10 +10,11 @@
 use std::collections::HashMap;
 
 use proc_macro2::{Span, TokenStream};
-use syn::{Generics, Ident};
+use syn::{self, Generics, Ident};
 
 use pest_meta::ast::*;
 use pest_meta::optimizer::*;
+use pest_meta::UNICODE_PROPERTY_NAMES;
 
 pub fn generate(
     name: Ident,
@@ -68,7 +69,8 @@ pub fn generate(
     }
 }
 
-// Note: All builtin rules should be validated as pest keywords in meta/src/validator.rs.
+// Note: All builtin rules should be validated as pest builtins in meta/src/validator.rs.
+// Some should also be keywords.
 fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     let mut builtins = HashMap::new();
 
@@ -84,28 +86,29 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     insert_builtin!(builtins, POP, state.stack_pop());
     insert_builtin!(builtins, POP_ALL, state.stack_match_pop());
     insert_builtin!(builtins, DROP, state.stack_drop());
-    insert_builtin!(builtins, DIGIT, state.match_range('0'..'9'));
-    insert_builtin!(builtins, NONZERO_DIGIT, state.match_range('1'..'9'));
-    insert_builtin!(builtins, BIN_DIGIT, state.match_range('0'..'1'));
-    insert_builtin!(builtins, OCT_DIGIT, state.match_range('0'..'7'));
+
+    insert_builtin!(builtins, ASCII_DIGIT, state.match_range('0'..'9'));
+    insert_builtin!(builtins, ASCII_NONZERO_DIGIT, state.match_range('1'..'9'));
+    insert_builtin!(builtins, ASCII_BIN_DIGIT, state.match_range('0'..'1'));
+    insert_builtin!(builtins, ASCII_OCT_DIGIT, state.match_range('0'..'7'));
     insert_builtin!(
         builtins,
-        HEX_DIGIT,
+        ASCII_HEX_DIGIT,
         state.match_range('0'..'9')
             .or_else(|state| state.match_range('a'..'f'))
             .or_else(|state| state.match_range('A'..'F'))
     );
-    insert_builtin!(builtins, ALPHA_LOWER, state.match_range('a'..'z'));
-    insert_builtin!(builtins, ALPHA_UPPER, state.match_range('A'..'Z'));
+    insert_builtin!(builtins, ASCII_ALPHA_LOWER, state.match_range('a'..'z'));
+    insert_builtin!(builtins, ASCII_ALPHA_UPPER, state.match_range('A'..'Z'));
     insert_builtin!(
         builtins,
-        ALPHA,
+        ASCII_ALPHA,
         state.match_range('a'..'z')
             .or_else(|state| state.match_range('A'..'Z'))
     );
     insert_builtin!(
         builtins,
-        ALPHANUMERIC,
+        ASCII_ALPHANUMERIC,
         state.match_range('a'..'z')
             .or_else(|state| state.match_range('A'..'Z'))
             .or_else(|state| state.match_range('0'..'9'))
@@ -118,6 +121,18 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
             .or_else(|state| state.match_string("\r\n"))
             .or_else(|state| state.match_string("\r"))
     );
+
+    for property in UNICODE_PROPERTY_NAMES {
+        let property_ident: Ident = syn::parse_str(property).unwrap();
+        // insert manually for #property substitution
+        builtins.insert(property, quote! {
+            #[inline]
+            #[allow(dead_code, non_snake_case, unused_variables)]
+            fn #property_ident(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                state.match_char_by(::pest::unicode::#property_ident)
+            }
+        }.into());
+    }
 
     builtins
 }

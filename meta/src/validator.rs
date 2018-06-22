@@ -14,6 +14,7 @@ use pest::Span;
 use pest::iterators::Pairs;
 
 use parser::{ParserExpr, ParserNode, ParserRule, Rule};
+use UNICODE_PROPERTY_NAMES;
 
 pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Error<'i, Rule>>> {
     let mut rust_keywords = HashSet::new();
@@ -91,17 +92,18 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     builtins.insert("POP");
     builtins.insert("POP_ALL");
     builtins.insert("SOI");
-    builtins.insert("DIGIT");
-    builtins.insert("NONZERO_DIGIT");
-    builtins.insert("BIN_DIGIT");
-    builtins.insert("OCT_DIGIT");
-    builtins.insert("HEX_DIGIT");
-    builtins.insert("ALPHA_LOWER");
-    builtins.insert("ALPHA_UPPER");
-    builtins.insert("ALPHA");
-    builtins.insert("ALPHANUMERIC");
+    builtins.insert("ASCII_DIGIT");
+    builtins.insert("ASCII_NONZERO_DIGIT");
+    builtins.insert("ASCII_BIN_DIGIT");
+    builtins.insert("ASCII_OCT_DIGIT");
+    builtins.insert("ASCII_HEX_DIGIT");
+    builtins.insert("ASCII_ALPHA_LOWER");
+    builtins.insert("ASCII_ALPHA_UPPER");
+    builtins.insert("ASCII_ALPHA");
+    builtins.insert("ASCII_ALPHANUMERIC");
     builtins.insert("ASCII");
     builtins.insert("NEWLINE");
+    builtins.extend(UNICODE_PROPERTY_NAMES);
 
     let definitions: Vec<_> = pairs
         .clone()

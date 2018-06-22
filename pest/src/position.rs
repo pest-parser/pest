@@ -274,6 +274,26 @@ impl<'i> Position<'i> {
         false
     }
 
+    /// Matches the char at the `Position` against a filter function and returns `true` if a match
+    /// was made. If no match was made, returns `false` and `pos` will not be updated.
+    #[inline]
+    pub(crate) fn match_char_by<F>(&mut self, f: F) -> bool
+    where F: FnOnce(char) -> bool
+    {
+        // Guaranteed UTF-8
+        let s = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
+        if let Some(c) = s.chars().next() {
+            if f(c) {
+                self.pos += c.len_utf8();
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
     /// Matches `string` from the `Position` and returns `true` if a match was made or `false`
     /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
