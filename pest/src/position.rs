@@ -326,7 +326,7 @@ impl<'i> Position<'i> {
             let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
 
             if slice.is_char_boundary(string.len()) {
-                let slice = unsafe { slice.slice_unchecked(0, string.len()) };
+                let slice = unsafe { slice.get_unchecked(0..string.len()) };
                 slice.eq_ignore_ascii_case(string)
             } else {
                 false
