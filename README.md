@@ -146,8 +146,8 @@ pest requires [Cargo and Rust 1.23](https://www.rust-lang.org/en-US/downloads.ht
 Add the following to `Cargo.toml`:
 
 ```toml
-pest = "^1.0"
-pest_derive = "^1.0"
+pest = "1.0"
+pest_derive = "1.0"
 ```
 
 and in your Rust `lib.rs` or `main.rs`:
