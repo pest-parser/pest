@@ -97,11 +97,7 @@ impl<T: Clone> Stack<T> {
     }
 
     fn most_recent_snap(&self) -> usize {
-        if self.snapshots.is_empty() {
-            0
-        } else {
-            self.snapshots[self.snapshots.len() - 1]
-        }
+        *self.snapshots.last().unwrap_or(&0)
     }
 }
 
