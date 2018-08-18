@@ -13,8 +13,7 @@
 pub struct Stack<T: Clone> {
     ops: Vec<StackOp<T>>,
     cache: Vec<T>,
-    snapshots: Vec<usize>,
-    current_snapshot: usize
+    snapshots: Vec<usize>
 }
 
 impl<T: Clone> Stack<T> {
@@ -23,8 +22,7 @@ impl<T: Clone> Stack<T> {
         Stack {
             ops: vec![],
             cache: vec![],
-            snapshots: vec![0],
-            current_snapshot: 0
+            snapshots: vec![]
         }
     }
 
@@ -62,19 +60,24 @@ impl<T: Clone> Stack<T> {
     /// Takes a snapshot of the current `Stack`.
     pub fn snapshot(&mut self) {
         let ops_index = self.ops.len();
-        if ops_index > self.current_snapshot {
+
+        if ops_index > self.most_recent_snap() {
             self.snapshots.push(ops_index);
-            self.current_snapshot = ops_index;
         }
     }
 
     /// Rewinds the `Stack` to the most recent `snapshot()`. If no `snapshot()` has been taken, this
-    /// function will do nothing.
+    /// function return the stack to its initial state.
     pub fn restore(&mut self) {
-        if let Some(ops_index) = self.snapshots.pop() {
-            self.rewind_to(ops_index);
-            self.ops.truncate(ops_index);
-            self.current_snapshot = self.ops.len();
+        match self.snapshots.pop() {
+            Some(ops_index) => {
+                self.rewind_to(ops_index);
+                self.ops.truncate(ops_index);
+            },
+            None => {
+                self.cache.clear();
+                self.ops.clear();
+            }
         }
     }
 
@@ -91,6 +94,10 @@ impl<T: Clone> Stack<T> {
                 }
             }
         }
+    }
+
+    fn most_recent_snap(&self) -> usize {
+        *self.snapshots.last().unwrap_or(&0)
     }
 }
 
