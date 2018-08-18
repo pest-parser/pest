@@ -171,8 +171,8 @@ pest requires [Cargo and Rust 1.23+](https://www.rust-lang.org/en-US/downloads.h
 Add the following to `Cargo.toml`:
 
 ```toml
-pest = "^2.0"
-pest_derive = "^2.0"
+pest = "2.0"
+pest_derive = "2.0"
 ```
 
 and in your Rust `lib.rs` or `main.rs`:
