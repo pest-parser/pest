@@ -227,6 +227,7 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i,
     let mut errors = vec![];
 
     errors.extend(validate_repetition(rules));
+    errors.extend(validate_choices(rules));
     errors.extend(validate_whitespace_comment(rules));
     errors.extend(validate_left_recursion(rules));
 
@@ -319,16 +320,14 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<
                 ParserExpr::Rep(ref other)
                 | ParserExpr::RepOnce(ref other)
                 | ParserExpr::RepMin(ref other, _) => {
-                    let trace = &mut vec![rule.name.clone()];
-
-                    if is_non_failing(&other.expr, &map, trace) {
+                    if is_non_failing(&other.expr, &map, &mut vec![]) {
                         Some(Error::CustomErrorSpan {
                             message: "expression inside repetition is non-failing and will repeat \
                                       infinitely"
                                 .to_owned(),
                             span: node.span.clone()
                         })
-                    } else if is_non_progressing(&other.expr, &map, trace) {
+                    } else if is_non_progressing(&other.expr, &map, &mut vec![]) {
                         Some(Error::CustomErrorSpan {
                             message:
                                 "expression inside repetition is non-progressing and will repeat \
@@ -349,6 +348,39 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<
     result
 }
 
+fn validate_choices<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i, Rule>> {
+    let mut result = vec![];
+    let map = to_hash_map(rules);
+
+    for rule in rules.into_iter() {
+        let mut errors = rule.node
+            .clone()
+            .filter_map_top_down(|node| match node.expr {
+                ParserExpr::Choice(ref lhs, _) => {
+                    match lhs.expr {
+                        ParserExpr::Choice(..) => None,
+                        _ => if is_non_failing(&lhs.expr, &map, &mut vec![]) {
+                            Some(Error::CustomErrorSpan {
+                                message:
+                                    "expression is non-failing; following choices cannot be \
+                                     reached"
+                                        .to_owned(),
+                                span: lhs.span.clone()
+                            })
+                        } else {
+                            None
+                        }
+                    }
+                }
+                _ => None
+            });
+
+        result.append(&mut errors);
+    }
+
+    result
+}
+
 fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i, Rule>> {
     let map = to_hash_map(rules);
 
@@ -356,9 +388,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Ve
         .into_iter()
         .filter_map(|rule| {
             if rule.name == "whitespace" || rule.name == "comment" {
-                let trace = &mut vec![rule.name.clone()];
-
-                if is_non_failing(&rule.node.expr, &map, trace) {
+                if is_non_failing(&rule.node.expr, &map, &mut vec![]) {
                     Some(Error::CustomErrorSpan {
                         message: format!(
                             "{} is non-failing and will repeat infinitely",
@@ -366,7 +396,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Ve
                         ),
                         span: rule.node.span.clone()
                     })
-                } else if is_non_progressing(&rule.node.expr, &map, trace) {
+                } else if is_non_progressing(&rule.node.expr, &map, &mut vec![]) {
                     Some(Error::CustomErrorSpan {
                         message: format!(
                             "{} is non-progressing and will repeat infinitely",
@@ -721,6 +751,45 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
     fn non_primary_choice_left_recursion() {
         let input = "a = { \"a\" | a }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | a = { \"a\"* | \"a\" | \"b\" }
+  |       ^--^
+  |
+  = expression is non-failing; following choices cannot be reached")]
+    fn lhs_non_failing_choice() {
+        let input = "a = { \"a\"* | \"a\" | \"b\" }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | a = { b | \"a\" } b = { \"b\"* | \"c\" }
+  |       ^
+  |
+  = expression is non-failing; following choices cannot be reached
+
+ --> 1:23
+  |
+1 | a = { b | \"a\" } b = { \"b\"* | \"c\" }
+  |                       ^--^
+  |
+  = expression is non-failing; following choices cannot be reached")]
+    fn lhs_non_failing_nested_choices() {
+        let input = "a = { b | \"a\" } b = { \"b\"* | \"c\" }";
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap()
         ));
