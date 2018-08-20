@@ -322,7 +322,7 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<
                 | ParserExpr::RepMin(ref other, _) => {
                     if is_non_failing(&other.expr, &map, &mut vec![]) {
                         Some(Error::CustomErrorSpan {
-                            message: "expression inside repetition is non-failing and will repeat \
+                            message: "expression inside repetition cannot fail and will repeat \
                                       infinitely"
                                 .to_owned(),
                             span: node.span.clone()
@@ -362,8 +362,7 @@ fn validate_choices<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i,
                         _ => if is_non_failing(&lhs.expr, &map, &mut vec![]) {
                             Some(Error::CustomErrorSpan {
                                 message:
-                                    "expression is non-failing; following choices cannot be \
-                                     reached"
+                                    "expression cannot fail; following choices cannot be reached"
                                         .to_owned(),
                                 span: lhs.span.clone()
                             })
@@ -391,7 +390,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Ve
                 if is_non_failing(&rule.node.expr, &map, &mut vec![]) {
                     Some(Error::CustomErrorSpan {
                         message: format!(
-                            "{} is non-failing and will repeat infinitely",
+                            "{} cannot fail and will repeat infinitely",
                             &rule.name
                         ),
                         span: rule.node.span.clone()
@@ -440,8 +439,8 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
 
                     return Some(Error::CustomErrorSpan {
                         message: format!(
-                            "rule {} is left-recursive ({}); pest::prec_climber might \
-                             be useful in this case",
+                            "rule {} is left-recursive ({}); pest::prec_climber might be useful \
+                             in this case",
                             node.span.as_str(),
                             chain
                         ),
@@ -581,7 +580,7 @@ mod tests {
 1 | whitespace = { \"\" }
   |                ^^
   |
-  = whitespace is non-failing and will repeat infinitely")]
+  = whitespace cannot fail and will repeat infinitely")]
     fn non_failing_whitespace() {
         let input = "whitespace = { \"\" }";
         unwrap_or_report(consume_rules(
@@ -613,7 +612,7 @@ mod tests {
 1 | a = { (\"\")* }
   |       ^---^
   |
-  = expression inside repetition is non-failing and will repeat infinitely")]
+  = expression inside repetition cannot fail and will repeat infinitely")]
     fn non_failing_repetition() {
         let input = "a = { (\"\")* }";
         unwrap_or_report(consume_rules(
@@ -629,7 +628,7 @@ mod tests {
 1 | a = { \"\" } b = { a* }
   |                  ^^
   |
-  = expression inside repetition is non-failing and will repeat infinitely")]
+  = expression inside repetition cannot fail and will repeat infinitely")]
     fn indirect_non_failing_repetition() {
         let input = "a = { \"\" } b = { a* }";
         unwrap_or_report(consume_rules(
@@ -645,7 +644,7 @@ mod tests {
 1 | a = { \"a\" ~ (\"b\" ~ (\"\")*) }
   |                    ^---^
   |
-  = expression inside repetition is non-failing and will repeat infinitely")]
+  = expression inside repetition cannot fail and will repeat infinitely")]
     fn deep_non_failing_repetition() {
         let input = "a = { \"a\" ~ (\"b\" ~ (\"\")*) }";
         unwrap_or_report(consume_rules(
@@ -764,7 +763,7 @@ mod tests {
 1 | a = { \"a\"* | \"a\" | \"b\" }
   |       ^--^
   |
-  = expression is non-failing; following choices cannot be reached")]
+  = expression cannot fail; following choices cannot be reached")]
     fn lhs_non_failing_choice() {
         let input = "a = { \"a\"* | \"a\" | \"b\" }";
         unwrap_or_report(consume_rules(
@@ -780,14 +779,14 @@ mod tests {
 1 | a = { b | \"a\" } b = { \"b\"* | \"c\" }
   |       ^
   |
-  = expression is non-failing; following choices cannot be reached
+  = expression cannot fail; following choices cannot be reached
 
  --> 1:23
   |
 1 | a = { b | \"a\" } b = { \"b\"* | \"c\" }
   |                       ^--^
   |
-  = expression is non-failing; following choices cannot be reached")]
+  = expression cannot fail; following choices cannot be reached")]
     fn lhs_non_failing_nested_choices() {
         let input = "a = { b | \"a\" } b = { \"b\"* | \"c\" }";
         unwrap_or_report(consume_rules(
