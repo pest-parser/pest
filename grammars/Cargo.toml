@@ -11,8 +11,8 @@ license = "MIT/Apache-2.0"
 readme = "_README.md"
 
 [dependencies]
-pest = { path = "../pest", version = "^2.0" }
-pest_derive = { path = "../derive", version = "^2.0" }
+pest = { path = "../pest", version = "2.0" }
+pest_derive = { path = "../derive", version = "2.0" }
 
 [badges]
 codecov = { repository = "pest-parser/pest" }

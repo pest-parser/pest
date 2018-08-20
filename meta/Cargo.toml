@@ -11,9 +11,9 @@ license = "MIT/Apache-2.0"
 readme = "_README.md"
 
 [dependencies]
-maplit = "^1.0"
-pest = "^1.0"
-pest_derive = "^1.0"
+maplit = "1.0"
+pest = "1.0"
+pest_derive = "1.0"
 
 [badges]
 codecov = { repository = "pest-parser/pest" }

@@ -15,11 +15,11 @@ name = "pest_derive"
 proc-macro = true
 
 [dependencies]
-pest = { path = "../pest", version = "^2.0" }
-pest_meta = { path = "../meta", version = "^2.0" }
-proc-macro2 = "^0.4.4"
-quote = "^0.6.3"
-syn = "^0.14.1"
+pest = { path = "../pest", version = "2.0" }
+pest_meta = { path = "../meta", version = "2.0" }
+proc-macro2 = "0.4.4"
+quote = "0.6.3"
+syn = "0.14.1"
 
 [badges]
 codecov = { repository = "pest-parser/pest" }
