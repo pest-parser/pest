@@ -357,18 +357,20 @@ fn validate_choices<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i,
             .clone()
             .filter_map_top_down(|node| match node.expr {
                 ParserExpr::Choice(ref lhs, _) => {
-                    match lhs.expr {
-                        ParserExpr::Choice(..) => None,
-                        _ => if is_non_failing(&lhs.expr, &map, &mut vec![]) {
-                            Some(Error::CustomErrorSpan {
-                                message:
-                                    "expression cannot fail; following choices cannot be reached"
-                                        .to_owned(),
-                                span: lhs.span.clone()
-                            })
-                        } else {
-                            None
-                        }
+                    let node = match lhs.expr {
+                        ParserExpr::Choice(_, ref rhs) => rhs,
+                        _ => lhs
+                    };
+
+                    if is_non_failing(&node.expr, &map, &mut vec![]) {
+                        Some(Error::CustomErrorSpan {
+                            message:
+                                "expression cannot fail; following choices cannot be reached"
+                                    .to_owned(),
+                            span: node.span.clone()
+                        })
+                    } else {
+                        None
                     }
                 }
                 _ => None
@@ -766,6 +768,22 @@ mod tests {
   = expression cannot fail; following choices cannot be reached")]
     fn lhs_non_failing_choice() {
         let input = "a = { \"a\"* | \"a\" | \"b\" }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:13
+  |
+1 | a = { \"a\" | \"a\"* | \"b\" }
+  |             ^--^
+  |
+  = expression cannot fail; following choices cannot be reached")]
+    fn lhs_non_failing_choice_middle() {
+        let input = "a = { \"a\" | \"a\"* | \"b\" }";
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap()
         ));
