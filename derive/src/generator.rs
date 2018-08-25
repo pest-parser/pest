@@ -48,10 +48,17 @@ pub fn generate(
                 ::pest::error::Error<Rule>
             > {
                 mod rules {
-                    use super::Rule;
+                    pub mod hidden {
+                        use super::super::Rule;
+                        #skip
+                    }
 
-                    #( #rules )*
-                    #skip
+                    pub mod visible {
+                        use super::super::Rule;
+                        #( #rules )*
+                    }
+
+                    pub use self::visible::*;
                 }
 
                 ::pest::state(input, |state| {
@@ -262,7 +269,7 @@ fn generate_skip(rules: &Vec<OptimizedRule>) -> TokenStream {
             skip,
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
                 state.repeat(|state| {
-                    WHITESPACE(state)
+                    super::visible::WHITESPACE(state)
                 })
             } else {
                 Ok(state)
@@ -272,7 +279,7 @@ fn generate_skip(rules: &Vec<OptimizedRule>) -> TokenStream {
             skip,
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
                 state.repeat(|state| {
-                    COMMENT(state)
+                    super::visible::COMMENT(state)
                 })
             } else {
                 Ok(state)
@@ -283,13 +290,13 @@ fn generate_skip(rules: &Vec<OptimizedRule>) -> TokenStream {
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
                 state.sequence(|state| {
                     state.repeat(|state| {
-                        WHITESPACE(state)
+                        super::visible::WHITESPACE(state)
                     }).and_then(|state| {
                         state.repeat(|state| {
                             state.sequence(|state| {
-                                COMMENT(state).and_then(|state| {
+                                super::visible::COMMENT(state).and_then(|state| {
                                     state.repeat(|state| {
-                                        WHITESPACE(state)
+                                        super::visible::WHITESPACE(state)
                                     })
                                 })
                             })
@@ -361,7 +368,7 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
                     #head
                     #(
                         .and_then(|state| {
-                            self::skip(state)
+                            super::hidden::skip(state)
                         }).and_then(|state| {
                             #tail
                         })
@@ -407,7 +414,7 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
                         #expr.and_then(|state| {
                             state.repeat(|state| {
                                 state.sequence(|state| {
-                                    self::skip(
+                                    super::hidden::skip(
                                         state
                                     ).and_then(|state| {
                                         #expr
@@ -613,15 +620,15 @@ mod tests {
             quote! {
                 state.sequence(|state| {
                     state.match_string("a").and_then(|state| {
-                        self::skip(state)
+                        super::hidden::skip(state)
                     }).and_then(|state| {
                         state.match_string("b")
                     }).and_then(|state| {
-                        self::skip(state)
+                        super::hidden::skip(state)
                     }).and_then(|state| {
                         state.match_string("c")
                     }).and_then(|state| {
-                        self::skip(state)
+                        super::hidden::skip(state)
                     }).and_then(|state| {
                         state.match_string("d")
                     })
@@ -749,7 +756,7 @@ mod tests {
 
         let sequence = quote! {
             state.sequence(|state| {
-                self::skip(state).and_then(
+                super::hidden::skip(state).and_then(
                     |state| {
                         state.match_insensitive("b")
                     }
@@ -759,7 +766,7 @@ mod tests {
         let repeat = quote! {
             state.repeat(|state| {
                 state.sequence(|state| {
-                    self::skip(state).and_then(|state| {
+                    super::hidden::skip(state).and_then(|state| {
                         state.match_string("c")
                             .or_else(|state| {
                                 state.match_string("d")
@@ -774,7 +781,7 @@ mod tests {
                 self::a(state).or_else(|state| {
                     state.sequence(|state| {
                         state.match_range('a'..'b').and_then(|state| {
-                            self::skip(state)
+                            super::hidden::skip(state)
                         }).and_then(|state| {
                             state.lookahead(false, |state| {
                                 state.sequence(|state| {
@@ -790,7 +797,7 @@ mod tests {
                                 })
                             })
                         }).and_then(|state| {
-                            self::skip(state)
+                            super::hidden::skip(state)
                         }).and_then(|state| {
                             state.lookahead(true, |state| {
                                 state.optional(|state| {
@@ -884,34 +891,42 @@ mod tests {
                     a
                 }
 
-            impl ::pest::Parser<Rule> for MyParser {
-                fn parse<'i>(
-                    rule: Rule,
-                    input: &'i str
-                ) -> ::std::result::Result<
-                    ::pest::iterators::Pairs<'i, Rule>,
-                    ::pest::error::Error<Rule>
-                > {
-                    mod rules {
-                        use super::Rule;
+                impl ::pest::Parser<Rule> for MyParser {
+                    fn parse<'i>(
+                        rule: Rule,
+                        input: &'i str
+                    ) -> ::std::result::Result<
+                        ::pest::iterators::Pairs<'i, Rule>,
+                        ::pest::error::Error<Rule>
+                    > {
+                        mod rules {
+                            pub mod hidden {
+                                use super::super::Rule;
 
-                            #[inline]
-                            #[allow(non_snake_case, unused_variables)]
-                            pub fn a(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                                state.match_string("b")
+                                #[inline]
+                                #[allow(dead_code, non_snake_case, unused_variables)]
+                                pub fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                                    Ok(state)
+                                }
                             }
 
-                            #[inline]
-                            #[allow(dead_code, non_snake_case, unused_variables)]
-                            fn ANY(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                                state.skip(1)
+                            pub mod visible {
+                                use super::super::Rule;
+
+                                #[inline]
+                                #[allow(non_snake_case, unused_variables)]
+                                pub fn a(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                                    state.match_string("b")
+                                }
+
+                                #[inline]
+                                #[allow(dead_code, non_snake_case, unused_variables)]
+                                pub fn ANY(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                                    state.skip(1)
+                                }
                             }
 
-                            #[inline]
-                            #[allow(dead_code, non_snake_case, unused_variables)]
-                            fn skip(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
-                                Ok(state)
-                            }
+                            pub use self::visible::*;
                         }
 
                         ::pest::state(input, |state| {

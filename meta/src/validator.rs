@@ -80,7 +80,6 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     pest_keywords.insert("POP");
     pest_keywords.insert("POP_ALL");
     pest_keywords.insert("PUSH");
-    pest_keywords.insert("skip");
     pest_keywords.insert("SOI");
 
     let mut builtins = HashSet::new();
@@ -807,6 +806,14 @@ mod tests {
   = expression cannot fail; following choices cannot be reached")]
     fn lhs_non_failing_nested_choices() {
         let input = "a = { b | \"a\" } b = { \"b\"* | \"c\" }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap()
+        ));
+    }
+
+    #[test]
+    fn skip_can_be_defined() {
+        let input = "skip = { \"\" }";
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap()
         ));
