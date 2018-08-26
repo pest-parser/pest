@@ -117,30 +117,6 @@ Letter:  b
 Digit:   2
 ```
 
-## Meaningful error reporting
-
-Parsing `"123"` instead of `"a1 b2"` in the code above will result in the following panic:
-
-```
-thread 'main' panicked at ' --> 1:1
-  |
-1 | 123
-  | ^---
-  |
-  = unexpected digit', src/main.rs:12
-```
-
-while parsing `"ab *"` will result in:
-
-```
-thread 'main' panicked at ' --> 1:4
-  |
-1 | ab *
-  |    ^---
-  |
-  = expected ident', src/main.rs:12
-```
-
 ## Sheer performance
 Performance measurements put a pest-generated JSON parser somewhere between one of the most optimized JSON parsers, 
 [ujson4c](https://github.com/esnme/ujson4c), and a static native-speed parser, [nom](https://github.com/Geal/nom).
