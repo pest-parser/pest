@@ -143,7 +143,7 @@ thread 'main' panicked at ' --> 1:4
 
 ## Sheer performance
 Performance measurements put a pest-generated JSON parser somewhere between one of the most optimized JSON parsers, 
-[ujson4c](https://github.com/esnme/ujson4c), and a static native-speed parser, [nom](https://github.com/Geal/nom)
+[ujson4c](https://github.com/esnme/ujson4c), and a static native-speed parser, [nom](https://github.com/Geal/nom).
 
 <p align="center">
   <img src="https://raw.github.com/pest-parser/pest/master/results.svg?sanitize=true"/>
