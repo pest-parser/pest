@@ -42,7 +42,7 @@ up-to-date formalization of a language that is easy to read and maintain.
 ## Meaningful error reporting
 
 Based on the grammar definition, the parser also includes automatic error reporting. For the example above, the input 
-"123" will result in: 
+`"123"` will result in:
 
 ```
 thread 'main' panicked at ' --> 1:1
@@ -52,7 +52,7 @@ thread 'main' panicked at ' --> 1:1
   |
   = unexpected digit', src/main.rs:12
 ```
-while "ab *" will result in: 
+while `"ab *"` will result in:
 ```
 thread 'main' panicked at ' --> 1:1
   |
