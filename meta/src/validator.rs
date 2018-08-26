@@ -72,6 +72,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     rust_keywords.insert("yield");
 
     let mut pest_keywords = HashSet::new();
+    pest_keywords.insert("_");
     pest_keywords.insert("ANY");
     pest_keywords.insert("DROP");
     pest_keywords.insert("EOI");
