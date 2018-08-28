@@ -85,8 +85,8 @@ impl<R: RuleType> Error<R> {
         }
     }
 
-    /// Renames all `Rule`s from a `ParsingError` variant returning a `CustomErrorPos`. It does
-    /// nothing when called on `CustomErrorPos` and `CustomErrorSpan` variants.
+    /// Renames all `Rule`s from a `ParsingError` `variant`. It does nothing when called on
+    /// `CustomError` `varriant`.
     ///
     /// Useful in order to rename verbose rules or have detailed per-`Rule` formatting.
     ///
