@@ -23,6 +23,7 @@ use span::Span;
 pub struct Error<R> {
     /// Variant of the error
     pub variant: ErrorVariant<R>,
+    /// Location within the input string
     pub location: InputLocation,
     line: String,
     continued_line: Option<String>,
@@ -57,6 +58,32 @@ pub enum InputLocation {
 }
 
 impl<R: RuleType> Error<R> {
+    /// Creates `Error` from `ErrorVariant` and `Possition`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::error::{Error, ErrorVariant};
+    /// # use pest::Position;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[allow(dead_code)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// # enum Rule {
+    /// #     open_paren,
+    /// #     closed_paren
+    /// # }
+    /// # let input = "";
+    /// # let pos = Position::from_start(input);
+    /// let error = Error::new_from_pos(
+    ///     ErrorVariant::ParsingError {
+    ///         positives: vec![Rule::open_paren],
+    ///         negatives: vec![Rule::closed_paren]
+    ///     },
+    ///     pos
+    /// );
+    ///
+    /// println!("{}", error);
+    /// ```
     pub fn new_from_pos(variant: ErrorVariant<R>, pos: Position) -> Error<R> {
         Error {
             variant,
@@ -68,6 +95,34 @@ impl<R: RuleType> Error<R> {
         }
     }
 
+    /// Creates `Error` from `ErrorVariant` and `Span`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::error::{Error, ErrorVariant};
+    /// # use pest::{Position, Span};
+    /// # #[allow(non_camel_case_types)]
+    /// # #[allow(dead_code)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// # enum Rule {
+    /// #     open_paren,
+    /// #     closed_paren
+    /// # }
+    /// # let input = "";
+    /// # let start = Position::from_start(input);
+    /// # let end = start.clone();
+    /// # let span = start.span(&end);
+    /// let error = Error::new_from_span(
+    ///     ErrorVariant::ParsingError {
+    ///         positives: vec![Rule::open_paren],
+    ///         negatives: vec![Rule::closed_paren]
+    ///     },
+    ///     span
+    /// );
+    ///
+    /// println!("{}", error);
+    /// ```
     pub fn new_from_span(variant: ErrorVariant<R>, span: Span) -> Error<R> {
         let continued_line = if span.start_pos().line_col().0 != span.end_pos().line_col().0 {
             Some(span.end_pos().line_of().to_owned())
