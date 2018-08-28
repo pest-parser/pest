@@ -25,6 +25,7 @@ pub struct Error<R> {
     pub variant: ErrorVariant<R>,
     /// Location within the input string
     pub location: InputLocation,
+    path: Option<String>,
     line: String,
     continued_line: Option<String>,
     start: (usize, usize),
@@ -88,6 +89,7 @@ impl<R: RuleType> Error<R> {
         Error {
             variant,
             location: InputLocation::Pos(pos.pos()),
+            path: None,
             line: pos.line_of().to_owned(),
             continued_line: None,
             start: pos.line_col(),
@@ -133,11 +135,42 @@ impl<R: RuleType> Error<R> {
         Error {
             variant,
             location: InputLocation::Span((span.start(), span.end())),
+            path: None,
             line: span.start_pos().line_of().to_owned(),
             continued_line,
             start: span.start_pos().line_col(),
             end: Some(span.end_pos().line_col())
         }
+    }
+
+    /// Returns `Error` variant with `path` which is shown when formatted with `Display`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::error::{Error, ErrorVariant};
+    /// # use pest::Position;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[allow(dead_code)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// # enum Rule {
+    /// #     open_paren,
+    /// #     closed_paren
+    /// # }
+    /// # let input = "";
+    /// # let pos = Position::from_start(input);
+    /// Error::new_from_pos(
+    ///     ErrorVariant::ParsingError {
+    ///         positives: vec![Rule::open_paren],
+    ///         negatives: vec![Rule::closed_paren]
+    ///     },
+    ///     pos
+    /// ).with_path("file.rs");
+    /// ```
+    pub fn with_path(mut self, path: &str) -> Error<R> {
+        self.path = Some(path.to_owned());
+
+        self
     }
 
     /// Renames all `Rule`s from a `ParsingError` `variant`. It does nothing when called on
@@ -297,12 +330,13 @@ impl<R: RuleType> Error<R> {
 
     pub(crate) fn format(&self) -> String {
         let spacing = self.spacing();
+        let path = self.path.as_ref().map(|path| format!("{}:", path)).unwrap_or_default();
 
         if let (Some(end), &Some(ref continued_line)) = (self.end, &self.continued_line) {
             let has_line_gap = end.0 - self.start.0 > 1;
             if has_line_gap {
                 format!(
-                    "{s    }--> {ls}:{c}\n\
+                    "{s    }--> {p}{ls}:{c}\n\
                      {s    } |\n\
                      {ls:w$} | {line}\n\
                      {s    } | ...\n\
@@ -312,6 +346,7 @@ impl<R: RuleType> Error<R> {
                      {s    } = {message}",
                     s = spacing,
                     w = spacing.len(),
+                    p = path,
                     ls = self.start.0,
                     le = end.0,
                     c = self.start.1,
@@ -322,7 +357,7 @@ impl<R: RuleType> Error<R> {
                 )
             } else {
                 format!(
-                    "{s    }--> {ls}:{c}\n\
+                    "{s    }--> {p}{ls}:{c}\n\
                      {s    } |\n\
                      {ls:w$} | {line}\n\
                      {le:w$} | {continued_line}\n\
@@ -331,6 +366,7 @@ impl<R: RuleType> Error<R> {
                      {s    } = {message}",
                     s = spacing,
                     w = spacing.len(),
+                    p = path,
                     ls = self.start.0,
                     le = end.0,
                     c = self.start.1,
@@ -342,13 +378,14 @@ impl<R: RuleType> Error<R> {
             }
         } else {
             format!(
-                "{s}--> {l}:{c}\n\
+                "{s}--> {p}{l}:{c}\n\
                  {s} |\n\
                  {l} | {line}\n\
                  {s} | {underline}\n\
                  {s} |\n\
                  {s} = {message}",
                 s = spacing,
+                p = path,
                 l = self.start.0,
                 c = self.start.1,
                 line = self.line,
@@ -603,6 +640,31 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = unexpected 5, 6, or 7; expected 2, 3, or 4",
+            ].join("\n")
+        );
+    }
+
+    #[test]
+    fn error_with_path() {
+        let input = b"ab\ncd\nef";
+        let pos = unsafe { position::new(input, 4) };
+        let error: Error<u32> = Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![1, 2, 3],
+                negatives: vec![4, 5, 6]
+            },
+            pos
+        ).with_path("file.rs");
+
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> file.rs:2:2",
+                "  |",
+                "2 | cd",
+                "  |  ^---",
+                "  |",
+                "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
             ].join("\n")
         );
     }
