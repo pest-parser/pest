@@ -53,7 +53,6 @@ impl Vm {
             "POP" => return state.stack_pop(),
             "POP_ALL" => return state.stack_match_pop(),
             "DROP" => return state.stack_drop(),
-
             "ASCII_DIGIT" => return state.match_range('0'..'9'),
             "ASCII_NONZERO_DIGIT" => return state.match_range('1'..'9'),
             "ASCII_BIN_DIGIT" => return state.match_range('0'..'1'),
