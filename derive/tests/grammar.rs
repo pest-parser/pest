@@ -779,9 +779,9 @@ fn shadowing() {
     parses_to! {
         parser: GrammarParser,
         input: "shadows builtin",
-        rule: Rule::Symbol,
+        rule: Rule::SYMBOL,
         tokens: [
-            Symbol(0, 15)
+            SYMBOL(0, 15)
         ]
     }
 }
