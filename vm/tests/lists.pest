@@ -7,20 +7,12 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-a = { "a" }
-b = { "b" }
-c = { "c" }
-d = { ANY }
+item = { (!"\n" ~ ANY)* }
 
-choices = _{ a | b | c }
-choices_no_progress = { a | b | c }
-choices_a_progress = { a ~ a | b | c }
-choices_b_progress = { a | b ~ b | c }
+lists        = _{ lines ~ EOI }
+lines        = _{ top_first ~ ("\n" ~ top_continue)* }
+top_first    = _{ "- " ~ item ~ ("\n" ~ children)? }
+top_continue = _{ PEEK_ALL ~ "- " ~ item ~ ("\n" ~ children)? }
 
-level1 = _{ level2 }
-level2 = _{ a | b | c }
-
-negative = _{ !d }
-negative_match = _{ !a ~ b }
-mixed = _{ !d | a }
-mixed_progress = _{ (!d | a | b) ~ a }
+indentation = _{ (" " | "\t")+ }
+children    =  { PEEK_ALL ~ PUSH(indentation) ~ lines ~ DROP }

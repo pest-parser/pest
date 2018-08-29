@@ -81,12 +81,12 @@ pub fn generate(
 fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     let mut builtins = HashMap::new();
 
+    insert_builtin!(builtins, ANY, state.skip(1));
     insert_public_builtin!(
         builtins,
         EOI,
         state.rule(Rule::EOI, |state| state.end_of_input())
     );
-    insert_builtin!(builtins, ANY, state.skip(1));
     insert_builtin!(builtins, SOI, state.start_of_input());
     insert_builtin!(builtins, PEEK, state.stack_peek());
     insert_builtin!(builtins, PEEK_ALL, state.stack_match_peek());

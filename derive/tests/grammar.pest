@@ -42,7 +42,7 @@ pop_all = { PUSH(range) ~ PUSH(range) ~ POP_ALL }
 pop_fail = { PUSH(range) ~ !POP ~ range ~ POP }
 checkpoint_restore = ${ PUSH("") ~ (PUSH("a") ~ "b" ~ POP | POP ~ "a") ~ EOI }
 unicode = { XID_START ~ XID_CONTINUE* }
-Symbol = { "shadows builtin" }
+SYMBOL = { "shadows builtin" }
 
 WHITESPACE = _{ " " }
 COMMENT = _{ "$"+ }

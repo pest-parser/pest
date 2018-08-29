@@ -687,6 +687,21 @@ fn peek() {
 }
 
 #[test]
+fn peek_all() {
+    parses_to! {
+        parser: vm(),
+        input: "0110",
+        rule: "peek_all",
+        tokens: [
+            peek_all(0, 4, [
+                range(0, 1),
+                range(1, 2)
+            ])
+        ]
+    };
+}
+
+#[test]
 fn pop() {
     parses_to! {
         parser: vm(),
@@ -694,6 +709,21 @@ fn pop() {
         rule: "pop_",
         tokens: [
             pop_(0, 4, [
+                range(0, 1),
+                range(1, 2)
+            ])
+        ]
+    };
+}
+
+#[test]
+fn pop_all() {
+    parses_to! {
+        parser: vm(),
+        input: "0110",
+        rule: "pop_all",
+        tokens: [
+            pop_all(0, 4, [
                 range(0, 1),
                 range(1, 2)
             ])
@@ -738,4 +768,28 @@ fn checkpoint_restore() {
             checkpoint_restore(0, 1, [EOI(1, 1)])
         ]
     };
+}
+
+#[test]
+fn unicode() {
+    parses_to! {
+        parser: vm(),
+        input: "نامهای",
+        rule: "unicode",
+        tokens: [
+            unicode(0, 12)
+        ]
+    }
+}
+
+#[test]
+fn shadowing() {
+    parses_to! {
+        parser: vm(),
+        input: "shadows builtin",
+        rule: "SYMBOL",
+        tokens: [
+            SYMBOL(0, 15)
+        ]
+    }
 }

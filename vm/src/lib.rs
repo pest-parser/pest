@@ -13,6 +13,7 @@ extern crate pest_meta;
 use pest::{Atomicity, ParseResult, ParserState};
 use pest::error::Error;
 use pest::iterators::Pairs;
+use pest::unicode;
 use pest_meta::ast::RuleType;
 use pest_meta::optimizer::{OptimizedExpr, OptimizedRule};
 
@@ -44,12 +45,40 @@ impl Vm {
         state: Box<ParserState<'i, &'a str>>
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match rule {
-            "any" => return state.skip(1),
+            "ANY" => return state.skip(1),
             "EOI" => return state.rule("EOI", |state| state.end_of_input()),
             "SOI" => return state.start_of_input(),
             "PEEK" => return state.stack_peek(),
+            "PEEK_ALL" => return state.stack_match_peek(),
             "POP" => return state.stack_pop(),
+            "POP_ALL" => return state.stack_match_pop(),
             "DROP" => return state.stack_drop(),
+            "ASCII_DIGIT" => return state.match_range('0'..'9'),
+            "ASCII_NONZERO_DIGIT" => return state.match_range('1'..'9'),
+            "ASCII_BIN_DIGIT" => return state.match_range('0'..'1'),
+            "ASCII_OCT_DIGIT" => return state.match_range('0'..'7'),
+            "ASCII_HEX_DIGIT" => {
+                return state.match_range('0'..'9')
+                    .or_else(|state| state.match_range('a'..'f'))
+                    .or_else(|state| state.match_range('A'..'F'))
+            },
+            "ASCII_ALPHA_LOWER" => return state.match_range('a'..'z'),
+            "ASCII_ALPHA_UPPER" => return state.match_range('A'..'Z'),
+            "ASCII_ALPHA" => {
+                return state.match_range('a'..'z')
+                    .or_else(|state| state.match_range('A'..'Z'))
+            },
+            "ASCII_ALPHANUMERIC" => {
+                return state.match_range('a'..'z')
+                    .or_else(|state| state.match_range('A'..'Z'))
+                    .or_else(|state| state.match_range('0'..'9'))
+            },
+            "ASCII" => return state.match_range('\x00'..'\x7f'),
+            "NEWLINE" => {
+                return state.match_string("\n")
+                    .or_else(|state| state.match_string("\r\n"))
+                    .or_else(|state| state.match_string("\r"))
+            },
             _ => ()
         };
 
@@ -98,6 +127,10 @@ impl Vm {
                 }
             }
         } else {
+            if let Some(property) = unicode::by_name(rule) {
+                return state.match_char_by(|c| property(c));
+            }
+
             panic!("undefined rule {}", rule);
         }
     }
