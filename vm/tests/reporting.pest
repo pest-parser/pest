@@ -10,7 +10,7 @@
 a = { "a" }
 b = { "b" }
 c = { "c" }
-d = { any }
+d = { ANY }
 
 choices = _{ a | b | c }
 choices_no_progress = { a | b | c }
@@ -24,4 +24,3 @@ negative = _{ !d }
 negative_match = _{ !a ~ b }
 mixed = _{ !d | a }
 mixed_progress = _{ (!d | a | b) ~ a }
-
