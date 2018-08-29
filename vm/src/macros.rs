@@ -168,11 +168,11 @@ macro_rules! parses_to {
                             &::pest::Token::End { rule: ref second_rule, .. }
                         ) => {
                             assert!(
-                                format!("{:?}", first_rule) == "eoi",
+                                format!("{}", first_rule) == "EOI",
                                 format!("expected end of input, but found {:?}", rest)
                             );
                             assert!(
-                                format!("{:?}", second_rule) == "eoi",
+                                format!("{}", second_rule) == "EOI",
                                 format!("expected end of input, but found {:?}", rest)
                             );
                         }
