@@ -35,7 +35,7 @@ char_property_functions! {
         REGIONAL_INDICATOR, SENTENCE_TERMINAL, SOFT_DOTTED, TERMINAL_PUNCTUATION, UNIFIED_IDEOGRAPH,
         UPPERCASE, VARIATION_SELECTOR, WHITE_SPACE, XID_CONTINUE, XID_START,
     ];
-    
+
     mod category;
     [
         CASED_LETTER, CLOSE_PUNCTUATION, CONNECTOR_PUNCTUATION, CONTROL, CURRENCY_SYMBOL,
@@ -46,4 +46,20 @@ char_property_functions! {
         PRIVATE_USE, PUNCTUATION, SEPARATOR, SPACE_SEPARATOR, SPACING_MARK, SURROGATE, SYMBOL,
         TITLECASE_LETTER, UNASSIGNED, UPPERCASE_LETTER,
     ];
+}
+
+pub fn by_name(name: &str) -> Option<Box<Fn(char) -> bool>> {println!("{:?}", name);
+    for property in binary::BY_NAME {
+        if name == property.0.to_uppercase() {
+            return Some(Box::new(move |c| property.1.contains_char(c)));
+        }
+    }
+
+    for property in category::BY_NAME {
+        if name == property.0.to_uppercase() {
+            return Some(Box::new(move |c| property.1.contains_char(c)));
+        }
+    }
+
+    None
 }
