@@ -10,9 +10,12 @@
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::mem;
 use std::ops::Range;
 use std::ptr;
 use std::str;
+
+use packed_simd as simd;
 
 use span;
 
@@ -272,6 +275,41 @@ impl<'i> Position<'i> {
         }
 
         false
+    }
+
+    #[cfg(not(feature = "no_std"))]
+    #[inline]
+    pub(crate) fn skip_until_bytes(&mut self, bytes: &[u8]) -> bool {
+        let mut current_pos = self.pos;
+        loop {
+            if self.input.len() - current_pos >= 16 {
+                let string = simd::u8x16::from_slice_unaligned(&self.input[current_pos..]);
+                let min = bytes.iter().filter_map(|byte| {
+                    let mask = string.eq(simd::u8x16::splat(*byte));
+                    if mask.any() {
+                        let value: u128 = unsafe { mem::transmute(mask) };
+                        Some(value.trailing_zeros())
+                    } else {
+                        None
+                    }
+                }).min();
+                if let Some(min) = min {
+                    self.pos = current_pos + min as usize / 8;
+                    return true;
+                }
+                current_pos += 16;
+            } else {
+                for i in current_pos..self.input.len() {
+                    for byte in bytes {
+                        if self.input[i] == *byte {
+                            self.pos = i;
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+        }
     }
 
     /// Matches the char at the `Position` against a filter function and returns `true` if a match
@@ -540,6 +578,31 @@ mod tests {
 
         test_pos = pos.clone();
         assert!(!test_pos.skip_until(&["zzz"]));
+        assert_eq!(test_pos.pos(), 0);
+    }
+
+    #[test]
+    fn skip_until_bytes() {
+        let input = "ab              ac";
+        let pos = Position::from_start(input);
+        let a = 97;
+        let b = 98;
+        let c = 99;
+
+        let mut test_pos = pos.clone();
+        test_pos.skip_until_bytes(&[a, b]);
+        assert_eq!(test_pos.pos(), 0);
+
+        test_pos = pos.clone();
+        test_pos.skip_until_bytes(&[b]);
+        assert_eq!(test_pos.pos(), 1);
+
+        test_pos = pos.clone();
+        test_pos.skip_until_bytes(&[c]);
+        assert_eq!(test_pos.pos(), 17);
+
+        test_pos = pos.clone();
+        assert!(!test_pos.skip_until_bytes(&[100]));
         assert_eq!(test_pos.pos(), 0);
     }
 

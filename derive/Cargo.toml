@@ -14,6 +14,9 @@ readme = "_README.md"
 name = "pest_derive"
 proc-macro = true
 
+[features]
+no_simd = []
+
 [dependencies]
 pest = { path = "../pest", version = "2.0" }
 pest_meta = { path = "../meta", version = "2.0" }

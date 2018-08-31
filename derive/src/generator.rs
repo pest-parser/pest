@@ -553,6 +553,26 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
             }
         }
         OptimizedExpr::Skip(strings) => {
+            #[cfg(not(feature = "no_simd"))]
+            {
+                if strings.iter().all(|s| s.len() == 1) {
+                    let bytes: Vec<_> = strings.iter().map(|s| s.as_bytes()[0]).collect();
+
+                    quote! {
+                        let bytes = [#(#bytes),*];
+
+                        state.skip_until_bytes(&bytes)
+                    }
+                } else {
+                    quote! {
+                        let strings = [#(#strings),*];
+
+                        state.skip_until(&strings)
+                    }
+                }
+            }
+
+            #[cfg(feature = "no_simd")]
             quote! {
                 let strings = [#(#strings),*];
 
@@ -727,9 +747,9 @@ mod tests {
         assert_eq!(
             generate_expr_atomic(expr).to_string(),
             quote! {
-                let strings = ["a", "b"];
+                let bytes = [97u8, 98u8];
 
-                state.skip_until(&strings)
+                state.skip_until_bytes(&bytes)
             }.to_string()
         );
     }

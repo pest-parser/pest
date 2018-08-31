@@ -623,6 +623,34 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Asks the `ParserState` to continue to skip until one of the given `bytes` is found. If
+    /// the match is successful, this will return an `Ok` with the updated `Box<ParserState>`. If
+    /// failed, an `Err` with the updated `Box<ParserState>` is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "abcd";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state.skip_until_bytes(&[99, 100]); // c: 99, d: 100
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 2);
+    /// ```
+    #[cfg(not(feature = "no_std"))]
+    #[inline]
+    pub fn skip_until_bytes(mut self: Box<Self>, bytes: &[u8]) -> ParseResult<Box<Self>> {
+        if self.position.skip_until_bytes(bytes) {
+            Ok(self)
+        } else {
+            Err(self)
+        }
+    }
+
     /// Asks the `ParserState` to match the start of the input. If the match is successful, this
     /// will return an `Ok` with the updated `Box<ParserState>`. If failed, an `Err` with the
     /// updated `Box<ParserState>` is returned.
