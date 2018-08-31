@@ -56,6 +56,8 @@
 
 #![doc(html_root_url = "https://docs.rs/pest")]
 
+#[cfg(not(feature = "no_std"))]
+extern crate packed_simd;
 extern crate ucd_trie;
 
 pub use parser::Parser;

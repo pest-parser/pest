@@ -10,10 +10,15 @@ categories = ["parsing"]
 license = "MIT/Apache-2.0"
 readme = "_README.md"
 
+[features]
+default = ["packed_simd"]
+no_simd = []
+
 [badges]
 codecov = { repository = "pest-parser/pest" }
 maintenance = { status = "actively-developed" }
 travis-ci = { repository = "pest-parser/pest" }
 
 [dependencies]
+packed_simd = { version = "0.2", optional = true }
 ucd-trie = "0.1.1"
