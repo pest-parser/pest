@@ -8,6 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use std::collections::HashMap;
+use std::path::Path;
 
 use proc_macro2::{Span, TokenStream};
 use syn::{self, Generics, Ident};
@@ -19,12 +20,14 @@ use pest_meta::UNICODE_PROPERTY_NAMES;
 pub fn generate(
     name: Ident,
     generics: &Generics,
+    path: &Path,
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>
 ) -> TokenStream {
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
 
     let builtins = generate_builtin_rules();
+    let include_fix = generate_include(&name, &path.to_str().expect("non-Unicode path"));
     let rule_enum = generate_enum(&rules, uses_eoi);
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
@@ -71,6 +74,7 @@ pub fn generate(
     };
 
     quote! {
+        #include_fix
         #rule_enum
         #parser_impl
     }
@@ -142,6 +146,16 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     }
 
     builtins
+}
+
+// Needed because Cargo doesn't watch for changes in grammers.
+fn generate_include(name: &Ident, path: &str) -> TokenStream {
+    let const_name = Ident::new(&format!("_PEST_GRAMMAR_{}", name), Span::call_site());
+    quote! {
+        #[allow(non_upper_case_globals)]
+        #[cfg(debug_assertions)]
+        const #const_name: &'static str = include_str!(#path);
+    }
 }
 
 fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> TokenStream {
@@ -883,8 +897,12 @@ mod tests {
         let defaults = vec!["ANY"];
 
         assert_eq!(
-            generate(name, &generics, rules, defaults).to_string(),
+            generate(name, &generics, Path::new("test.pest"), rules, defaults).to_string(),
             quote! {
+                #[allow(non_upper_case_globals)]
+                #[cfg(debug_assertions)]
+                const _PEST_GRAMMAR_MyParser: &'static str = include_str!("test.pest");
+
                 #[allow(dead_code, non_camel_case_types)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
