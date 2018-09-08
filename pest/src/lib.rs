@@ -36,16 +36,7 @@
 //! relative to `src` and is specified between the `derive` attribute and an empty `struct` that
 //! `Parser` will be derived on.
 //!
-//! Because of a limitation in procedural macros, there is no way for Cargo to know that a module
-//! needs to be recompiled based on the file that the procedural macro is opening. This leads to the
-//! case where modifying a `.pest` file without touching the file where the `derive` is does not
-//! recompile it if it already has a working binary in the cache. To avoid this issue, the grammar
-//! file can be included in a dummy `const` definition while debugging.
-//!
 //! ```ignore
-//! #[cfg(debug_assertions)]
-//! const _GRAMMAR: &'static str = include_str!("path/to/my_grammar.pest"); // relative to this file
-//!
 //! #[derive(Parser)]
 //! #[grammar = "path/to/my_grammar.pest"] // relative to src
 //! struct MyParser;
