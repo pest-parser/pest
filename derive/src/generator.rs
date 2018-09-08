@@ -897,8 +897,12 @@ mod tests {
         let defaults = vec!["ANY"];
 
         assert_eq!(
-            generate(name, &generics, rules, defaults).to_string(),
+            generate(name, &generics, Path::new("test.pest"), rules, defaults).to_string(),
             quote! {
+                #[allow(non_upper_case_globals)]
+                #[cfg(debug_assertions)]
+                const _PEST_GRAMMAR_MyParser: &'static str = include_str!("test.pest");
+
                 #[allow(dead_code, non_camel_case_types)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
