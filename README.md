@@ -168,7 +168,7 @@ extern crate pest_derive;
 * [comrak](https://github.com/kivikakk/comrak)
 * [graphql-parser](https://github.com/Keats/graphql-parser)
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
-* [Huia](https://gitlab.com/huia-lang/huia-compiler)
+* [Huia](https://gitlab.com/jimsy/huia/)
 * [py_literal](https://github.com/jturner314/py_literal)
 * [rouler](https://github.com/jarcane/rouler)
 * [RuSh](https://github.com/lwandrebeck/RuSh)
