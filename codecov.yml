@@ -1,4 +1,6 @@
 comment: off
 
 ignore:
+ - derive/src/lib.rs
+ -pest/examples/parens.rs
  - pest/src/unicode/*
