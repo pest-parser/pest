@@ -203,3 +203,21 @@ impl<'i> Hash for Span<'i> {
         self.end.hash(state);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split() {
+        let input = "a";
+        let start = position::Position::from_start(input);
+        let mut end = start.clone();
+
+        assert!(end.skip(1));
+
+        let span = start.clone().span(&end.clone());
+
+        assert_eq!(span.split(), (start, end));
+    }
+}
