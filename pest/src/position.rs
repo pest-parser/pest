@@ -417,6 +417,8 @@ impl<'i> Hash for Position<'i> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+    
     use super::*;
 
     #[test]
@@ -560,5 +562,37 @@ mod tests {
 
         assert_eq!(unsafe { new(input, 0) }.match_insensitive("asd"), true);
         assert_eq!(unsafe { new(input, 3) }.match_insensitive("asdf"), true);
+    }
+
+    #[test]
+    fn cmp() {
+        let input = "a";
+        let start = Position::from_start(input);
+        let mut end = start.clone();
+
+        assert!(end.skip(1));
+        let result = start.cmp(&end);
+
+        assert_eq!(result, Ordering::Less);
+    }
+
+    #[test]
+    #[should_panic]
+    fn cmp_panic() {
+        let input1 = "a";
+        let input2 = "b";
+        let pos1 = Position::from_start(input1);
+        let pos2 = Position::from_start(input2);
+
+        pos1.cmp(&pos2);
+    }
+
+    #[test]
+    fn hash() {
+        let input = "a";
+        let start = Position::from_start(input);
+        let mut positions = HashSet::new();
+
+        positions.insert(start);
     }
 }

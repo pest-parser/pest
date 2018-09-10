@@ -7,7 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ptr;
@@ -174,32 +173,28 @@ impl<'i> PartialEq for Span<'i> {
 
 impl<'i> Eq for Span<'i> {}
 
-impl<'i> PartialOrd for Span<'i> {
-    fn partial_cmp(&self, other: &Span<'i>) -> Option<Ordering> {
-        if ptr::eq(self.input, other.input) {
-            match self.start.partial_cmp(&other.start) {
-                Some(Ordering::Equal) => self.end.partial_cmp(&other.end),
-                ordering => ordering
-            }
-        } else {
-            None
-        }
-    }
-}
-
-impl<'i> Ord for Span<'i> {
-    fn cmp(&self, other: &Span<'i>) -> Ordering {
-        self.partial_cmp(other).expect(
-            "cannot compare spans from \
-             different inputs"
-        )
-    }
-}
-
 impl<'i> Hash for Span<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (self.input as *const [u8]).hash(state);
         self.start.hash(state);
         self.end.hash(state);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split() {
+        let input = "a";
+        let start = position::Position::from_start(input);
+        let mut end = start.clone();
+
+        assert!(end.skip(1));
+
+        let span = start.clone().span(&end.clone());
+
+        assert_eq!(span.split(), (start, end));
     }
 }

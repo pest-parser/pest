@@ -104,14 +104,7 @@ impl Parser<Rule> for CalculatorParser {
 
         state(input, |state| match rule {
             Rule::expression => expression(state),
-            Rule::primary => primary(state),
-            Rule::number => number(state),
-            Rule::plus => plus(state),
-            Rule::minus => minus(state),
-            Rule::times => times(state),
-            Rule::divide => divide(state),
-            Rule::modulus => modulus(state),
-            Rule::power => power(state)
+            _ => unreachable!()
         })
     }
 }
