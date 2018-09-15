@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "debugger",
     "derive",
     "grammars",
     "meta",

@@ -1,0 +1,22 @@
+[package]
+name = "pest_debugger"
+description = "pest grammar command-line debugger"
+version = "2.0.0"
+authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
+repository = "https://github.com/pest-parser/pest"
+documentation = "https://docs.rs/pest"
+keywords = ["pest", "grammar", "debugger"]
+categories = ["parsing"]
+license = "MIT/Apache-2.0"
+readme = "_README.md"
+
+[dependencies]
+pest = { path = "../pest", version = "2.0" }
+pest_meta = { path = "../meta", version = "2.0" }
+pest_vm = { path = "../vm", version = "2.0" }
+rustyline = "2"
+
+[badges]
+codecov = { repository = "pest-parser/pest" }
+maintenance = { status = "actively-developed" }
+travis-ci = { repository = "pest-parser/pest" }
