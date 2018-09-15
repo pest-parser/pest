@@ -18,6 +18,8 @@ extern crate pest_derive;
 
 use std::fmt::Display;
 
+use pest::Error;
+
 pub mod parser;
 pub mod ast;
 pub mod optimizer;
@@ -30,13 +32,57 @@ where
 {
     result.unwrap_or_else(|e| {
         panic!(
-            "grammar error\n\n".to_owned()
-                + &e.into_iter()
-                    .map(|error| format!("{}", error))
-                    .collect::<Vec<_>>()
-                    .join("\n\n")
+            "grammar errors\n\n{}",
+            &e.into_iter()
+                .map(|error| format!("{}", error))
+                .collect::<Vec<_>>()
+                .join("\n\n")
         )
     })
+}
+
+pub fn parse_and_optimize<'i>(
+    file_name: &str,
+    grammar: &'i str
+) -> Result<(Vec<&'i str>, Vec<optimizer::OptimizedRule>), Vec<Error<'i, parser::Rule>>> {
+    let pairs = match parser::parse(parser::Rule::grammar_rules, grammar) {
+        Ok(pairs) => pairs,
+        Err(error) => panic!(
+            "error parsing {:?}\n\n{}",
+            file_name,
+            error.renamed_rules(|rule| match *rule {
+                parser::Rule::grammar_rule => "rule".to_owned(),
+                parser::Rule::_push => "PUSH".to_owned(),
+                parser::Rule::assignment_operator => "`=`".to_owned(),
+                parser::Rule::silent_modifier => "`_`".to_owned(),
+                parser::Rule::atomic_modifier => "`@`".to_owned(),
+                parser::Rule::compound_atomic_modifier => "`$`".to_owned(),
+                parser::Rule::non_atomic_modifier => "`!`".to_owned(),
+                parser::Rule::opening_brace => "`{`".to_owned(),
+                parser::Rule::closing_brace => "`}`".to_owned(),
+                parser::Rule::opening_paren => "`(`".to_owned(),
+                parser::Rule::positive_predicate_operator => "`&`".to_owned(),
+                parser::Rule::negative_predicate_operator => "`!`".to_owned(),
+                parser::Rule::sequence_operator => "`&`".to_owned(),
+                parser::Rule::choice_operator => "`|`".to_owned(),
+                parser::Rule::optional_operator => "`?`".to_owned(),
+                parser::Rule::repeat_operator => "`*`".to_owned(),
+                parser::Rule::repeat_once_operator => "`+`".to_owned(),
+                parser::Rule::comma => "`,`".to_owned(),
+                parser::Rule::closing_paren => "`)`".to_owned(),
+                parser::Rule::quote => "`\"`".to_owned(),
+                parser::Rule::insensitive_string => "`^`".to_owned(),
+                parser::Rule::range_operator => "`..`".to_owned(),
+                parser::Rule::single_quote => "`'`".to_owned(),
+                other_rule => format!("{:?}", other_rule)
+            })
+        )
+    };
+
+    let defaults = validator::validate_pairs(pairs.clone())?;
+    let ast = parser::consume_rules(pairs)?;
+
+    Ok((defaults, optimizer::optimize(ast)))
 }
 
 #[doc(hidden)]

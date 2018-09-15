@@ -272,8 +272,7 @@ use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 mod macros;
 mod generator;
 
-use pest_meta::{optimizer, unwrap_or_report, validator};
-use pest_meta::parser::{self, Rule};
+use pest_meta::{parse_and_optimize, unwrap_or_report};
 
 #[proc_macro_derive(Parser, attributes(grammar))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
@@ -292,43 +291,9 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
         Err(error) => panic!("error opening {:?}: {}", file_name, error)
     };
 
-    let pairs = match parser::parse(Rule::grammar_rules, &data) {
-        Ok(pairs) => pairs,
-        Err(error) => panic!(
-            "error parsing {:?}\n\n{}",
-            file_name,
-            error.renamed_rules(|rule| match *rule {
-                Rule::grammar_rule => "rule".to_owned(),
-                Rule::_push => "PUSH".to_owned(),
-                Rule::assignment_operator => "`=`".to_owned(),
-                Rule::silent_modifier => "`_`".to_owned(),
-                Rule::atomic_modifier => "`@`".to_owned(),
-                Rule::compound_atomic_modifier => "`$`".to_owned(),
-                Rule::non_atomic_modifier => "`!`".to_owned(),
-                Rule::opening_brace => "`{`".to_owned(),
-                Rule::closing_brace => "`}`".to_owned(),
-                Rule::opening_paren => "`(`".to_owned(),
-                Rule::positive_predicate_operator => "`&`".to_owned(),
-                Rule::negative_predicate_operator => "`!`".to_owned(),
-                Rule::sequence_operator => "`&`".to_owned(),
-                Rule::choice_operator => "`|`".to_owned(),
-                Rule::optional_operator => "`?`".to_owned(),
-                Rule::repeat_operator => "`*`".to_owned(),
-                Rule::repeat_once_operator => "`+`".to_owned(),
-                Rule::comma => "`,`".to_owned(),
-                Rule::closing_paren => "`)`".to_owned(),
-                Rule::quote => "`\"`".to_owned(),
-                Rule::insensitive_string => "`^`".to_owned(),
-                Rule::range_operator => "`..`".to_owned(),
-                Rule::single_quote => "`'`".to_owned(),
-                other_rule => format!("{:?}", other_rule)
-            })
-        )
-    };
-
-    let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
-    let ast = unwrap_or_report(parser::consume_rules(pairs));
-    let optimized = optimizer::optimize(ast);
+    let (defaults, optimized) = unwrap_or_report(
+        parse_and_optimize(file_name.to_string_lossy().as_ref(), &data)
+    );
     let generated = generator::generate(name, &generics, &path, optimized, defaults);
 
     generated.into()
