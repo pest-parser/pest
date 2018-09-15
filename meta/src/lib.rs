@@ -31,12 +31,18 @@ where
     E::Item: Display
 {
     result.unwrap_or_else(|e| {
+        let errors = e.into_iter()
+            .map(|error| format!("{}", error))
+            .collect::<Vec<_>>();
+        let noun = match errors.len() {
+            1 => "error",
+            _ => "errors"
+        };
+
         panic!(
-            "grammar errors\n\n{}",
-            &e.into_iter()
-                .map(|error| format!("{}", error))
-                .collect::<Vec<_>>()
-                .join("\n\n")
+            "grammar {}\n\n{}",
+            noun,
+            &errors.join("\n\n")
         )
     })
 }

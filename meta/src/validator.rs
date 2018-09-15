@@ -703,7 +703,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
+    #[should_panic(expected = "grammar errors
 
  --> 1:7
   |
@@ -790,7 +790,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "grammar error
+    #[should_panic(expected = "grammar errors
 
  --> 1:7
   |
