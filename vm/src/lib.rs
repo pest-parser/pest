@@ -13,6 +13,7 @@ extern crate pest_meta;
 use pest::{Atomicity, ParseResult, ParserState};
 use pest::error::Error;
 use pest::iterators::Pairs;
+use pest::Position;
 use pest::unicode;
 use pest_meta::ast::RuleType;
 use pest_meta::optimizer::{OptimizedExpr, OptimizedRule};
@@ -22,13 +23,19 @@ use std::collections::HashMap;
 mod macros;
 
 pub struct Vm {
-    rules: HashMap<String, OptimizedRule>
+    rules: HashMap<String, OptimizedRule>,
+    listener: Option<Box<Fn(String, &Position)>>
 }
 
 impl Vm {
     pub fn new(rules: Vec<OptimizedRule>) -> Vm {
         let rules = rules.into_iter().map(|r| (r.name.clone(), r)).collect();
-        Vm { rules }
+        Vm { rules, listener: None }
+    }
+
+    pub fn with_listener(rules: Vec<OptimizedRule>, listener: Box<Fn(String, &Position)>) -> Vm {
+        let rules = rules.into_iter().map(|r| (r.name.clone(), r)).collect();
+        Vm { rules, listener: Some(listener) }
     }
 
     pub fn parse<'a, 'i>(
@@ -44,6 +51,10 @@ impl Vm {
         rule: &'a str,
         state: Box<ParserState<'i, &'a str>>
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
+        if let Some(ref listener) = self.listener {
+            listener(rule.to_owned(), state.position());
+        }
+
         match rule {
             "ANY" => return state.skip(1),
             "EOI" => return state.rule("EOI", |state| state.end_of_input()),
