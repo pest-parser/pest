@@ -587,6 +587,7 @@ fn unescape(string: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::unwrap_or_report;
 
     #[test]
     fn rules() {
@@ -1172,6 +1173,119 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:13
+  |
+1 | rule = { \"\"{4294967297} }
+  |             ^--------^
+  |
+  = number cannot overflow u32")]
+    fn repeat_exact_overflow() {
+        let input = "rule = { \"\"{4294967297} }";
+
+        let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
+        unwrap_or_report(consume_rules_with_spans(pairs));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:13
+  |
+1 | rule = { \"\"{0} }
+  |             ^
+  |
+  = cannot repeat 0 times")]
+    fn repeat_exact_zero() {
+        let input = "rule = { \"\"{0} }";
+
+        let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
+        unwrap_or_report(consume_rules_with_spans(pairs));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:13
+  |
+1 | rule = { \"\"{4294967297,} }
+  |             ^--------^
+  |
+  = number cannot overflow u32")]
+    fn repeat_min_overflow() {
+        let input = "rule = { \"\"{4294967297,} }";
+
+        let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
+        unwrap_or_report(consume_rules_with_spans(pairs));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:14
+  |
+1 | rule = { \"\"{,4294967297} }
+  |              ^--------^
+  |
+  = number cannot overflow u32")]
+    fn repeat_max_overflow() {
+        let input = "rule = { \"\"{,4294967297} }";
+
+        let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
+        unwrap_or_report(consume_rules_with_spans(pairs));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:14
+  |
+1 | rule = { \"\"{,0} }
+  |              ^
+  |
+  = cannot repeat 0 times")]
+    fn repeat_max_zero() {
+        let input = "rule = { \"\"{,0} }";
+
+        let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
+        unwrap_or_report(consume_rules_with_spans(pairs));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:13
+  |
+1 | rule = { \"\"{4294967297,4294967298} }
+  |             ^--------^
+  |
+  = number cannot overflow u32")]
+    fn repeat_min_max_overflow() {
+        let input = "rule = { \"\"{4294967297,4294967298} }";
+
+        let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
+        unwrap_or_report(consume_rules_with_spans(pairs));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:15
+  |
+1 | rule = { \"\"{0,0} }
+  |               ^
+  |
+  = cannot repeat 0 times")]
+    fn repeat_min_max_zero() {
+        let input = "rule = { \"\"{0,0} }";
+
+        let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
+        unwrap_or_report(consume_rules_with_spans(pairs));
+    }
+
 
     #[test]
     fn unescape_all() {
