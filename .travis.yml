@@ -5,10 +5,18 @@ os:
   - linux
 rust:
   - stable
+  - nightly
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
 addons:
   apt:
     packages:
       - libssl-dev
+      - pkg-config
+      - cmake
+      - zlib1g-dev
 git:
   depth: 1
 branches:
@@ -24,6 +32,8 @@ script:
       cargo doc --all --verbose
 after_success:
   - |
-      bash <(curl https://raw.githubusercontent.com/xd009642/tarpaulin/master/travis-install.sh)
-      cargo tarpaulin --out Xml
-      bash <(curl -s https://codecov.io/bash)
+      if [[ $TRAVIS_RUST_VERSION =~ nightly ]]; then
+        RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
+        cargo tarpaulin --out Xml &&
+        bash <(curl -s https://codecov.io/bash)
+      fi
