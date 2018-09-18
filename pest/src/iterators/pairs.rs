@@ -264,6 +264,20 @@ mod tests {
     use super::super::super::macros::tests::*;
 
     #[test]
+    fn as_str() {
+        let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
+
+        assert_eq!(pairs.as_str(), "abcde");
+    }
+
+    #[test]
+    fn concat() {
+        let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
+
+        assert_eq!(pairs.concat(), "abce");
+    }
+
+    #[test]
     fn pairs_debug() {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
