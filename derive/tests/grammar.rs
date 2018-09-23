@@ -664,6 +664,21 @@ fn repeat_comment() {
 }
 
 #[test]
+fn soi_at_start() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::soi_at_start,
+        tokens: [
+            soi_at_start(0, 3, [
+                string(0, 3)
+            ])
+        ]
+    };
+}
+
+
+#[test]
 fn peek() {
     parses_to! {
         parser: GrammarParser,
@@ -758,6 +773,138 @@ fn checkpoint_restore() {
         rule: Rule::checkpoint_restore,
         tokens: [
             checkpoint_restore(0, 1, [EOI(1, 1)])
+        ]
+    };
+}
+
+#[test]
+fn ascii_digits() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "6",
+        rule: Rule::ascii_digits,
+        tokens: [
+            ascii_digits(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_nonzero_digits() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "5",
+        rule: Rule::ascii_nonzero_digits,
+        tokens: [
+            ascii_nonzero_digits(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_bin_digits() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "1",
+        rule: Rule::ascii_bin_digits,
+        tokens: [
+            ascii_bin_digits(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_oct_digits() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "3",
+        rule: Rule::ascii_oct_digits,
+        tokens: [
+            ascii_oct_digits(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_hex_digits() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "6bC",
+        rule: Rule::ascii_hex_digits,
+        tokens: [
+            ascii_hex_digits(0, 3)
+        ]
+    };
+}
+
+#[test]
+fn ascii_alpha_lowers() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "a",
+        rule: Rule::ascii_alpha_lowers,
+        tokens: [
+            ascii_alpha_lowers(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_alpha_uppers() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "K",
+        rule: Rule::ascii_alpha_uppers,
+        tokens: [
+            ascii_alpha_uppers(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_alphas() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "wF",
+        rule: Rule::ascii_alphas,
+        tokens: [
+            ascii_alphas(0, 2)
+        ]
+    };
+}
+
+#[test]
+fn ascii_alphanumerics() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "4jU",
+        rule: Rule::ascii_alphanumerics,
+        tokens: [
+            ascii_alphanumerics(0, 3)
+        ]
+    };
+}
+
+#[test]
+fn asciis() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "x02",
+        rule: Rule::asciis,
+        tokens: [
+            asciis(0, 3)
+        ]
+    };
+}
+
+#[test]
+fn newline() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "\n\r\n\r",
+        rule: Rule::newline,
+        tokens: [
+            newline(0, 4)
         ]
     };
 }
