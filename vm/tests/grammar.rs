@@ -672,6 +672,20 @@ fn repeat_comment() {
 }
 
 #[test]
+fn soi_at_start() {
+    parses_to! {
+        parser: vm(),
+        input: "abc",
+        rule: "soi_at_start",
+        tokens: [
+            soi_at_start(0, 3, [
+                string(0, 3)
+            ])
+        ]
+    };
+}
+
+#[test]
 fn peek() {
     parses_to! {
         parser: vm(),
@@ -766,6 +780,138 @@ fn checkpoint_restore() {
         rule: "checkpoint_restore",
         tokens: [
             checkpoint_restore(0, 1, [EOI(1, 1)])
+        ]
+    };
+}
+
+#[test]
+fn ascii_digits() {
+    parses_to! {
+        parser: vm(),
+        input: "6",
+        rule: "ascii_digits",
+        tokens: [
+            ascii_digits(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_nonzero_digits() {
+    parses_to! {
+        parser: vm(),
+        input: "5",
+        rule: "ascii_nonzero_digits",
+        tokens: [
+            ascii_nonzero_digits(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_bin_digits() {
+    parses_to! {
+        parser: vm(),
+        input: "1",
+        rule: "ascii_bin_digits",
+        tokens: [
+            ascii_bin_digits(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_oct_digits() {
+    parses_to! {
+        parser: vm(),
+        input: "3",
+        rule: "ascii_oct_digits",
+        tokens: [
+            ascii_oct_digits(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_hex_digits() {
+    parses_to! {
+        parser: vm(),
+        input: "6bC",
+        rule: "ascii_hex_digits",
+        tokens: [
+            ascii_hex_digits(0, 3)
+        ]
+    };
+}
+
+#[test]
+fn ascii_alpha_lowers() {
+    parses_to! {
+        parser: vm(),
+        input: "a",
+        rule: "ascii_alpha_lowers",
+        tokens: [
+            ascii_alpha_lowers(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_alpha_uppers() {
+    parses_to! {
+        parser: vm(),
+        input: "K",
+        rule: "ascii_alpha_uppers",
+        tokens: [
+            ascii_alpha_uppers(0, 1)
+        ]
+    };
+}
+
+#[test]
+fn ascii_alphas() {
+    parses_to! {
+        parser: vm(),
+        input: "wF",
+        rule: "ascii_alphas",
+        tokens: [
+            ascii_alphas(0, 2)
+        ]
+    };
+}
+
+#[test]
+fn ascii_alphanumerics() {
+    parses_to! {
+        parser: vm(),
+        input: "4jU",
+        rule: "ascii_alphanumerics",
+        tokens: [
+            ascii_alphanumerics(0, 3)
+        ]
+    };
+}
+
+#[test]
+fn asciis() {
+    parses_to! {
+        parser: vm(),
+        input: "x02",
+        rule: "asciis",
+        tokens: [
+            asciis(0, 3)
+        ]
+    };
+}
+
+#[test]
+fn newline() {
+    parses_to! {
+        parser: vm(),
+        input: "\n\r\n\r",
+        rule: "newline",
+        tokens: [
+            newline(0, 4)
         ]
     };
 }
