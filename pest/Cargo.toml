@@ -3,6 +3,7 @@ name = "pest"
 description = "The Elegant Parser"
 version = "1.0.6"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
+homepage = "https://pest-parser.github.io/"
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
 keywords = ["pest", "parser", "peg", "grammar"]
