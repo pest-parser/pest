@@ -36,7 +36,7 @@ ident_list = _{ !digit ~ ident ~ (" " ~ ident)+ }
 ```
 
 This is then saved in a `.pest` grammar file and is never mixed up with Rust code which results in an always up-to-date
-formal definition of the grammar which is very easy to maintain.
+formal definition of the grammar which is very easy to maintain. You will find all the [juicy details in our book](https://pest-parser.github.io/book/grammars/syntax.html).
 
 ## Pairs API
 
@@ -68,7 +68,7 @@ fn main() {
         for inner_pair in pair.into_inner() {
             match inner_pair.as_rule() {
                 Rule::alpha => println!("Letter:  {}", inner_pair.into_span().as_str()),
-                Rule::digit => println!("Digit:   {}", inner_pair.into_span().as_str()), 
+                Rule::digit => println!("Digit:   {}", inner_pair.into_span().as_str()),
                 _ => unreachable!()
             };
         }
