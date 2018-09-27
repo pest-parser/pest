@@ -15,8 +15,10 @@ use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
 use RuleType;
 
-/// A `struct` containing `Pairs`. It is created by
-/// [`Pairs::flatten`](struct.Pairs.html#method.flatten).
+/// An iterator over [`Pair`]s. It is created by [`Pairs::flatten`].
+///
+/// [`Pair`]: struct.Pair.html
+/// [`Pairs::flatten`]: struct.Pairs.html#method.flatten
 pub struct FlatPairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i [u8],
@@ -39,7 +41,7 @@ pub fn new<R: RuleType>(
 }
 
 impl<'i, R: RuleType> FlatPairs<'i, R> {
-    /// Converts the `FlatPairs` into a `TokenIterator`.
+    /// Returns the `Tokens` for these pairs.
     ///
     /// # Examples
     ///

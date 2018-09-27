@@ -7,8 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! A `mod` containing constructs useful in infix operator parsing with the precedence climbing
-//! method.
+//! Constructs useful in infix operator parsing with the precedence climbing method.
 
 use std::collections::HashMap;
 use std::iter::Peekable;
@@ -17,7 +16,9 @@ use std::ops::BitOr;
 use RuleType;
 use iterators::Pair;
 
-/// An `enum` describing an `Operator`'s associativity.
+/// Associativity of an [`Operator`].
+///
+/// [`Operator`]: struct.Operator.html
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Assoc {
     /// Left `Operator` associativity
@@ -26,7 +27,9 @@ pub enum Assoc {
     Right
 }
 
-/// A `struct` defining an infix operator used in [`PrecClimber`](struct.PrecClimber.html).
+/// Infix operator used in [`PrecClimber`].
+///
+/// [`PrecClimber`]: struct.PrecClimber.html
 #[derive(Debug)]
 pub struct Operator<R: RuleType> {
     rule: R,
@@ -76,11 +79,12 @@ impl<R: RuleType> BitOr for Operator<R> {
     }
 }
 
-/// A `struct` useful in order to perform [precedence climbing][1] on infix expressions contained in
-/// a [`Pairs`](../iterators/struct.Pairs.html). The token pairs contained in the `Pairs` should
-/// start with a *primary* pair and then alternate between an *operator* and a *primary*.
+/// List of operators and precedences, which can perform [precedence climbing][1] on infix
+/// expressions contained in a [`Pairs`]. The token pairs contained in the `Pairs` should start
+/// with a *primary* pair and then alternate between an *operator* and a *primary*.
 ///
 /// [1]: https://en.wikipedia.org/wiki/Operator-precedence_parser#Precedence_climbing_method
+/// [`Pairs`]: ../iterators/struct.Pairs.html
 #[derive(Debug)]
 pub struct PrecClimber<R: RuleType> {
     ops: HashMap<R, (u32, Assoc)>

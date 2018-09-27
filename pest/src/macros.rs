@@ -144,7 +144,7 @@ macro_rules! consumes_to {
     };
 }
 
-/// A `macro` which facilitates grammar testing and debugging by comparing produced tokens.
+/// Testing tool that compares produced tokens.
 ///
 /// This macro takes several arguments:
 ///
@@ -245,7 +245,7 @@ macro_rules! parses_to {
     };
 }
 
-/// A `macro` which facilitates grammar testing and debugging by comparing produced errors.
+/// Testing tool that compares produced errors.
 ///
 /// This macro takes several arguments:
 ///

@@ -17,7 +17,9 @@ use position::{self, Position};
 use span::Span;
 use stack::Stack;
 
-/// An `enum` specifying the current lookahead status of a `ParserState`.
+/// The current lookahead status of a [`ParserState`].
+///
+/// [`ParserState`]: struct.ParserState.html
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Lookahead {
     Positive,
@@ -25,7 +27,9 @@ pub enum Lookahead {
     None
 }
 
-/// An `enum` specifying the current atomicity of a `ParserState`.
+/// The current atomicity of a [`ParserState`].
+///
+/// [`ParserState`]: struct.ParserState.html
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Atomicity {
     Atomic,
@@ -33,10 +37,12 @@ pub enum Atomicity {
     NonAtomic
 }
 
-/// Type alias to simplify specifying the return value of the chained closures.
+/// Type alias to simplify specifying the return value of chained closures.
 pub type ParseResult<S> = Result<S, S>;
 
-/// A `struct` which contains the complete state of a `Parser`.
+/// The complete state of a [`Parser`].
+///
+/// [`Parser`]: trait.Parser.html
 #[derive(Debug)]
 pub struct ParserState<'i, R: RuleType> {
     position: Position<'i>,
@@ -301,9 +307,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Starts a sequence of transformations provided by `f` from the `Box<ParserState>`. It returns the
-    /// same `Result` returned by `f` in the case of an `Ok` or `Err` with the current `Box<ParserState>`
-    /// otherwise.
+    /// Starts a sequence of transformations provided by `f` from the `Box<ParserState>`. Returns
+    /// the same `Result` returned by `f` in the case of an `Ok`, or `Err` with the current
+    /// `Box<ParserState>` otherwise.
     ///
     /// This method is useful to parse sequences that only match together which usually come in the
     /// form of chained `Result`s with
@@ -354,8 +360,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Repeatedly applies the transformation provided by `f` from the `Box<ParserState>`. It
-    /// returns `Ok` with the updated `Box<ParserState>` returned by `f` wrapped up in an `Err`.
+    /// Repeatedly applies the transformation provided by `f` from the `Box<ParserState>`. Returns
+    /// `Ok` with the updated `Box<ParserState>` returned by `f` wrapped up in an `Err`.
     ///
     /// # Examples
     ///
@@ -397,8 +403,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Optionally applies the transformation provided by `f` from the `Box<ParserState>`. It returns `Ok`
-    /// with the updated `Box<ParserState>` returned by `f` regardless of the `Result`.
+    /// Optionally applies the transformation provided by `f` from the `Box<ParserState>`. Returns
+    /// `Ok` with the updated `Box<ParserState>` returned by `f` regardless of the `Result`.
     ///
     /// # Examples
     ///
@@ -433,9 +439,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Asks the `ParserState` to match a single character based on a filter function.
-    /// If the match is successful, this will return an `Ok` with the updated `Box<ParserState>`.
-    /// If failed, an `Err` with the updated `Box<ParserState>` is returned.
+    /// Attempts to match a single character based on a filter function. Returns `Ok` with the
+    /// updated `Box<ParserState>` if successful, or `Err` with the updated `Box<ParserState>`
+    /// otherwise.
     ///
     /// # Examples
     ///
@@ -468,9 +474,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Asks the `ParserState` to match the given `string`. If the match is successful, this will
-    /// return an `Ok` with the updated `Box<ParserState>`. If failed, an `Err` with the updated
-    /// `Box<ParserState>` is returned.
+    /// Attempts to match the given string. Returns `Ok` with the updated `Box<ParserState>` if
+    /// successful, or `Err` with the updated `Box<ParserState>` otherwise.
     ///
     /// # Examples
     ///
@@ -500,9 +505,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Asks the `ParserState` to case-insensitively match the given `string`. If the match is
-    /// successful, this will return an `Ok` with the updated `Box<ParserState>`. If failed, an
-    /// `Err` with the updated `Box<ParserState>` is returned.
+    /// Attempts to case-insensitively match the given string. Returns `Ok` with the updated
+    /// `Box<ParserState>` if successful, or `Err` with the updated `Box<ParserState>` otherwise.
     ///
     /// # Examples
     ///
@@ -532,9 +536,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Asks the `ParserState` to match a `char` `range` from the given `string`. If the match is
-    /// successful, this will return an `Ok` with the updated `Box<ParserState>`. If failed, an
-    /// `Err` with the updated `Box<ParserState>` is returned.
+    /// Attempts to match a single character from the given range. Returns `Ok` with the updated
+    /// `Box<ParserState>` if successful, or `Err` with the updated `Box<ParserState>` otherwise.
     ///
     /// # Examples
     ///
@@ -564,9 +567,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Asks the `ParserState` to skip `n` `char`s. If the match is successful, this will return an
-    /// `Ok` with the updated `Box<ParserState>`. If failed, an `Err` with the updated
-    /// `Box<ParserState>` is returned.
+    /// Attempts to skip `n` characters forward. Returns `Ok` with the updated `Box<ParserState>`
+    /// if successful, or `Err` with the updated `Box<ParserState>` otherwise.
     ///
     /// # Examples
     ///
@@ -596,9 +598,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Asks the `ParserState` to continue to skip until one of the given `strings` is found. If
-    /// the match is successful, this will return an `Ok` with the updated `Box<ParserState>`. If
-    /// failed, an `Err` with the updated `Box<ParserState>` is returned.
+    /// Attempts to skip forward until one of the given strings is found. Returns `Ok` with the
+    /// updated `Box<ParserState>` if one of the strings is found, or `Err` with the updated
+    /// `Box<ParserState>` otherwise.
     ///
     /// # Examples
     ///
@@ -623,9 +625,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Asks the `ParserState` to match the start of the input. If the match is successful, this
-    /// will return an `Ok` with the updated `Box<ParserState>`. If failed, an `Err` with the
-    /// updated `Box<ParserState>` is returned.
+    /// Attempts to match the start of the input. Returns `Ok` with the current `Box<ParserState>`
+    /// if the parser has not yet advanced, or `Err` with the current `Box<ParserState>` otherwise.
     ///
     /// # Examples
     ///
@@ -654,9 +655,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Asks the `ParserState` to match the end of the input. If the match is successful, this will
-    /// return an `Ok` with the updated `Box<ParserState>`. If failed, an `Err` with the updated
-    /// `Box<ParserState>` is returned.
+    /// Attempts to match the end of the input. Returns `Ok` with the current `Box<ParserState>` if
+    /// there is no input remaining, or `Err` with the current `Box<ParserState>` otherwise.
     ///
     /// # Examples
     ///
@@ -686,7 +686,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     /// Starts a lookahead transformation provided by `f` from the `Box<ParserState>`. It returns
-    /// `Ok` with the current `Box<ParserState>` if `f` also returns an `Ok` or `Err` with the current
+    /// `Ok` with the current `Box<ParserState>` if `f` also returns an `Ok`, or `Err` with the current
     /// `Box<ParserState>` otherwise. If `is_positive` is `false`, it swaps the `Ok` and `Err`
     /// together, negating the `Result`.
     ///
@@ -807,8 +807,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     /// Evaluates the result of closure `f` and pushes the span of the input consumed from before
-    /// `f` is called to after `f` is called to the stack. Returns an `Ok(Box<ParserState>)` if
-    /// `f` is called successfully, `Err(Box<ParserState>)` otherwise.
+    /// `f` is called to after `f` is called to the stack. Returns `Ok(Box<ParserState>)` if `f` is
+    /// called successfully, or `Err(Box<ParserState>)` otherwise.
     ///
     /// # Examples
     ///
@@ -843,9 +843,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Peeks the top of the stack and attempts to match the string. Returns an
-    /// `Ok(Box<ParserState>)` if the string is matched successfully, `Err(Box<ParserState>)`
-    /// otherwise.
+    /// Peeks the top of the stack and attempts to match the string. Returns `Ok(Box<ParserState>)`
+    /// if the string is matched successfully, or `Err(Box<ParserState>)` otherwise.
     ///
     /// # Examples
     ///
@@ -872,9 +871,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         self.match_string(string)
     }
 
-    /// Pops the top of the stack and attempts to match the string. Returns an
-    /// `Ok(Box<ParserState>)` if the string is matched successfully, `Err(Box<ParserState>)`
-    /// otherwise.
+    /// Pops the top of the stack and attempts to match the string. Returns `Ok(Box<ParserState>)`
+    /// if the string is matched successfully, or `Err(Box<ParserState>)` otherwise.
     ///
     /// # Examples
     ///
@@ -972,8 +970,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Drops the top of the stack and returns `Ok(Box<ParserState>)` if there was a value to
-    /// drop. Otherwise, it returns `Err(Box<ParserState>)`.
+    /// Drops the top of the stack. Returns `Ok(Box<ParserState>)` if there was a value to drop, or
+    /// `Err(Box<ParserState>)` otherwise.
     ///
     /// # Examples
     ///

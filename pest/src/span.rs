@@ -14,9 +14,10 @@ use std::str;
 
 use position;
 
-/// A `struct` of a span over a `&str`. It is created from either
-/// [two `Position`s](struct.Position.html#method.span) or from a
-/// [`Pair`](../iterators/struct.Pair.html#method.span).
+/// A span over a `&str`. It is created from either [two `Position`s] or from a [`Pair`].
+///
+/// [two `Position`s]: struct.Position.html#method.span
+/// [`Pair`]: ../iterators/struct.Pair.html#method.span
 pub struct Span<'i> {
     input: &'i [u8],
     start: usize,

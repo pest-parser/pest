@@ -19,8 +19,11 @@ use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
 use RuleType;
 
-/// A `struct` containing `Pairs`. It is created by [`pest::state`](../fn.state.html) and
-/// [`Pair::into_inner`](struct.Pair.html#method.into_inner).
+/// An iterator over [`Pair`]s. It is created by [`pest::state`] and [`Pair::into_inner`].
+///
+/// [`Pair`]: struct.Pair.html
+/// [`pest::state`]: ../fn.state.html
+/// [`Pair::into_inner`]: struct.Pair.html#method.into_inner
 #[derive(Clone)]
 pub struct Pairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
@@ -137,7 +140,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
         flat_pairs::new(self.queue, self.input, self.start, self.end)
     }
 
-    /// Converts the `Pairs` into a `TokenIterator`.
+    /// Returns the `Tokens` for the `Pairs`.
     ///
     /// # Examples
     ///

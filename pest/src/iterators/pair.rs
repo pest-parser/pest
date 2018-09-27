@@ -19,12 +19,14 @@ use super::tokens::{self, Tokens};
 use RuleType;
 use span::{self, Span};
 
-/// A `struct` containing a matching pair of `Token`s and everything between them.
+/// A matching pair of [`Token`]s and everything between them.
 ///
 /// A matching `Token` pair is formed by a `Token::Start` and a subsequent `Token::End` with the
 /// same `Rule`, with the condition that all `Token`s between them can form such pairs as well.
 /// This is similar to the [brace matching problem](https://en.wikipedia.org/wiki/Brace_matching) in
 /// editors.
+///
+/// [`Token`]: ../enum.Token.html
 #[derive(Clone)]
 pub struct Pair<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
@@ -101,8 +103,6 @@ impl<'i, R: RuleType> Pair<'i, R> {
     }
 
     /// Returns the `Span` defined by the `Pair`, consuming it.
-    ///
-    /// **Deprecated.** Please use `as_span` instead.
     ///
     /// # Examples
     ///
@@ -187,7 +187,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
         pairs::new(self.queue, self.input, self.start + 1, pair)
     }
 
-    /// Converts the `Pair` into a `TokenIterator`.
+    /// Returns the `Tokens` for the `Pair`.
     ///
     /// # Examples
     ///
