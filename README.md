@@ -13,17 +13,32 @@
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
 [![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
 
-pest is a general purpose parser written in Rust with a focus on accessibility, correctness, and [performance][1].
-It uses parsing expression grammars ([PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar)) as input,
-which are similar in spirit to regular expressions, but which offer the enhanced expressivity needed to parse complex
-languages.
+pest is a general purpose parser written in Rust with a focus on accessibility,
+correctness, and performance. It uses parsing expression grammars
+(or [PEG]) as input, which are similar in spirit to regular expressions, but
+which offer the enhanced expressivity needed to parse complex languages.
 
-[1]: https://github.com/pest-parser/pest#sheer-performance
+[PEG]: https://en.wikipedia.org/wiki/Parsing_expression_grammar
+
+## Getting started
+
+The recommended way to start parsing with pest is to read the official [book].
+
+Other helpful resources:
+
+* API reference on [docs.rs]
+* play with grammars and share them on our [fiddle]
+* leave feedback, ask questions, or greet us on [Gitter]
+
+[book]: https://pest-parser.github.io/book
+[docs.rs]: https://docs.rs/pest
+[fiddle]: https://pest-parser.github.io/#editor
+[Gitter]: https://gitter.im/dragostis/pest
 
 ## Example
 
-The following is an example of a grammar for a list of alpha-numeric identifiers where the first identifier does not 
-start with a digit:
+The following is an example of a grammar for a list of alpha-numeric identifiers
+where the first identifier does not start with a digit:
 
 ```rust
 alpha = { 'a'..'z' | 'A'..'Z' }
@@ -36,13 +51,14 @@ ident_list = _{ !digit ~ ident ~ (" " ~ ident)+ }
           // ident_list rule is silent which means it produces no tokens
 ```
 
-Grammars are saved in separate .pest files which are never mixed with procedural code. This results in an always 
-up-to-date formalization of a language that is easy to read and maintain.
+Grammars are saved in separate .pest files which are never mixed with procedural
+code. This results in an always up-to-date formalization of a language that is
+easy to read and maintain.
 
 ## Meaningful error reporting
 
-Based on the grammar definition, the parser also includes automatic error reporting. For the example above, the input 
-`"123"` will result in:
+Based on the grammar definition, the parser also includes automatic error
+reporting. For the example above, the input `"123"` will result in:
 
 ```
 thread 'main' panicked at ' --> 1:1
@@ -64,8 +80,8 @@ thread 'main' panicked at ' --> 1:1
 
 ## Pairs API
 
-The grammar can be used to derive a `Parser` implementation automatically. Parsing returns an iterator of nested token
-pairs:
+The grammar can be used to derive a `Parser` implementation automatically.
+Parsing returns an iterator of nested token pairs:
 
 ```rust
 extern crate pest;
@@ -117,47 +133,12 @@ Letter:  b
 Digit:   2
 ```
 
-## Sheer performance
-Performance measurements put a pest-generated JSON parser somewhere between one of the most optimized JSON parsers, 
-[ujson4c](https://github.com/esnme/ujson4c), and a static native-speed parser, [nom](https://github.com/Geal/nom).
-
-<p align="center">
-  <img src="https://raw.github.com/pest-parser/pest/master/results.svg?sanitize=true"/>
-</p>
-
-The [benchmark](https://github.com/Geal/pestvsnom) uses
-[a large 2MB JSON file](https://github.com/miloyip/nativejson-benchmark/blob/master/data/canada.json).
-Tested on a 2.6GHz Intel® Core™ i5 running macOS.
-
-The second entry is mapping Pairs, pest's internal lazy tree representation, to a custom JSON AST. While the first entry
-forms a perfectly usable tree, it does not produce a fully-processed JSON object, with decimal to binary number
-conversion notably missing. The second one does, but since it has an extra intermediate representation of the object,
-it repeats some work by performing extra allocations.
-
 ## Other features
 
 * Precedence climbing
 * Input handling
 * Custom errors
 * Runs on stable Rust
-
-## Usage
-pest requires [Cargo and Rust 1.23+](https://www.rust-lang.org/en-US/downloads.html).
-
-Add the following to `Cargo.toml`:
-
-```toml
-pest = "2.0"
-pest_derive = "2.0"
-```
-
-and in your Rust `lib.rs` or `main.rs`:
-
-```rust
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
-```
 
 ## Projects using pest
 
@@ -179,5 +160,5 @@ extern crate pest_derive;
 
 ## Special thanks
 
-A special round of applause goes to prof. Marius Minea for his guidance and all pest contributors,
-some of which being none other than my friends.
+A special round of applause goes to prof. Marius Minea for his guidance and all
+pest contributors, some of which being none other than my friends.
