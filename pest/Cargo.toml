@@ -3,6 +3,7 @@ name = "pest"
 description = "The Elegant Parser"
 version = "2.0.0"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
+homepage = "https://pest-parser.github.io/"
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
 keywords = ["pest", "parser", "peg", "grammar"]
@@ -10,10 +11,10 @@ categories = ["parsing"]
 license = "MIT/Apache-2.0"
 readme = "_README.md"
 
+[dependencies]
+ucd-trie = "0.1.1"
+
 [badges]
 codecov = { repository = "pest-parser/pest" }
 maintenance = { status = "actively-developed" }
 travis-ci = { repository = "pest-parser/pest" }
-
-[dependencies]
-ucd-trie = "0.1.1"
