@@ -18,7 +18,7 @@ use RuleType;
 use position::Position;
 use span::Span;
 
-/// The error type for a failed parse.
+/// Parse-related error type.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Error<R> {
     /// Variant of the error

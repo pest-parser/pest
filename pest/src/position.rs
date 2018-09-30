@@ -16,7 +16,7 @@ use std::str;
 
 use span;
 
-/// A character position in a `&str` which provides useful methods to manually parse that string.
+/// A cursor position in a `&str` which provides useful methods to manually parse that string.
 pub struct Position<'i> {
     input: &'i [u8],
     pos: usize
@@ -27,7 +27,7 @@ pub unsafe fn new(input: &[u8], pos: usize) -> Position {
 }
 
 impl<'i> Position<'i> {
-    /// Creates a `Position` at the start of an `&str`.
+    /// Creates a `Position` at the start of a `&str`.
     ///
     /// # Examples
     ///
@@ -417,7 +417,7 @@ impl<'i> Hash for Position<'i> {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
-    
+
     use super::*;
 
     #[test]
