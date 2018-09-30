@@ -12,11 +12,11 @@ use optimizer::*;
 
 pub fn restore_on_err(
     rule: OptimizedRule,
-    rules_to_exprs: &HashMap<String, OptimizedExpr>
+    rules: &HashMap<String, OptimizedExpr>
 ) -> OptimizedRule {
     match rule {
         OptimizedRule { name, ty, expr } => {
-            let expr = expr.map_bottom_up(|expr| wrap_branching_exprs(expr, rules_to_exprs));
+            let expr = expr.map_bottom_up(|expr| wrap_branching_exprs(expr, rules));
 
             OptimizedRule { name, ty, expr }
         }
@@ -25,23 +25,23 @@ pub fn restore_on_err(
 
 fn wrap_branching_exprs(
     expr: OptimizedExpr,
-    rules_to_exprs: &HashMap<String, OptimizedExpr>
+    rules: &HashMap<String, OptimizedExpr>
 ) -> OptimizedExpr {
     match expr {
         OptimizedExpr::Opt(expr) => {
-            if child_modifies_state(&expr, rules_to_exprs) {
+            if child_modifies_state(&expr, rules, &mut HashMap::new()) {
                 OptimizedExpr::Opt(Box::new(OptimizedExpr::RestoreOnErr(expr)))
             } else {
                 OptimizedExpr::Opt(expr)
             }
         }
         OptimizedExpr::Choice(lhs, rhs) => {
-            let wrapped_lhs = if child_modifies_state(&lhs, rules_to_exprs) {
+            let wrapped_lhs = if child_modifies_state(&lhs, rules, &mut HashMap::new()) {
                 Box::new(OptimizedExpr::RestoreOnErr(lhs))
             } else {
                 lhs
             };
-            let wrapped_rhs = if child_modifies_state(&rhs, rules_to_exprs) {
+            let wrapped_rhs = if child_modifies_state(&rhs, rules, &mut HashMap::new()) {
                 Box::new(OptimizedExpr::RestoreOnErr(rhs))
             } else {
                 rhs
@@ -49,7 +49,7 @@ fn wrap_branching_exprs(
             OptimizedExpr::Choice(wrapped_lhs, wrapped_rhs)
         }
         OptimizedExpr::Rep(expr) => {
-            if child_modifies_state(&expr, rules_to_exprs) {
+            if child_modifies_state(&expr, rules, &mut HashMap::new()) {
                 OptimizedExpr::Rep(Box::new(OptimizedExpr::RestoreOnErr(expr)))
             } else {
                 OptimizedExpr::Rep(expr)
@@ -61,16 +61,33 @@ fn wrap_branching_exprs(
 
 fn child_modifies_state(
     expr: &OptimizedExpr,
-    rules_to_exprs: &HashMap<String, OptimizedExpr>
+    rules: &HashMap<String, OptimizedExpr>,
+    cache: &mut HashMap<String, Option<bool>>
 ) -> bool {
     expr.iter_top_down().any(|expr| match expr {
         OptimizedExpr::Push(_) => true,
-        OptimizedExpr::Ident(ref s) if s == "POP" => true,
+        OptimizedExpr::Ident(ref name) if name == "POP" => true,
         OptimizedExpr::Ident(ref name) => {
-            let mut map = rules_to_exprs.clone();
-            match map.remove(name) {
-                Some(rule_expr) => child_modifies_state(&rule_expr, &map),
-                None => false
+            match cache.get(name).map(|result| *result) {
+                Some(option) => match option {
+                    Some(cached) => cached,
+                    None => {
+                        cache.insert(name.to_owned(), Some(false));
+                        false
+                    }
+                }
+                None => {
+                    cache.insert(name.to_owned(), None);
+
+                    let result = match rules.get(name) {
+                        Some(expr) => child_modifies_state(expr, rules, cache),
+                        None => false
+                    };
+
+                    cache.insert(name.to_owned(), Some(result));
+
+                    result
+                }
             }
         }
         _ => false
@@ -92,10 +109,8 @@ mod tests {
             },
         ];
 
-        let rules_to_map = &populate_rules_to_exprs(&rules);
-
         assert_eq!(
-            restore_on_err(rules[0].clone(), rules_to_map),
+            restore_on_err(rules[0].clone(), &to_hash_map(&rules)),
             rules[0].clone()
         );
     }
@@ -118,9 +133,7 @@ mod tests {
             )))))))
         };
 
-        let rules_to_map = &populate_rules_to_exprs(&rules);
-
-        assert_eq!(restore_on_err(rules[0].clone(), rules_to_map), restored);
+        assert_eq!(restore_on_err(rules[0].clone(), &to_hash_map(&rules)), restored);
     }
 
     #[test]
@@ -147,8 +160,6 @@ mod tests {
             )
         };
 
-        let rules_to_map = &populate_rules_to_exprs(&rules);
-
-        assert_eq!(restore_on_err(rules[0].clone(), rules_to_map), restored);
+        assert_eq!(restore_on_err(rules[0].clone(), &to_hash_map(&rules)), restored);
     }
 }

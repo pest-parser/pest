@@ -28,10 +28,10 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<OptimizedRule> {
         .map(rule_to_optimized_rule)
         .collect();
 
-    let rules_to_exprs = populate_rules_to_exprs(&optimized);
+    let rules = to_hash_map(&optimized);
     optimized
         .into_iter()
-        .map(|rule| restorer::restore_on_err(rule, &rules_to_exprs))
+        .map(|rule| restorer::restore_on_err(rule, &rules))
         .collect()
 }
 
@@ -65,11 +65,8 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
     }
 }
 
-fn populate_rules_to_exprs(rules: &[OptimizedRule]) -> HashMap<String, OptimizedExpr> {
-    rules
-        .iter()
-        .map(|r| (r.name.clone(), r.expr.clone()))
-        .collect()
+fn to_hash_map(rules: & Vec<OptimizedRule>) -> HashMap<String, OptimizedExpr> {
+    rules.iter().map(|r| (r.name.clone(), r.expr.clone())).collect()
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
