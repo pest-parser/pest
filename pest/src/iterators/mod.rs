@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! A `mod` containing iterators and constructs to aid in parser output manipulation.
+//! Types and iterators for parser output.
 
 mod flat_pairs;
 mod pair;

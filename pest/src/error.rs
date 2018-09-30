@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! A `mod` containing error data structures.
+//! Types for different kinds of parsing failures.
 
 use std::cmp;
 use std::error;
@@ -18,7 +18,7 @@ use RuleType;
 use position::Position;
 use span::Span;
 
-/// A `struct` defining errors.
+/// The error type for a failed parse.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Error<R> {
     /// Variant of the error
@@ -32,7 +32,7 @@ pub struct Error<R> {
     end: Option<(usize, usize)>
 }
 
-/// An `enum` describing `Error` variants.
+/// Different kinds of parsing errors.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ErrorVariant<R> {
     /// Generated parsing error with expected and unexpected `Rule`s
@@ -49,7 +49,7 @@ pub enum ErrorVariant<R> {
     }
 }
 
-/// An `enum` describing where the `Error` has occurred.
+/// Where an `Error` has occurred.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum InputLocation {
     /// `Error` was created by `Error::new_from_pos`
@@ -59,7 +59,7 @@ pub enum InputLocation {
 }
 
 impl<R: RuleType> Error<R> {
-    /// Creates `Error` from `ErrorVariant` and `Possition`.
+    /// Creates `Error` from `ErrorVariant` and `Position`.
     ///
     /// # Examples
     ///
@@ -173,10 +173,13 @@ impl<R: RuleType> Error<R> {
         self
     }
 
-    /// Renames all `Rule`s from a `ParsingError` `variant`. It does nothing when called on
-    /// `CustomError` `varriant`.
+    /// Renames all `Rule`s if this is a [`ParsingError`]. It does nothing when called on a
+    /// [`CustomError`].
     ///
     /// Useful in order to rename verbose rules or have detailed per-`Rule` formatting.
+    ///
+    /// [`ParsingError`]: enum.ErrorVariant.html#variant.ParsingError
+    /// [`CustomError`]: enum.ErrorVariant.html#variant.CustomError
     ///
     /// # Examples
     ///

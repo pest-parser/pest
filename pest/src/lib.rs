@@ -12,29 +12,20 @@
 //! pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser built with
 //! *simplicity* and *speed* in mind.
 //!
-//! ## Parser
+//! ## Usage
 //!
-//! pest works mainly through a `trait`, `Parser`, which provides an interface to the parsing
-//! functionality. Since `Parser` is a `trait`, parsing needs to be defined either though the
-//! `#[derive(Parser)]` attribute, or manually through the [`Position API`](struct.Position.html).
-//! The use of the `derive` is highly encouraged since this is the only way you can make use of
-//! pest's PEG grammar, while manual parser definition can be used where highly specific or
-//! efficient parsing is required.
+//! The core of pest is the trait [`Parser`], which provides an interface to the parsing
+//! functionality.
 //!
-//! ## `#[derive(Parser)]`
-//!
-//! pest comes with a procedural macro crate--`pest_derive`--which needs to be included in
-//! `Cargo.toml` in order to enable the `derive`.
-//!
-//! ```toml
-//! pest_derive = "*"
-//! ```
+//! The accompanying crate `pest_derive` can automatically generate a [`Parser`] from a PEG
+//! grammar. Using `pest_derive` is highly encouraged, but it is also possible to implement
+//! [`Parser`] manually if required.
 //!
 //! ## `.pest` files
 //!
-//! Grammar definitions reside in custom `.pest` files located in the `src` directory. Their path is
-//! relative to `src` and is specified between the `derive` attribute and an empty `struct` that
-//! `Parser` will be derived on.
+//! Grammar definitions reside in custom `.pest` files located in the crate `src` directory.
+//! Parsers are automatically generated from these files using `#[derive(Parser)]` and a special
+//! `#[grammar = "..."]` attribute on a dummy struct.
 //!
 //! ```ignore
 //! #[derive(Parser)]
@@ -42,8 +33,10 @@
 //! struct MyParser;
 //! ```
 //!
-//! The grammar of `.pest` files is documented in the
-//! [`pest_derive` crate](https://docs.rs/pest_derive/#Grammar).
+//! The syntax of `.pest` files is documented in the [`pest_derive` crate].
+//!
+//! [`Parser`]: trait.parser.html
+//! [`pest_derive` crate]: https://docs.rs/pest_derive/
 
 #![doc(html_root_url = "https://docs.rs/pest")]
 
@@ -70,7 +63,7 @@ mod token;
 #[doc(hidden)]
 pub mod unicode;
 
-/// A `trait` which parser rules must implement.
+/// A trait which parser rules must implement.
 ///
 /// This trait is set up so that any struct that implements all of its required traits will
 /// automatically implement this trait as well.

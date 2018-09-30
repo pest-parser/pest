@@ -15,9 +15,11 @@ use RuleType;
 use position;
 use token::Token;
 
-/// A `struct` containing `Token`s. It is returned by either
-/// [`Pair::into_iter`](struct.Pair.html#method.into_iter) or
-/// [`Pairs::into_iter`](struct.Pairs.html#method.into_iter)
+/// An iterator over [`Token`]s. It is created by [`Pair::tokens`] and [`Pairs::tokens`].
+///
+/// [`Token`]: ../enum.Token.html
+/// [`Pair::tokens`]: struct.Pair.html#method.tokens
+/// [`Pairs::tokens`]: struct.Pairs.html#method.tokens
 #[derive(Clone)]
 pub struct Tokens<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,

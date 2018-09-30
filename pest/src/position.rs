@@ -16,8 +16,7 @@ use std::str;
 
 use span;
 
-/// A `struct` containing a position that is tied to a `&str` which provides useful methods to
-/// manually parse it.
+/// A character position in a `&str` which provides useful methods to manually parse that string.
 pub struct Position<'i> {
     input: &'i [u8],
     pos: usize
@@ -28,7 +27,7 @@ pub unsafe fn new(input: &[u8], pos: usize) -> Position {
 }
 
 impl<'i> Position<'i> {
-    /// Creates starting `Position` from an `&str`.
+    /// Creates a `Position` at the start of an `&str`.
     ///
     /// # Examples
     ///
@@ -43,7 +42,7 @@ impl<'i> Position<'i> {
         unsafe { new(input.as_bytes(), 0) }
     }
 
-    /// Returns the current byte position as a `usize`.
+    /// Returns the byte position of this `Position` as a `usize`.
     ///
     /// # Examples
     ///
@@ -63,7 +62,7 @@ impl<'i> Position<'i> {
     ///
     /// # Panics
     ///
-    /// Panics when the positions come from different inputs.
+    /// Panics if the positions come from different inputs.
     ///
     /// # Examples
     ///
@@ -86,7 +85,7 @@ impl<'i> Position<'i> {
         }
     }
 
-    /// Returns the line - and column number pair of the current `Position`.
+    /// Returns the line and column number of this `Position`.
     ///
     /// # Examples
     ///
@@ -148,7 +147,7 @@ impl<'i> Position<'i> {
         line_col
     }
 
-    /// Returns the actual line of the input represented by the current `Position`.
+    /// Returns the entire line of the input that contains this `Position`.
     ///
     /// # Examples
     ///
