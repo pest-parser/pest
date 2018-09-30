@@ -1,6 +1,8 @@
 comment: off
 
 ignore:
+ # Should add debugger back once it's stabilized.
+ - debugger/*
  - derive/src/lib.rs
  - pest/examples/parens.rs
  - pest/src/unicode/*
