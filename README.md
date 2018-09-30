@@ -13,15 +13,17 @@
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
 [![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
 
-pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser with [simplicity][1] and [speed][2] in mind.
+pest is a general purpose parser written in Rust with a focus on accessibility, correctness, and [performance][1].
+It uses parsing expression grammars ([PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar)) as input,
+which are similar in spirit to regular expressions, but which offer the enhanced expressivity needed to parse complex
+languages.
 
-[1]: https://github.com/pest-parser/pest#elegant-grammar
-[2]: https://github.com/pest-parser/pest#sheer-performance
+[1]: https://github.com/pest-parser/pest#sheer-performance
 
-## Elegant grammar
+## Example
 
-Defining a grammar for a list of alpha-numeric identifiers where the first identifier does not start with a digit is as
-straight-forward as:
+The following is an example of a grammar for a list of alpha-numeric identifiers where the first identifier does not 
+start with a digit:
 
 ```rust
 alpha = { 'a'..'z' | 'A'..'Z' }
@@ -34,8 +36,31 @@ ident_list = _{ !digit ~ ident ~ (" " ~ ident)+ }
           // ident_list rule is silent which means it produces no tokens
 ```
 
-This is then saved in a `.pest` grammar file and is never mixed up with Rust code which results in an always up-to-date
-formal definition of the grammar which is very easy to maintain.
+Grammars are saved in separate .pest files which are never mixed with procedural code. This results in an always 
+up-to-date formalization of a language that is easy to read and maintain.
+
+## Meaningful error reporting
+
+Based on the grammar definition, the parser also includes automatic error reporting. For the example above, the input 
+`"123"` will result in:
+
+```
+thread 'main' panicked at ' --> 1:1
+  |
+1 | 123
+  | ^---
+  |
+  = unexpected digit', src/main.rs:12
+```
+while `"ab *"` will result in:
+```
+thread 'main' panicked at ' --> 1:1
+  |
+1 | ab *
+  |    ^---
+  |
+  = expected ident', src/main.rs:12
+```
 
 ## Pairs API
 
@@ -92,40 +117,9 @@ Letter:  b
 Digit:   2
 ```
 
-## Meaningful error reporting
-
-Parsing `"123"` instead of `"a1 b2"` in the code above will result in the following panic:
-
-```
-thread 'main' panicked at ' --> 1:1
-  |
-1 | 123
-  | ^---
-  |
-  = unexpected digit', src/main.rs:12
-```
-
-while parsing `"ab *"` will result in:
-
-```
-thread 'main' panicked at ' --> 1:4
-  |
-1 | ab *
-  |    ^---
-  |
-  = expected ident', src/main.rs:12
-```
-
 ## Sheer performance
-
-pest provides parsing performance in the same league as carefully written manual parsers.
-The following JSON benchmark puts it somewhere in between one of the most optimized JSON parsers,
+Performance measurements put a pest-generated JSON parser somewhere between one of the most optimized JSON parsers, 
 [ujson4c](https://github.com/esnme/ujson4c), and a static native-speed parser, [nom](https://github.com/Geal/nom).
-
-The first entry of pest scores 36ms, while the second scores 96ms since it's mapping `Pair`s
-to a custom JSON AST. While the first entry forms a perfectly usable tree, it does not process
-the file to a fully-processed JSON object. The second one does, but since it has an extra
-intermediate representation of the object, it repeats some work.
 
 <p align="center">
   <img src="https://raw.github.com/pest-parser/pest/master/results.svg?sanitize=true"/>
@@ -135,21 +129,26 @@ The [benchmark](https://github.com/Geal/pestvsnom) uses
 [a large 2MB JSON file](https://github.com/miloyip/nativejson-benchmark/blob/master/data/canada.json).
 Tested on a 2.6GHz Intel® Core™ i5 running macOS.
 
+The second entry is mapping Pairs, pest's internal lazy tree representation, to a custom JSON AST. While the first entry
+forms a perfectly usable tree, it does not produce a fully-processed JSON object, with decimal to binary number
+conversion notably missing. The second one does, but since it has an extra intermediate representation of the object,
+it repeats some work by performing extra allocations.
+
 ## Other features
 
-* precedence climbing
-* input handling
-* custom errors
-* runs on stable Rust
+* Precedence climbing
+* Input handling
+* Custom errors
+* Runs on stable Rust
 
 ## Usage
-pest requires [Cargo and Rust 1.23](https://www.rust-lang.org/en-US/downloads.html).
+pest requires [Cargo and Rust 1.23+](https://www.rust-lang.org/en-US/downloads.html).
 
 Add the following to `Cargo.toml`:
 
 ```toml
-pest = "^1.0"
-pest_derive = "^1.0"
+pest = "2.0"
+pest_derive = "2.0"
 ```
 
 and in your Rust `lib.rs` or `main.rs`:
