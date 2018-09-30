@@ -9,8 +9,27 @@
 
 //! # pest. The Elegant Parser
 //!
-//! pest is a [PEG](https://en.wikipedia.org/wiki/Parsing_expression_grammar) parser built with
-//! *simplicity* and *speed* in mind.
+//! pest is a general purpose parser written in Rust with a focus on accessibility, correctness,
+//! and performance. It uses parsing expression grammars (or [PEG]) as input, which are similar in
+//! spirit to regular expressions, but which offer the enhanced expressivity needed to parse
+//! complex languages.
+//!
+//! [PEG]: https://en.wikipedia.org/wiki/Parsing_expression_grammar
+//!
+//! ## Getting started
+//!
+//! The recommended way to start parsing with pest is to read the official [book].
+//!
+//! Other helpful resources:
+//!
+//! * API reference on [docs.rs]
+//! * play with grammars and share them on our [fiddle]
+//! * leave feedback, ask questions, or greet us on [Gitter]
+//! 
+//! [book]: https://pest-parser.github.io/book
+//! [docs.rs]: https://docs.rs/pest
+//! [fiddle]: https://pest-parser.github.io/#editor
+//! [Gitter]: https://gitter.im/dragostis/pest
 //!
 //! ## Usage
 //!
