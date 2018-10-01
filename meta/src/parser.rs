@@ -10,17 +10,18 @@
 use std::char;
 use std::iter::Peekable;
 
-use pest::{Error, Parser};
-use pest::Span;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
+use pest::Span;
+use pest::{
+    error::{Error, ErrorVariant},
+    Parser
+};
 
 use ast::{Expr, Rule as AstRule, RuleType};
 use validator;
 
-#[derive(Parser)]
-#[grammar = "grammar.pest"]
-pub struct PestParser;
+include!("grammar.rs");
 
 pub fn parse<'i>(rule: Rule, data: &'i str) -> Result<Pairs<Rule>, Error<Rule>> {
     PestParser::parse(rule, data)
@@ -164,7 +165,7 @@ fn convert_node<'i>(node: ParserNode<'i>) -> Expr {
     }
 }
 
-pub fn consume_rules<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<AstRule>, Vec<Error<'i, Rule>>> {
+pub fn consume_rules<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>>> {
     let rules = consume_rules_with_spans(pairs)?;
     let errors = validator::validate_ast(&rules);
     if errors.len() == 0 {
@@ -176,7 +177,7 @@ pub fn consume_rules<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<AstRule>, Vec<Err
 
 fn consume_rules_with_spans<'i>(
     pairs: Pairs<'i, Rule>
-) -> Result<Vec<ParserRule<'i>>, Vec<Error<'i, Rule>>> {
+) -> Result<Vec<ParserRule<'i>>, Vec<Error<Rule>>> {
     let climber = PrecClimber::new(vec![
         Operator::new(Rule::choice_operator, Assoc::Left),
         Operator::new(Rule::sequence_operator, Assoc::Left),
@@ -221,11 +222,11 @@ fn consume_rules_with_spans<'i>(
 fn consume_expr<'i>(
     pairs: Peekable<Pairs<'i, Rule>>,
     climber: &PrecClimber<Rule>
-) -> Result<ParserNode<'i>, Vec<Error<'i, Rule>>> {
+) -> Result<ParserNode<'i>, Vec<Error<Rule>>> {
     fn unaries<'i>(
         mut pairs: Peekable<Pairs<'i, Rule>>,
         climber: &PrecClimber<Rule>
-    ) -> Result<ParserNode<'i>, Vec<Error<'i, Rule>>> {
+    ) -> Result<ParserNode<'i>, Vec<Error<Rule>>> {
         let pair = pairs.next().unwrap();
 
         let node = match pair.as_rule() {
@@ -314,7 +315,7 @@ fn consume_expr<'i>(
 
                 pairs.fold(
                     Ok(node),
-                    |node: Result<ParserNode<'i>, Vec<Error<'i, Rule>>>, pair| {
+                    |node: Result<ParserNode<'i>, Vec<Error<Rule>>>, pair| {
                         let node = node?;
 
                         let node = match pair.as_rule() {
@@ -348,19 +349,21 @@ fn consume_expr<'i>(
                                 let num = if let Ok(num) = number.as_str().parse::<u32>() {
                                     num
                                 } else {
-                                    return Err(vec![
-                                        Error::CustomErrorSpan {
-                                            message: "number cannot overflow u32".to_owned(),
-                                            span: number.into_span()
+                                    return Err(vec![Error::new_from_span(
+                                        ErrorVariant::CustomError {
+                                            message: "number cannot overflow u32".to_owned()
                                         },
-                                    ]);
+                                        number.into_span()
+                                    )]);
                                 };
 
                                 if num == 0 {
-                                    let error: Error<Rule> = Error::CustomErrorSpan {
-                                        message: "cannot repeat 0 times".to_owned(),
-                                        span: number.into_span()
-                                    };
+                                    let error: Error<Rule> = Error::new_from_span(
+                                        ErrorVariant::CustomError {
+                                            message: "cannot repeat 0 times".to_owned()
+                                        },
+                                        number.into_span()
+                                    );
 
                                     return Err(vec![error]);
                                 }
@@ -380,12 +383,12 @@ fn consume_expr<'i>(
                                 let min = if let Ok(min) = min_number.as_str().parse::<u32>() {
                                     min
                                 } else {
-                                    return Err(vec![
-                                        Error::CustomErrorSpan {
-                                            message: "number cannot overflow u32".to_owned(),
-                                            span: min_number.into_span()
+                                    return Err(vec![Error::new_from_span(
+                                        ErrorVariant::CustomError {
+                                            message: "number cannot overflow u32".to_owned()
                                         },
-                                    ]);
+                                        min_number.into_span()
+                                    )]);
                                 };
 
                                 let start = node.span.start_pos();
@@ -404,19 +407,21 @@ fn consume_expr<'i>(
                                 let max = if let Ok(max) = max_number.as_str().parse::<u32>() {
                                     max
                                 } else {
-                                    return Err(vec![
-                                        Error::CustomErrorSpan {
-                                            message: "number cannot overflow u32".to_owned(),
-                                            span: max_number.into_span()
+                                    return Err(vec![Error::new_from_span(
+                                        ErrorVariant::CustomError {
+                                            message: "number cannot overflow u32".to_owned()
                                         },
-                                    ]);
+                                        max_number.into_span()
+                                    )]);
                                 };
 
                                 if max == 0 {
-                                    let error: Error<Rule> = Error::CustomErrorSpan {
-                                        message: "cannot repeat 0 times".to_owned(),
-                                        span: max_number.into_span()
-                                    };
+                                    let error: Error<Rule> = Error::new_from_span(
+                                        ErrorVariant::CustomError {
+                                            message: "cannot repeat 0 times".to_owned()
+                                        },
+                                        max_number.into_span()
+                                    );
 
                                     return Err(vec![error]);
                                 }
@@ -436,12 +441,12 @@ fn consume_expr<'i>(
                                 let min = if let Ok(min) = min_number.as_str().parse::<u32>() {
                                     min
                                 } else {
-                                    return Err(vec![
-                                        Error::CustomErrorSpan {
-                                            message: "number cannot overflow u32".to_owned(),
-                                            span: min_number.into_span()
+                                    return Err(vec![Error::new_from_span(
+                                        ErrorVariant::CustomError {
+                                            message: "number cannot overflow u32".to_owned()
                                         },
-                                    ]);
+                                        min_number.into_span()
+                                    )]);
                                 };
 
                                 inner.next().unwrap(); // comma
@@ -450,19 +455,21 @@ fn consume_expr<'i>(
                                 let max = if let Ok(max) = max_number.as_str().parse::<u32>() {
                                     max
                                 } else {
-                                    return Err(vec![
-                                        Error::CustomErrorSpan {
-                                            message: "number cannot overflow u32".to_owned(),
-                                            span: max_number.into_span()
+                                    return Err(vec![Error::new_from_span(
+                                        ErrorVariant::CustomError {
+                                            message: "number cannot overflow u32".to_owned()
                                         },
-                                    ]);
+                                        max_number.into_span()
+                                    )]);
                                 };
 
                                 if max == 0 {
-                                    let error: Error<Rule> = Error::CustomErrorSpan {
-                                        message: "cannot repeat 0 times".to_owned(),
-                                        span: max_number.into_span()
-                                    };
+                                    let error: Error<Rule> = Error::new_from_span(
+                                        ErrorVariant::CustomError {
+                                            message: "cannot repeat 0 times".to_owned()
+                                        },
+                                        max_number.into_span()
+                                    );
 
                                     return Err(vec![error]);
                                 }
@@ -494,9 +501,9 @@ fn consume_expr<'i>(
     }
 
     let term = |pair: Pair<'i, Rule>| unaries(pair.into_inner().peekable(), climber);
-    let infix = |lhs: Result<ParserNode<'i>, Vec<Error<'i, Rule>>>,
+    let infix = |lhs: Result<ParserNode<'i>, Vec<Error<Rule>>>,
                  op: Pair<'i, Rule>,
-                 rhs: Result<ParserNode<'i>, Vec<Error<'i, Rule>>>| match op.as_rule(
+                 rhs: Result<ParserNode<'i>, Vec<Error<Rule>>>| match op.as_rule(
     ) {
         Rule::sequence_operator => {
             let lhs = lhs?;
