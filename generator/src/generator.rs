@@ -22,12 +22,17 @@ pub fn generate(
     generics: &Generics,
     path: &Path,
     rules: Vec<OptimizedRule>,
-    defaults: Vec<&str>
+    defaults: Vec<&str>,
+    include_grammar: bool
 ) -> TokenStream {
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
 
     let builtins = generate_builtin_rules();
-    let include_fix = generate_include(&name, &path.to_str().expect("non-Unicode path"));
+    let include_fix = if include_grammar {
+        generate_include(&name, &path.to_str().expect("non-Unicode path"))
+    } else {
+        quote!()
+    };
     let rule_enum = generate_enum(&rules, uses_eoi);
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
@@ -897,7 +902,7 @@ mod tests {
         let defaults = vec!["ANY"];
 
         assert_eq!(
-            generate(name, &generics, Path::new("test.pest"), rules, defaults).to_string(),
+            generate(name, &generics, Path::new("test.pest"), rules, defaults, true).to_string(),
             quote! {
                 #[allow(non_upper_case_globals)]
                 #[cfg(debug_assertions)]

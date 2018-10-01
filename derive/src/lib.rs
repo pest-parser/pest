@@ -273,5 +273,5 @@ use proc_macro::TokenStream;
 
 #[proc_macro_derive(Parser, attributes(grammar))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
-    pest_generator::derive_parser(input.into()).into()
+    pest_generator::derive_parser(input.into(), true).into()
 }

@@ -34,7 +34,7 @@ mod generator;
 use pest_meta::{optimizer, unwrap_or_report, validator};
 use pest_meta::parser::{self, Rule};
 
-pub fn derive_parser(input: TokenStream) -> TokenStream {
+pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
     let (name, generics, path) = parse_derive(ast);
 
@@ -87,7 +87,8 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
     let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
-    let generated = generator::generate(name, &generics, &path, optimized, defaults);
+    let generated =
+        generator::generate(name, &generics, &path, optimized, defaults, include_grammar);
 
     generated.into()
 }
