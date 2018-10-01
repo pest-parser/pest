@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "derive",
+    "generator",
     "grammars",
     "meta",
     "pest",

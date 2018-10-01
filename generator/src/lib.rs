@@ -265,13 +265,167 @@
 //! * `NEWLINE` - matches either "\n" or "\r\n" or "\r"
 
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
+#![recursion_limit = "256"]
 
-extern crate pest_generator;
+extern crate pest;
+extern crate pest_meta;
+
 extern crate proc_macro;
+extern crate proc_macro2;
+#[macro_use]
+extern crate quote;
+extern crate syn;
 
-use proc_macro::TokenStream;
+use std::env;
+use std::fs::File;
+use std::io::{self, Read};
+use std::path::Path;
 
-#[proc_macro_derive(Parser, attributes(grammar))]
+use proc_macro2::TokenStream;
+use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
+
+#[macro_use]
+mod macros;
+mod generator;
+
+use pest_meta::{optimizer, unwrap_or_report, validator};
+use pest_meta::parser::{self, Rule};
+
 pub fn derive_parser(input: TokenStream) -> TokenStream {
-    pest_generator::derive_parser(input.into()).into()
+    let ast: DeriveInput = syn::parse2(input).unwrap();
+    let (name, generics, path) = parse_derive(ast);
+
+    let root = env::var("CARGO_MANIFEST_DIR").unwrap_or(".".into());
+    let path = Path::new(&root).join("src/").join(&path);
+    let file_name = match path.file_name() {
+        Some(file_name) => file_name,
+        None => panic!("grammar attribute should point to a file")
+    };
+
+    let data = match read_file(&path) {
+        Ok(data) => data,
+        Err(error) => panic!("error opening {:?}: {}", file_name, error)
+    };
+
+    let pairs = match parser::parse(Rule::grammar_rules, &data) {
+        Ok(pairs) => pairs,
+        Err(error) => panic!(
+            "error parsing {:?}\n\n{}",
+            file_name,
+            error.renamed_rules(|rule| match *rule {
+                Rule::grammar_rule => "rule".to_owned(),
+                Rule::_push => "PUSH".to_owned(),
+                Rule::assignment_operator => "`=`".to_owned(),
+                Rule::silent_modifier => "`_`".to_owned(),
+                Rule::atomic_modifier => "`@`".to_owned(),
+                Rule::compound_atomic_modifier => "`$`".to_owned(),
+                Rule::non_atomic_modifier => "`!`".to_owned(),
+                Rule::opening_brace => "`{`".to_owned(),
+                Rule::closing_brace => "`}`".to_owned(),
+                Rule::opening_paren => "`(`".to_owned(),
+                Rule::positive_predicate_operator => "`&`".to_owned(),
+                Rule::negative_predicate_operator => "`!`".to_owned(),
+                Rule::sequence_operator => "`&`".to_owned(),
+                Rule::choice_operator => "`|`".to_owned(),
+                Rule::optional_operator => "`?`".to_owned(),
+                Rule::repeat_operator => "`*`".to_owned(),
+                Rule::repeat_once_operator => "`+`".to_owned(),
+                Rule::comma => "`,`".to_owned(),
+                Rule::closing_paren => "`)`".to_owned(),
+                Rule::quote => "`\"`".to_owned(),
+                Rule::insensitive_string => "`^`".to_owned(),
+                Rule::range_operator => "`..`".to_owned(),
+                Rule::single_quote => "`'`".to_owned(),
+                other_rule => format!("{:?}", other_rule)
+            })
+        )
+    };
+
+    let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
+    let ast = unwrap_or_report(parser::consume_rules(pairs));
+    let optimized = optimizer::optimize(ast);
+    let generated = generator::generate(name, &generics, &path, optimized, defaults);
+
+    generated.into()
+}
+
+fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
+    let mut file = File::open(path.as_ref())?;
+    let mut string = String::new();
+    file.read_to_string(&mut string)?;
+    Ok(string)
+}
+
+fn parse_derive(ast: DeriveInput) -> (Ident, Generics, String) {
+    let name = ast.ident;
+    let generics = ast.generics;
+
+    let grammar: Vec<&Attribute> = ast.attrs
+        .iter()
+        .filter(|attr| match attr.interpret_meta() {
+            Some(Meta::NameValue(name_value)) => name_value.ident.to_string() == "grammar",
+            _ => false
+        })
+        .collect();
+
+    let filename = match grammar.len() {
+        0 => panic!("a grammar file needs to be provided with the #[grammar = \"...\"] attribute"),
+        1 => get_filename(grammar[0]),
+        _ => panic!("only 1 grammar file can be provided")
+    };
+
+    (name, generics, filename)
+}
+
+fn get_filename(attr: &Attribute) -> String {
+    match attr.interpret_meta() {
+        Some(Meta::NameValue(name_value)) => match name_value.lit {
+            Lit::Str(filename) => filename.value(),
+            _ => panic!("grammar attribute must be a string")
+        },
+        _ => panic!("grammar attribute must be of the form `grammar = \"...\"`")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_derive;
+    use syn;
+
+    #[test]
+    fn derive_ok() {
+        let definition = "
+            #[other_attr]
+            #[grammar = \"myfile.pest\"]
+            pub struct MyParser<'a, T>;
+        ";
+        let ast = syn::parse_str(definition).unwrap();
+        let (_, _, filename) = parse_derive(ast);
+        assert_eq!(filename, "myfile.pest");
+    }
+
+    #[test]
+    #[should_panic(expected = "only 1 grammar file can be provided")]
+    fn derive_multiple_grammars() {
+        let definition = "
+            #[other_attr]
+            #[grammar = \"myfile1.pest\"]
+            #[grammar = \"myfile2.pest\"]
+            pub struct MyParser<'a, T>;
+        ";
+        let ast = syn::parse_str(definition).unwrap();
+        parse_derive(ast);
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar attribute must be a string")]
+    fn derive_wrong_arg() {
+        let definition = "
+            #[other_attr]
+            #[grammar = 1]
+            pub struct MyParser<'a, T>;
+        ";
+        let ast = syn::parse_str(definition).unwrap();
+        parse_derive(ast);
+    }
 }
