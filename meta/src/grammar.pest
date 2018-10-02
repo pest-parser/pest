@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-grammar_rules = _{ soi ~ grammar_rule+ ~ eoi }
+grammar_rules = _{ SOI ~ grammar_rule+ ~ EOI }
 
 grammar_rule = {
     identifier ~ assignment_operator ~ modifier? ~
@@ -77,8 +77,8 @@ insensitive_string =  { "^" ~ string }
 range              =  { character ~ range_operator ~ character }
 character          = ${ single_quote ~ inner_chr ~ single_quote }
 
-inner_str = @{ (!("\"" | "\\") ~ any)* ~ (escape ~ inner_str)? }
-inner_chr = @{ escape | any }
+inner_str = @{ (!("\"" | "\\") ~ ANY)* ~ (escape ~ inner_str)? }
+inner_chr = @{ escape | ANY }
 escape    = @{ "\\" ~ ("\"" | "\\" | "r" | "n" | "t" | "0" | "'" | code | unicode) }
 code      = @{ "x" ~ hex_digit{2} }
 unicode   = @{ "u" ~ opening_brace ~ hex_digit{2, 6} ~ closing_brace }
@@ -89,5 +89,5 @@ single_quote   = { "'" }
 range_operator = { ".." }
 
 newline    = _{ "\n" | "\r\n" }
-whitespace = _{ " " | "\t" | newline }
-comment    = _{ "//" ~ (!newline ~ any)* }
+WHITESPACE = _{ " " | "\t" | newline }
+COMMENT    = _{ "//" ~ (!newline ~ ANY)* }

@@ -1,0 +1,2 @@
+[alias]
+bootstrap = "run --package pest_bootstrap"

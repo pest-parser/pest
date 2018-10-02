@@ -27,6 +27,7 @@ notifications:
 script:
   # Need a custom script because we are using cargo workspaces.
   - |
+      cargo bootstrap && # dynamic build dependency of pest_meta
       cargo build --all --verbose &&
       cargo test --all --verbose &&
       cargo doc --all --verbose

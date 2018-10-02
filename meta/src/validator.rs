@@ -9,14 +9,14 @@
 
 use std::collections::{HashMap, HashSet};
 
-use pest::Error;
-use pest::Span;
+use pest::error::{Error, ErrorVariant, InputLocation};
 use pest::iterators::Pairs;
+use pest::Span;
 
 use parser::{ParserExpr, ParserNode, ParserRule, Rule};
 use UNICODE_PROPERTY_NAMES;
 
-pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Error<'i, Rule>>> {
+pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Error<Rule>>> {
     let mut rust_keywords = HashSet::new();
     rust_keywords.insert("abstract");
     rust_keywords.insert("alignof");
@@ -144,17 +144,19 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
 pub fn validate_rust_keywords<'i>(
     definitions: &Vec<Span<'i>>,
     rust_keywords: &HashSet<&str>
-) -> Vec<Error<'i, Rule>> {
+) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
     for definition in definitions {
         let name = definition.as_str();
 
         if rust_keywords.contains(name) {
-            errors.push(Error::CustomErrorSpan {
-                message: format!("{} is a rust keyword", name),
-                span: definition.clone()
-            })
+            errors.push(Error::new_from_span(
+                ErrorVariant::CustomError {
+                    message: format!("{} is a rust keyword", name)
+                },
+                definition.clone()
+            ))
         }
     }
 
@@ -164,24 +166,26 @@ pub fn validate_rust_keywords<'i>(
 pub fn validate_pest_keywords<'i>(
     definitions: &Vec<Span<'i>>,
     pest_keywords: &HashSet<&str>
-) -> Vec<Error<'i, Rule>> {
+) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
     for definition in definitions {
         let name = definition.as_str();
 
         if pest_keywords.contains(name) {
-            errors.push(Error::CustomErrorSpan {
-                message: format!("{} is a pest keyword", name),
-                span: definition.clone()
-            })
+            errors.push(Error::new_from_span(
+                ErrorVariant::CustomError {
+                    message: format!("{} is a pest keyword", name)
+                },
+                definition.clone()
+            ))
         }
     }
 
     errors
 }
 
-pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<'i, Rule>> {
+pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
     let mut defined = HashSet::new();
 
@@ -189,10 +193,12 @@ pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<'i
         let name = definition.as_str();
 
         if defined.contains(&name) {
-            errors.push(Error::CustomErrorSpan {
-                message: format!("rule {} already defined", name),
-                span: definition.clone()
-            })
+            errors.push(Error::new_from_span(
+                ErrorVariant::CustomError {
+                    message: format!("rule {} already defined", name)
+                },
+                definition.clone()
+            ))
         } else {
             defined.insert(name);
         }
@@ -205,7 +211,7 @@ pub fn validate_undefined<'i>(
     definitions: &Vec<Span<'i>>,
     called_rules: &Vec<Span<'i>>,
     builtins: &HashSet<&str>
-) -> Vec<Error<'i, Rule>> {
+) -> Vec<Error<Rule>> {
     let mut errors = vec![];
     let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
 
@@ -213,17 +219,19 @@ pub fn validate_undefined<'i>(
         let name = rule.as_str();
 
         if !definitions.contains(name) && !builtins.contains(name) {
-            errors.push(Error::CustomErrorSpan {
-                message: format!("rule {} is undefined", name),
-                span: rule.clone()
-            })
+            errors.push(Error::new_from_span(
+                ErrorVariant::CustomError {
+                    message: format!("rule {} is undefined", name)
+                },
+                rule.clone()
+            ))
         }
     }
 
     errors
 }
 
-pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i, Rule>> {
+pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
     errors.extend(validate_repetition(rules));
@@ -231,8 +239,8 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i,
     errors.extend(validate_whitespace_comment(rules));
     errors.extend(validate_left_recursion(rules));
 
-    errors.sort_by_key(|error| match *error {
-        Error::CustomErrorSpan { ref span, .. } => span.clone(),
+    errors.sort_by_key(|error| match &error.location {
+        InputLocation::Span(span) => span.clone(),
         _ => unreachable!()
     });
 
@@ -309,7 +317,7 @@ fn is_non_failing<'i>(
     }
 }
 
-fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i, Rule>> {
+fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
     let mut result = vec![];
     let map = to_hash_map(rules);
 
@@ -321,20 +329,25 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<
                 | ParserExpr::RepOnce(ref other)
                 | ParserExpr::RepMin(ref other, _) => {
                     if is_non_failing(&other.expr, &map, &mut vec![]) {
-                        Some(Error::CustomErrorSpan {
-                            message: "expression inside repetition cannot fail and will repeat \
-                                      infinitely"
-                                .to_owned(),
-                            span: node.span.clone()
-                        })
+                        Some(Error::new_from_span(
+                            ErrorVariant::CustomError {
+                                message:
+                                    "expression inside repetition cannot fail and will repeat \
+                                     infinitely"
+                                        .to_owned()
+                            },
+                            node.span.clone()
+                        ))
                     } else if is_non_progressing(&other.expr, &map, &mut vec![]) {
-                        Some(Error::CustomErrorSpan {
-                            message:
-                                "expression inside repetition is non-progressing and will repeat \
-                                 infinitely"
-                                    .to_owned(),
-                            span: node.span.clone()
-                        })
+                        Some(Error::new_from_span(
+                            ErrorVariant::CustomError {
+                                message:
+                                    "expression inside repetition is non-progressing and will repeat \
+                                     infinitely"
+                                        .to_owned(),
+                            },
+                            node.span.clone()
+                        ))
                     } else {
                         None
                     }
@@ -348,12 +361,13 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<
     result
 }
 
-fn validate_choices<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i, Rule>> {
+fn validate_choices<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
     let mut result = vec![];
     let map = to_hash_map(rules);
 
     for rule in rules.into_iter() {
-        let mut errors = rule.node
+        let mut errors = rule
+            .node
             .clone()
             .filter_map_top_down(|node| match node.expr {
                 ParserExpr::Choice(ref lhs, _) => {
@@ -363,12 +377,14 @@ fn validate_choices<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i,
                     };
 
                     if is_non_failing(&node.expr, &map, &mut vec![]) {
-                        Some(Error::CustomErrorSpan {
-                            message:
-                                "expression cannot fail; following choices cannot be reached"
-                                    .to_owned(),
-                            span: node.span.clone()
-                        })
+                        Some(Error::new_from_span(
+                            ErrorVariant::CustomError {
+                                message:
+                                    "expression cannot fail; following choices cannot be reached"
+                                        .to_owned()
+                            },
+                            node.span.clone()
+                        ))
                     } else {
                         None
                     }
@@ -382,7 +398,7 @@ fn validate_choices<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i,
     result
 }
 
-fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i, Rule>> {
+fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
     let map = to_hash_map(rules);
 
     rules
@@ -390,21 +406,25 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Ve
         .filter_map(|rule| {
             if rule.name == "whitespace" || rule.name == "comment" {
                 if is_non_failing(&rule.node.expr, &map, &mut vec![]) {
-                    Some(Error::CustomErrorSpan {
-                        message: format!(
-                            "{} cannot fail and will repeat infinitely",
-                            &rule.name
-                        ),
-                        span: rule.node.span.clone()
-                    })
+                    Some(Error::new_from_span(
+                        ErrorVariant::CustomError {
+                            message: format!(
+                                "{} cannot fail and will repeat infinitely",
+                                &rule.name
+                            )
+                        },
+                        rule.node.span.clone()
+                    ))
                 } else if is_non_progressing(&rule.node.expr, &map, &mut vec![]) {
-                    Some(Error::CustomErrorSpan {
-                        message: format!(
-                            "{} is non-progressing and will repeat infinitely",
-                            &rule.name
-                        ),
-                        span: rule.node.span.clone()
-                    })
+                    Some(Error::new_from_span(
+                        ErrorVariant::CustomError {
+                            message: format!(
+                                "{} is non-progressing and will repeat infinitely",
+                                &rule.name
+                            )
+                        },
+                        rule.node.span.clone()
+                    ))
                 } else {
                     None
                 }
@@ -415,7 +435,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Ve
         .collect()
 }
 
-fn validate_left_recursion<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<'i, Rule>> {
+fn validate_left_recursion<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
     left_recursion(to_hash_map(rules))
 }
 
@@ -423,12 +443,12 @@ fn to_hash_map<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> HashMap<String, &'
     rules.iter().map(|r| (r.name.clone(), &r.node)).collect()
 }
 
-fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec<Error<'i, Rule>> {
+fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec<Error<Rule>> {
     fn check_expr<'a, 'i: 'a>(
         node: &'a ParserNode<'i>,
         rules: &'a HashMap<String, &ParserNode<'i>>,
         trace: &mut Vec<String>
-    ) -> Option<Error<'i, Rule>> {
+    ) -> Option<Error<Rule>> {
         match node.expr.clone() {
             ParserExpr::Ident(other) => {
                 if trace[0] == other {
@@ -439,15 +459,17 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
                         .collect::<Vec<_>>()
                         .join(" -> ");
 
-                    return Some(Error::CustomErrorSpan {
-                        message: format!(
-                            "rule {} is left-recursive ({}); pest::prec_climber might be useful \
-                             in this case",
-                            node.span.as_str(),
-                            chain
-                        ),
-                        span: node.span.clone()
-                    });
+                    return Some(Error::new_from_span(
+                        ErrorVariant::CustomError {
+                            message: format!(
+                                "rule {} is left-recursive ({}); pest::prec_climber might be useful \
+                                 in this case",
+                                node.span.as_str(),
+                                chain
+                            )
+                        },
+                        node.span.clone()
+                    ));
                 }
 
                 if !trace.contains(&other) {
