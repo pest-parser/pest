@@ -12,11 +12,8 @@ use std::iter::Peekable;
 
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
-use pest::Span;
-use pest::{
-    error::{Error, ErrorVariant},
-    Parser
-};
+use pest::{Span, Parser};
+use pest::error::{Error, ErrorVariant};
 
 use ast::{Expr, Rule as AstRule, RuleType};
 use validator;
