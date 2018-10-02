@@ -1,7 +1,7 @@
 [package]
 name = "pest_meta"
 description = "pest meta language parser and validator"
-version = "2.0.2"
+version = "2.0.3"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest-parser.github.io/"
 repository = "https://github.com/pest-parser/pest"
@@ -11,6 +11,7 @@ categories = ["parsing"]
 license = "MIT/Apache-2.0"
 readme = "_README.md"
 exclude = ["src/grammar.pest"]
+include = ["Cargo.toml", "src/**/*", "src/grammar.rs"]
 
 [dependencies]
 maplit = "1.0"
