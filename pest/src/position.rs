@@ -256,7 +256,7 @@ impl<'i> Position<'i> {
     }
 
     /// Skips until one of the given `strings` is found. If none of the `strings` can be found,
-    /// this function will return `false` and its `pos` will not be updated.
+    /// this function will return `false` but its `pos` will *still* be updated.
     #[inline]
     pub(crate) fn skip_until(&mut self, strings: &[&str]) -> bool {
         for from in self.pos..self.input.len() {
@@ -270,6 +270,7 @@ impl<'i> Position<'i> {
             }
         }
 
+        self.pos = self.input.len();
         false
     }
 
@@ -537,11 +538,7 @@ mod tests {
 
         test_pos = pos.clone();
         assert!(!test_pos.skip_until(&["z"]));
-        assert_eq!(test_pos.pos(), 0);
-
-        test_pos = pos.clone();
-        assert!(!test_pos.skip_until(&["zzz"]));
-        assert_eq!(test_pos.pos(), 0);
+        assert_eq!(test_pos.pos(), 5);
     }
 
     #[test]

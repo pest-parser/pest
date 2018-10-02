@@ -599,8 +599,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     /// Attempts to skip forward until one of the given strings is found. Returns `Ok` with the
-    /// updated `Box<ParserState>` if one of the strings is found, or `Err` with the updated
-    /// `Box<ParserState>` otherwise.
+    /// updated `Box<ParserState>` whether or not one of the strings is found.
     ///
     /// # Examples
     ///
@@ -618,11 +617,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn skip_until(mut self: Box<Self>, strings: &[&str]) -> ParseResult<Box<Self>> {
-        if self.position.skip_until(strings) {
-            Ok(self)
-        } else {
-            Err(self)
-        }
+        self.position.skip_until(strings);
+        Ok(self)
     }
 
     /// Attempts to match the start of the input. Returns `Ok` with the current `Box<ParserState>`
