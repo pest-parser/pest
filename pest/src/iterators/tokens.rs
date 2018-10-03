@@ -57,7 +57,7 @@ impl<'i, R: RuleType> Tokens<'i, R> {
                 Token::Start {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::new(self.input, input_pos) }
+                    pos: position::Position::new(self.input, input_pos).unwrap()
                 }
             }
             QueueableToken::End {
@@ -66,7 +66,7 @@ impl<'i, R: RuleType> Tokens<'i, R> {
                 Token::End {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::new(self.input, input_pos) }
+                    pos: position::Position::new(self.input, input_pos).unwrap()
                 }
             }
         }

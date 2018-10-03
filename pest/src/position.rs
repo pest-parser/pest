@@ -17,16 +17,33 @@ use std::str;
 use span;
 
 /// A cursor position in a `&str` which provides useful methods to manually parse that string.
+#[derive(Clone)]
 pub struct Position<'i> {
     input: &'i [u8],
     pos: usize
 }
 
-pub unsafe fn new(input: &[u8], pos: usize) -> Position {
-    Position { input, pos }
-}
-
 impl<'i> Position<'i> {
+
+    /// Attempts to create a new `Position` at the given position. If the specified position is
+    /// an invalid index, or the specified position is not a valid UTF8 boundary, then None is
+    /// returned.
+    ///
+    /// # Examples
+    /// ```
+    /// # use pest::Position;
+    /// let heart = "💖".as_bytes();
+    /// assert_eq!(Position::new(heart, 1), None);
+    /// assert_eq!(Position::new(heart, 2), None);
+    /// ```
+    pub fn new(input: &[u8], pos: usize) -> Option<Position> {
+        if input.len() < pos || str::from_utf8(&input[pos..]).is_err() {
+            None
+        } else {
+            Some(Position { input, pos })
+        }
+    }
+
     /// Creates a `Position` at the start of a `&str`.
     ///
     /// # Examples
@@ -39,7 +56,7 @@ impl<'i> Position<'i> {
     #[inline]
     pub fn from_start(input: &'i str) -> Position<'i> {
         // Position 0 is always safe because it's always a valid UTF-8 border.
-        unsafe { new(input.as_bytes(), 0) }
+        Position::new(input.as_bytes(), 0).unwrap()
     }
 
     /// Returns the byte position of this `Position` as a `usize`.
@@ -376,13 +393,6 @@ impl<'i> fmt::Debug for Position<'i> {
     }
 }
 
-impl<'i> Clone for Position<'i> {
-    fn clone(&self) -> Position<'i> {
-        // Cloning a safe position is safe.
-        unsafe { new(self.input, self.pos) }
-    }
-}
-
 impl<'i> PartialEq for Position<'i> {
     fn eq(&self, other: &Position<'i>) -> bool {
         ptr::eq(self.input, other.input) && self.pos == other.pos
@@ -424,73 +434,73 @@ mod tests {
     #[test]
     fn empty() {
         let input = b"";
-        assert_eq!(unsafe { new(input, 0) }.match_string(""), true);
-        assert_eq!(!unsafe { new(input, 0) }.match_string("a"), true);
+        assert_eq!(Position::new(input, 0).unwrap().match_string(""), true);
+        assert_eq!(!Position::new(input, 0).unwrap().match_string("a"), true);
     }
 
     #[test]
     fn parts() {
         let input = b"asdasdf";
 
-        assert_eq!(unsafe { new(input, 0) }.match_string("asd"), true);
-        assert_eq!(unsafe { new(input, 3) }.match_string("asdf"), true);
+        assert_eq!(Position::new(input, 0).unwrap().match_string("asd"), true);
+        assert_eq!(Position::new(input, 3).unwrap().match_string("asdf"), true);
     }
 
     #[test]
     fn line_col() {
         let input = "a\rb\nc\r\nd嗨".as_bytes();
 
-        assert_eq!(unsafe { new(input, 0) }.line_col(), (1, 1));
-        assert_eq!(unsafe { new(input, 1) }.line_col(), (1, 2));
-        assert_eq!(unsafe { new(input, 2) }.line_col(), (1, 3));
-        assert_eq!(unsafe { new(input, 3) }.line_col(), (1, 4));
-        assert_eq!(unsafe { new(input, 4) }.line_col(), (2, 1));
-        assert_eq!(unsafe { new(input, 5) }.line_col(), (2, 2));
-        assert_eq!(unsafe { new(input, 6) }.line_col(), (2, 3));
-        assert_eq!(unsafe { new(input, 7) }.line_col(), (3, 1));
-        assert_eq!(unsafe { new(input, 8) }.line_col(), (3, 2));
-        assert_eq!(unsafe { new(input, 11) }.line_col(), (3, 3));
+        assert_eq!(Position::new(input, 0).unwrap().line_col(), (1, 1));
+        assert_eq!(Position::new(input, 1).unwrap().line_col(), (1, 2));
+        assert_eq!(Position::new(input, 2).unwrap().line_col(), (1, 3));
+        assert_eq!(Position::new(input, 3).unwrap().line_col(), (1, 4));
+        assert_eq!(Position::new(input, 4).unwrap().line_col(), (2, 1));
+        assert_eq!(Position::new(input, 5).unwrap().line_col(), (2, 2));
+        assert_eq!(Position::new(input, 6).unwrap().line_col(), (2, 3));
+        assert_eq!(Position::new(input, 7).unwrap().line_col(), (3, 1));
+        assert_eq!(Position::new(input, 8).unwrap().line_col(), (3, 2));
+        assert_eq!(Position::new(input, 11).unwrap().line_col(), (3, 3));
     }
 
     #[test]
     fn line_of() {
         let input = "a\rb\nc\r\nd嗨".as_bytes();
 
-        assert_eq!(unsafe { new(input, 0) }.line_of(), "a\rb");
-        assert_eq!(unsafe { new(input, 1) }.line_of(), "a\rb");
-        assert_eq!(unsafe { new(input, 2) }.line_of(), "a\rb");
-        assert_eq!(unsafe { new(input, 3) }.line_of(), "a\rb");
-        assert_eq!(unsafe { new(input, 4) }.line_of(), "c");
-        assert_eq!(unsafe { new(input, 5) }.line_of(), "c");
-        assert_eq!(unsafe { new(input, 6) }.line_of(), "c");
-        assert_eq!(unsafe { new(input, 7) }.line_of(), "d嗨");
-        assert_eq!(unsafe { new(input, 8) }.line_of(), "d嗨");
-        assert_eq!(unsafe { new(input, 11) }.line_of(), "d嗨");
+        assert_eq!(Position::new(input, 0).unwrap().line_of(), "a\rb");
+        assert_eq!(Position::new(input, 1).unwrap().line_of(), "a\rb");
+        assert_eq!(Position::new(input, 2).unwrap().line_of(), "a\rb");
+        assert_eq!(Position::new(input, 3).unwrap().line_of(), "a\rb");
+        assert_eq!(Position::new(input, 4).unwrap().line_of(), "c");
+        assert_eq!(Position::new(input, 5).unwrap().line_of(), "c");
+        assert_eq!(Position::new(input, 6).unwrap().line_of(), "c");
+        assert_eq!(Position::new(input, 7).unwrap().line_of(), "d嗨");
+        assert_eq!(Position::new(input, 8).unwrap().line_of(), "d嗨");
+        assert_eq!(Position::new(input, 11).unwrap().line_of(), "d嗨");
     }
 
     #[test]
     fn line_of_empty() {
         let input = b"";
 
-        assert_eq!(unsafe { new(input, 0) }.line_of(), "");
+        assert_eq!(Position::new(input, 0).unwrap().line_of(), "");
     }
 
     #[test]
     fn line_of_new_line() {
         let input = b"\n";
 
-        assert_eq!(unsafe { new(input, 0) }.line_of(), "");
+        assert_eq!(Position::new(input, 0).unwrap().line_of(), "");
     }
 
     #[test]
     fn line_of_between_new_line() {
         let input = b"\n\n";
 
-        assert_eq!(unsafe { new(input, 1) }.line_of(), "");
+        assert_eq!(Position::new(input, 1).unwrap().line_of(), "");
     }
 
     fn measure_skip(input: &[u8], pos: usize, n: usize) -> Option<usize> {
-        let mut p = unsafe { new(input, pos) };
+        let mut p = Position::new(input, pos).unwrap();
         if p.skip(n) {
             Some(p.pos - pos)
         } else {
@@ -545,19 +555,19 @@ mod tests {
     fn match_range() {
         let input = b"b";
 
-        assert_eq!(unsafe { new(input, 0) }.match_range('a'..'c'), true);
-        assert_eq!(unsafe { new(input, 0) }.match_range('b'..'b'), true);
-        assert_eq!(!unsafe { new(input, 0) }.match_range('a'..'a'), true);
-        assert_eq!(!unsafe { new(input, 0) }.match_range('c'..'c'), true);
-        assert_eq!(unsafe { new(input, 0) }.match_range('a'..'嗨'), true);
+        assert_eq!(Position::new(input, 0).unwrap().match_range('a'..'c'), true);
+        assert_eq!(Position::new(input, 0).unwrap().match_range('b'..'b'), true);
+        assert_eq!(!Position::new(input, 0).unwrap().match_range('a'..'a'), true);
+        assert_eq!(!Position::new(input, 0).unwrap().match_range('c'..'c'), true);
+        assert_eq!(Position::new(input, 0).unwrap().match_range('a'..'嗨'), true);
     }
 
     #[test]
     fn match_insensitive() {
         let input = b"AsdASdF";
 
-        assert_eq!(unsafe { new(input, 0) }.match_insensitive("asd"), true);
-        assert_eq!(unsafe { new(input, 3) }.match_insensitive("asdf"), true);
+        assert_eq!(Position::new(input, 0).unwrap().match_insensitive("asd"), true);
+        assert_eq!(Position::new(input, 3).unwrap().match_insensitive("asdf"), true);
     }
 
     #[test]
