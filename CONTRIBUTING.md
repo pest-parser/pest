@@ -30,7 +30,7 @@ We're happy to mentor any issues as long as we have the time, but issues with a 
 
 ## RFCs
 
-For those of you looking for a more philosophical challenge, feel free to give [these] a try. A lot of the work ahead of us is hard and we need great thinkers to lay the foundation on which to build forward. Not for faint of heart.
+For those of you looking for a more philosophical challenge, feel free to give [these] a try. A lot of the work ahead of us is hard and we need great thinkers to lay the foundation on which to build forward. Not for the faint of heart.
 
 [these]: https://github.com/pest-parser/pest/issues?q=is%3Aissue+is%3Aopen+label%3Aneeds-rfc
 
@@ -43,7 +43,7 @@ Our [website] and [book] are in constant need of attention. While not as well or
 
 ## Gitter
 
-Sometimes it's best to just say what you want. For that, there's our [Gitter] channel. Leave feedback, help out, learn what people are up to, go off-topic for hours, or complain that compile times are terrible—seriously, please don't.
+Sometimes it's best to just say what you want. For that, there's our [Gitter] room. Leave feedback, help out, learn what people are up to, go off-topic for hours, or complain that compile times are terrible—seriously, please don't.
 
 [Gitter]: https://gitter.im/pest-parser/pest
 
