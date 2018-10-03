@@ -1,86 +1,49 @@
 # Contributing to pest
 
-## How to contribute
+## Getting to know the project
 
-The simplest way to contribute is by opening issues. If you see a mistake in the docs, a bug, or even some bad
-indentation in the code, don't hesitate to open up an issue. If you have a feature request or know how to
-redesign a key component of pest, an issue is the way to go.
+Before diving into the whys and hows, it's best one got started with the whats. The best place to learn about what pest does and what its limits are is the [book]. Feel free to try any of the examples in the [fiddle editor] as well.
 
-However, if you have the time and energy to make your very own contribution to the project, we'd warmly
-encourage you to open a pull request. A maintainer will soon review your code and you can follow up from there.
+[book]: https://pest-parser.github.io/book
+[fiddle editor]: https://pest-parser.github.io/#editor
 
-### Finding something to contribute
+With that out of the way, let's go through *pest's* crate structure:
 
-The simplest way to get started is to take a look at the issues. If something is not specific enough or not
-detailed enough, feel free to leave a comment.
+* `pest` - contains bare-bones parsing functionality and error types
+* `derive` - automatically generates code that uses the above crate from a grammar file
+  * `meta` - parses, validates, optimizes, and converts grammars to ASTs
+  * `generator` - generates code from an AST
+* `vm` - run ASTs on-the-fly and is used by the fiddle and debugger
 
-Reach out on [Gitter](https://gitter.im/pest-parser/pest) for more ideas.
 
-## Security Issues
+## Where to start
 
-**DO NOT** publicly post about the security issue. Doing so will leave others vulnerable until it is patched.
+It's always a good practice to start with something that drives you, but if you're not inspired at the moment, you can go for a [good-first-issue]. These are the kind of issues more tailored to people with less *pest* experience, but they are not necessarily easier; they can offer a fair challenge.
 
-1. Reach out on [Gitter](https://gitter.im/pest-parser/pest) and someone will direct you about what to do. 
-   DO NOT report the issue itself on the public channel. Just let them know that you have found something
-   and they will direct you about how to disclose the problem appropriately.
-2. If that does not work, [create a new issue](https://github.com/pest-parser/pest/issues/new) and mention
-   that you have a security issue. We will give you a way to privately contact us about the problem.
+[good-first-issue]: https://github.com/pest-parser/pest/issues?q=is%3Aissue+is%3Aopen+label%3Agood-first-issue
 
-## GitHub Issue Labels
+## Mentoring
 
-The issue labels are broken up into several categories. When you want to add labels to an issue,
-start by adding a single label from the `Priority`, `Status`, and `Type` categories. This is usually
-all you will have to do for most issues. You will usually only need one of each, but feel free to
-use more as you see appropriate.
+We're happy to mentor any issues as long as we have the time, but issues with a [mentored] tag should generally be considered when looking for ways to learn, grow, and get some honest feedback on your work.
 
-The `Difficulty` category is optional but highly recommended. It's optional because sometimes
-it can be hard to classify an issue right away. Add this label as soon as possible because it
-helps new contributors determine what to start working on.
+[mentored]: https://github.com/pest-parser/pest/issues?q=is%3Aissue+is%3Aopen+label%3Amentored
 
-* **Priority:** The importance of the issue. Most issues should be Medium or Low. Anything higher
-  usually signals that someone should be working on it right away.
-  * `Priority: Low`
-    * Probably will not be fixed soon by the core contributors
-    * We are open to pull requests from people who need this sooner than we can add it
-  * `Priority: Medium`
-    * Most issues will start as this
-  * `Priority: High`
-    * Really important, fix this very soon
-    * Someone should be assigned and working on it
-  * `Priority: Critical`
-    * Fix this immediately
-    * Someone should be assigned and working on it
-  * `Priority: Needs Triage`
-    * This priority label can be used for issues that need to be triaged to decide their priority
-* **Status:** The current state of the issue. For some statuses, you may decide to not include a priority.
-  * `Status: Need Info`
-    * The issue is blocked waiting on information from the user who reported the bug
-  * `Status: Blocked`
-    * The issue is blocked waiting on another issue or PR
-  * `Status: On Hold`
-    * The issue is on hold pending something else
-  * `Status: Available (not started)`
-    * Anyone can pick this issue up as it has not been started (just leave a comment on the issue)
-  * `Status: Pending`
-    * The issue is next up to be worked on
-  * `Status: In Progress`
-    * Someone is assigned and the issue is being worked on
-    * If the person working on the issue stops, the issue goes back to being available
-  * `Status: Completed`
-    * The issue has been completed and should be closed
-  * `Status: Review Needed`
-    * The changes made to resolve the issue or PR need to be reviewed before further progress can be made
-  * `Status: Revision Needed`
-    * Some revisions are required before further progress can be made
-  * `Status: Abandoned`
-    * Work on this issue has been abandoned
-  * `Status: Won't Fix`
-    * Issue does not need to be fixed or will not be fixed for one reason or another
-* **Type:** The type of issue. The majority of issues should fit into one of these types.
-  * `Type: Bug`
-  * `Type: Feature/Enhancement`
-  * `Type: Documentation`
-  * `Type: Maintenance`
-  * `Type: Performance`
-  * `Type: Question`
-  * `Type: Security`
+## RFCs
+
+For those of you looking for a more philosophical challenge, feel free to give [these] a try. A lot of the work ahead of us is hard and we need great thinkers to lay the foundation on which to build forward. Not for faint of heart.
+
+[these]: https://github.com/pest-parser/pest/issues?q=is%3Aissue+is%3Aopen+label%3Aneeds-rfc
+
+## Website and book
+
+Our [website] and [book] are in constant need of attention. While not as well organized, they should be more approachable to the general popultion.
+
+[website]:https://github.com/pest-parser/site
+[book]: https://github.com/pest-parser/book
+
+## Gitter
+
+Sometimes it's best to just say what you want. For that, there's our [Gitter] channel. Leave feedback, help out, learn what people are up to, go off-topic for hours, or complain that compile times are terrible—seriously, please don't.
+
+[Gitter]: https://gitter.im/pest-parser/pest
+
