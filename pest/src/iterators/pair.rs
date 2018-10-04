@@ -156,7 +156,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
         let end = self.pos(self.pair());
 
         // Generated positions always come from Positions and are UTF-8 borders.
-        span::Span::new(self.input, start, end).unwrap()
+        unsafe { span::Span::new_unchecked(self.input, start, end) }
     }
 
     /// Returns the inner `Pairs` between the `Pair`, consuming it.

@@ -86,7 +86,7 @@ where
                     positives: state.pos_attempts.clone(),
                     negatives: state.neg_attempts.clone()
                 },
-                position::Position::new(input, state.attempt_pos).unwrap()
+                unsafe { position::Position::new_unchecked(input, state.attempt_pos) }
             ))
         }
     }
@@ -950,8 +950,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     pub fn stack_match_pop(mut self: Box<Self>) -> ParseResult<Box<Self>> {
         let mut position = self.position.clone();
         let mut result = true;
-        while self.stack.peek().is_some() {
-            let span = self.stack.pop().unwrap();
+        while let Some(span) = self.stack.pop() {
             result = position.match_string(span.as_str());
             if !result {
                 break;

@@ -27,6 +27,11 @@ pub struct Span<'i> {
 
 impl<'i> Span<'i> {
 
+    pub(crate) unsafe fn new_unchecked(input: &str, start: usize, end: usize) -> Span {
+        debug_assert!(input.get(start..end).is_some());
+        Span { input, start, end }
+    }
+
     /// Attempts to create a new span. Will return None if `input[start..end]` is an invalid index
     /// into `input`.
     ///
@@ -98,7 +103,7 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn start_pos(&self) -> position::Position<'i> {
         // Span's start position is always a UTF-8 border.
-        position::Position::new(self.input, self.start).unwrap()
+        unsafe { position::Position::new_unchecked(self.input, self.start) }
     }
 
     /// Returns the `Span`'s end `Position`.
@@ -117,7 +122,7 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn end_pos(&self) -> position::Position<'i> {
         // Span's end position is always a UTF-8 border.
-        position::Position::new(self.input, self.end).unwrap()
+        unsafe { position::Position::new_unchecked(self.input, self.end) }
     }
 
     /// Splits the `Span` into a pair of `Position`s.
@@ -136,8 +141,8 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn split(self) -> (position::Position<'i>, position::Position<'i>) {
         // Span's start and end positions are always a UTF-8 borders.
-        let pos1 = position::Position::new(self.input, self.start).unwrap();
-        let pos2 = position::Position::new(self.input, self.end).unwrap();
+        let pos1 = unsafe { position::Position::new_unchecked(self.input, self.start) };
+        let pos2 = unsafe { position::Position::new_unchecked(self.input, self.end) };
 
         (pos1, pos2)
     }
