@@ -38,7 +38,7 @@ impl<'i> Position<'i> {
     /// assert_ne!(Position::new(heart, cheart.len_utf8()), None);
     /// ```
     pub fn new(input: &str, pos: usize) -> Option<Position> {
-        if input.len() < pos || input.get(pos..).is_none() {
+        if input.get(pos..).is_none() {
             None
         } else {
             Some(Position { input, pos })
@@ -278,10 +278,13 @@ impl<'i> Position<'i> {
         for from in self.pos..self.input.len() {
             for slice in strings.iter() {
                 let to = from + slice.len();
-
-                if to <= self.input.len() && *slice == &self.input[from..to] {
-                    self.pos = from;
-                    return true;
+                if to <= self.input.len() {
+                    if let Some(t) = self.input.get(from..to) {
+                        if t == *slice {
+                            self.pos = from;
+                            return true;
+                        }
+                    }
                 }
             }
         }
@@ -296,7 +299,7 @@ impl<'i> Position<'i> {
     pub(crate) fn match_char_by<F>(&mut self, f: F) -> bool
     where F: FnOnce(char) -> bool
     {
-        if let Some(c) = self.input.chars().next() {
+        if let Some(c) = (&self.input[self.pos..]).chars().next() {
             if f(c) {
                 self.pos += c.len_utf8();
                 true
@@ -312,13 +315,25 @@ impl<'i> Position<'i> {
     /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
     pub(crate) fn match_string(&mut self, string: &str) -> bool {
-        let to = self.pos + string.len();
+        let matched = {
+            let to = self.pos + string.len();
 
-        if  to <= self.input.len() && string == &self.input[self.pos..to] {
+            if to <= self.input.len() {
+                if let Some(slice) = self.input.get(self.pos..to) {
+                    string == slice
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        };
+
+        if matched {
             self.pos += string.len();
             true
         } else {
-           false
+            false
         }
     }
 
@@ -326,13 +341,20 @@ impl<'i> Position<'i> {
     /// made or `false` otherwise. If no match was made, `pos` will not be updated.
     #[inline]
     pub(crate) fn match_insensitive(&mut self, string: &str) -> bool {
-        let to = self.pos + string.len();
+        let matched = {
+            let slice = &self.input[self.pos..];
+            if let Some(slice) = slice.get(0..string.len()) {
+                slice.eq_ignore_ascii_case(string)
+            } else {
+                false
+            }
+        };
 
-        if  to <= self.input.len() && string.eq_ignore_ascii_case(&self.input[self.pos..to]) {
+        if matched {
             self.pos += string.len();
             true
         } else {
-           false
+            false
         }
     }
 
@@ -340,15 +362,25 @@ impl<'i> Position<'i> {
     /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
     pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
-        if let Some(c) = &self.input[self.pos..].chars().next() {
-            if range.start <= *c && range.end >= *c {
-                self.pos += c.len_utf8();
-                true
+        let len = {
+
+            if let Some(c) = self.input.chars().next() {
+                if range.start <= c && c <= range.end {
+                    Some(c.len_utf8())
+                } else {
+                    None
+                }
             } else {
-                false
+                None
             }
-        } else {
-            false
+        };
+
+        match len {
+            Some(len) => {
+                self.pos += len;
+                true
+            }
+            None => false
         }
     }
 }
