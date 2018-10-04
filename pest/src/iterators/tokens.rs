@@ -24,14 +24,14 @@ use token::Token;
 #[derive(Clone)]
 pub struct Tokens<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i [u8],
+    input: &'i str,
     start: usize,
     end: usize
 }
 
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &[u8],
+    input: &str,
     start: usize,
     end: usize
 ) -> Tokens<R> {
@@ -58,8 +58,7 @@ impl<'i, R: RuleType> Tokens<'i, R> {
                 Token::Start {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: position::Position::new(unsafe { str::from_utf8_unchecked(self.input) },
-                                                 input_pos).unwrap()
+                    pos: position::Position::new(self.input, input_pos).unwrap()
                 }
             }
             QueueableToken::End {
@@ -68,8 +67,7 @@ impl<'i, R: RuleType> Tokens<'i, R> {
                 Token::End {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: position::Position::new(unsafe { str::from_utf8_unchecked(self.input) },
-                                                 input_pos).unwrap()
+                    pos: position::Position::new(self.input, input_pos).unwrap()
                 }
             }
         }

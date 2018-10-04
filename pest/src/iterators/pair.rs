@@ -30,11 +30,11 @@ use span::{self, Span};
 #[derive(Clone)]
 pub struct Pair<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i [u8],
+    input: &'i str,
     start: usize
 }
 
-pub fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &[u8], start: usize) -> Pair<R> {
+pub fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &str, start: usize) -> Pair<R> {
     Pair {
         queue,
         input,
@@ -99,7 +99,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
         let end = self.pos(self.pair());
 
         // Generated positions always come from Positions and are UTF-8 borders.
-        unsafe { str::from_utf8_unchecked(&self.input[start..end]) }
+        &self.input[start..end]
     }
 
     /// Returns the `Span` defined by the `Pair`, consuming it.
@@ -156,7 +156,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
         let end = self.pos(self.pair());
 
         // Generated positions always come from Positions and are UTF-8 borders.
-        unsafe { span::new(self.input, start, end) }
+        span::Span::new(self.input, start, end).unwrap()
     }
 
     /// Returns the inner `Pairs` between the `Pair`, consuming it.
@@ -281,7 +281,7 @@ impl<'i, R: Eq> Eq for Pair<'i, R> {}
 impl<'i, R: Hash> Hash for Pair<'i, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
-        (self.input as *const [u8]).hash(state);
+        (self.input.as_bytes() as *const [u8]).hash(state);
         self.start.hash(state);
     }
 }

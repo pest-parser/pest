@@ -95,8 +95,8 @@ impl<'i> Position<'i> {
     /// ```
     #[inline]
     pub fn span(&self, other: &Position<'i>) -> span::Span<'i> {
-        if ptr::eq(self.input, other.input) {
-            unsafe { span::new(self.input.as_bytes(), self.pos, other.pos) }
+        if ptr::eq(self.input, other.input) /* && self.input.get(self.pos..other.pos).is_some() */ {
+            span::Span::new(self.input, self.pos, other.pos).unwrap()
         } else {
             // TODO: maybe a panic if self.pos < other.pos
             panic!("span created from positions from different inputs")
@@ -278,12 +278,10 @@ impl<'i> Position<'i> {
         for from in self.pos..self.input.len() {
             for slice in strings.iter() {
                 let to = from + slice.len();
-                if to <= self.input.len() {
-                    if let Some(t) = self.input.get(from..to) {
-                        if t == *slice {
-                            self.pos = from;
-                            return true;
-                        }
+                if let Some(t) = self.input.get(from..to) {
+                    if t == *slice {
+                        self.pos = from;
+                        return true;
                     }
                 }
             }
@@ -315,23 +313,15 @@ impl<'i> Position<'i> {
     /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
     pub(crate) fn match_string(&mut self, string: &str) -> bool {
-        let matched = {
-            let to = self.pos + string.len();
+        let to = self.pos + string.len();
 
-            if to <= self.input.len() {
-                if let Some(slice) = self.input.get(self.pos..to) {
-                    string == slice
-                } else {
-                    false
-                }
+        if let Some(slice) = self.input.get(self.pos..to) {
+            if string == slice {
+                self.pos += string.len();
+                true
             } else {
                 false
             }
-        };
-
-        if matched {
-            self.pos += string.len();
-            true
         } else {
             false
         }
@@ -363,8 +353,7 @@ impl<'i> Position<'i> {
     #[inline]
     pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
         let len = {
-
-            if let Some(c) = self.input.chars().next() {
+            if let Some(c) = (&self.input[self.pos..]).chars().next() {
                 if range.start <= c && c <= range.end {
                     Some(c.len_utf8())
                 } else {

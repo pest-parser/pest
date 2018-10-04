@@ -18,18 +18,34 @@ use position;
 ///
 /// [two `Position`s]: struct.Position.html#method.span
 /// [`Pair`]: ../iterators/struct.Pair.html#method.span
+#[derive(Clone)]
 pub struct Span<'i> {
-    input: &'i [u8],
+    input: &'i str,
     start: usize,
     end: usize
 }
 
-#[inline]
-pub unsafe fn new(input: &[u8], start: usize, end: usize) -> Span {
-    Span { input, start, end }
-}
-
 impl<'i> Span<'i> {
+
+    /// Attempts to create a new span. Will return None if `input[start..end]` is an invalid index
+    /// into `input`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::Span;
+    /// let input = "Hello!";
+    /// assert_eq!(None, Span::new(input, 100, 0));
+    /// assert!(Span::new(input, 0, input.len()).is_some());
+    /// ```
+    pub fn new(input: &str, start: usize, end: usize) -> Option<Span> {
+        if input.get(start..end).is_some() {
+            Some(Span { input, start, end })
+        } else {
+            None
+        }
+    }
+
     /// Returns the `Span`'s start byte position as a `usize`.
     ///
     /// # Examples
@@ -82,8 +98,7 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn start_pos(&self) -> position::Position<'i> {
         // Span's start position is always a UTF-8 border.
-        position::Position::new(unsafe { str::from_utf8_unchecked(self.input) },
-                                self.start).unwrap()
+        position::Position::new(self.input, self.start).unwrap()
     }
 
     /// Returns the `Span`'s end `Position`.
@@ -102,7 +117,7 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn end_pos(&self) -> position::Position<'i> {
         // Span's end position is always a UTF-8 border.
-        position::Position::new(unsafe { str::from_utf8_unchecked(self.input) }, self.end).unwrap()
+        position::Position::new(self.input, self.end).unwrap()
     }
 
     /// Splits the `Span` into a pair of `Position`s.
@@ -121,10 +136,8 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn split(self) -> (position::Position<'i>, position::Position<'i>) {
         // Span's start and end positions are always a UTF-8 borders.
-        let pos1 = position::Position::new(unsafe { str::from_utf8_unchecked(self.input) }, self.start)
-            .unwrap();
-        let pos2 = position::Position::new(unsafe { str::from_utf8_unchecked(self.input) }, self.end)
-            .unwrap();
+        let pos1 = position::Position::new(self.input, self.start).unwrap();
+        let pos2 = position::Position::new(self.input, self.end).unwrap();
 
         (pos1, pos2)
     }
@@ -149,7 +162,7 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn as_str(&self) -> &'i str {
         // Span's start and end positions are always a UTF-8 borders.
-        unsafe { str::from_utf8_unchecked(&self.input[self.start..self.end]) }
+        &self.input[self.start..self.end]
     }
 }
 
@@ -163,12 +176,6 @@ impl<'i> fmt::Debug for Span<'i> {
     }
 }
 
-impl<'i> Clone for Span<'i> {
-    fn clone(&self) -> Span<'i> {
-        unsafe { new(self.input, self.start, self.end) }
-    }
-}
-
 impl<'i> PartialEq for Span<'i> {
     fn eq(&self, other: &Span<'i>) -> bool {
         ptr::eq(self.input, other.input) && self.start == other.start && self.end == other.end
@@ -179,7 +186,7 @@ impl<'i> Eq for Span<'i> {}
 
 impl<'i> Hash for Span<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.input as *const [u8]).hash(state);
+        (self.input.as_bytes() as *const [u8]).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }
