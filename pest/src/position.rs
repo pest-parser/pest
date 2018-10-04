@@ -278,11 +278,9 @@ impl<'i> Position<'i> {
         for from in self.pos..self.input.len() {
             for slice in strings.iter() {
                 let to = from + slice.len();
-                if let Some(t) = self.input.get(from..to) {
-                    if t == *slice {
-                        self.pos = from;
-                        return true;
-                    }
+                if slice.as_bytes() == &self.input.as_bytes()[from..to] {
+                    self.pos = from;
+                    return true;
                 }
             }
         }
@@ -315,13 +313,9 @@ impl<'i> Position<'i> {
     pub(crate) fn match_string(&mut self, string: &str) -> bool {
         let to = self.pos + string.len();
 
-        if let Some(slice) = self.input.get(self.pos..to) {
-            if string == slice {
-                self.pos += string.len();
-                true
-            } else {
-                false
-            }
+        if Some(string) == self.input.get(self.pos..to) {
+            self.pos += string.len();
+            true
         } else {
             false
         }
