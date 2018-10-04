@@ -25,6 +25,11 @@ pub struct Position<'i> {
 
 impl<'i> Position<'i> {
 
+    pub(crate) unsafe fn new_unchecked(input: &str, pos: usize) -> Position {
+        debug_assert!(input.get(pos..).is_some());
+        Position { input, pos }
+    }
+
     /// Attempts to create a new `Position` at the given position. If the specified position is
     /// an invalid index, or the specified position is not a valid UTF8 boundary, then None is
     /// returned.
@@ -57,7 +62,7 @@ impl<'i> Position<'i> {
     #[inline]
     pub fn from_start(input: &'i str) -> Position<'i> {
         // Position 0 is always safe because it's always a valid UTF-8 border.
-        Position::new(input, 0).unwrap()
+        Position { input, pos: 0 }
     }
 
     /// Returns the byte position of this `Position` as a `usize`.
@@ -96,7 +101,7 @@ impl<'i> Position<'i> {
     #[inline]
     pub fn span(&self, other: &Position<'i>) -> span::Span<'i> {
         if ptr::eq(self.input, other.input) /* && self.input.get(self.pos..other.pos).is_some() */ {
-            span::Span::new(self.input, self.pos, other.pos).unwrap()
+            unsafe { span::Span::new_unchecked(self.input, self.pos, other.pos) }
         } else {
             // TODO: maybe a panic if self.pos < other.pos
             panic!("span created from positions from different inputs")
@@ -276,9 +281,15 @@ impl<'i> Position<'i> {
     #[inline]
     pub(crate) fn skip_until(&mut self, strings: &[&str]) -> bool {
         for from in self.pos..self.input.len() {
+            let bytes = if let Some(t) = self.input.get(from..) {
+                t.as_bytes()
+            } else {
+                continue;
+            };
+
             for slice in strings.iter() {
-                let to = from + slice.len();
-                if slice.as_bytes() == &self.input.as_bytes()[from..to] {
+                let to = slice.len();
+                if Some(slice.as_bytes()) == bytes.get(0..to) {
                     self.pos = from;
                     return true;
                 }
@@ -313,7 +324,7 @@ impl<'i> Position<'i> {
     pub(crate) fn match_string(&mut self, string: &str) -> bool {
         let to = self.pos + string.len();
 
-        if Some(string) == self.input.get(self.pos..to) {
+        if Some(string.as_bytes()) == self.input.as_bytes().get(self.pos..to) {
             self.pos += string.len();
             true
         } else {
