@@ -101,6 +101,7 @@ impl<'i> Position<'i> {
     #[inline]
     pub fn span(&self, other: &Position<'i>) -> span::Span<'i> {
         if ptr::eq(self.input, other.input) /* && self.input.get(self.pos..other.pos).is_some() */ {
+            // This is safe because the pos field of a Position should always be a valid str index.
             unsafe { span::Span::new_unchecked(self.input, self.pos, other.pos) }
         } else {
             // TODO: maybe a panic if self.pos < other.pos

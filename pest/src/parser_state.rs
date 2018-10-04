@@ -86,6 +86,7 @@ where
                     positives: state.pos_attempts.clone(),
                     negatives: state.neg_attempts.clone()
                 },
+                // TODO: Figure out why state.attempt_pos is a valid position?
                 unsafe { position::Position::new_unchecked(input, state.attempt_pos) }
             ))
         }
