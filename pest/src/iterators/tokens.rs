@@ -9,6 +9,7 @@
 
 use std::fmt;
 use std::rc::Rc;
+use std::str;
 
 use super::queueable_token::QueueableToken;
 use RuleType;
@@ -57,7 +58,8 @@ impl<'i, R: RuleType> Tokens<'i, R> {
                 Token::Start {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: position::Position::new(self.input, input_pos).unwrap()
+                    pos: position::Position::new(unsafe { str::from_utf8_unchecked(self.input) },
+                                                 input_pos).unwrap()
                 }
             }
             QueueableToken::End {
@@ -66,7 +68,8 @@ impl<'i, R: RuleType> Tokens<'i, R> {
                 Token::End {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: position::Position::new(self.input, input_pos).unwrap()
+                    pos: position::Position::new(unsafe { str::from_utf8_unchecked(self.input) },
+                                                 input_pos).unwrap()
                 }
             }
         }

@@ -82,7 +82,8 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn start_pos(&self) -> position::Position<'i> {
         // Span's start position is always a UTF-8 border.
-        position::Position::new(self.input, self.start).unwrap()
+        position::Position::new(unsafe { str::from_utf8_unchecked(self.input) },
+                                self.start).unwrap()
     }
 
     /// Returns the `Span`'s end `Position`.
@@ -101,7 +102,7 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn end_pos(&self) -> position::Position<'i> {
         // Span's end position is always a UTF-8 border.
-        position::Position::new(self.input, self.end).unwrap()
+        position::Position::new(unsafe { str::from_utf8_unchecked(self.input) }, self.end).unwrap()
     }
 
     /// Splits the `Span` into a pair of `Position`s.
@@ -120,8 +121,10 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn split(self) -> (position::Position<'i>, position::Position<'i>) {
         // Span's start and end positions are always a UTF-8 borders.
-        let pos1 = position::Position::new(self.input, self.start).unwrap();
-        let pos2 = position::Position::new(self.input, self.end).unwrap();
+        let pos1 = position::Position::new(unsafe { str::from_utf8_unchecked(self.input) }, self.start)
+            .unwrap();
+        let pos2 = position::Position::new(unsafe { str::from_utf8_unchecked(self.input) }, self.end)
+            .unwrap();
 
         (pos1, pos2)
     }

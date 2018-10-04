@@ -86,8 +86,7 @@ where
                     positives: state.pos_attempts.clone(),
                     negatives: state.neg_attempts.clone()
                 },
-                // TODO: Figure out why this is safe to do
-                position::Position::new(input.as_bytes(), state.attempt_pos).unwrap()
+                position::Position::new(input, state.attempt_pos).unwrap()
             ))
         }
     }
