@@ -78,7 +78,7 @@ impl<'i> Position<'i> {
     #[inline]
     pub fn span(&self, other: &Position<'i>) -> span::Span<'i> {
         if ptr::eq(self.input, other.input) {
-            // Position's pos is always a UTF-8 border.
+            // self.pos is always a UTF-8 border.
             unsafe { span::new(self.input, self.pos, other.pos) }
         } else {
             panic!("span created from positions from different inputs")
@@ -108,7 +108,7 @@ impl<'i> Position<'i> {
         }
 
         let mut pos = self.pos;
-        // Position's pos is always a UTF-8 border.
+        // self.pos is always a UTF-8 border.
         let slice = unsafe { str::from_utf8_unchecked(&self.input[..pos]) };
         let mut chars = slice.chars().peekable();
 
@@ -172,7 +172,7 @@ impl<'i> Position<'i> {
         let start = if self.pos == 0 {
             0
         } else {
-            // Position's pos is always a UTF-8 border.
+            // self.pos is always a UTF-8 border.
             let start = unsafe { str::from_utf8_unchecked(self.input) }
                 .char_indices()
                 .rev()
@@ -198,7 +198,7 @@ impl<'i> Position<'i> {
 
             end
         } else {
-            // Position's pos is always a UTF-8 border.
+            // self.pos is always a UTF-8 border.
             let end = unsafe { str::from_utf8_unchecked(self.input) }
                 .char_indices()
                 .skip_while(|&(i, _)| i < self.pos)
@@ -237,7 +237,7 @@ impl<'i> Position<'i> {
     pub(crate) fn skip(&mut self, n: usize) -> bool {
         let skipped = {
             let mut len = 0;
-            // Position's pos is always a UTF-8 border.
+            // self.pos is always a UTF-8 border.
             let mut chars = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) }.chars();
 
             for _ in 0..n {
@@ -280,7 +280,7 @@ impl<'i> Position<'i> {
     pub(crate) fn match_char_by<F>(&mut self, f: F) -> bool
     where F: FnOnce(char) -> bool
     {
-        // Guaranteed UTF-8
+        // self.pos is always a UTF-8 border.
         let s = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
         if let Some(c) = s.chars().next() {
             if f(c) {
@@ -321,11 +321,11 @@ impl<'i> Position<'i> {
     #[inline]
     pub(crate) fn match_insensitive(&mut self, string: &str) -> bool {
         let matched = {
-            // Matching is safe since, even if the string does not fall on UTF-8 borders, that
-            // particular slice is only used for comparison which will be handled correctly.
+            // self.pos is always a UTF-8 border.
             let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
 
             if slice.is_char_boundary(string.len()) {
+                // Checked above.
                 let slice = unsafe { slice.get_unchecked(0..string.len()) };
                 slice.eq_ignore_ascii_case(string)
             } else {
@@ -346,7 +346,7 @@ impl<'i> Position<'i> {
     #[inline]
     pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
         let len = {
-            // Cannot actually cause undefined behavior.
+            // self.pos is always a UTF-8 border.
             let slice = unsafe { str::from_utf8_unchecked(&self.input[self.pos..]) };
 
             if let Some(c) = slice.chars().next() {
