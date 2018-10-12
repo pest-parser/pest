@@ -34,14 +34,11 @@ pub struct Pair<'i, R> {
     /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
-    /// # Safety
-    ///
-    /// Must be a valid character boundary in `input`; that is: `input[start..]` must not panic.
+    /// Token index into `queue`.
     start: usize
 }
 
 // TODO(safety): QueueableTokens must be valid indices into input.
-// TODO(safety): start must be a valid index into input.
 pub fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &str, start: usize) -> Pair<R> {
     if cfg!(debug_assertions) {
         for tok in queue.iter() {
@@ -50,7 +47,6 @@ pub fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &str, start: u
                     assert!(input.get(input_pos..).is_some(), "💥 UNSAFE `Pair` CREATED 💥")
             }
         }
-        assert!(input.get(start..).is_some(), "💥 UNSAFE `Pair` CREATED 💥")
     }
 
     Pair {
