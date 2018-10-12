@@ -40,8 +40,8 @@ pub fn new<R: RuleType>(
     end: usize
 ) -> Tokens<R> {
     if cfg!(debug_assertions) {
-        for tok in queue {
-            match tok {
+        for tok in queue.iter() {
+            match *tok {
                 QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } =>
                     assert!(input.get(input_pos..).is_some(), "💥 UNSAFE `Tokens` CREATED 💥")
             }
