@@ -142,9 +142,9 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     Ok(defaults.map(|string| *string).collect())
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher))]
+#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher, ptr_arg))]
 pub fn validate_rust_keywords<'i>(
-    definitions: &[Span<'i>],
+    definitions: &Vec<Span<'i>>,
     rust_keywords: &HashSet<&str>
 ) -> Vec<Error<Rule>> {
     let mut errors = vec![];
@@ -165,9 +165,9 @@ pub fn validate_rust_keywords<'i>(
     errors
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher))]
+#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher, ptr_arg))]
 pub fn validate_pest_keywords<'i>(
-    definitions: &[Span<'i>],
+    definitions: &Vec<Span<'i>>,
     pest_keywords: &HashSet<&str>
 ) -> Vec<Error<Rule>> {
     let mut errors = vec![];
@@ -188,7 +188,8 @@ pub fn validate_pest_keywords<'i>(
     errors
 }
 
-pub fn validate_already_defined<'i>(definitions: &[Span<'i>]) -> Vec<Error<Rule>> {
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
+pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
     let mut defined = HashSet::new();
 
@@ -210,10 +211,10 @@ pub fn validate_already_defined<'i>(definitions: &[Span<'i>]) -> Vec<Error<Rule>
     errors
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher))]
+#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher, ptr_arg))]
 pub fn validate_undefined<'i>(
-    definitions: &[Span<'i>],
-    called_rules: &[Span<'i>],
+    definitions: &Vec<Span<'i>>,
+    called_rules: &Vec<Span<'i>>,
     builtins: &HashSet<&str>
 ) -> Vec<Error<Rule>> {
     let mut errors = vec![];
@@ -235,7 +236,8 @@ pub fn validate_undefined<'i>(
     errors
 }
 
-pub fn validate_ast<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Error<Rule>> {
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
+pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
     errors.extend(validate_repetition(rules));
