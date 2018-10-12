@@ -85,6 +85,7 @@ impl<R: RuleType> Error<R> {
     ///
     /// println!("{}", error);
     /// ```
+    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     pub fn new_from_pos(variant: ErrorVariant<R>, pos: Position) -> Error<R> {
         Error {
             variant,
@@ -125,6 +126,7 @@ impl<R: RuleType> Error<R> {
     ///
     /// println!("{}", error);
     /// ```
+    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     pub fn new_from_span(variant: ErrorVariant<R>, span: Span) -> Error<R> {
         let continued_line = if span.start_pos().line_col().0 != span.end_pos().line_col().0 {
             Some(span.end_pos().line_of().to_owned())

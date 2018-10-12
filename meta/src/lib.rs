@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+#![cfg_attr(feature = "cargo-clippy", allow(range_plus_one))]
+
 extern crate maplit;
 #[cfg(test)]
 #[macro_use]
