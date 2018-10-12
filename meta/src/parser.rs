@@ -20,7 +20,7 @@ use validator;
 
 include!("grammar.rs");
 
-pub fn parse<'i>(rule: Rule, data: &'i str) -> Result<Pairs<Rule>, Error<Rule>> {
+pub fn parse(rule: Rule, data: &str) -> Result<Pairs<Rule>, Error<Rule>> {
     PestParser::parse(rule, data)
 }
 
@@ -123,7 +123,7 @@ pub enum ParserExpr<'i> {
     Push(Box<ParserNode<'i>>)
 }
 
-fn convert_rule<'i>(rule: ParserRule<'i>) -> AstRule {
+fn convert_rule(rule: ParserRule) -> AstRule {
     match rule {
         ParserRule { name, ty, node, .. } => {
             let expr = convert_node(node);
@@ -133,7 +133,7 @@ fn convert_rule<'i>(rule: ParserRule<'i>) -> AstRule {
     }
 }
 
-fn convert_node<'i>(node: ParserNode<'i>) -> Expr {
+fn convert_node(node: ParserNode) -> Expr {
     match node.expr {
         ParserExpr::Str(string) => Expr::Str(string),
         ParserExpr::Insens(string) => Expr::Insens(string),
@@ -162,11 +162,11 @@ fn convert_node<'i>(node: ParserNode<'i>) -> Expr {
     }
 }
 
-pub fn consume_rules<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>>> {
+pub fn consume_rules(pairs: Pairs<Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>>> {
     let rules = consume_rules_with_spans(pairs)?;
     let errors = validator::validate_ast(&rules);
-    if errors.len() == 0 {
-        Ok(rules.into_iter().map(|rule| convert_rule(rule)).collect())
+    if errors.is_empty() {
+        Ok(rules.into_iter().map(convert_rule).collect())
     } else {
         Err(errors)
     }

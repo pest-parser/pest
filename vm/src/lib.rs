@@ -128,6 +128,8 @@ impl Vm {
             }
         } else {
             if let Some(property) = unicode::by_name(rule) {
+                // std::boxed::Box<dyn std::ops::Fn(char) -> bool> is not FnOnce(char)->bool
+                #[cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
                 return state.match_char_by(|c| property(c));
             }
 

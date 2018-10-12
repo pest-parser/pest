@@ -65,7 +65,7 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
     }
 }
 
-fn to_hash_map(rules: & Vec<OptimizedRule>) -> HashMap<String, OptimizedExpr> {
+fn to_hash_map(rules: &[OptimizedRule]) -> HashMap<String, OptimizedExpr> {
     rules.iter().map(|r| (r.name.clone(), r.expr.clone())).collect()
 }
 

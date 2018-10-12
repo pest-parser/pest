@@ -68,7 +68,7 @@ fn child_modifies_state(
         OptimizedExpr::Push(_) => true,
         OptimizedExpr::Ident(ref name) if name == "POP" => true,
         OptimizedExpr::Ident(ref name) => {
-            match cache.get(name).map(|result| *result) {
+            match cache.get(name).cloned() {
                 Some(option) => match option {
                     Some(cached) => cached,
                     None => {
