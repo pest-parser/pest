@@ -20,11 +20,18 @@ use span;
 #[derive(Clone)]
 pub struct Position<'i> {
     input: &'i str,
+    /// # Safety:
+    ///
+    /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
     pos: usize
 }
 
 impl<'i> Position<'i> {
-
+    /// Create a new `Position` without checking invariants. (Checked with `debug_assertions`.)
+    ///
+    /// # Safety:
+    ///
+    /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
     pub(crate) unsafe fn new_unchecked(input: &str, pos: usize) -> Position {
         debug_assert!(input.get(pos..).is_some());
         Position { input, pos }

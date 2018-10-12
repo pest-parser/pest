@@ -21,12 +21,22 @@ use position;
 #[derive(Clone)]
 pub struct Span<'i> {
     input: &'i str,
+    /// # Safety
+    ///
+    /// Must be a valid character boundary index into `input`.
     start: usize,
+    /// # Safety
+    ///
+    /// Must be a valid character boundary index into `input`.
     end: usize
 }
 
 impl<'i> Span<'i> {
-
+    /// Create a new `Span` without checking invariants. (Checked with `debug_assertions`.)
+    ///
+    /// # Safety
+    ///
+    /// `input[start..end]` must be a valid subslice; that is, said indexing should not panic.
     pub(crate) unsafe fn new_unchecked(input: &str, start: usize, end: usize) -> Span {
         debug_assert!(input.get(start..end).is_some());
         Span { input, start, end }
