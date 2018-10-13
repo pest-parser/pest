@@ -327,7 +327,7 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Error<Rul
     let mut result = vec![];
     let map = to_hash_map(rules);
 
-    for rule in rules.into_iter() {
+    for rule in rules {
         let mut errors = rule.node
             .clone()
             .filter_map_top_down(|node| match node.expr {
@@ -371,7 +371,7 @@ fn validate_choices<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Error<Rule>>
     let mut result = vec![];
     let map = to_hash_map(rules);
 
-    for rule in rules.into_iter() {
+    for rule in rules {
         let mut errors = rule
             .node
             .clone()
