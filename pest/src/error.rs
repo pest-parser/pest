@@ -25,11 +25,11 @@ pub struct Error<R> {
     pub variant: ErrorVariant<R>,
     /// Location within the input string
     pub location: InputLocation,
+    /// Line/column within the input string
+    pub line_col: LineColLocation,
     path: Option<String>,
     line: String,
     continued_line: Option<String>,
-    start: (usize, usize),
-    end: Option<(usize, usize)>
 }
 
 /// Different kinds of parsing errors.
@@ -56,6 +56,15 @@ pub enum InputLocation {
     Pos(usize),
     /// `Error` was created by `Error::new_from_span`
     Span((usize, usize))
+}
+
+/// Line/column where an `Error` has occurred.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum LineColLocation {
+    /// Line/column pair if `Error` was created by `Error::new_from_pos`
+    Pos((usize, usize)),
+    /// Line/column pairs if `Error` was created by `Error::new_from_span`
+    Span((usize, usize), (usize, usize))
 }
 
 impl<R: RuleType> Error<R> {
@@ -93,8 +102,7 @@ impl<R: RuleType> Error<R> {
             path: None,
             line: pos.line_of().to_owned(),
             continued_line: None,
-            start: pos.line_col(),
-            end: None
+            line_col: LineColLocation::Pos(pos.line_col())
         }
     }
 
@@ -140,8 +148,7 @@ impl<R: RuleType> Error<R> {
             path: None,
             line: span.start_pos().line_of().to_owned(),
             continued_line,
-            start: span.start_pos().line_col(),
-            end: Some(span.end_pos().line_col())
+            line_col: LineColLocation::Span(span.start_pos().line_col(), span.end_pos().line_col())
         }
     }
 
@@ -230,11 +237,17 @@ impl<R: RuleType> Error<R> {
         self
     }
 
+    fn start(&self) -> (usize, usize) {
+        match self.line_col {
+            LineColLocation::Pos(line_col) => line_col,
+            LineColLocation::Span(start_line_col, _) => start_line_col
+        }
+    }
+
     fn spacing(&self) -> String {
-        let line = if let Some((line, _)) = self.end {
-            cmp::max(self.start.0, line)
-        } else {
-            self.start.0
+        let line = match self.line_col {
+            LineColLocation::Pos((line, _)) => line,
+            LineColLocation::Span((start_line, _), (end_line, _)) => cmp::max(start_line, end_line)
         };
 
         let line_str_len = format!("{}", line).len();
@@ -250,18 +263,19 @@ impl<R: RuleType> Error<R> {
     fn underline(&self) -> String {
         let mut underline = String::new();
 
-        let mut start = self.start.1;
-        let end = if let Some((_, mut end)) = self.end {
-            let inverted_cols = start > end;
-            if inverted_cols {
-                mem::swap(&mut start, &mut end);
-                start -= 1;
-                end += 1;
-            }
+        let mut start = self.start().1;
+        let end = match self.line_col {
+            LineColLocation::Span(_, (_, mut end)) => {
+                let inverted_cols = start > end;
+                if inverted_cols {
+                    mem::swap(&mut start, &mut end);
+                    start -= 1;
+                    end += 1;
+                }
 
-            Some(end)
-        } else {
-            None
+                Some(end)
+            }
+            _ => None
         };
         let offset = start - 1;
 
@@ -337,8 +351,9 @@ impl<R: RuleType> Error<R> {
         let spacing = self.spacing();
         let path = self.path.as_ref().map(|path| format!("{}:", path)).unwrap_or_default();
 
-        if let (Some(end), &Some(ref continued_line)) = (self.end, &self.continued_line) {
-            let has_line_gap = end.0 - self.start.0 > 1;
+        let pair = (self.line_col.clone(), &self.continued_line);
+        if let (LineColLocation::Span(_, end), &Some(ref continued_line)) = pair {
+            let has_line_gap = end.0 - self.start().0 > 1;
             if has_line_gap {
                 format!(
                     "{s    }--> {p}{ls}:{c}\n\
@@ -352,9 +367,9 @@ impl<R: RuleType> Error<R> {
                     s = spacing,
                     w = spacing.len(),
                     p = path,
-                    ls = self.start.0,
+                    ls = self.start().0,
                     le = end.0,
-                    c = self.start.1,
+                    c = self.start().1,
                     line = self.line,
                     continued_line = continued_line,
                     underline = self.underline(),
@@ -372,9 +387,9 @@ impl<R: RuleType> Error<R> {
                     s = spacing,
                     w = spacing.len(),
                     p = path,
-                    ls = self.start.0,
+                    ls = self.start().0,
                     le = end.0,
-                    c = self.start.1,
+                    c = self.start().1,
                     line = self.line,
                     continued_line = continued_line,
                     underline = self.underline(),
@@ -391,8 +406,8 @@ impl<R: RuleType> Error<R> {
                  {s} = {message}",
                 s = spacing,
                 p = path,
-                l = self.start.0,
-                c = self.start.1,
+                l = self.start().0,
+                c = self.start().1,
                 line = self.line,
                 underline = self.underline(),
                 message = self.message()
