@@ -29,12 +29,26 @@ use span::{self, Span};
 /// [`Token`]: ../enum.Token.html
 #[derive(Clone)]
 pub struct Pair<'i, R> {
+    /// # Safety
+    ///
+    /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
+    /// Token index into `queue`.
     start: usize
 }
 
+// TODO(safety): QueueableTokens must be valid indices into input.
 pub fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &str, start: usize) -> Pair<R> {
+    if cfg!(debug_assertions) {
+        for tok in queue.iter() {
+            match *tok {
+                QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } =>
+                    assert!(input.get(input_pos..).is_some(), "💥 UNSAFE `Pair` CREATED 💥")
+            }
+        }
+    }
+
     Pair {
         queue,
         input,

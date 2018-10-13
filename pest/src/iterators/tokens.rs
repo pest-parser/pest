@@ -23,18 +23,31 @@ use token::Token;
 /// [`Pairs::tokens`]: struct.Pairs.html#method.tokens
 #[derive(Clone)]
 pub struct Tokens<'i, R> {
+    /// # Safety:
+    ///
+    /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
     start: usize,
     end: usize
 }
 
+// TODO(safety): QueueableTokens must be valid indices into input.
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &str,
     start: usize,
     end: usize
 ) -> Tokens<R> {
+    if cfg!(debug_assertions) {
+        for tok in queue.iter() {
+            match *tok {
+                QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } =>
+                    assert!(input.get(input_pos..).is_some(), "💥 UNSAFE `Tokens` CREATED 💥")
+            }
+        }
+    }
+
     Tokens {
         queue,
         input,
