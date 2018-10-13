@@ -291,14 +291,15 @@ mod tests {
     fn pairs_debug() {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
+        #[rustfmt::skip]
         assert_eq!(
             format!("{:?}", pairs),
             "[\
-             Pair { rule: a, span: Span { str: \"abc\", start: 0, end: 3 }, inner: [\
-             Pair { rule: b, span: Span { str: \"b\", start: 1, end: 2 }, inner: [] }\
-             ] }, \
-             Pair { rule: c, span: Span { str: \"e\", start: 4, end: 5 }, inner: [] }\
-             ]"
+                Pair { rule: a, span: Span { str: \"abc\", start: 0, end: 3 }, inner: [\
+                    Pair { rule: b, span: Span { str: \"b\", start: 1, end: 2 }, inner: [] }\
+                ] }, \
+                Pair { rule: c, span: Span { str: \"e\", start: 4, end: 5 }, inner: [] }\
+            ]"
             .to_owned()
         );
     }
