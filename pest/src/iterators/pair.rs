@@ -16,8 +16,8 @@ use std::str;
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
-use RuleType;
 use span::{self, Span};
+use RuleType;
 
 /// A matching pair of [`Token`]s and everything between them.
 ///
@@ -271,7 +271,8 @@ impl<'i, R: RuleType> fmt::Display for Pair<'i, R> {
 
 impl<'i, R: PartialEq> PartialEq for Pair<'i, R> {
     fn eq(&self, other: &Pair<'i, R>) -> bool {
-        Rc::ptr_eq(&self.queue, &other.queue) && ptr::eq(self.input, other.input)
+        Rc::ptr_eq(&self.queue, &other.queue)
+            && ptr::eq(self.input, other.input)
             && self.start == other.start
     }
 }

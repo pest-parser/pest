@@ -526,9 +526,9 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::parser::{consume_rules, PestParser};
     use super::super::unwrap_or_report;
+    use super::*;
     use pest::Parser;
 
     #[test]

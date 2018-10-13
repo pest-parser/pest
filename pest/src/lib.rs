@@ -25,7 +25,7 @@
 //! * API reference on [docs.rs]
 //! * play with grammars and share them on our [fiddle]
 //! * leave feedback, ask questions, or greet us on [Gitter]
-//! 
+//!
 //! [book]: https://pest-parser.github.io/book
 //! [docs.rs]: https://docs.rs/pest
 //! [fiddle]: https://pest-parser.github.io/#editor

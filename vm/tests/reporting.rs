@@ -12,8 +12,8 @@ extern crate pest_meta;
 #[macro_use]
 extern crate pest_vm;
 
-use pest_meta::{optimizer, parser};
 use pest_meta::parser::Rule;
+use pest_meta::{optimizer, parser};
 use pest_vm::Vm;
 
 const GRAMMAR: &'static str = include_str!("reporting.pest");

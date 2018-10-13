@@ -31,8 +31,8 @@ use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 mod macros;
 mod generator;
 
-use pest_meta::{optimizer, unwrap_or_report, validator};
 use pest_meta::parser::{self, Rule};
+use pest_meta::{optimizer, unwrap_or_report, validator};
 
 pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
@@ -102,7 +102,8 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, String) {
     let name = ast.ident;
     let generics = ast.generics;
 
-    let grammar: Vec<&Attribute> = ast.attrs
+    let grammar: Vec<&Attribute> = ast
+        .attrs
         .iter()
         .filter(|attr| match attr.interpret_meta() {
             Some(Meta::NameValue(name_value)) => name_value.ident == "grammar",

@@ -11,9 +11,9 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::queueable_token::QueueableToken;
-use RuleType;
 use position;
 use token::Token;
+use RuleType;
 
 /// An iterator over [`Token`]s. It is created by [`Pair::tokens`] and [`Pairs::tokens`].
 ///
@@ -111,9 +111,9 @@ impl<'i, R: RuleType> fmt::Debug for Tokens<'i, R> {
 
 #[cfg(test)]
 mod tests {
-    use super::Token;
-    use super::super::super::Parser;
     use super::super::super::macros::tests::*;
+    use super::super::super::Parser;
+    use super::Token;
 
     #[test]
     fn double_ended_iter_for_tokens() {

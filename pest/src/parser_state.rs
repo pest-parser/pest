@@ -10,12 +10,12 @@
 use std::ops::Range;
 use std::rc::Rc;
 
-use RuleType;
 use error::{Error, ErrorVariant};
 use iterators::{pairs, QueueableToken};
 use position::{self, Position};
 use span::Span;
 use stack::Stack;
+use RuleType;
 
 /// The current lookahead status of a [`ParserState`].
 ///
@@ -465,7 +465,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn match_char_by<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
-    where F: FnOnce(char) -> bool
+    where
+        F: FnOnce(char) -> bool
     {
         if self.position.match_char_by(f) {
             Ok(self)
@@ -860,7 +861,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn stack_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
-        let string = self.stack
+        let string = self
+            .stack
             .peek()
             .expect("peek was called on empty stack")
             .as_str();
@@ -888,7 +890,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn stack_pop(mut self: Box<Self>) -> ParseResult<Box<Self>> {
-        let string = self.stack
+        let string = self
+            .stack
             .pop()
             .expect("pop was called on empty stack")
             .as_str();
@@ -916,9 +919,10 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     #[inline]
     pub fn stack_match_peek(mut self: Box<Self>) -> ParseResult<Box<Self>> {
         let mut position = self.position.clone();
-        let result = self.stack.iter().all(|span| {
-            position.match_string(span.as_str())
-        });
+        let result = self
+            .stack
+            .iter()
+            .all(|span| position.match_string(span.as_str()));
 
         if result {
             self.position = position;

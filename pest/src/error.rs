@@ -14,9 +14,9 @@ use std::error;
 use std::fmt;
 use std::mem;
 
-use RuleType;
 use position::Position;
 use span::Span;
+use RuleType;
 
 /// Parse-related error type.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -306,9 +306,7 @@ impl<R: RuleType> Error<R> {
                 ref positives,
                 ref negatives
             } => Error::parsing_error_message(positives, negatives, |r| format!("{:?}", r)),
-            ErrorVariant::CustomError { ref message } => {
-                message.clone()
-            }
+            ErrorVariant::CustomError { ref message } => message.clone()
         }
     }
 
@@ -349,7 +347,11 @@ impl<R: RuleType> Error<R> {
 
     pub(crate) fn format(&self) -> String {
         let spacing = self.spacing();
-        let path = self.path.as_ref().map(|path| format!("{}:", path)).unwrap_or_default();
+        let path = self
+            .path
+            .as_ref()
+            .map(|path| format!("{}:", path))
+            .unwrap_or_default();
 
         let pair = (self.line_col.clone(), &self.continued_line);
         if let (LineColLocation::Span(_, end), &Some(ref continued_line)) = pair {
@@ -433,8 +435,8 @@ impl<'i, R: RuleType> error::Error for Error<R> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::position;
+    use super::*;
 
     #[test]
     fn display_parsing_error_mixed() {
@@ -457,7 +459,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -482,7 +485,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = expected 1 or 2",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -507,7 +511,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -532,7 +537,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = unknown parsing error",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -556,7 +562,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = error: big one",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -582,7 +589,8 @@ mod tests {
                 "  |  ^^",
                 "  |",
                 "  = error: big one",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -609,7 +617,8 @@ mod tests {
                 "  |  ^^",
                 "  |",
                 "  = error: big one",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -635,7 +644,8 @@ mod tests {
                 "  | ^----^",
                 "  |",
                 "  = error: big one",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -649,7 +659,8 @@ mod tests {
                 negatives: vec![4, 5, 6]
             },
             pos
-        ).renamed_rules(|n| format!("{}", n + 1));
+        )
+        .renamed_rules(|n| format!("{}", n + 1));
 
         assert_eq!(
             format!("{}", error),
@@ -660,7 +671,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = unexpected 5, 6, or 7; expected 2, 3, or 4",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -674,7 +686,8 @@ mod tests {
                 negatives: vec![4, 5, 6]
             },
             pos
-        ).with_path("file.rs");
+        )
+        .with_path("file.rs");
 
         assert_eq!(
             format!("{}", error),
@@ -685,7 +698,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 }
