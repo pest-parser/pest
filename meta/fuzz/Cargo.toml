@@ -1,4 +1,3 @@
-
 [package]
 name = "pest_meta-fuzz"
 version = "0.0.1"
