@@ -1,0 +1,25 @@
+[package]
+name = "pest_grammars-fuzz"
+version = "0.0.0"
+authors = ["Automatically generated"]
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies.pest_grammars]
+path = ".."
+[dependencies.libfuzzer-sys]
+git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "json"
+path = "fuzz_targets/json.rs"
+
+[[bin]]
+name = "toml"
+path = "fuzz_targets/toml.rs"
