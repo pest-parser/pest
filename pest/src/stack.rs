@@ -85,11 +85,11 @@ impl<T: Clone> Stack<T> {
     fn rewind_to(&mut self, index: usize) {
         let ops_to_rewind = &self.ops[index..];
         for op in ops_to_rewind.iter().rev() {
-            match op {
-                &StackOp::Push(_) => {
+            match *op {
+                StackOp::Push(_) => {
                     self.cache.pop();
                 }
-                &StackOp::Pop(ref elem) => {
+                StackOp::Pop(ref elem) => {
                     self.cache.push(elem.clone());
                 }
             }

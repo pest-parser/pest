@@ -16,6 +16,7 @@ use pest::Span;
 use parser::{ParserExpr, ParserNode, ParserRule, Rule};
 use UNICODE_PROPERTY_NAMES;
 
+#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
 pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Error<Rule>>> {
     let mut rust_keywords = HashSet::new();
     rust_keywords.insert("abstract");
@@ -129,7 +130,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     errors.extend(validate_already_defined(&definitions));
     errors.extend(validate_undefined(&definitions, &called_rules, &builtins));
 
-    if errors.len() > 0 {
+    if !errors.is_empty() {
         return Err(errors);
     }
 
@@ -138,9 +139,10 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
 
     let defaults = called_rules.difference(&definitions);
 
-    Ok(defaults.into_iter().map(|string| *string).collect())
+    Ok(defaults.map(|string| *string).collect())
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher, ptr_arg))]
 pub fn validate_rust_keywords<'i>(
     definitions: &Vec<Span<'i>>,
     rust_keywords: &HashSet<&str>
@@ -163,6 +165,7 @@ pub fn validate_rust_keywords<'i>(
     errors
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher, ptr_arg))]
 pub fn validate_pest_keywords<'i>(
     definitions: &Vec<Span<'i>>,
     pest_keywords: &HashSet<&str>
@@ -185,6 +188,7 @@ pub fn validate_pest_keywords<'i>(
     errors
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
 pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
     let mut defined = HashSet::new();
@@ -207,6 +211,7 @@ pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Ru
     errors
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher, ptr_arg))]
 pub fn validate_undefined<'i>(
     definitions: &Vec<Span<'i>>,
     called_rules: &Vec<Span<'i>>,
@@ -231,6 +236,7 @@ pub fn validate_undefined<'i>(
     errors
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
 pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
@@ -239,8 +245,8 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rul
     errors.extend(validate_whitespace_comment(rules));
     errors.extend(validate_left_recursion(rules));
 
-    errors.sort_by_key(|error| match &error.location {
-        InputLocation::Span(span) => span.clone(),
+    errors.sort_by_key(|error| match error.location {
+        InputLocation::Span(span) => span,
         _ => unreachable!()
     });
 
@@ -317,7 +323,7 @@ fn is_non_failing<'i>(
     }
 }
 
-fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
+fn validate_repetition<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Error<Rule>> {
     let mut result = vec![];
     let map = to_hash_map(rules);
 
@@ -361,7 +367,7 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<
     result
 }
 
-fn validate_choices<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
+fn validate_choices<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Error<Rule>> {
     let mut result = vec![];
     let map = to_hash_map(rules);
 
@@ -398,7 +404,7 @@ fn validate_choices<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rul
     result
 }
 
-fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
+fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Error<Rule>> {
     let map = to_hash_map(rules);
 
     rules
@@ -435,14 +441,15 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Ve
         .collect()
 }
 
-fn validate_left_recursion<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
+fn validate_left_recursion<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Error<Rule>> {
     left_recursion(to_hash_map(rules))
 }
 
-fn to_hash_map<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> HashMap<String, &'a ParserNode<'i>> {
+fn to_hash_map<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> HashMap<String, &'a ParserNode<'i>> {
     rules.iter().map(|r| (r.name.clone(), &r.node)).collect()
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
 fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec<Error<Rule>> {
     fn check_expr<'a, 'i: 'a>(
         node: &'a ParserNode<'i>,
@@ -492,7 +499,7 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
                 }
             }
             ParserExpr::Choice(ref lhs, ref rhs) => {
-                check_expr(&lhs, rules, trace).or(check_expr(&rhs, rules, trace))
+                check_expr(&lhs, rules, trace).or_else(|| check_expr(&rhs, rules, trace))
             }
             ParserExpr::Rep(ref node) => check_expr(&node, rules, trace),
             ParserExpr::RepOnce(ref node) => check_expr(&node, rules, trace),

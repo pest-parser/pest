@@ -17,6 +17,7 @@ use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 use pest_meta::UNICODE_PROPERTY_NAMES;
 
+#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
 pub fn generate(
     name: Ident,
     generics: &Generics,
@@ -37,11 +38,11 @@ pub fn generate(
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
 
-    let mut rules: Vec<_> = rules.into_iter().map(|rule| generate_rule(rule)).collect();
+    let mut rules: Vec<_> = rules.into_iter().map(generate_rule).collect();
     rules.extend(
         defaults
             .into_iter()
-            .map(|name| builtins.get(name).unwrap().clone())
+            .map(|name| builtins[name].clone())
     );
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -147,7 +148,7 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
             fn #property_ident(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.match_char_by(::pest::unicode::#property_ident)
             }
-        }.into());
+        });
     }
 
     builtins
@@ -163,7 +164,7 @@ fn generate_include(name: &Ident, path: &str) -> TokenStream {
     }
 }
 
-fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> TokenStream {
+fn generate_enum(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
     let rules = rules.iter().map(|rule| Ident::new(rule.name.as_str(), Span::call_site()));
     if uses_eoi {
         quote! {
@@ -185,7 +186,7 @@ fn generate_enum(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> TokenStream {
     }
 }
 
-fn generate_patterns(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> TokenStream {
+fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
     let mut rules: Vec<TokenStream> = rules
         .iter()
         .map(|rule| {
@@ -209,20 +210,18 @@ fn generate_patterns(rules: &Vec<OptimizedRule>, uses_eoi: bool) -> TokenStream 
 
 fn generate_rule(rule: OptimizedRule) -> TokenStream {
     let name = Ident::new(&rule.name, Span::call_site());
-    let expr = if { rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic } {
+    let expr = if rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic {
         generate_expr_atomic(rule.expr)
-    } else {
-        if name == "WHITESPACE" || name == "COMMENT" {
-            let atomic = generate_expr_atomic(rule.expr);
+    } else if name == "WHITESPACE" || name == "COMMENT" {
+        let atomic = generate_expr_atomic(rule.expr);
 
-            quote! {
-                state.atomic(::pest::Atomicity::Atomic, |state| {
-                    #atomic
-                })
-            }
-        } else {
-            generate_expr(rule.expr)
+        quote! {
+            state.atomic(::pest::Atomicity::Atomic, |state| {
+                #atomic
+            })
         }
+    } else {
+        generate_expr(rule.expr)
     };
 
     match rule.ty {
@@ -278,7 +277,7 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
     }
 }
 
-fn generate_skip(rules: &Vec<OptimizedRule>) -> TokenStream {
+fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
     let whitespace = rules.iter().any(|rule| rule.name == "WHITESPACE");
     let comment = rules.iter().any(|rule| rule.name == "COMMENT");
 

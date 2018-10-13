@@ -38,7 +38,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
     let (name, generics, path) = parse_derive(ast);
 
-    let root = env::var("CARGO_MANIFEST_DIR").unwrap_or(".".into());
+    let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
     let path = Path::new(&root).join("src/").join(&path);
     let file_name = match path.file_name() {
         Some(file_name) => file_name,
@@ -87,10 +87,8 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
     let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
-    let generated =
-        generator::generate(name, &generics, &path, optimized, defaults, include_grammar);
 
-    generated.into()
+    generator::generate(name, &generics, &path, optimized, defaults, include_grammar)
 }
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
@@ -107,7 +105,7 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, String) {
     let grammar: Vec<&Attribute> = ast.attrs
         .iter()
         .filter(|attr| match attr.interpret_meta() {
-            Some(Meta::NameValue(name_value)) => name_value.ident.to_string() == "grammar",
+            Some(Meta::NameValue(name_value)) => name_value.ident == "grammar",
             _ => false
         })
         .collect();

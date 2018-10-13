@@ -107,7 +107,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     #[inline]
     pub fn concat(&self) -> String {
-        self.clone().into_iter().fold(String::new(), |string, pair| string + pair.as_str())
+        self.clone().fold(String::new(), |string, pair| string + pair.as_str())
     }
 
     /// Flattens the `Pairs`.
