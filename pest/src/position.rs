@@ -333,7 +333,7 @@ impl<'i> Position<'i> {
         let to = self.pos + string.len();
 
         if Some(string.as_bytes()) == self.input.as_bytes().get(self.pos..to) {
-            self.pos += string.len();
+            self.pos = to;
             true
         } else {
             false
@@ -365,25 +365,14 @@ impl<'i> Position<'i> {
     /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
     pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
-        let len = {
-            if let Some(c) = (&self.input[self.pos..]).chars().next() {
-                if range.start <= c && c <= range.end {
-                    Some(c.len_utf8())
-                } else {
-                    None
-                }
-            } else {
-                None
+        if let Some(c) = (&self.input[self.pos..]).chars().next() {
+            if range.start <= c && c <= range.end {
+                self.pos += c.len_utf8();
+                return true;
             }
-        };
-
-        match len {
-            Some(len) => {
-                self.pos += len;
-                true
-            }
-            None => false
         }
+        
+        false
     }
 }
 
