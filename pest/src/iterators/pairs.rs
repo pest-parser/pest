@@ -167,6 +167,18 @@ impl<'i, R: RuleType> Pairs<'i, R> {
         tokens::new(self.queue, self.input, self.start, self.end)
     }
 
+    #[inline]
+    pub fn peek(&mut self) -> Option<<Self as Iterator>::Item> {
+        if self.start < self.end {
+            Some(pair::new(Rc::clone(&self.queue), self.input, self.start))
+        } else {
+            None
+        }
+        if self.start >= self.end {
+            return None;
+        }
+    }
+
     fn pair(&self) -> usize {
         match self.queue[self.start] {
             QueueableToken::Start {
@@ -198,14 +210,8 @@ impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
     type Item = Pair<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.start >= self.end {
-            return None;
-        }
-
-        let pair = pair::new(Rc::clone(&self.queue), self.input, self.start);
-
+        let pair = self.peek()?;
         self.start = self.pair() + 1;
-
         Some(pair)
     }
 }
