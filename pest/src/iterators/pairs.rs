@@ -174,9 +174,6 @@ impl<'i, R: RuleType> Pairs<'i, R> {
         } else {
             None
         }
-        if self.start >= self.end {
-            return None;
-        }
     }
 
     fn pair(&self) -> usize {
