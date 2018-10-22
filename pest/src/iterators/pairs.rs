@@ -168,7 +168,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     }
 
     #[inline]
-    pub fn peek(&mut self) -> Option<<Self as Iterator>::Item> {
+    pub fn peek(&mut self) -> Option<Pair> {
         if self.start < self.end {
             Some(pair::new(Rc::clone(&self.queue), self.input, self.start))
         } else {
