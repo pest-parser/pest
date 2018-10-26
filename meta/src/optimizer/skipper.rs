@@ -35,21 +35,16 @@ pub fn skip(rule: Rule) -> Rule {
             expr: if ty == RuleType::Atomic {
                 expr.map_top_down(|expr| {
                     // TODO: Use box syntax when it gets stabilized.
-                    match expr.clone() {
-                        Expr::Rep(expr) => match *expr.clone() {
-                            Expr::Seq(lhs, rhs) => match (*lhs, *rhs) {
-                                (Expr::NegPred(expr), Expr::Ident(ident)) => {
-                                    if ident == "ANY" {
-                                        if let Some(expr) = populate_choices(*expr, vec![]) {
-                                            return expr;
-                                        }
+                    if let Expr::Rep(expr) = expr.clone() {
+                        if let Expr::Seq(lhs, rhs) = *expr.clone() {
+                            if let (Expr::NegPred(expr), Expr::Ident(ident)) = (*lhs, *rhs) {
+                                if ident == "ANY" {
+                                    if let Some(expr) = populate_choices(*expr, vec![]) {
+                                        return expr;
                                     }
                                 }
-                                _ => ()
-                            },
-                            _ => ()
-                        },
-                        _ => ()
+                            }
+                        }
                     };
 
                     expr

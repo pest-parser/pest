@@ -54,7 +54,7 @@
 //!
 //! The syntax of `.pest` files is documented in the [`pest_derive` crate].
 //!
-//! [`Parser`]: trait.parser.html
+//! [`Parser`]: trait.Parser.html
 //! [`pest_derive` crate]: https://docs.rs/pest_derive/
 
 #![doc(html_root_url = "https://docs.rs/pest")]
