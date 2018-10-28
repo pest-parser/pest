@@ -150,6 +150,7 @@ Digit:   2
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
 * [hexdino](https://github.com/Luz/hexdino)
 * [Huia](https://gitlab.com/jimsy/huia/)
+* [mt940](https://github.com/svenstaro/mt940-rs)
 * [py_literal](https://github.com/jturner314/py_literal)
 * [rouler](https://github.com/jarcane/rouler)
 * [RuSh](https://github.com/lwandrebeck/RuSh)
@@ -158,7 +159,6 @@ Digit:   2
 * [tera](https://github.com/Keats/tera)
 * [ui_gen](https://github.com/emoon/ui_gen)
 * [ukhasnet-parser](https://github.com/adamgreig/ukhasnet-parser)
-* [mt940](https://github.com/svenstaro/mt940-rs)
 
 ## Special thanks
 
