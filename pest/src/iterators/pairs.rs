@@ -167,6 +167,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
         tokens::new(self.queue, self.input, self.start, self.end)
     }
 
+    /// Peek at the first inner `Pair` without changing the position of this iterator.
     #[inline]
     pub fn peek(&self) -> Option<Pair<'i, R>> {
         if self.start < self.end {
