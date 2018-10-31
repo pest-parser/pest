@@ -29,7 +29,7 @@ pub struct Error<R> {
     pub line_col: LineColLocation,
     path: Option<String>,
     line: String,
-    continued_line: Option<String>,
+    continued_line: Option<String>
 }
 
 /// Different kinds of parsing errors.
