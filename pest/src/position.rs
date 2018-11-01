@@ -289,7 +289,7 @@ impl<'i> Position<'i> {
     #[inline]
     pub(crate) fn skip_until(&mut self, strings: &[&str]) -> bool {
         for from in self.pos..self.input.len() {
-            let bytes = if let Some(t) = self.input.get(from..) {
+            let bytes = if let Some(string) = self.input.get(from..) {
                 t.as_bytes()
             } else {
                 continue;
