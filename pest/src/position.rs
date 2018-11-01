@@ -214,16 +214,16 @@ impl<'i> Position<'i> {
                 None => 0
             }
         };
-        let input_bytes = self.input.as_bytes();
-        let end = if input_bytes.is_empty() {
+        let bytes = self.input.as_bytes();
+        let end = if bytes.is_empty() {
             0
         } else if self.pos == self.input.len() - 1 {
             let mut end = self.input.len();
 
-            if end > 0 && input_bytes[end - 1] == b'\n' {
+            if end > 0 && bytes[end - 1] == b'\n' {
                 end -= 1;
             }
-            if end > 0 && input_bytes[end - 1] == b'\r' {
+            if end > 0 && bytes[end - 1] == b'\r' {
                 end -= 1;
             }
 
@@ -239,7 +239,7 @@ impl<'i> Position<'i> {
                 None => self.input.len()
             };
 
-            if end > 0 && input_bytes[end - 1] == b'\r' {
+            if end > 0 && bytes[end - 1] == b'\r' {
                 end -= 1;
             }
 
