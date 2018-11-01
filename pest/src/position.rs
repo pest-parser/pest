@@ -409,7 +409,7 @@ impl<'i> Ord for Position<'i> {
 
 impl<'i> Hash for Position<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.input.as_bytes() as *const [u8]).hash(state);
+        (self.input as *const str).hash(state);
         self.pos.hash(state);
     }
 }
