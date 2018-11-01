@@ -42,7 +42,7 @@ impl<'i> Span<'i> {
         Span { input, start, end }
     }
 
-    /// Attempts to create a new span. Will return None if `input[start..end]` is an invalid index
+    /// Attempts to create a new span. Will return `None` if `input[start..end]` is an invalid index
     /// into `input`.
     ///
     /// # Examples
