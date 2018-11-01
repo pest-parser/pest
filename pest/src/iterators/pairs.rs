@@ -255,7 +255,7 @@ impl<'i, R: Eq> Eq for Pairs<'i, R> {}
 impl<'i, R: Hash> Hash for Pairs<'i, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
-        (self.input.as_bytes() as *const [u8]).hash(state);
+        (self.input as *const str).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }
