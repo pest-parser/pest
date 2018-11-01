@@ -201,7 +201,7 @@ impl<'i> Eq for Span<'i> {}
 
 impl<'i> Hash for Span<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.input.as_bytes() as *const [u8]).hash(state);
+        (self.input as *const str).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }
