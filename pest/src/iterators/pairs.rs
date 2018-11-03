@@ -27,14 +27,14 @@ use RuleType;
 #[derive(Clone)]
 pub struct Pairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i [u8],
+    input: &'i str,
     start: usize,
     end: usize
 }
 
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &[u8],
+    input: &str,
     start: usize,
     end: usize
 ) -> Pairs<R> {
@@ -78,7 +78,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
         let end = self.pos(self.end - 1);
 
         // Generated positions always come from Positions and are UTF-8 borders.
-        unsafe { str::from_utf8_unchecked(&self.input[start..end]) }
+        &self.input[start..end]
     }
 
     /// Captures inner token `Pair`s and concatenates resulting `&str`s. This does not capture
@@ -259,7 +259,7 @@ impl<'i, R: Eq> Eq for Pairs<'i, R> {}
 impl<'i, R: Hash> Hash for Pairs<'i, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
-        (self.input as *const [u8]).hash(state);
+        (self.input as *const str).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }

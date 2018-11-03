@@ -29,12 +29,26 @@ use span::{self, Span};
 /// [`Token`]: ../enum.Token.html
 #[derive(Clone)]
 pub struct Pair<'i, R> {
+    /// # Safety
+    ///
+    /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i [u8],
+    input: &'i str,
+    /// Token index into `queue`.
     start: usize
 }
 
-pub fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &[u8], start: usize) -> Pair<R> {
+// TODO(safety): QueueableTokens must be valid indices into input.
+pub fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &str, start: usize) -> Pair<R> {
+    if cfg!(debug_assertions) {
+        for tok in queue.iter() {
+            match *tok {
+                QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } =>
+                    assert!(input.get(input_pos..).is_some(), "💥 UNSAFE `Pair` CREATED 💥")
+            }
+        }
+    }
+
     Pair {
         queue,
         input,
@@ -99,7 +113,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
         let end = self.pos(self.pair());
 
         // Generated positions always come from Positions and are UTF-8 borders.
-        unsafe { str::from_utf8_unchecked(&self.input[start..end]) }
+        &self.input[start..end]
     }
 
     /// Returns the `Span` defined by the `Pair`, consuming it.
@@ -156,7 +170,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
         let end = self.pos(self.pair());
 
         // Generated positions always come from Positions and are UTF-8 borders.
-        unsafe { span::new(self.input, start, end) }
+        unsafe { span::Span::new_unchecked(self.input, start, end) }
     }
 
     /// Returns the inner `Pairs` between the `Pair`, consuming it.
@@ -281,7 +295,7 @@ impl<'i, R: Eq> Eq for Pair<'i, R> {}
 impl<'i, R: Hash> Hash for Pair<'i, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
-        (self.input as *const [u8]).hash(state);
+        (self.input as *const str).hash(state);
         self.start.hash(state);
     }
 }

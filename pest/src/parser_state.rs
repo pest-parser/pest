@@ -73,7 +73,7 @@ where
     match f(state) {
         Ok(state) => {
             let len = state.queue.len();
-            Ok(pairs::new(Rc::new(state.queue), input.as_bytes(), 0, len))
+            Ok(pairs::new(Rc::new(state.queue), input, 0, len))
         }
         Err(mut state) => {
             state.pos_attempts.sort();
@@ -86,7 +86,8 @@ where
                     positives: state.pos_attempts.clone(),
                     negatives: state.neg_attempts.clone()
                 },
-                unsafe { position::new(input.as_bytes(), state.attempt_pos) }
+                // TODO(performance): Guarantee state.attempt_pos is a valid position
+                position::Position::new(input, state.attempt_pos).unwrap()
             ))
         }
     }
@@ -950,8 +951,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     pub fn stack_match_pop(mut self: Box<Self>) -> ParseResult<Box<Self>> {
         let mut position = self.position.clone();
         let mut result = true;
-        while self.stack.peek().is_some() {
-            let span = self.stack.pop().unwrap();
+        while let Some(span) = self.stack.pop() {
             result = position.match_string(span.as_str());
             if !result {
                 break;

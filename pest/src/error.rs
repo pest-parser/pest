@@ -438,8 +438,8 @@ mod tests {
 
     #[test]
     fn display_parsing_error_mixed() {
-        let input = b"ab\ncd\nef";
-        let pos = unsafe { position::new(input, 4) };
+        let input = "ab\ncd\nef";
+        let pos = position::Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2, 3],
@@ -463,8 +463,8 @@ mod tests {
 
     #[test]
     fn display_parsing_error_positives() {
-        let input = b"ab\ncd\nef";
-        let pos = unsafe { position::new(input, 4) };
+        let input = "ab\ncd\nef";
+        let pos = position::Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2],
@@ -488,8 +488,8 @@ mod tests {
 
     #[test]
     fn display_parsing_error_negatives() {
-        let input = b"ab\ncd\nef";
-        let pos = unsafe { position::new(input, 4) };
+        let input = "ab\ncd\nef";
+        let pos = position::Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![],
@@ -513,8 +513,8 @@ mod tests {
 
     #[test]
     fn display_parsing_error_unknown() {
-        let input = b"ab\ncd\nef";
-        let pos = unsafe { position::new(input, 4) };
+        let input = "ab\ncd\nef";
+        let pos = position::Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![],
@@ -538,8 +538,8 @@ mod tests {
 
     #[test]
     fn display_custom_pos() {
-        let input = b"ab\ncd\nef";
-        let pos = unsafe { position::new(input, 4) };
+        let input = "ab\ncd\nef";
+        let pos = position::Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::CustomError {
                 message: "error: big one".to_owned()
@@ -562,9 +562,9 @@ mod tests {
 
     #[test]
     fn display_custom_span_two_lines() {
-        let input = b"ab\ncd\nefgh";
-        let start = unsafe { position::new(input, 4) };
-        let end = unsafe { position::new(input, 9) };
+        let input = "ab\ncd\nefgh";
+        let start = position::Position::new(input, 4).unwrap();
+        let end = position::Position::new(input, 9).unwrap();
         let error: Error<u32> = Error::new_from_span(
             ErrorVariant::CustomError {
                 message: "error: big one".to_owned()
@@ -588,9 +588,9 @@ mod tests {
 
     #[test]
     fn display_custom_span_three_lines() {
-        let input = b"ab\ncd\nefgh";
-        let start = unsafe { position::new(input, 1) };
-        let end = unsafe { position::new(input, 9) };
+        let input = "ab\ncd\nefgh";
+        let start = position::Position::new(input, 1).unwrap();
+        let end = position::Position::new(input, 9).unwrap();
         let error: Error<u32> = Error::new_from_span(
             ErrorVariant::CustomError {
                 message: "error: big one".to_owned()
@@ -615,9 +615,9 @@ mod tests {
 
     #[test]
     fn display_custom_span_two_lines_inverted_cols() {
-        let input = b"abcdef\ngh";
-        let start = unsafe { position::new(input, 5) };
-        let end = unsafe { position::new(input, 8) };
+        let input = "abcdef\ngh";
+        let start = position::Position::new(input, 5).unwrap();
+        let end = position::Position::new(input, 8).unwrap();
         let error: Error<u32> = Error::new_from_span(
             ErrorVariant::CustomError {
                 message: "error: big one".to_owned()
@@ -641,8 +641,8 @@ mod tests {
 
     #[test]
     fn mapped_parsing_error() {
-        let input = b"ab\ncd\nef";
-        let pos = unsafe { position::new(input, 4) };
+        let input = "ab\ncd\nef";
+        let pos = position::Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2, 3],
@@ -666,8 +666,8 @@ mod tests {
 
     #[test]
     fn error_with_path() {
-        let input = b"ab\ncd\nef";
-        let pos = unsafe { position::new(input, 4) };
+        let input = "ab\ncd\nef";
+        let pos = position::Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2, 3],

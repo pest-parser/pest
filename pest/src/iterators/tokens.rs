@@ -9,6 +9,7 @@
 
 use std::fmt;
 use std::rc::Rc;
+use std::str;
 
 use super::queueable_token::QueueableToken;
 use RuleType;
@@ -22,18 +23,31 @@ use token::Token;
 /// [`Pairs::tokens`]: struct.Pairs.html#method.tokens
 #[derive(Clone)]
 pub struct Tokens<'i, R> {
+    /// # Safety:
+    ///
+    /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &'i [u8],
+    input: &'i str,
     start: usize,
     end: usize
 }
 
+// TODO(safety): QueueableTokens must be valid indices into input.
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &[u8],
+    input: &str,
     start: usize,
     end: usize
 ) -> Tokens<R> {
+    if cfg!(debug_assertions) {
+        for tok in queue.iter() {
+            match *tok {
+                QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } =>
+                    assert!(input.get(input_pos..).is_some(), "💥 UNSAFE `Tokens` CREATED 💥")
+            }
+        }
+    }
+
     Tokens {
         queue,
         input,
@@ -57,7 +71,7 @@ impl<'i, R: RuleType> Tokens<'i, R> {
                 Token::Start {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::new(self.input, input_pos) }
+                    pos: unsafe { position::Position::new_unchecked(self.input, input_pos) }
                 }
             }
             QueueableToken::End {
@@ -66,7 +80,7 @@ impl<'i, R: RuleType> Tokens<'i, R> {
                 Token::End {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::new(self.input, input_pos) }
+                    pos: unsafe { position::Position::new_unchecked(self.input, input_pos) }
                 }
             }
         }

@@ -18,18 +18,49 @@ use position;
 ///
 /// [two `Position`s]: struct.Position.html#method.span
 /// [`Pair`]: ../iterators/struct.Pair.html#method.span
+#[derive(Clone)]
 pub struct Span<'i> {
-    input: &'i [u8],
+    input: &'i str,
+    /// # Safety
+    ///
+    /// Must be a valid character boundary index into `input`.
     start: usize,
+    /// # Safety
+    ///
+    /// Must be a valid character boundary index into `input`.
     end: usize
 }
 
-#[inline]
-pub unsafe fn new(input: &[u8], start: usize, end: usize) -> Span {
-    Span { input, start, end }
-}
-
 impl<'i> Span<'i> {
+    /// Create a new `Span` without checking invariants. (Checked with `debug_assertions`.)
+    ///
+    /// # Safety
+    ///
+    /// `input[start..end]` must be a valid subslice; that is, said indexing should not panic.
+    pub(crate) unsafe fn new_unchecked(input: &str, start: usize, end: usize) -> Span {
+        debug_assert!(input.get(start..end).is_some());
+        Span { input, start, end }
+    }
+
+    /// Attempts to create a new span. Will return `None` if `input[start..end]` is an invalid index
+    /// into `input`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::Span;
+    /// let input = "Hello!";
+    /// assert_eq!(None, Span::new(input, 100, 0));
+    /// assert!(Span::new(input, 0, input.len()).is_some());
+    /// ```
+    pub fn new(input: &str, start: usize, end: usize) -> Option<Span> {
+        if input.get(start..end).is_some() {
+            Some(Span { input, start, end })
+        } else {
+            None
+        }
+    }
+
     /// Returns the `Span`'s start byte position as a `usize`.
     ///
     /// # Examples
@@ -82,7 +113,7 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn start_pos(&self) -> position::Position<'i> {
         // Span's start position is always a UTF-8 border.
-        unsafe { position::new(self.input, self.start) }
+        unsafe { position::Position::new_unchecked(self.input, self.start) }
     }
 
     /// Returns the `Span`'s end `Position`.
@@ -101,7 +132,7 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn end_pos(&self) -> position::Position<'i> {
         // Span's end position is always a UTF-8 border.
-        unsafe { position::new(self.input, self.end) }
+        unsafe { position::Position::new_unchecked(self.input, self.end) }
     }
 
     /// Splits the `Span` into a pair of `Position`s.
@@ -120,8 +151,8 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn split(self) -> (position::Position<'i>, position::Position<'i>) {
         // Span's start and end positions are always a UTF-8 borders.
-        let pos1 = unsafe { position::new(self.input, self.start) };
-        let pos2 = unsafe { position::new(self.input, self.end) };
+        let pos1 = unsafe { position::Position::new_unchecked(self.input, self.start) };
+        let pos2 = unsafe { position::Position::new_unchecked(self.input, self.end) };
 
         (pos1, pos2)
     }
@@ -146,7 +177,7 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn as_str(&self) -> &'i str {
         // Span's start and end positions are always a UTF-8 borders.
-        unsafe { str::from_utf8_unchecked(&self.input[self.start..self.end]) }
+        &self.input[self.start..self.end]
     }
 }
 
@@ -160,12 +191,6 @@ impl<'i> fmt::Debug for Span<'i> {
     }
 }
 
-impl<'i> Clone for Span<'i> {
-    fn clone(&self) -> Span<'i> {
-        unsafe { new(self.input, self.start, self.end) }
-    }
-}
-
 impl<'i> PartialEq for Span<'i> {
     fn eq(&self, other: &Span<'i>) -> bool {
         ptr::eq(self.input, other.input) && self.start == other.start && self.end == other.end
@@ -176,7 +201,7 @@ impl<'i> Eq for Span<'i> {}
 
 impl<'i> Hash for Span<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.input as *const [u8]).hash(state);
+        (self.input as *const str).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }
