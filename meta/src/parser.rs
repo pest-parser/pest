@@ -109,6 +109,7 @@ pub enum ParserExpr<'i> {
     Insens(String),
     Range(String, String),
     Ident(String),
+    PeekSlice(i32, Option<i32>),
     PosPred(Box<ParserNode<'i>>),
     NegPred(Box<ParserNode<'i>>),
     Seq(Box<ParserNode<'i>>, Box<ParserNode<'i>>),
@@ -139,6 +140,7 @@ fn convert_node(node: ParserNode) -> Expr {
         ParserExpr::Insens(string) => Expr::Insens(string),
         ParserExpr::Range(start, end) => Expr::Range(start, end),
         ParserExpr::Ident(ident) => Expr::Ident(ident),
+        ParserExpr::PeekSlice(start, end) => Expr::PeekSlice(start, end),
         ParserExpr::PosPred(node) => Expr::PosPred(Box::new(convert_node(*node))),
         ParserExpr::NegPred(node) => Expr::NegPred(Box::new(convert_node(*node))),
         ParserExpr::Seq(node1, node2) => Expr::Seq(
@@ -271,6 +273,32 @@ fn consume_expr<'i>(
                             span: start.span(&end)
                         }
                     }
+                    Rule::peek_slice => {
+                        let mut pairs = pair.clone().into_inner();
+                        pairs.next().unwrap(); // opening_brack
+                        let pair_start = pairs.next().unwrap(); // .. or integer
+                        let start: i32 = match pair_start.as_rule() {
+                            Rule::range_operator => 0,
+                            Rule::integer => {
+                                pairs.next().unwrap(); // ..
+                                pair_start.as_str().parse().expect("incorrect integer")
+                            },
+                            _ => unreachable!()
+                        };
+                        let pair_end = pairs.next().unwrap(); // integer or }
+                        let end: Option<i32> = match pair_end.as_rule() {
+                            Rule::closing_brack => None,
+                            Rule::integer => {
+                                pairs.next().unwrap(); // }
+                                Some(pair_end.as_str().parse().expect("incorrect integer"))
+                            },
+                            _ => unreachable!()
+                        };
+                        ParserNode {
+                            expr: ParserExpr::PeekSlice(start, end),
+                            span: pair.into_span()
+                        }
+                    },
                     Rule::identifier => ParserNode {
                         expr: ParserExpr::Ident(pair.as_str().to_owned()),
                         span: pair.clone().into_span()
@@ -801,6 +829,74 @@ mod tests {
     }
 
     #[test]
+    fn peek_slice_all() {
+        parses_to! {
+            parser: PestParser,
+            input: "PEEK[..]",
+            rule: Rule::peek_slice,
+            tokens: [
+                peek_slice(0, 8, [
+                    opening_brack(4, 5),
+                    range_operator(5, 7),
+                    closing_brack(7, 8)
+                ])
+            ]
+        };
+    }
+
+    #[test]
+    fn peek_slice_start() {
+        parses_to! {
+            parser: PestParser,
+            input: "PEEK[1..]",
+            rule: Rule::peek_slice,
+            tokens: [
+                peek_slice(0, 9, [
+                    opening_brack(4, 5),
+                    integer(5, 6),
+                    range_operator(6, 8),
+                    closing_brack(8, 9)
+                ])
+            ]
+        };
+    }
+
+    #[test]
+    fn peek_slice_end() {
+        parses_to! {
+            parser: PestParser,
+            input: "PEEK[ ..-1]",
+            rule: Rule::peek_slice,
+            tokens: [
+                peek_slice(0, 11, [
+                    opening_brack(4, 5),
+                    range_operator(6, 8),
+                    integer(8, 10),
+                    closing_brack(10, 11)
+                ])
+            ]
+        };
+    }
+
+    #[test]
+    fn peek_slice_start_end() {
+        parses_to! {
+            parser: PestParser,
+            input: "PEEK[-5..10]",
+            rule: Rule::peek_slice,
+            tokens: [
+                peek_slice(0, 12, [
+                    opening_brack(4, 5),
+                    integer(5, 7),
+                    range_operator(7, 9),
+                    integer(9, 11),
+                    closing_brack(11, 12)
+                ])
+            ]
+        };
+    }
+
+    #[test]
     fn identifier() {
         parses_to! {
             parser: PestParser,
@@ -1047,6 +1143,7 @@ mod tests {
                 Rule::positive_predicate_operator,
                 Rule::negative_predicate_operator,
                 Rule::_push,
+                Rule::peek_slice,
                 Rule::identifier,
                 Rule::insensitive_string,
                 Rule::quote,

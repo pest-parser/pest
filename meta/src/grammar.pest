@@ -19,6 +19,8 @@ opening_brace       = { "{" }
 closing_brace       = { "}" }
 opening_paren       = { "(" }
 closing_paren       = { ")" }
+opening_brack       = { "[" }
+closing_brack       = { "]" }
 
 modifier = _{
     silent_modifier |
@@ -35,7 +37,7 @@ non_atomic_modifier      = { "!" }
 expression =  { term ~ (infix_operator ~ term)* }
 term       =  { prefix_operator* ~ node ~ postfix_operator* }
 node       = _{ opening_paren ~ expression ~ closing_paren | terminal }
-terminal   = _{ _push | identifier | string | insensitive_string | range }
+terminal   = _{ _push | peek_slice | identifier | string | insensitive_string | range }
 
 prefix_operator  = _{ positive_predicate_operator | negative_predicate_operator }
 infix_operator   = _{ sequence_operator | choice_operator }
@@ -63,10 +65,12 @@ repeat_max     = { opening_brace ~ comma ~ number ~ closing_brace }
 repeat_min_max = { opening_brace ~ number ~ comma ~ number ~ closing_brace }
 
 number = @{ '0'..'9'+ }
+integer = @{ "-"? ~ ('1'..'9' ~ number?) }  //TODO: should 0 or even -0 be allowed?
 
 comma = { "," }
 
 _push = { "PUSH" ~ opening_paren ~ expression ~ closing_paren }
+peek_slice = { "PEEK" ~ opening_brack ~ integer? ~ range_operator ~ integer? ~ closing_brack }
 
 identifier = @{ !"PUSH" ~ ("_" | alpha) ~ ("_" | alpha_num)* }
 alpha      = _{ 'a'..'z' | 'A'..'Z' }
