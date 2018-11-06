@@ -58,3 +58,23 @@ SYMBOL = { "shadows builtin" }
 
 WHITESPACE = _{ " " }
 COMMENT = _{ "$"+ }
+
+// Line comment
+
+/* 1-line multiline comment */
+
+/*
+	N-line multiline comment
+*/
+
+/*
+	// Line comment inside multiline
+
+	/*
+		(Multiline inside) multiline
+	*/
+
+	Invalid segment of grammar below (repeated rule)
+
+	WHITESPACE = _{ "hi" }
+*/
