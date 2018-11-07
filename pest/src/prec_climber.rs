@@ -13,8 +13,8 @@ use std::collections::HashMap;
 use std::iter::Peekable;
 use std::ops::BitOr;
 
-use RuleType;
 use iterators::Pair;
+use RuleType;
 
 /// Associativity of an [`Operator`].
 ///
@@ -116,7 +116,8 @@ impl<R: RuleType> PrecClimber<R> {
     /// ]);
     /// ```
     pub fn new(ops: Vec<Operator<R>>) -> PrecClimber<R> {
-        let ops = ops.into_iter()
+        let ops = ops
+            .into_iter()
             .zip(1..)
             .fold(HashMap::new(), |mut map, (op, prec)| {
                 let mut next = Some(op);

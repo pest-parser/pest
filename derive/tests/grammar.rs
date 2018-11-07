@@ -677,7 +677,6 @@ fn soi_at_start() {
     };
 }
 
-
 #[test]
 fn peek() {
     parses_to! {

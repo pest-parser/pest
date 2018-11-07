@@ -143,8 +143,8 @@ impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::Parser;
     use super::super::super::macros::tests::*;
+    use super::super::super::Parser;
 
     #[test]
     fn iter_for_flat_pairs() {

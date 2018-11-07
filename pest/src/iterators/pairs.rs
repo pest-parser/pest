@@ -107,7 +107,8 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     #[inline]
     pub fn concat(&self) -> String {
-        self.clone().fold(String::new(), |string, pair| string + pair.as_str())
+        self.clone()
+            .fold(String::new(), |string, pair| string + pair.as_str())
     }
 
     /// Flattens the `Pairs`.
@@ -249,8 +250,10 @@ impl<'i, R: RuleType> fmt::Display for Pairs<'i, R> {
 
 impl<'i, R: PartialEq> PartialEq for Pairs<'i, R> {
     fn eq(&self, other: &Pairs<'i, R>) -> bool {
-        Rc::ptr_eq(&self.queue, &other.queue) && ptr::eq(self.input, other.input)
-            && self.start == other.start && self.end == other.end
+        Rc::ptr_eq(&self.queue, &other.queue)
+            && ptr::eq(self.input, other.input)
+            && self.start == other.start
+            && self.end == other.end
     }
 }
 
@@ -267,8 +270,8 @@ impl<'i, R: Hash> Hash for Pairs<'i, R> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::Parser;
     use super::super::super::macros::tests::*;
+    use super::super::super::Parser;
 
     #[test]
     fn as_str() {
@@ -288,6 +291,7 @@ mod tests {
     fn pairs_debug() {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         assert_eq!(
             format!("{:?}", pairs),
             "[\
@@ -296,7 +300,7 @@ mod tests {
                 ] }, \
                 Pair { rule: c, span: Span { str: \"e\", start: 4, end: 5 }, inner: [] }\
             ]"
-        .to_owned()
+            .to_owned()
         );
     }
 

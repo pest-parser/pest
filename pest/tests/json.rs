@@ -12,9 +12,9 @@ extern crate pest;
 
 use std::collections::HashMap;
 
-use pest::{state, ParseResult, Parser, ParserState, Span};
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
+use pest::{state, ParseResult, Parser, ParserState, Span};
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -61,7 +61,8 @@ impl Parser<Rule> for JsonParser {
                             })
                         })
                         .and_then(|s| s.match_string("}"))
-                }).or_else(|s| {
+                })
+                .or_else(|s| {
                     s.sequence(|s| {
                         s.match_string("{")
                             .and_then(|s| skip(s))
@@ -101,7 +102,8 @@ impl Parser<Rule> for JsonParser {
                             })
                         })
                         .and_then(|s| s.match_string("]"))
-                }).or_else(|s| {
+                })
+                .or_else(|s| {
                     s.sequence(|s| {
                         s.match_string("[")
                             .and_then(|s| skip(s))
@@ -131,7 +133,8 @@ impl Parser<Rule> for JsonParser {
                                 s.sequence(|s| {
                                     s.lookahead(false, |s| {
                                         s.match_string("\"").or_else(|s| s.match_string("\\"))
-                                    }).and_then(|s| s.skip(1))
+                                    })
+                                    .and_then(|s| s.skip(1))
                                 })
                             })
                         })

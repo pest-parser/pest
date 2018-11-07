@@ -39,15 +39,12 @@ pub fn generate(
     let skip = generate_skip(&rules);
 
     let mut rules: Vec<_> = rules.into_iter().map(generate_rule).collect();
-    rules.extend(
-        defaults
-            .into_iter()
-            .map(|name| builtins[name].clone())
-    );
+    rules.extend(defaults.into_iter().map(|name| builtins[name].clone()));
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let parser_impl = quote! {
+        #[allow(warnings)]
         impl #impl_generics ::pest::Parser<Rule> for #name #ty_generics #where_clause {
             fn parse<'i>(
                 rule: Rule,
@@ -111,7 +108,8 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     insert_builtin!(
         builtins,
         ASCII_HEX_DIGIT,
-        state.match_range('0'..'9')
+        state
+            .match_range('0'..'9')
             .or_else(|state| state.match_range('a'..'f'))
             .or_else(|state| state.match_range('A'..'F'))
     );
@@ -120,13 +118,15 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     insert_builtin!(
         builtins,
         ASCII_ALPHA,
-        state.match_range('a'..'z')
+        state
+            .match_range('a'..'z')
             .or_else(|state| state.match_range('A'..'Z'))
     );
     insert_builtin!(
         builtins,
         ASCII_ALPHANUMERIC,
-        state.match_range('a'..'z')
+        state
+            .match_range('a'..'z')
             .or_else(|state| state.match_range('A'..'Z'))
             .or_else(|state| state.match_range('0'..'9'))
     );
@@ -134,7 +134,8 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     insert_builtin!(
         builtins,
         NEWLINE,
-        state.match_string("\n")
+        state
+            .match_string("\n")
             .or_else(|state| state.match_string("\r\n"))
             .or_else(|state| state.match_string("\r"))
     );
@@ -164,7 +165,9 @@ fn generate_include(name: &Ident, path: &str) -> TokenStream {
 }
 
 fn generate_enum(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
-    let rules = rules.iter().map(|rule| Ident::new(rule.name.as_str(), Span::call_site()));
+    let rules = rules
+        .iter()
+        .map(|rule| Ident::new(rule.name.as_str(), Span::call_site()));
     if uses_eoi {
         quote! {
             #[allow(dead_code, non_camel_case_types)]
@@ -285,9 +288,7 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
         (true, false) => generate_rule!(
             skip,
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
-                state.repeat(|state| {
-                    super::visible::WHITESPACE(state)
-                })
+                state.repeat(|state| super::visible::WHITESPACE(state))
             } else {
                 Ok(state)
             }
@@ -295,9 +296,7 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
         (false, true) => generate_rule!(
             skip,
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
-                state.repeat(|state| {
-                    super::visible::COMMENT(state)
-                })
+                state.repeat(|state| super::visible::COMMENT(state))
             } else {
                 Ok(state)
             }
@@ -306,19 +305,17 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
             skip,
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
                 state.sequence(|state| {
-                    state.repeat(|state| {
-                        super::visible::WHITESPACE(state)
-                    }).and_then(|state| {
-                        state.repeat(|state| {
-                            state.sequence(|state| {
-                                super::visible::COMMENT(state).and_then(|state| {
-                                    state.repeat(|state| {
-                                        super::visible::WHITESPACE(state)
+                    state
+                        .repeat(|state| super::visible::WHITESPACE(state))
+                        .and_then(|state| {
+                            state.repeat(|state| {
+                                state.sequence(|state| {
+                                    super::visible::COMMENT(state).and_then(|state| {
+                                        state.repeat(|state| super::visible::WHITESPACE(state))
                                     })
                                 })
                             })
                         })
-                    })
                 })
             } else {
                 Ok(state)
@@ -599,13 +596,11 @@ mod tests {
 
     #[test]
     fn rule_enum_simple() {
-        let rules = vec![
-            OptimizedRule {
-                name: "f".to_owned(),
-                ty: RuleType::Normal,
-                expr: OptimizedExpr::Ident("g".to_owned())
-            },
-        ];
+        let rules = vec![OptimizedRule {
+            name: "f".to_owned(),
+            ty: RuleType::Normal,
+            expr: OptimizedExpr::Ident("g".to_owned())
+        }];
 
         assert_eq!(
             generate_enum(&rules, false).to_string(),
@@ -615,7 +610,8 @@ mod tests {
                 pub enum Rule {
                     f
                 }
-            }.to_string()
+            }
+            .to_string()
         );
     }
 
@@ -650,7 +646,8 @@ mod tests {
                         state.match_string("d")
                     })
                 })
-            }.to_string()
+            }
+            .to_string()
         );
     }
 
@@ -679,7 +676,8 @@ mod tests {
                         state.match_string("d")
                     })
                 })
-            }.to_string()
+            }
+            .to_string()
         );
     }
 
@@ -706,7 +704,8 @@ mod tests {
                 }).or_else(|state| {
                     state.match_string("d")
                 })
-            }.to_string()
+            }
+            .to_string()
         );
     }
 
@@ -733,7 +732,8 @@ mod tests {
                 }).or_else(|state| {
                     state.match_string("d")
                 })
-            }.to_string()
+            }
+            .to_string()
         );
     }
 
@@ -747,7 +747,8 @@ mod tests {
                 let strings = ["a", "b"];
 
                 state.skip_until(&strings)
-            }.to_string()
+            }
+            .to_string()
         );
     }
 
@@ -833,7 +834,8 @@ mod tests {
                         })
                     })
                 })
-            }.to_string()
+            }
+            .to_string()
         );
     }
 
@@ -882,7 +884,8 @@ mod tests {
                         })
                     })
                 })
-            }.to_string()
+            }
+            .to_string()
         );
     }
 
@@ -890,13 +893,11 @@ mod tests {
     fn generate_complete() {
         let name = Ident::new("MyParser", Span::call_site());
         let generics = Generics::default();
-        let rules = vec![
-            OptimizedRule {
-                name: "a".to_owned(),
-                ty: RuleType::Silent,
-                expr: OptimizedExpr::Str("b".to_owned())
-            },
-        ];
+        let rules = vec![OptimizedRule {
+            name: "a".to_owned(),
+            ty: RuleType::Silent,
+            expr: OptimizedExpr::Str("b".to_owned())
+        }];
         let defaults = vec!["ANY"];
 
         assert_eq!(
@@ -911,6 +912,7 @@ mod tests {
                     a
                 }
 
+                #[allow(warnings)]
                 impl ::pest::Parser<Rule> for MyParser {
                     fn parse<'i>(
                         rule: Rule,

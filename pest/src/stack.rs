@@ -73,7 +73,7 @@ impl<T: Clone> Stack<T> {
             Some(ops_index) => {
                 self.rewind_to(ops_index);
                 self.ops.truncate(ops_index);
-            },
+            }
             None => {
                 self.cache.clear();
                 self.ops.clear();

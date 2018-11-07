@@ -312,7 +312,8 @@ impl<'i> Position<'i> {
     /// was made. If no match was made, returns `false` and `pos` will not be updated.
     #[inline]
     pub(crate) fn match_char_by<F>(&mut self, f: F) -> bool
-    where F: FnOnce(char) -> bool
+    where
+        F: FnOnce(char) -> bool
     {
         if let Some(c) = (&self.input[self.pos..]).chars().next() {
             if f(c) {

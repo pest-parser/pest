@@ -1,15 +1,28 @@
 sudo: required
 language: rust
 cache: cargo
+
 os:
   - linux
+
 rust:
   - stable
   - nightly
+
 matrix:
+  include:
+    - name: rustfmt
+      rust: nightly-2018-10-30 # We're using unstable rustfmt configuration options
+      install: rustup component add rustfmt-preview
+      script: cargo fmt --all -- --check
+    - name: style
+      rust: 1.29.0 # First version to include clippy-preview
+      install: rustup component add clippy-preview
+      script: cargo clippy --all -- -D warnings
   allow_failures:
     - rust: nightly
   fast_finish: true
+
 addons:
   apt:
     packages:
@@ -26,16 +39,15 @@ branches:
     - master
 notifications:
   email: false
-install:
-  - rustup component add clippy-preview
+
+before_script: cargo bootstrap
+
 script:
-  # Need a custom script because we are using cargo workspaces.
   - |
-      cargo bootstrap && # dynamic build dependency of pest_meta
-      cargo clippy --all --verbose -- -D clippy &&
       cargo build --all --verbose &&
       cargo test --all --verbose &&
       cargo doc --all --verbose
+
 after_success:
   - |
       if [[ $TRAVIS_RUST_VERSION =~ nightly ]]; then
