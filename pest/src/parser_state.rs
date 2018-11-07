@@ -904,6 +904,33 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         self.match_string(string)
     }
 
+    /// Matches part of the state of the stack.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// TODO
+    /// ```
+    #[inline]
+    pub fn stack_slice_peek(mut self: Box<Self>, start: i32, end: Option<i32>) -> ParseResult<Box<Self>> {        
+        let mut position = self.position.clone();
+        let range = match constrain_idxs(start, end, self.stack.len()) {
+            Some(r) => r,
+            None => return Err(self),
+        };
+        // return true if an empty sequence is requested
+        let result = range.end <= range.start || self.stack[range].iter().all(|span| {
+            position.match_string(span.as_str())
+        });
+
+        if result {
+            self.position = position;
+            Ok(self)
+        } else {
+            Err(self)
+        }
+    }
+
     /// Matches the full state of the stack.
     ///
     /// # Examples
@@ -924,17 +951,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn stack_match_peek(mut self: Box<Self>) -> ParseResult<Box<Self>> {
-        let mut position = self.position.clone();
-        let result = self.stack.iter().all(|span| {
-            position.match_string(span.as_str())
-        });
-
-        if result {
-            self.position = position;
-            Ok(self)
-        } else {
-            Err(self)
-        }
+        self.stack_slice_peek(0, None)
     }
 
     /// Matches the full state of the stack. This method will clear the stack as it evaluates.
@@ -1047,5 +1064,23 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     pub(crate) fn restore(mut self: Box<Self>) -> Box<Self> {
         self.stack.restore();
         self
+    }
+}
+
+fn constrain_idxs(start_: i32, end_: Option<i32>, len: usize) -> Option<std::ops::Range<usize>> {
+    let start = match negative_index(start_, len) { Some(s) => s, None => return None };
+    let end = match end_ {
+        Some(end_) => match negative_index(end_, len) { Some(s) => s, None => return None },
+        None => len,
+    };
+    Some(start..end)
+}
+
+fn negative_index(i: i32, len: usize) -> Option<usize> {
+    if i >= 0 {
+        Some(i as usize)
+    } else {
+        let real_i = len as isize + i as isize;
+        if real_i >= 0 { Some(real_i as usize) } else { None }
     }
 }

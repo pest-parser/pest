@@ -82,6 +82,7 @@ pub enum OptimizedExpr {
     Insens(String),
     Range(String, String),
     Ident(String),
+    PeekSlice(i32, Option<i32>),
     PosPred(Box<OptimizedExpr>),
     NegPred(Box<OptimizedExpr>),
     Seq(Box<OptimizedExpr>, Box<OptimizedExpr>),

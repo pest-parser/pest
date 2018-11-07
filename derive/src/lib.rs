@@ -190,6 +190,7 @@
 //! * `POP` - pops a string from the stack and matches it
 //! * `POP_ALL` - pops the entire state of the stack and matches it
 //! * `PEEK` - peeks a string from the stack and matches it
+//! * `PEEK[a..b]` - peeks part of the stack and matches it
 //! * `PEEK_ALL` - peeks the entire state of the stack and matches it
 //! * `DROP` - drops the top of the stack (fails to match if the stack is empty)
 //!
@@ -236,12 +237,24 @@
 //! ```
 //!
 //! `POP` works the same way with the exception that it pops the string off of the stack if the
-//! the match worked. With the stack from above, if `POP` matches `"a"`, the stack will be mutated
+//! match worked. With the stack from above, if `POP` matches `"a"`, the stack will be mutated
 //! to `["b"]`.
 //!
 //! `DROP` makes it possible to remove the string at the top of the stack
 //! without matching it. If the stack is nonempty, `DROP` drops the top of the
 //! stack. If the stack is empty, then `DROP` fails to match.
+//!
+//! ### Advanced peeking
+//!
+//! `PEEK[a..b]` and `PEEK_ALL` allow to peek deeper into the stack. The syntax works exactly like
+//! Rust’s slice syntax. Additionally, negative indices can be used to indicate an offset from the
+//! top. With the stack `["a", "b", "c"]`:
+//! 
+//! ```ignore
+//! x = { PEEK[1..2] } = { PEEK[1..-1] } = { "b" }
+//! y = { PEEK[..-2] } = { PEEK[0..1] } = { "a" }
+//! z = { PEEK[1..] } = { PEEK[-2..3] } = { "b", "c" }
+//! ```
 //!
 //! ## `Rule`
 //!

@@ -152,6 +152,7 @@ impl Vm {
                 state.match_range(start..end)
             }
             OptimizedExpr::Ident(ref name) => self.parse_rule(name, state),
+            OptimizedExpr::PeekSlice(start, end) => state.stack_slice_peek(start, end),
             OptimizedExpr::PosPred(ref expr) => {
                 state.lookahead(true, |state| self.parse_expr(expr, state))
             }

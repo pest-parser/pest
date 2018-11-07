@@ -351,6 +351,11 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
             let ident = Ident::new(&ident, Span::call_site());
             quote! { self::#ident(state) }
         }
+        OptimizedExpr::PeekSlice(start, end) => {
+            quote! {
+                state::stack_slice_peek(#start, #end)
+            }
+        }
         OptimizedExpr::PosPred(expr) => {
             let expr = generate_expr(*expr);
 
@@ -490,6 +495,11 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
         OptimizedExpr::Ident(ident) => {
             let ident = Ident::new(&ident, Span::call_site());
             quote! { self::#ident(state) }
+        }
+        OptimizedExpr::PeekSlice(start, end) => {
+            quote! {
+                state::stack_slice_peek(#start, #end)
+            }
         }
         OptimizedExpr::PosPred(expr) => {
             let expr = generate_expr_atomic(*expr);
