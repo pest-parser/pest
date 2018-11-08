@@ -950,7 +950,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap().position().pos(), 4);
     /// ```
     #[inline]
-    pub fn stack_match_peek(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+    pub fn stack_match_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
         self.stack_slice_peek(0, None)
     }
 
