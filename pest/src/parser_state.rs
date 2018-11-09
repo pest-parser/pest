@@ -909,7 +909,24 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     ///
     /// ```
-    /// // TODO
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "abcd dc cb";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state
+    ///     .stack_push(|state| state.match_string("a"))
+    ///     .and_then(|state| state.stack_push(|state| state.match_string("b")))
+    ///     .and_then(|state| state.stack_push(|state| state.match_string("c")))
+    ///     .and_then(|state| state.stack_push(|state| state.match_string("d")))
+    ///     .and_then(|state| state.match_string(" "))
+    ///     .and_then(|state| state.stack_match_peek_slice(2, None))
+    ///     .and_then(|state| state.match_string(" "))
+    ///     .and_then(|state| state.stack_match_peek_slice(1, Some(-1)));
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 10);
     /// ```
     #[inline]
     pub fn stack_match_peek_slice(mut self: Box<Self>, start: i32, end: Option<i32>) -> ParseResult<Box<Self>> {        
