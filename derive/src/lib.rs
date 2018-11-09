@@ -223,8 +223,8 @@
 //! `PUSH(e)` simply pushes the captured string of the expression `e` down a stack. This stack can
 //! then later be used to match grammar based on its content with `POP` and `PEEK`.
 //!
-//! `PEEK` always matches the string at the top of stack. So, if the stack contains `["a", "b"]`,
-//! then this grammar:
+//! `PEEK` always matches the string at the top of stack. So, if the stack contains `["a", "b"]`
+//! (`"a"` being on top), this grammar:
 //!
 //! ```ignore
 //! a = { PEEK }
@@ -249,9 +249,10 @@
 //! `PEEK[start..end]` and `PEEK_ALL` allow to peek deeper into the stack. The syntax works exactly
 //! like Rust’s exclusive slice syntax. Additionally, negative indices can be used to indicate an
 //! offset from the top. If the end lies before or at the start, the expression matches (as does
-//! a `PEEK_ALL` on an empty stack). With the stack `["a", "b", "c"]`:
+//! a `PEEK_ALL` on an empty stack). With the stack `["a", "b", "c"]` (`"a"` on top):
 //! 
 //! ```ignore
+//! fill = PUSH("c") ~ PUSH("b") ~ PUSH("a")
 //! w = { PEEK_ALL } = { PEEK[..] } = { "a" ~ "b" ~ "c" }
 //! x = { PEEK[1..2] } = { PEEK[1..-1] } = { "b" }
 //! y = { PEEK[..-2] } = { PEEK[0..1] } = { "a" }
