@@ -919,7 +919,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             None => return Err(self),
         };
         // return true if an empty sequence is requested
-        let result = range.end <= range.start || self.stack[range].iter().all(|span| {
+        let result = range.end <= range.start || self.stack[range].iter().rev().all(|span| {
             position.match_string(span.as_str())
         });
 
