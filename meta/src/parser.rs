@@ -1265,6 +1265,29 @@ mod tests {
             ]
         );
     }
+    
+    #[test]
+    fn ast_peek_slice() {
+        let input = "rule = _{ PEEK[-04..] ~ PEEK[..3] }";
+
+        let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
+        let ast = consume_rules_with_spans(pairs).unwrap();
+        let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule)).collect();
+
+        assert_eq!(
+            ast,
+            vec![
+                AstRule {
+                    name: "rule".to_owned(),
+                    ty: RuleType::Silent,
+                    expr: Expr::Seq(
+                        Box::new(Expr::PeekSlice(-4, None)),
+                        Box::new(Expr::PeekSlice(0, Some(3))),
+                    )
+                }
+            ],
+        );
+    }
 
     #[test]
     #[should_panic(expected = "grammar error
