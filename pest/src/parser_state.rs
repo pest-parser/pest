@@ -1068,6 +1068,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 }
 
 fn constrain_idxs(start_: i32, end_: Option<i32>, len: usize) -> Option<std::ops::Range<usize>> {
+    if start_ > len as i32 || end_.map_or(false, |e| e > len as i32) { return None }
     let start = match negative_index(start_, len) { Some(s) => s, None => return None };
     let end = match end_ {
         Some(end_) => match negative_index(end_, len) { Some(s) => s, None => return None },
@@ -1080,7 +1081,7 @@ fn negative_index(i: i32, len: usize) -> Option<usize> {
     if i >= 0 {
         Some(i as usize)
     } else {
-        let real_i = len as isize + i as isize;
+        let real_i = len as i32 + i;
         if real_i >= 0 { Some(real_i as usize) } else { None }
     }
 }

@@ -281,7 +281,7 @@ fn consume_expr<'i>(
                             Rule::range_operator => 0,
                             Rule::integer => {
                                 pairs.next().unwrap(); // ..
-                                pair_start.as_str().parse().expect("incorrect integer")
+                                pair_start.as_str().parse().unwrap()
                             },
                             _ => unreachable!()
                         };
@@ -290,7 +290,7 @@ fn consume_expr<'i>(
                             Rule::closing_brack => None,
                             Rule::integer => {
                                 pairs.next().unwrap(); // }
-                                Some(pair_end.as_str().parse().expect("incorrect integer"))
+                                Some(pair_end.as_str().parse().unwrap())
                             },
                             _ => unreachable!()
                         };

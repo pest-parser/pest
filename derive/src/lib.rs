@@ -246,14 +246,17 @@
 //!
 //! ### Advanced peeking
 //!
-//! `PEEK[a..b]` and `PEEK_ALL` allow to peek deeper into the stack. The syntax works exactly like
-//! Rust’s slice syntax. Additionally, negative indices can be used to indicate an offset from the
-//! top. With the stack `["a", "b", "c"]`:
+//! `PEEK[start..end]` and `PEEK_ALL` allow to peek deeper into the stack. The syntax works exactly
+//! like Rust’s exclusive slice syntax. Additionally, negative indices can be used to indicate an
+//! offset from the top. If the end lies before or at the start, the expression matches (as does
+//! a `PEEK_ALL` on an empty stack). With the stack `["a", "b", "c"]`:
 //! 
 //! ```ignore
+//! w = { PEEK_ALL } = { PEEK[..] } = { "a" ~ "b" ~ "c" }
 //! x = { PEEK[1..2] } = { PEEK[1..-1] } = { "b" }
 //! y = { PEEK[..-2] } = { PEEK[0..1] } = { "a" }
-//! z = { PEEK[1..] } = { PEEK[-2..3] } = { "b", "c" }
+//! z = { PEEK[1..] } = { PEEK[-2..3] } = { "b" ~ "c" }
+//! n = { PEEK[2..-2] } = { PEEK[2..1] } = { "" }
 //! ```
 //!
 //! ## `Rule`
