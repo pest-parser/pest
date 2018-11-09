@@ -912,7 +912,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// TODO
     /// ```
     #[inline]
-    pub fn stack_slice_peek(mut self: Box<Self>, start: i32, end: Option<i32>) -> ParseResult<Box<Self>> {        
+    pub fn stack_match_peek_slice(mut self: Box<Self>, start: i32, end: Option<i32>) -> ParseResult<Box<Self>> {        
         let mut position = self.position.clone();
         let range = match constrain_idxs(start, end, self.stack.len()) {
             Some(r) => r,
@@ -951,7 +951,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn stack_match_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
-        self.stack_slice_peek(0, None)
+        self.stack_match_peek_slice(0, None)
     }
 
     /// Matches the full state of the stack. This method will clear the stack as it evaluates.
