@@ -54,7 +54,7 @@ impl<T: Clone> Stack<T> {
         popped
     }
 
-    /// Returns an iterator to the current state of the cache in fifo order.
+    /// Returns an iterator to the current state of the cache in lifo order (top to bottom).
     #[allow(dead_code)]
     pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.cache.iter().rev()

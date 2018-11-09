@@ -1068,20 +1068,39 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 }
 
 fn constrain_idxs(start_: i32, end_: Option<i32>, len: usize) -> Option<std::ops::Range<usize>> {
-    if start_ > len as i32 || end_.map_or(false, |e| e > len as i32) { return None }
-    let start = match negative_index(start_, len) { Some(s) => s, None => return None };
-    let end = match end_ {
-        Some(end_) => match negative_index(end_, len) { Some(s) => s, None => return None },
-        None => len,
-    };
+    let start = normalize_index(start_, len)?;
+    let end = end_.map_or(Some(len), |e| normalize_index(e, len))?;
     Some(start..end)
 }
 
-fn negative_index(i: i32, len: usize) -> Option<usize> {
-    if i >= 0 {
+/// Normalizes the index using its sequence’s length.
+/// Returns `None` if the normalized index is OOB.
+fn normalize_index(i: i32, len: usize) -> Option<usize> {
+    if i > len as i32 {
+        None
+    } else if i >= 0 {
         Some(i as usize)
     } else {
         let real_i = len as i32 + i;
         if real_i >= 0 { Some(real_i as usize) } else { None }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn normalize_index_pos() {
+        assert_eq!(normalize_index(4, 6), Some(4));
+        assert_eq!(normalize_index(5, 5), Some(5));
+        assert_eq!(normalize_index(6, 3), None);
+    }
+
+    #[test]
+    fn normalize_index_neg() {
+        assert_eq!(normalize_index(-4, 6), Some(2));
+        assert_eq!(normalize_index(-5, 5), Some(0));
+        assert_eq!(normalize_index(-6, 3), None);
     }
 }
