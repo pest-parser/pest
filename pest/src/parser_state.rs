@@ -909,7 +909,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     ///
     /// ```
-    /// TODO
+    /// // TODO
     /// ```
     #[inline]
     pub fn stack_match_peek_slice(mut self: Box<Self>, start: i32, end: Option<i32>) -> ParseResult<Box<Self>> {        
