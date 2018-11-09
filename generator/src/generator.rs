@@ -498,7 +498,7 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
         }
         OptimizedExpr::PeekSlice(start, end) => {
             quote! {
-                state::stack_match_peek_slice(#start, #end)
+                state.stack_match_peek_slice(#start, #end)
             }
         }
         OptimizedExpr::PosPred(expr) => {
