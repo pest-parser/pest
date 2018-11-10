@@ -248,6 +248,14 @@ impl<'i, R: RuleType> Pair<'i, R> {
     }
 }
 
+impl<'i, R: RuleType> Pairs<'i, R> {
+    /// Create a new `Pairs` iterator containing just the single `Pair`.
+    pub fn single(pair: Pair<'i, R>) -> Self {
+        let end = pair.pair();
+        pairs::new(pair.queue, pair.input, pair.start, end)
+    }
+}
+
 impl<'i, R: RuleType> fmt::Debug for Pair<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Pair")
