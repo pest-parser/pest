@@ -355,7 +355,7 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
         OptimizedExpr::PeekSlice(start, end_) => {
             let end = QuoteOption(end_);
             quote! {
-                state.stack_match_peek_slice(#start, #end)
+                state.stack_match_peek_slice(#start, #end, ::pest::MatchDir::BottomToTop)
             }
         }
         OptimizedExpr::PosPred(expr) => {
@@ -501,7 +501,7 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
         OptimizedExpr::PeekSlice(start, end_) => {
             let end = QuoteOption(end_);
             quote! {
-                state.stack_match_peek_slice(#start, #end)
+                state.stack_match_peek_slice(#start, #end, ::pest::MatchDir::BottomToTop)
             }
         }
         OptimizedExpr::PosPred(expr) => {

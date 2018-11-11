@@ -40,6 +40,13 @@ pub enum Atomicity {
 /// Type alias to simplify specifying the return value of chained closures.
 pub type ParseResult<S> = Result<S, S>;
 
+/// Match direction for the stack. Used in `PEEK[a..b]`/`stack_match_peek_slice`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MatchDir {
+    BottomToTop,
+    TopToBottom
+}
+
 /// The complete state of a [`Parser`].
 ///
 /// [`Parser`]: trait.Parser.html
@@ -909,12 +916,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # Examples
     ///
     /// ```
-    /// # use pest;
+    /// # use pest::{self, MatchDir};
     /// # #[allow(non_camel_case_types)]
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
     ///
-    /// let input = "abcd dc cb";
+    /// let input = "abcd cd cb";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
     /// let mut result = state
     ///     .stack_push(|state| state.match_string("a"))
@@ -922,24 +929,30 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///     .and_then(|state| state.stack_push(|state| state.match_string("c")))
     ///     .and_then(|state| state.stack_push(|state| state.match_string("d")))
     ///     .and_then(|state| state.match_string(" "))
-    ///     .and_then(|state| state.stack_match_peek_slice(2, None))
+    ///     .and_then(|state| state.stack_match_peek_slice(2, None, MatchDir::BottomToTop))
     ///     .and_then(|state| state.match_string(" "))
-    ///     .and_then(|state| state.stack_match_peek_slice(1, Some(-1)));
+    ///     .and_then(|state| state.stack_match_peek_slice(1, Some(-1), MatchDir::TopToBottom));
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().pos(), 10);
     /// ```
     #[inline]
-    pub fn stack_match_peek_slice(mut self: Box<Self>, start: i32, end: Option<i32>) -> ParseResult<Box<Self>> {        
-        let mut position = self.position.clone();
+    pub fn stack_match_peek_slice(mut self: Box<Self>, start: i32, end: Option<i32>, match_dir: MatchDir) -> ParseResult<Box<Self>> {
         let range = match constrain_idxs(start, end, self.stack.len()) {
             Some(r) => r,
             None => return Err(self),
         };
         // return true if an empty sequence is requested
-        let result = range.end <= range.start || self.stack[range].iter().rev().all(|span| {
-            position.match_string(span.as_str())
-        });
-
+        if range.end <= range.start { return Ok(self) }
+        
+        let mut position = self.position.clone();
+        let result = {
+            let mut iter_b2t = self.stack[range].iter();
+            let matcher = |span: &Span| { position.match_string(span.as_str()) };
+            match match_dir {
+                MatchDir::BottomToTop => iter_b2t.all(matcher),
+                MatchDir::TopToBottom => iter_b2t.rev().all(matcher),
+            }
+        };
         if result {
             self.position = position;
             Ok(self)
@@ -958,17 +971,18 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
     ///
-    /// let input = "aaaa";
+    /// let input = "abba";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(|state| {
-    ///     state.stack_push(|state| state.match_string("a"))
-    /// }).and_then(|state| state.stack_match_peek());
+    /// let mut result = state
+    ///     .stack_push(|state| state.match_string("a"))
+    ///     .and_then(|state| { state.stack_push(|state| state.match_string("b")) })
+    ///     .and_then(|state| state.stack_match_peek());
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().pos(), 4);
     /// ```
     #[inline]
     pub fn stack_match_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
-        self.stack_match_peek_slice(0, None)
+        self.stack_match_peek_slice(0, None, MatchDir::TopToBottom)
     }
 
     /// Matches the full state of the stack. This method will clear the stack as it evaluates.

@@ -719,7 +719,7 @@ fn peek_all() {
 fn peek_slice_23() {
     parses_to! {
         parser: vm(),
-        input: "0123421",
+        input: "0123412",
         rule: "peek_slice_23",
         tokens: [
             peek_slice_23(0, 7, [
