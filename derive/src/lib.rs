@@ -223,7 +223,7 @@
 //! then later be used to match grammar based on its content with `POP` and `PEEK`.
 //!
 //! `PEEK` always matches the string at the top of stack. So, if the stack contains `["a", "b"]`,
-//! the this grammar:
+//! then this grammar:
 //!
 //! ```ignore
 //! a = { PEEK }
