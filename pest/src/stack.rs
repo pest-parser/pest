@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::ops::{Range, Index};
+use std::ops::{ Range, Index };
 
 /// Implementation of a `Stack` which maintains an log of `StackOp`s in order to rewind the stack
 /// to a previous state.
@@ -52,12 +52,6 @@ impl<T: Clone> Stack<T> {
             self.ops.push(StackOp::Pop(val.clone()));
         }
         popped
-    }
-
-    /// Returns an iterator to the current state of the cache in lifo order (top to bottom).
-    #[allow(dead_code)]
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
-        self.cache.iter().rev()
     }
     
     /// Returns the size of the stack
@@ -144,17 +138,6 @@ mod test {
         stack.restore();
 
         assert_eq!(stack.iter().collect::<Vec<&i32>>(), vec![&0]);
-    }
-
-    #[test]
-    fn iter() {
-        let mut stack = Stack::new();
-
-        stack.push(0);
-        stack.push(1);
-        stack.push(2);
-
-        assert_eq!(stack.iter().collect::<Vec<&i32>>(), vec![&2, &1, &0]);
     }
 
     #[test]
