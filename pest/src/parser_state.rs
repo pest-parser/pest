@@ -1098,10 +1098,10 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 }
 
-fn constrain_idxs(start_: i32, end_: Option<i32>, len: usize) -> Option<std::ops::Range<usize>> {
-    let start = normalize_index(start_, len)?;
-    let end = end_.map_or(Some(len), |e| normalize_index(e, len))?;
-    Some(start..end)
+fn constrain_idxs(start: i32, end: Option<i32>, len: usize) -> Option<std::ops::Range<usize>> {
+    let start_norm = normalize_index(start, len)?;
+    let end_norm = end.map_or(Some(len), |e| normalize_index(e, len))?;
+    Some(start_norm..end_norm)
 }
 
 /// Normalizes the index using its sequence’s length.

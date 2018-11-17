@@ -65,7 +65,7 @@ repeat_max     = { opening_brace ~ comma ~ number ~ closing_brace }
 repeat_min_max = { opening_brace ~ number ~ comma ~ number ~ closing_brace }
 
 number = @{ '0'..'9'+ }
-integer = @{ "-"? ~ number }
+integer = @{ number | "-"? ~ '1'..'9' ~ number? }
 
 comma = { "," }
 
