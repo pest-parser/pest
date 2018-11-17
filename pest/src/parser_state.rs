@@ -203,7 +203,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             });
         }
 
-        let attempts = self.pos_attempts.len() + self.neg_attempts.len();
+        let attempts = self.attempts_at(actual_pos);
 
         let result = f(self);
 
@@ -266,6 +266,14 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    fn attempts_at(&self, pos: usize) -> usize {
+        if self.attempt_pos == pos {
+            self.pos_attempts.len() + self.neg_attempts.len()
+        } else {
+            0
+        }
+    }
+
     fn track(
         &mut self,
         rule: R,
@@ -281,7 +289,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         // If nested rules made no progress, there is no use to report them; it's only useful to
         // track the current rule, the exception being when only one attempt has been made during
         // the children rules.
-        let curr_attempts = self.pos_attempts.len() + self.neg_attempts.len();
+        let curr_attempts = self.attempts_at(pos);
         if curr_attempts > prev_attempts && curr_attempts - prev_attempts == 1 {
             return;
         }
