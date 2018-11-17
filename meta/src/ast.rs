@@ -33,7 +33,7 @@ pub enum Expr {
     Range(String, String),
     /// Matches the rule with the given name, e.g. `a`
     Ident(String),
-    /// Matches a custom part of the stack
+    /// Matches a custom part of the stack, e.g. `PEEK[..]`
     PeekSlice(i32, Option<i32>),
     /// Positive lookahead; matches expression without making progress, e.g. `&e`
     PosPred(Box<Expr>),
