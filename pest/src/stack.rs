@@ -59,11 +59,7 @@ impl<T: Clone> Stack<T> {
 
     /// Takes a snapshot of the current `Stack`.
     pub fn snapshot(&mut self) {
-        let ops_index = self.ops.len();
-
-        if ops_index > self.most_recent_snap() {
-            self.snapshots.push(ops_index);
-        }
+        self.snapshots.push(self.ops.len());
     }
 
     /// Rewinds the `Stack` to the most recent `snapshot()`. If no `snapshot()` has been taken, this
@@ -95,10 +91,6 @@ impl<T: Clone> Stack<T> {
             }
         }
     }
-
-    fn most_recent_snap(&self) -> usize {
-        *self.snapshots.last().unwrap_or(&0)
-    }
 }
 
 #[derive(Debug)]
@@ -122,6 +114,20 @@ mod test {
         stack.push(0);
         stack.restore();
         assert!(stack.is_empty());
+    }
+
+    #[test]
+    fn snapshot_twice() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+
+        stack.snapshot();
+        stack.snapshot();
+        stack.restore();
+        stack.restore();
+
+        assert_eq!(stack.iter().collect::<Vec<&i32>>(), vec![&0]);
     }
 
     #[test]
