@@ -65,6 +65,8 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
                 Rule::non_atomic_modifier => "`!`".to_owned(),
                 Rule::opening_brace => "`{`".to_owned(),
                 Rule::closing_brace => "`}`".to_owned(),
+                Rule::opening_brack => "`[`".to_owned(),
+                Rule::closing_brack => "`]`".to_owned(),
                 Rule::opening_paren => "`(`".to_owned(),
                 Rule::positive_predicate_operator => "`&`".to_owned(),
                 Rule::negative_predicate_operator => "`!`".to_owned(),

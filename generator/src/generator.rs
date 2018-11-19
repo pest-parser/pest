@@ -12,6 +12,7 @@ use std::path::Path;
 
 use proc_macro2::{Span, TokenStream};
 use syn::{self, Generics, Ident};
+use quote::{ToTokens, TokenStreamExt};
 
 use pest_meta::ast::*;
 use pest_meta::optimizer::*;
@@ -351,6 +352,12 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
             let ident = Ident::new(&ident, Span::call_site());
             quote! { self::#ident(state) }
         }
+        OptimizedExpr::PeekSlice(start, end_) => {
+            let end = QuoteOption(end_);
+            quote! {
+                state.stack_match_peek_slice(#start, #end, ::pest::MatchDir::BottomToTop)
+            }
+        }
         OptimizedExpr::PosPred(expr) => {
             let expr = generate_expr(*expr);
 
@@ -491,6 +498,12 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
             let ident = Ident::new(&ident, Span::call_site());
             quote! { self::#ident(state) }
         }
+        OptimizedExpr::PeekSlice(start, end_) => {
+            let end = QuoteOption(end_);
+            quote! {
+                state.stack_match_peek_slice(#start, #end, ::pest::MatchDir::BottomToTop)
+            }
+        }
         OptimizedExpr::PosPred(expr) => {
             let expr = generate_expr_atomic(*expr);
 
@@ -590,6 +603,17 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
                 state.restore_on_err(|state| #expr)
             }
         }
+    }
+}
+
+struct QuoteOption<T>(Option<T>);
+
+impl<T: ToTokens> ToTokens for QuoteOption<T> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        tokens.append_all(match self.0 {
+            Some(ref t) => quote! { ::std::option::Option::Some(#t) },
+            None => quote! { ::std::option::Option::None },
+        });
     }
 }
 

@@ -40,6 +40,13 @@ pub enum Atomicity {
 /// Type alias to simplify specifying the return value of chained closures.
 pub type ParseResult<S> = Result<S, S>;
 
+/// Match direction for the stack. Used in `PEEK[a..b]`/`stack_match_peek_slice`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MatchDir {
+    BottomToTop,
+    TopToBottom
+}
+
 /// The complete state of a [`Parser`].
 ///
 /// [`Parser`]: trait.Parser.html
@@ -904,6 +911,56 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         self.match_string(string)
     }
 
+    /// Matches part of the state of the stack.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::{self, MatchDir};
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "abcd cd cb";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut result = state
+    ///     .stack_push(|state| state.match_string("a"))
+    ///     .and_then(|state| state.stack_push(|state| state.match_string("b")))
+    ///     .and_then(|state| state.stack_push(|state| state.match_string("c")))
+    ///     .and_then(|state| state.stack_push(|state| state.match_string("d")))
+    ///     .and_then(|state| state.match_string(" "))
+    ///     .and_then(|state| state.stack_match_peek_slice(2, None, MatchDir::BottomToTop))
+    ///     .and_then(|state| state.match_string(" "))
+    ///     .and_then(|state| state.stack_match_peek_slice(1, Some(-1), MatchDir::TopToBottom));
+    /// assert!(result.is_ok());
+    /// assert_eq!(result.unwrap().position().pos(), 10);
+    /// ```
+    #[inline]
+    pub fn stack_match_peek_slice(mut self: Box<Self>, start: i32, end: Option<i32>, match_dir: MatchDir) -> ParseResult<Box<Self>> {
+        let range = match constrain_idxs(start, end, self.stack.len()) {
+            Some(r) => r,
+            None => return Err(self),
+        };
+        // return true if an empty sequence is requested
+        if range.end <= range.start { return Ok(self) }
+        
+        let mut position = self.position.clone();
+        let result = {
+            let mut iter_b2t = self.stack[range].iter();
+            let matcher = |span: &Span| { position.match_string(span.as_str()) };
+            match match_dir {
+                MatchDir::BottomToTop => iter_b2t.all(matcher),
+                MatchDir::TopToBottom => iter_b2t.rev().all(matcher),
+            }
+        };
+        if result {
+            self.position = position;
+            Ok(self)
+        } else {
+            Err(self)
+        }
+    }
+
     /// Matches the full state of the stack.
     ///
     /// # Examples
@@ -914,27 +971,18 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// enum Rule {}
     ///
-    /// let input = "aaaa";
+    /// let input = "abba";
     /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.stack_push(|state| state.match_string("a")).and_then(|state| {
-    ///     state.stack_push(|state| state.match_string("a"))
-    /// }).and_then(|state| state.stack_match_peek());
+    /// let mut result = state
+    ///     .stack_push(|state| state.match_string("a"))
+    ///     .and_then(|state| { state.stack_push(|state| state.match_string("b")) })
+    ///     .and_then(|state| state.stack_match_peek());
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().pos(), 4);
     /// ```
     #[inline]
-    pub fn stack_match_peek(mut self: Box<Self>) -> ParseResult<Box<Self>> {
-        let mut position = self.position.clone();
-        let result = self.stack.iter().all(|span| {
-            position.match_string(span.as_str())
-        });
-
-        if result {
-            self.position = position;
-            Ok(self)
-        } else {
-            Err(self)
-        }
+    pub fn stack_match_peek(self: Box<Self>) -> ParseResult<Box<Self>> {
+        self.stack_match_peek_slice(0, None, MatchDir::TopToBottom)
     }
 
     /// Matches the full state of the stack. This method will clear the stack as it evaluates.
@@ -1047,5 +1095,43 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     pub(crate) fn restore(mut self: Box<Self>) -> Box<Self> {
         self.stack.restore();
         self
+    }
+}
+
+fn constrain_idxs(start: i32, end: Option<i32>, len: usize) -> Option<std::ops::Range<usize>> {
+    let start_norm = normalize_index(start, len)?;
+    let end_norm = end.map_or(Some(len), |e| normalize_index(e, len))?;
+    Some(start_norm..end_norm)
+}
+
+/// Normalizes the index using its sequence’s length.
+/// Returns `None` if the normalized index is OOB.
+fn normalize_index(i: i32, len: usize) -> Option<usize> {
+    if i > len as i32 {
+        None
+    } else if i >= 0 {
+        Some(i as usize)
+    } else {
+        let real_i = len as i32 + i;
+        if real_i >= 0 { Some(real_i as usize) } else { None }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn normalize_index_pos() {
+        assert_eq!(normalize_index(4, 6), Some(4));
+        assert_eq!(normalize_index(5, 5), Some(5));
+        assert_eq!(normalize_index(6, 3), None);
+    }
+
+    #[test]
+    fn normalize_index_neg() {
+        assert_eq!(normalize_index(-4, 6), Some(2));
+        assert_eq!(normalize_index(-5, 5), Some(0));
+        assert_eq!(normalize_index(-6, 3), None);
     }
 }

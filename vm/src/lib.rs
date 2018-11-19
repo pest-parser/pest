@@ -10,7 +10,7 @@
 extern crate pest;
 extern crate pest_meta;
 
-use pest::{Atomicity, ParseResult, ParserState};
+use pest::{Atomicity, ParseResult, ParserState, MatchDir};
 use pest::error::Error;
 use pest::iterators::Pairs;
 use pest::unicode;
@@ -152,6 +152,7 @@ impl Vm {
                 state.match_range(start..end)
             }
             OptimizedExpr::Ident(ref name) => self.parse_rule(name, state),
+            OptimizedExpr::PeekSlice(start, end) => state.stack_match_peek_slice(start, end, MatchDir::BottomToTop),
             OptimizedExpr::PosPred(ref expr) => {
                 state.lookahead(true, |state| self.parse_expr(expr, state))
             }

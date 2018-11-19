@@ -38,6 +38,7 @@ soi_at_start = { SOI ~ string }
 repeat_mutate_stack = { (PUSH('a'..'c') ~ ",")* ~ POP ~ POP ~ POP }
 peek_ = { PUSH(range) ~ PUSH(range) ~ PEEK ~ PEEK }
 peek_all = { PUSH(range) ~ PUSH(range) ~ PEEK_ALL }
+peek_slice_23 = { PUSH(range) ~ PUSH(range) ~ PUSH(range) ~ PUSH(range) ~ PUSH(range) ~ PEEK[1..-2] }
 pop_ = { PUSH(range) ~ PUSH(range) ~ POP ~ POP }
 pop_all = { PUSH(range) ~ PUSH(range) ~ POP_ALL }
 pop_fail = { PUSH(range) ~ !POP ~ range ~ POP }

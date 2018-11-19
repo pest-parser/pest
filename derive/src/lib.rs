@@ -190,6 +190,7 @@
 //! * `POP` - pops a string from the stack and matches it
 //! * `POP_ALL` - pops the entire state of the stack and matches it
 //! * `PEEK` - peeks a string from the stack and matches it
+//! * `PEEK[a..b]` - peeks part of the stack and matches it
 //! * `PEEK_ALL` - peeks the entire state of the stack and matches it
 //! * `DROP` - drops the top of the stack (fails to match if the stack is empty)
 //!
@@ -222,8 +223,8 @@
 //! `PUSH(e)` simply pushes the captured string of the expression `e` down a stack. This stack can
 //! then later be used to match grammar based on its content with `POP` and `PEEK`.
 //!
-//! `PEEK` always matches the string at the top of stack. So, if the stack contains `["a", "b"]`,
-//! then this grammar:
+//! `PEEK` always matches the string at the top of stack. So, if the stack contains `["b", "a"]`
+//! (`"a"` being on top), this grammar:
 //!
 //! ```ignore
 //! a = { PEEK }
@@ -236,12 +237,32 @@
 //! ```
 //!
 //! `POP` works the same way with the exception that it pops the string off of the stack if the
-//! the match worked. With the stack from above, if `POP` matches `"a"`, the stack will be mutated
+//! match worked. With the stack from above, if `POP` matches `"a"`, the stack will be mutated
 //! to `["b"]`.
 //!
 //! `DROP` makes it possible to remove the string at the top of the stack
 //! without matching it. If the stack is nonempty, `DROP` drops the top of the
 //! stack. If the stack is empty, then `DROP` fails to match.
+//!
+//! ### Advanced peeking
+//!
+//! `PEEK[start..end]` and `PEEK_ALL` allow to peek deeper into the stack. The syntax works exactly
+//! like Rust’s exclusive slice syntax. Additionally, negative indices can be used to indicate an
+//! offset from the top. If the end lies before or at the start, the expression matches (as does
+//! a `PEEK_ALL` on an empty stack). With the stack `["c", "b", "a"]` (`"a"` on top):
+//!
+//! ```ignore
+//! fill = PUSH("c") ~ PUSH("b") ~ PUSH("a")
+//! v = { PEEK_ALL } = { "a" ~ "b" ~ "c" }  // top to bottom
+//! w = { PEEK[..] } = { "c" ~ "b" ~ "a" }  // bottom to top
+//! x = { PEEK[1..2] } = { PEEK[1..-1] } = { "b" }
+//! y = { PEEK[..-2] } = { PEEK[0..1] } = { "a" }
+//! z = { PEEK[1..] } = { PEEK[-2..3] } = { "c" ~ "b" }
+//! n = { PEEK[2..-2] } = { PEEK[2..1] } = { "" }
+//! ```
+//!
+//! For historical reasons, `PEEK_ALL` matches from top to bottom, while `PEEK[start..end]` matches
+//! from bottom to top. There is currectly no syntax to match a slice of the stack top to bottom.
 //!
 //! ## `Rule`
 //!

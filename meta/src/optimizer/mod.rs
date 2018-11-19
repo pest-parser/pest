@@ -42,6 +42,7 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
             Expr::Insens(string) => OptimizedExpr::Insens(string),
             Expr::Range(start, end) => OptimizedExpr::Range(start, end),
             Expr::Ident(ident) => OptimizedExpr::Ident(ident),
+            Expr::PeekSlice(start, end) => OptimizedExpr::PeekSlice(start, end),
             Expr::PosPred(expr) => OptimizedExpr::PosPred(Box::new(to_optimized(*expr))),
             Expr::NegPred(expr) => OptimizedExpr::NegPred(Box::new(to_optimized(*expr))),
             Expr::Seq(lhs, rhs) => {
@@ -54,7 +55,9 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
             Expr::Rep(expr) => OptimizedExpr::Rep(Box::new(to_optimized(*expr))),
             Expr::Skip(strings) => OptimizedExpr::Skip(strings),
             Expr::Push(expr) => OptimizedExpr::Push(Box::new(to_optimized(*expr))),
-            _ => unreachable!("No valid transformation to OptimizedRule")
+            Expr::RepOnce(_) | Expr::RepExact(..) | Expr::RepMin(..) | Expr::RepMax(..) | Expr::RepMinMax(..) => {
+                unreachable!("No valid transformation to OptimizedRule")
+            }
         }
     }
 
@@ -82,6 +85,7 @@ pub enum OptimizedExpr {
     Insens(String),
     Range(String, String),
     Ident(String),
+    PeekSlice(i32, Option<i32>),
     PosPred(Box<OptimizedExpr>),
     NegPred(Box<OptimizedExpr>),
     Seq(Box<OptimizedExpr>, Box<OptimizedExpr>),

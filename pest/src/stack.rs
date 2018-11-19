@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use std::ops::{Range, Index};
+
 /// Implementation of a `Stack` which maintains an log of `StackOp`s in order to rewind the stack
 /// to a previous state.
 #[derive(Debug)]
@@ -51,10 +53,10 @@ impl<T: Clone> Stack<T> {
         }
         popped
     }
-
-    /// Returns an iterator to the current state of the cache in fifo order.
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
-        self.cache.iter().rev()
+    
+    /// Returns the size of the stack
+    pub fn len(&self) -> usize {
+        self.cache.len()
     }
 
     /// Takes a snapshot of the current `Stack`.
@@ -93,6 +95,14 @@ impl<T: Clone> Stack<T> {
     }
 }
 
+impl<T: Clone> Index<Range<usize>> for Stack<T> {
+    type Output = [T];
+    
+    fn index(&self, range: Range<usize>) -> &[T] {
+        self.cache.index(range)
+    }
+}
+
 #[derive(Debug)]
 enum StackOp<T> {
     Push(T),
@@ -127,18 +137,7 @@ mod test {
         stack.restore();
         stack.restore();
 
-        assert_eq!(stack.iter().collect::<Vec<&i32>>(), vec![&0]);
-    }
-
-    #[test]
-    fn iter() {
-        let mut stack = Stack::new();
-
-        stack.push(0);
-        stack.push(1);
-        stack.push(2);
-
-        assert_eq!(stack.iter().collect::<Vec<&i32>>(), vec![&2, &1, &0]);
+        assert_eq!(stack[0..stack.len()], [0]);
     }
 
     #[test]
