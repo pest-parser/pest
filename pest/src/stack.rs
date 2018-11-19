@@ -137,7 +137,7 @@ mod test {
         stack.restore();
         stack.restore();
 
-        assert_eq!(stack.iter().collect::<Vec<&i32>>(), vec![&0]);
+        assert_eq!(stack[0..stack.len()], [0]);
     }
 
     #[test]
