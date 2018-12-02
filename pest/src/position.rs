@@ -285,6 +285,28 @@ impl<'i> Position<'i> {
         true
     }
 
+    /// Goes back `n` `char`s from the `Position` and returns `true` if the skip was possible or `false`
+    /// otherwise. If the return value is `false`, `pos` will not be updated.
+    #[inline]
+    pub(crate) fn skip_back(&mut self, n: usize) -> bool {
+        let skipped = {
+            let mut len = 0;
+            // Position's pos is always a UTF-8 border.
+            let mut chars = (&self.input[..self.pos]).chars().rev();
+            for _ in 0..n {
+                if let Some(c) = chars.next() {
+                    len += c.len_utf8();
+                } else {
+                    return false;
+                }
+            }
+            len
+        };
+
+        self.pos -= skipped;
+        true
+    }
+
     /// Skips until one of the given `strings` is found. If none of the `strings` can be found,
     /// this function will return `false` but its `pos` will *still* be updated.
     #[inline]

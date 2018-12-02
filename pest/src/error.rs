@@ -136,19 +136,25 @@ impl<R: RuleType> Error<R> {
     /// ```
     #[allow(clippy::needless_pass_by_value)]
     pub fn new_from_span(variant: ErrorVariant<R>, span: Span) -> Error<R> {
-        let continued_line = if span.start_pos().line_col().0 != span.end_pos().line_col().0 {
-            Some(span.end_pos().line_of().to_owned())
+        let start = span.start_pos();
+        let mut end = span.end_pos();
+        if end.line_col().1 == 1 { // end position is after a \n
+            end.skip_back(1);
+        }
+        
+        let continued_line = if start.line_col().0 != end.line_col().0 {
+            Some(end.line_of().to_owned())
         } else {
             None
         };
 
         Error {
             variant,
-            location: InputLocation::Span((span.start(), span.end())),
+            location: InputLocation::Span((start.pos(), end.pos())),
             path: None,
-            line: span.start_pos().line_of().to_owned(),
+            line: start.line_of().to_owned(),
             continued_line,
-            line_col: LineColLocation::Span(span.start_pos().line_col(), span.end_pos().line_col()),
+            line_col: LineColLocation::Span(start.line_col(), end.line_col())
         }
     }
 
@@ -646,6 +652,34 @@ mod tests {
                 "  = error: big one",
             ]
             .join("\n")
+        );
+    }
+
+    #[test]
+    fn display_custom_span_end_after_newline() {
+        let input = "abcdef\n";
+        let start = position::Position::new(input, 0).unwrap();
+        let end = position::Position::new(input, 7).unwrap();
+        assert!(start.at_start());
+        assert!(end.at_end());
+
+        let error: Error<u32> = Error::new_from_span(
+            ErrorVariant::CustomError {
+                message: "error: big one".to_owned()
+            },
+            start.span(&end)
+        );
+
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 1:1",
+                "  |",
+                "1 | abcdef",
+                "  | ^----^",
+                "  |",
+                "  = error: big one",
+            ].join("\n")
         );
     }
 
