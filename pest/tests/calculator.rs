@@ -13,7 +13,7 @@ extern crate pest;
 use pest::{state, ParseResult, Parser, ParserState};
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
-use pest::prec_climber::{Assoc, Operator, PrecClimber};
+use pest::pratt_parser::{Assoc, Op, PrattParser};
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -109,8 +109,8 @@ impl Parser<Rule> for CalculatorParser {
     }
 }
 
-fn consume<'i>(pair: Pair<'i, Rule>, climber: &PrecClimber<Rule>) -> i32 {
-    let primary = |pair| consume(pair, climber);
+fn consume<'i>(pair: Pair<'i, Rule>, pratt: &PrattParser<Rule>) -> i32 {
+    let primary = |pair| consume(pair, pratt);
     let infix = |lhs: i32, op: Pair<Rule>, rhs: i32| match op.as_rule() {
         Rule::plus => lhs + rhs,
         Rule::minus => lhs - rhs,
@@ -122,7 +122,10 @@ fn consume<'i>(pair: Pair<'i, Rule>, climber: &PrecClimber<Rule>) -> i32 {
     };
 
     match pair.as_rule() {
-        Rule::expression => climber.climb(pair.into_inner(), primary, infix),
+        Rule::expression => pratt
+          .map_primary(primary)
+          .map_infix(infix)
+          .parse(pair.into_inner()),
         Rule::number => pair.as_str().parse().unwrap(),
         _ => unreachable!()
     }
@@ -187,14 +190,15 @@ fn expression() {
 }
 
 #[test]
-fn prec_climb() {
-    let climber = PrecClimber::new(vec![
-        Operator::new(Rule::plus, Assoc::Left) | Operator::new(Rule::minus, Assoc::Left),
-        Operator::new(Rule::times, Assoc::Left) | Operator::new(Rule::divide, Assoc::Left)
-            | Operator::new(Rule::modulus, Assoc::Left),
-        Operator::new(Rule::power, Assoc::Right),
-    ]);
+fn pratt_parse() {
+    let pratt = PrattParser::new()
+        .op(Op::infix(Rule::plus,    Assoc::Left)
+          | Op::infix(Rule::minus,   Assoc::Left))
+        .op(Op::infix(Rule::times,   Assoc::Left)
+          | Op::infix(Rule::divide,  Assoc::Left)
+          | Op::infix(Rule::modulus, Assoc::Left))
+        .op(Op::infix(Rule::power,   Assoc::Right));
 
     let pairs = CalculatorParser::parse(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
-    assert_eq!(-1_525, consume(pairs.unwrap().next().unwrap(), &climber));
+    assert_eq!(-1_525, consume(pairs.unwrap().next().unwrap(), &pratt));
 }

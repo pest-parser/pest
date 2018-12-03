@@ -76,6 +76,7 @@ mod parser;
 mod parser_state;
 mod position;
 pub mod prec_climber;
+pub mod pratt_parser;
 mod span;
 mod stack;
 mod token;
