@@ -684,6 +684,34 @@ mod tests {
     }
 
     #[test]
+    fn display_custom_span_empty() {
+        let input = "";
+        let start = position::Position::new(input, 0).unwrap();
+        let end = position::Position::new(input, 0).unwrap();
+        assert!(start.at_start());
+        assert!(end.at_end());
+
+        let error: Error<u32> = Error::new_from_span(
+            ErrorVariant::CustomError {
+                message: "error: empty".to_owned()
+            },
+            start.span(&end)
+        );
+
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 1:1",
+                "  |",
+                "1 | ",
+                "  | ^",
+                "  |",
+                "  = error: empty",
+            ].join("\n")
+        );
+    }
+
+    #[test]
     fn mapped_parsing_error() {
         let input = "ab\ncd\nef";
         let pos = position::Position::new(input, 4).unwrap();
