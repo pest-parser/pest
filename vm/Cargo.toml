@@ -13,7 +13,7 @@ readme = "_README.md"
 
 [dependencies]
 pest = { path = "../pest", version = "2.0" }
-pest_meta = { path = "../meta", version = "2.0" }
+pest_meta = { path = "../meta", version = "2.0.3" }
 
 [badges]
 codecov = { repository = "pest-parser/pest" }
