@@ -11,7 +11,7 @@
 pub struct Rule {
     pub name: String,
     pub ty: RuleType,
-    pub expr: Expr
+    pub expr: Expr,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -20,7 +20,7 @@ pub enum RuleType {
     Silent,
     Atomic,
     CompoundAtomic,
-    NonAtomic
+    NonAtomic,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -60,7 +60,7 @@ pub enum Expr {
     /// Continues to match expressions until one of the strings in the `Vec` is found
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
-    Push(Box<Expr>)
+    Push(Box<Expr>),
 }
 
 impl Expr {
@@ -70,11 +70,11 @@ impl Expr {
 
     pub fn map_top_down<F>(self, mut f: F) -> Expr
     where
-        F: FnMut(Expr) -> Expr
+        F: FnMut(Expr) -> Expr,
     {
         fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
         where
-            F: FnMut(Expr) -> Expr
+            F: FnMut(Expr) -> Expr,
         {
             let expr = f(expr);
 
@@ -130,7 +130,7 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
-                expr => expr
+                expr => expr,
             }
         }
 
@@ -139,11 +139,11 @@ impl Expr {
 
     pub fn map_bottom_up<F>(self, mut f: F) -> Expr
     where
-        F: FnMut(Expr) -> Expr
+        F: FnMut(Expr) -> Expr,
     {
         fn map_internal<F>(expr: Expr, f: &mut F) -> Expr
         where
-            F: FnMut(Expr) -> Expr
+            F: FnMut(Expr) -> Expr,
         {
             let mapped = match expr {
                 Expr::PosPred(expr) => {
@@ -197,7 +197,7 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
-                expr => expr
+                expr => expr,
             };
 
             f(mapped)
@@ -210,7 +210,7 @@ impl Expr {
 pub struct ExprTopDownIterator {
     current: Option<Expr>,
     next: Option<Expr>,
-    right_branches: Vec<Expr>
+    right_branches: Vec<Expr>,
 }
 
 impl ExprTopDownIterator {
@@ -218,7 +218,7 @@ impl ExprTopDownIterator {
         let mut iter = ExprTopDownIterator {
             current: None,
             next: None,
-            right_branches: vec![]
+            right_branches: vec![],
         };
         iter.iterate_expr(expr.clone());
         iter
@@ -278,7 +278,7 @@ mod tests {
     fn top_down_iterator() {
         let expr = Expr::Choice(
             Box::new(Expr::Str(String::from("a"))),
-            Box::new(Expr::Str(String::from("b")))
+            Box::new(Expr::Str(String::from("b"))),
         );
         let mut top_down = expr.clone().iter_top_down();
         assert_eq!(top_down.next(), Some(expr));
@@ -292,17 +292,17 @@ mod tests {
         let expr = Expr::Choice(
             Box::new(Expr::Seq(
                 Box::new(Expr::Ident("a".to_owned())),
-                Box::new(Expr::Str("b".to_owned()))
+                Box::new(Expr::Str("b".to_owned())),
             )),
             Box::new(Expr::PosPred(Box::new(Expr::NegPred(Box::new(Expr::Rep(
                 Box::new(Expr::RepOnce(Box::new(Expr::Opt(Box::new(Expr::Choice(
                     Box::new(Expr::Insens("c".to_owned())),
                     Box::new(Expr::Push(Box::new(Expr::Range(
                         "'d'".to_owned(),
-                        "'e'".to_owned()
-                    ))))
-                ))))))
-            ))))))
+                        "'e'".to_owned(),
+                    )))),
+                )))))),
+            )))))),
         );
 
         assert_eq!(

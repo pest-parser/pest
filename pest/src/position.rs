@@ -23,7 +23,7 @@ pub struct Position<'i> {
     /// # Safety:
     ///
     /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
-    pos: usize
+    pos: usize,
 }
 
 impl<'i> Position<'i> {
@@ -49,12 +49,9 @@ impl<'i> Position<'i> {
     /// assert_eq!(Position::new(heart, 1), None);
     /// assert_ne!(Position::new(heart, cheart.len_utf8()), None);
     /// ```
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(input: &str, pos: usize) -> Option<Position> {
-        if input.get(pos..).is_none() {
-            None
-        } else {
-            Some(Position { input, pos })
-        }
+        input.get(pos..).map(|_| Position { input, pos })
     }
 
     /// Creates a `Position` at the start of a `&str`.
@@ -107,7 +104,9 @@ impl<'i> Position<'i> {
     /// ```
     #[inline]
     pub fn span(&self, other: &Position<'i>) -> span::Span<'i> {
-        if ptr::eq(self.input, other.input) /* && self.input.get(self.pos..other.pos).is_some() */ {
+        if ptr::eq(self.input, other.input)
+        /* && self.input.get(self.pos..other.pos).is_some() */
+        {
             // This is safe because the pos field of a Position should always be a valid str index.
             unsafe { span::Span::new_unchecked(self.input, self.pos, other.pos) }
         } else {
@@ -171,7 +170,7 @@ impl<'i> Position<'i> {
                     pos -= c.len_utf8();
                     line_col = (line_col.0, line_col.1 + 1);
                 }
-                None => unreachable!()
+                None => unreachable!(),
             }
         }
 
@@ -204,14 +203,15 @@ impl<'i> Position<'i> {
             0
         } else {
             // Position's pos is always a UTF-8 border.
-            let start = self.input
+            let start = self
+                .input
                 .char_indices()
                 .rev()
                 .skip_while(|&(i, _)| i >= self.pos)
                 .find(|&(_, c)| c == '\n');
             match start {
                 Some((i, _)) => i + 1,
-                None => 0
+                None => 0,
             }
         };
         let bytes = self.input.as_bytes();
@@ -230,13 +230,14 @@ impl<'i> Position<'i> {
             end
         } else {
             // Position's pos is always a UTF-8 border.
-            let end = self.input
+            let end = self
+                .input
                 .char_indices()
                 .skip_while(|&(i, _)| i < self.pos)
                 .find(|&(_, c)| c == '\n');
             let mut end = match end {
                 Some((i, _)) => i,
-                None => self.input.len()
+                None => self.input.len(),
             };
 
             if end > 0 && bytes[end - 1] == b'\r' {
@@ -312,7 +313,8 @@ impl<'i> Position<'i> {
     /// was made. If no match was made, returns `false` and `pos` will not be updated.
     #[inline]
     pub(crate) fn match_char_by<F>(&mut self, f: F) -> bool
-    where F: FnOnce(char) -> bool
+    where
+        F: FnOnce(char) -> bool,
     {
         if let Some(c) = (&self.input[self.pos..]).chars().next() {
             if f(c) {
@@ -371,7 +373,7 @@ impl<'i> Position<'i> {
                 return true;
             }
         }
-        
+
         false
     }
 }
@@ -546,17 +548,32 @@ mod tests {
 
         assert_eq!(Position::new(input, 0).unwrap().match_range('a'..'c'), true);
         assert_eq!(Position::new(input, 0).unwrap().match_range('b'..'b'), true);
-        assert_eq!(!Position::new(input, 0).unwrap().match_range('a'..'a'), true);
-        assert_eq!(!Position::new(input, 0).unwrap().match_range('c'..'c'), true);
-        assert_eq!(Position::new(input, 0).unwrap().match_range('a'..'嗨'), true);
+        assert_eq!(
+            !Position::new(input, 0).unwrap().match_range('a'..'a'),
+            true
+        );
+        assert_eq!(
+            !Position::new(input, 0).unwrap().match_range('c'..'c'),
+            true
+        );
+        assert_eq!(
+            Position::new(input, 0).unwrap().match_range('a'..'嗨'),
+            true
+        );
     }
 
     #[test]
     fn match_insensitive() {
         let input = "AsdASdF";
 
-        assert_eq!(Position::new(input, 0).unwrap().match_insensitive("asd"), true);
-        assert_eq!(Position::new(input, 3).unwrap().match_insensitive("asdf"), true);
+        assert_eq!(
+            Position::new(input, 0).unwrap().match_insensitive("asd"),
+            true
+        );
+        assert_eq!(
+            Position::new(input, 3).unwrap().match_insensitive("asdf"),
+            true
+        );
     }
 
     #[test]

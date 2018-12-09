@@ -12,9 +12,9 @@ extern crate pest;
 
 use std::collections::HashMap;
 
-use pest::{state, ParseResult, Parser, ParserState, Span};
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
+use pest::{state, ParseResult, Parser, ParserState, Span};
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -32,7 +32,7 @@ enum Rule {
     int,
     exp,
     bool,
-    null
+    null,
 }
 
 struct JsonParser;
@@ -61,7 +61,8 @@ impl Parser<Rule> for JsonParser {
                             })
                         })
                         .and_then(|s| s.match_string("}"))
-                }).or_else(|s| {
+                })
+                .or_else(|s| {
                     s.sequence(|s| {
                         s.match_string("{")
                             .and_then(|s| skip(s))
@@ -101,7 +102,8 @@ impl Parser<Rule> for JsonParser {
                             })
                         })
                         .and_then(|s| s.match_string("]"))
-                }).or_else(|s| {
+                })
+                .or_else(|s| {
                     s.sequence(|s| {
                         s.match_string("[")
                             .and_then(|s| skip(s))
@@ -131,7 +133,8 @@ impl Parser<Rule> for JsonParser {
                                 s.sequence(|s| {
                                     s.lookahead(false, |s| {
                                         s.match_string("\"").or_else(|s| s.match_string("\\"))
-                                    }).and_then(|s| s.skip(1))
+                                    })
+                                    .and_then(|s| s.skip(1))
                                 })
                             })
                         })
@@ -245,7 +248,7 @@ impl Parser<Rule> for JsonParser {
             Rule::int => int(state),
             Rule::exp => exp(state),
             Rule::bool => bool(state),
-            Rule::null => null(state)
+            Rule::null => null(state),
         })
     }
 }
@@ -257,7 +260,7 @@ enum Json<'i> {
     Number(f64),
     String(Span<'i>),
     Array(Vec<Json<'i>>),
-    Object(HashMap<Span<'i>, Json<'i>>)
+    Object(HashMap<Span<'i>, Json<'i>>),
 }
 
 fn consume(pair: Pair<Rule>) -> Json {
@@ -269,7 +272,7 @@ fn consume(pair: Pair<Rule>) -> Json {
             Rule::bool => match pair.as_str() {
                 "false" => Json::Bool(false),
                 "true" => Json::Bool(true),
-                _ => unreachable!()
+                _ => unreachable!(),
             },
             Rule::number => Json::Number(pair.as_str().parse().unwrap()),
             Rule::string => Json::String(pair.as_span()),
@@ -286,7 +289,7 @@ fn consume(pair: Pair<Rule>) -> Json {
 
                 Json::Object(pairs.collect())
             }
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -445,7 +448,7 @@ fn ast() {
         JsonParser::parse(Rule::json, input)
             .unwrap()
             .next()
-            .unwrap()
+            .unwrap(),
     );
 
     match ast {

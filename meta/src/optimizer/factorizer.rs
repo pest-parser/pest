@@ -24,15 +24,15 @@ pub fn factor(rule: Rule) -> Rule {
                             } else {
                                 Expr::Choice(
                                     Box::new(Expr::Seq(l1, r1)),
-                                    Box::new(Expr::Seq(l2, r2))
+                                    Box::new(Expr::Seq(l2, r2)),
                                 )
                             }
                         }
-                        (lhs, rhs) => Expr::Choice(Box::new(lhs), Box::new(rhs))
+                        (lhs, rhs) => Expr::Choice(Box::new(lhs), Box::new(rhs)),
                     },
-                    expr => expr
+                    expr => expr,
                 }
-            })
-        }
+            }),
+        },
     }
 }

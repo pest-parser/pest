@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::ops::{Range, Index};
+use std::ops::{Index, Range};
 
 /// Implementation of a `Stack` which maintains an log of `StackOp`s in order to rewind the stack
 /// to a previous state.
@@ -15,7 +15,7 @@ use std::ops::{Range, Index};
 pub struct Stack<T: Clone> {
     ops: Vec<StackOp<T>>,
     cache: Vec<T>,
-    snapshots: Vec<usize>
+    snapshots: Vec<usize>,
 }
 
 impl<T: Clone> Stack<T> {
@@ -24,7 +24,7 @@ impl<T: Clone> Stack<T> {
         Stack {
             ops: vec![],
             cache: vec![],
-            snapshots: vec![]
+            snapshots: vec![],
         }
     }
 
@@ -53,7 +53,7 @@ impl<T: Clone> Stack<T> {
         }
         popped
     }
-    
+
     /// Returns the size of the stack
     pub fn len(&self) -> usize {
         self.cache.len()
@@ -71,7 +71,7 @@ impl<T: Clone> Stack<T> {
             Some(ops_index) => {
                 self.rewind_to(ops_index);
                 self.ops.truncate(ops_index);
-            },
+            }
             None => {
                 self.cache.clear();
                 self.ops.clear();
@@ -97,7 +97,7 @@ impl<T: Clone> Stack<T> {
 
 impl<T: Clone> Index<Range<usize>> for Stack<T> {
     type Output = [T];
-    
+
     fn index(&self, range: Range<usize>) -> &[T] {
         self.cache.index(range)
     }
@@ -106,7 +106,7 @@ impl<T: Clone> Index<Range<usize>> for Stack<T> {
 #[derive(Debug)]
 enum StackOp<T> {
     Push(T),
-    Pop(T)
+    Pop(T),
 }
 
 #[cfg(test)]

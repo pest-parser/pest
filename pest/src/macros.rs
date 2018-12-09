@@ -304,7 +304,6 @@ macro_rules! parses_to {
 macro_rules! fails_with {
     ( parser: $parser:ident, input: $string:expr, rule: $rules:tt :: $rule:tt,
       positives: $positives:expr, negatives: $negatives:expr, pos: $pos:expr ) => {
-
         #[allow(unused_mut)]
         {
             use $crate::Parser;
@@ -312,16 +311,19 @@ macro_rules! fails_with {
             let error = $parser::parse($rules::$rule, $string).unwrap_err();
 
             match error.variant {
-                $crate::error::ErrorVariant::ParsingError { positives, negatives } => {
+                $crate::error::ErrorVariant::ParsingError {
+                    positives,
+                    negatives,
+                } => {
                     assert_eq!(positives, $positives);
                     assert_eq!(negatives, $negatives);
                 }
-                _ => unreachable!()
+                _ => unreachable!(),
             };
 
             match error.location {
                 $crate::error::InputLocation::Pos(pos) => assert_eq!(pos, $pos),
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         }
     };
@@ -329,16 +331,16 @@ macro_rules! fails_with {
 
 #[cfg(test)]
 pub mod tests {
-    use super::super::{state, Parser};
     use super::super::error::Error;
     use super::super::iterators::Pairs;
+    use super::super::{state, Parser};
 
     #[allow(non_camel_case_types)]
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     pub enum Rule {
         a,
         b,
-        c
+        c,
     }
 
     pub struct AbcParser;

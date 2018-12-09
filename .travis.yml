@@ -37,7 +37,6 @@ matrix:
       script: cargo tarpaulin --verbose --skip-clean --out Xml
       after_success: bash <(curl -s https://codecov.io/bash)
   allow_failures:
-    - name: style # TODO(CAD97): Fix this build and require it
     - name: minimal versions # Remove once it passes :D
     - name: coverage # So builds don't have to wait on it
   fast_finish: true

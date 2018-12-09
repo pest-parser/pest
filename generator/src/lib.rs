@@ -31,8 +31,8 @@ use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 mod macros;
 mod generator;
 
-use pest_meta::{optimizer, unwrap_or_report, validator};
 use pest_meta::parser::{self, Rule};
+use pest_meta::{optimizer, unwrap_or_report, validator};
 
 pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
@@ -42,12 +42,12 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let path = Path::new(&root).join("src/").join(&path);
     let file_name = match path.file_name() {
         Some(file_name) => file_name,
-        None => panic!("grammar attribute should point to a file")
+        None => panic!("grammar attribute should point to a file"),
     };
 
     let data = match read_file(&path) {
         Ok(data) => data,
-        Err(error) => panic!("error opening {:?}: {}", file_name, error)
+        Err(error) => panic!("error opening {:?}: {}", file_name, error),
     };
 
     let pairs = match parser::parse(Rule::grammar_rules, &data) {
@@ -81,9 +81,9 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
                 Rule::insensitive_string => "`^`".to_owned(),
                 Rule::range_operator => "`..`".to_owned(),
                 Rule::single_quote => "`'`".to_owned(),
-                other_rule => format!("{:?}", other_rule)
+                other_rule => format!("{:?}", other_rule),
             })
-        )
+        ),
     };
 
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
@@ -104,18 +104,19 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, String) {
     let name = ast.ident;
     let generics = ast.generics;
 
-    let grammar: Vec<&Attribute> = ast.attrs
+    let grammar: Vec<&Attribute> = ast
+        .attrs
         .iter()
         .filter(|attr| match attr.interpret_meta() {
             Some(Meta::NameValue(name_value)) => name_value.ident == "grammar",
-            _ => false
+            _ => false,
         })
         .collect();
 
     let filename = match grammar.len() {
         0 => panic!("a grammar file needs to be provided with the #[grammar = \"...\"] attribute"),
         1 => get_filename(grammar[0]),
-        _ => panic!("only 1 grammar file can be provided")
+        _ => panic!("only 1 grammar file can be provided"),
     };
 
     (name, generics, filename)
@@ -125,9 +126,9 @@ fn get_filename(attr: &Attribute) -> String {
     match attr.interpret_meta() {
         Some(Meta::NameValue(name_value)) => match name_value.lit {
             Lit::Str(filename) => filename.value(),
-            _ => panic!("grammar attribute must be a string")
+            _ => panic!("grammar attribute must be a string"),
         },
-        _ => panic!("grammar attribute must be of the form `grammar = \"...\"`")
+        _ => panic!("grammar attribute must be of the form `grammar = \"...\"`"),
     }
 }
 

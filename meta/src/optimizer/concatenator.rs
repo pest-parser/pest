@@ -21,14 +21,14 @@ pub fn concatenate(rule: Rule) -> Rule {
                         Expr::Seq(lhs, rhs) => match (*lhs, *rhs) {
                             (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),
                             (Expr::Insens(lhs), Expr::Insens(rhs)) => Expr::Insens(lhs + &rhs),
-                            (lhs, rhs) => Expr::Seq(Box::new(lhs), Box::new(rhs))
+                            (lhs, rhs) => Expr::Seq(Box::new(lhs), Box::new(rhs)),
                         },
-                        expr => expr
+                        expr => expr,
                     }
                 } else {
                     expr
                 }
-            })
-        }
+            }),
+        },
     }
 }

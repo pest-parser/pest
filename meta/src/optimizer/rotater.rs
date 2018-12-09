@@ -19,7 +19,7 @@ pub fn rotate(rule: Rule) -> Rule {
                     Expr::Seq(ll, lr) => {
                         rotate_internal(Expr::Seq(ll, Box::new(Expr::Seq(lr, rhs))))
                     }
-                    lhs => Expr::Seq(Box::new(lhs), rhs)
+                    lhs => Expr::Seq(Box::new(lhs), rhs),
                 }
             }
             Expr::Choice(lhs, rhs) => {
@@ -28,10 +28,10 @@ pub fn rotate(rule: Rule) -> Rule {
                     Expr::Choice(ll, lr) => {
                         rotate_internal(Expr::Choice(ll, Box::new(Expr::Choice(lr, rhs))))
                     }
-                    lhs => Expr::Choice(Box::new(lhs), rhs)
+                    lhs => Expr::Choice(Box::new(lhs), rhs),
                 }
             }
-            expr => expr
+            expr => expr,
         }
     }
 
@@ -39,7 +39,7 @@ pub fn rotate(rule: Rule) -> Rule {
         Rule { name, ty, expr } => Rule {
             name,
             ty,
-            expr: expr.map_top_down(rotate_internal)
-        }
+            expr: expr.map_top_down(rotate_internal),
+        },
     }
 }

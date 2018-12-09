@@ -12,7 +12,7 @@ use optimizer::*;
 
 pub fn restore_on_err(
     rule: OptimizedRule,
-    rules: &HashMap<String, OptimizedExpr>
+    rules: &HashMap<String, OptimizedExpr>,
 ) -> OptimizedRule {
     match rule {
         OptimizedRule { name, ty, expr } => {
@@ -25,7 +25,7 @@ pub fn restore_on_err(
 
 fn wrap_branching_exprs(
     expr: OptimizedExpr,
-    rules: &HashMap<String, OptimizedExpr>
+    rules: &HashMap<String, OptimizedExpr>,
 ) -> OptimizedExpr {
     match expr {
         OptimizedExpr::Opt(expr) => {
@@ -55,43 +55,41 @@ fn wrap_branching_exprs(
                 OptimizedExpr::Rep(expr)
             }
         }
-        _ => expr
+        _ => expr,
     }
 }
 
 fn child_modifies_state(
     expr: &OptimizedExpr,
     rules: &HashMap<String, OptimizedExpr>,
-    cache: &mut HashMap<String, Option<bool>>
+    cache: &mut HashMap<String, Option<bool>>,
 ) -> bool {
     expr.iter_top_down().any(|expr| match expr {
         OptimizedExpr::Push(_) => true,
         OptimizedExpr::Ident(ref name) if name == "DROP" => true,
         OptimizedExpr::Ident(ref name) if name == "POP" => true,
-        OptimizedExpr::Ident(ref name) => {
-            match cache.get(name).cloned() {
-                Some(option) => match option {
-                    Some(cached) => cached,
-                    None => {
-                        cache.insert(name.to_owned(), Some(false));
-                        false
-                    }
-                }
+        OptimizedExpr::Ident(ref name) => match cache.get(name).cloned() {
+            Some(option) => match option {
+                Some(cached) => cached,
                 None => {
-                    cache.insert(name.to_owned(), None);
-
-                    let result = match rules.get(name) {
-                        Some(expr) => child_modifies_state(expr, rules, cache),
-                        None => false
-                    };
-
-                    cache.insert(name.to_owned(), Some(result));
-
-                    result
+                    cache.insert(name.to_owned(), Some(false));
+                    false
                 }
+            },
+            None => {
+                cache.insert(name.to_owned(), None);
+
+                let result = match rules.get(name) {
+                    Some(expr) => child_modifies_state(expr, rules, cache),
+                    None => false,
+                };
+
+                cache.insert(name.to_owned(), Some(result));
+
+                result
             }
-        }
-        _ => false
+        },
+        _ => false,
     })
 }
 
@@ -102,13 +100,11 @@ mod tests {
 
     #[test]
     fn restore_no_stack_children() {
-        let rules = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Normal,
-                expr: Opt(Box::new(Str(String::from("a"))))
-            },
-        ];
+        let rules = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Normal,
+            expr: Opt(Box::new(Str(String::from("a")))),
+        }];
 
         assert_eq!(
             restore_on_err(rules[0].clone(), &to_hash_map(&rules)),
@@ -118,49 +114,51 @@ mod tests {
 
     #[test]
     fn restore_with_child_stack_ops() {
-        let rules = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Normal,
-                expr: Rep(Box::new(Push(Box::new(Str(String::from("a"))))))
-            },
-        ];
+        let rules = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Normal,
+            expr: Rep(Box::new(Push(Box::new(Str(String::from("a")))))),
+        }];
 
         let restored = OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
             expr: Rep(Box::new(RestoreOnErr(Box::new(Push(Box::new(Str(
-                String::from("a")
-            )))))))
+                String::from("a"),
+            ))))))),
         };
 
-        assert_eq!(restore_on_err(rules[0].clone(), &to_hash_map(&rules)), restored);
+        assert_eq!(
+            restore_on_err(rules[0].clone(), &to_hash_map(&rules)),
+            restored
+        );
     }
 
     #[test]
     fn restore_choice_branch_with_and_branch_without() {
-        let rules = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Normal,
-                expr: Choice(
-                    Box::new(Push(Box::new(Str(String::from("a"))))),
-                    Box::new(Str(String::from("a")))
-                )
-            },
-        ];
+        let rules = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Normal,
+            expr: Choice(
+                Box::new(Push(Box::new(Str(String::from("a"))))),
+                Box::new(Str(String::from("a"))),
+            ),
+        }];
 
         let restored = OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
             expr: Choice(
                 Box::new(RestoreOnErr(Box::new(Push(Box::new(Str(String::from(
-                    "a"
+                    "a",
                 ))))))),
-                Box::new(Str(String::from("a")))
-            )
+                Box::new(Str(String::from("a"))),
+            ),
         };
 
-        assert_eq!(restore_on_err(rules[0].clone(), &to_hash_map(&rules)), restored);
+        assert_eq!(
+            restore_on_err(rules[0].clone(), &to_hash_map(&rules)),
+            restored
+        );
     }
 }

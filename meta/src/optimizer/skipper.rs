@@ -24,7 +24,7 @@ pub fn skip(rule: Rule) -> Rule {
                 choices.push(string);
                 Some(Expr::Skip(choices))
             }
-            _ => None
+            _ => None,
         }
     }
 
@@ -51,7 +51,7 @@ pub fn skip(rule: Rule) -> Rule {
                 })
             } else {
                 expr
-            }
-        }
+            },
+        },
     }
 }
