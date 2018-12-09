@@ -194,40 +194,34 @@ impl<'i> Position<'i> {
     /// assert_eq!(result.unwrap().position().line_of(), "a");
     /// ```
     #[inline]
-    pub fn line_of(&self) -> &str {
+    pub fn line_of(&self) -> String {
         if self.pos > self.input.len() {
             panic!("position out of bounds");
-        }
-
-        let start = if self.pos == 0 {
-            0
-        } else {
-            // Position's pos is always a UTF-8 border.
-            let start = self
-                .input
-                .char_indices()
-                .rev()
-                .skip_while(|&(i, _)| i >= self.pos)
-                .find(|&(_, c)| c == '\n');
-            match start {
-                Some((i, _)) => i + 1,
-                None => 0,
-            }
         };
-        let bytes = self.input.as_bytes();
-        let end = if bytes.is_empty() {
+        // Safe since start and end can only be valid UTF-8 borders.
+        let line = &self.input[self.find_line_start()..self.find_line_end()];
+        line.to_owned().replace('\r', "␍").replace('\n', "␊")
+    }
+    
+    pub(crate) fn find_line_start(&self) -> usize {
+        if self.input.is_empty() { return 0 };
+        // Position's pos is always a UTF-8 border.
+        let start = self.input
+            .char_indices()
+            .rev()
+            .skip_while(|&(i, _)| i >= self.pos)
+            .find(|&(_, c)| c == '\n');
+        match start {
+            Some((i, _)) => i + 1,
+            None => 0
+        }
+    }
+    
+    pub(crate) fn find_line_end(&self) -> usize {
+        if self.input.is_empty() {
             0
         } else if self.pos == self.input.len() - 1 {
-            let mut end = self.input.len();
-
-            if end > 0 && bytes[end - 1] == b'\n' {
-                end -= 1;
-            }
-            if end > 0 && bytes[end - 1] == b'\r' {
-                end -= 1;
-            }
-
-            end
+            self.input.len()
         } else {
             // Position's pos is always a UTF-8 border.
             let end = self
@@ -235,20 +229,11 @@ impl<'i> Position<'i> {
                 .char_indices()
                 .skip_while(|&(i, _)| i < self.pos)
                 .find(|&(_, c)| c == '\n');
-            let mut end = match end {
-                Some((i, _)) => i,
-                None => self.input.len(),
-            };
-
-            if end > 0 && bytes[end - 1] == b'\r' {
-                end -= 1;
+            match end {
+                Some((i, _)) => i + 1,
+                None => self.input.len()
             }
-
-            end
-        };
-
-        // Safe since start and end can only be valid UTF-8 borders.
-        &self.input[start..end]
+        }
     }
 
     /// Returns `true` when the `Position` points to the start of the input `&str`.
@@ -479,13 +464,13 @@ mod tests {
     fn line_of() {
         let input = "a\rb\nc\r\nd嗨";
 
-        assert_eq!(Position::new(input, 0).unwrap().line_of(), "a\rb");
-        assert_eq!(Position::new(input, 1).unwrap().line_of(), "a\rb");
-        assert_eq!(Position::new(input, 2).unwrap().line_of(), "a\rb");
-        assert_eq!(Position::new(input, 3).unwrap().line_of(), "a\rb");
-        assert_eq!(Position::new(input, 4).unwrap().line_of(), "c");
-        assert_eq!(Position::new(input, 5).unwrap().line_of(), "c");
-        assert_eq!(Position::new(input, 6).unwrap().line_of(), "c");
+        assert_eq!(Position::new(input, 0).unwrap().line_of(), "a␍b␊");
+        assert_eq!(Position::new(input, 1).unwrap().line_of(), "a␍b␊");
+        assert_eq!(Position::new(input, 2).unwrap().line_of(), "a␍b␊");
+        assert_eq!(Position::new(input, 3).unwrap().line_of(), "a␍b␊");
+        assert_eq!(Position::new(input, 4).unwrap().line_of(), "c␍␊");
+        assert_eq!(Position::new(input, 5).unwrap().line_of(), "c␍␊");
+        assert_eq!(Position::new(input, 6).unwrap().line_of(), "c␍␊");
         assert_eq!(Position::new(input, 7).unwrap().line_of(), "d嗨");
         assert_eq!(Position::new(input, 8).unwrap().line_of(), "d嗨");
         assert_eq!(Position::new(input, 11).unwrap().line_of(), "d嗨");
@@ -502,14 +487,14 @@ mod tests {
     fn line_of_new_line() {
         let input = "\n";
 
-        assert_eq!(Position::new(input, 0).unwrap().line_of(), "");
+        assert_eq!(Position::new(input, 0).unwrap().line_of(), "␊");
     }
 
     #[test]
     fn line_of_between_new_line() {
         let input = "\n\n";
 
-        assert_eq!(Position::new(input, 1).unwrap().line_of(), "");
+        assert_eq!(Position::new(input, 1).unwrap().line_of(), "␊");
     }
 
     fn measure_skip(input: &str, pos: usize, n: usize) -> Option<usize> {
