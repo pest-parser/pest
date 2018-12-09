@@ -1,15 +1,47 @@
 sudo: required
 language: rust
 cache: cargo
+
 os:
   - linux
-rust:
-  - stable
-  - nightly
+
 matrix:
+  include:
+    - name: stable
+      rust: stable
+      before_script: cargo bootstrap
+      script:
+        cargo build --all --verbose &&
+        cargo test --all --verbose &&
+        cargo doc --all --verbose
+    - name: style
+      rust: 1.31.0 # Pinned warnings
+      install:
+      - rustup component add clippy
+      - rustup component add rustfmt
+      before_script: cargo bootstrap
+      script:
+      - cargo clippy --all -- -D warnings
+      - cargo fmt --all -- --check
+    - name: minimal versions
+      rust: nightly-2018-12-08 # Arbitrary nightly for unstable cargo feature -- make this MSRV build later?
+      before_script:
+        - cargo -Z minimal-versions generate-lockfile
+        - cargo bootstrap
+      script: cargo test --all --verbose
+    - name: coverage
+      rust: nightly-2018-12-08 # Update this when updating tarpaulin
+      env: RUSTFLAGS="--cfg procmacro2_semver_exempt"
+      install: cargo install cargo-tarpaulin --version 0.6.10
+      before_script: cargo bootstrap
+      script: cargo tarpaulin --out Xml
+      after_success: bash <(curl -s https://codecov.io/bash)
   allow_failures:
-    - rust: nightly
+    - name: style # TODO(CAD97): Fix this build and require it
+    - name: minimal versions # Remove once it passes :D
+    - name: coverage # So builds don't have to wait on it
   fast_finish: true
+
 addons:
   apt:
     packages:
@@ -26,20 +58,3 @@ branches:
     - master
 notifications:
   email: false
-install:
-  - rustup component add clippy-preview
-script:
-  # Need a custom script because we are using cargo workspaces.
-  - |
-      cargo bootstrap && # dynamic build dependency of pest_meta
-      cargo clippy --all --verbose -- -D clippy &&
-      cargo build --all --verbose &&
-      cargo test --all --verbose &&
-      cargo doc --all --verbose
-after_success:
-  - |
-      if [[ $TRAVIS_RUST_VERSION =~ nightly ]]; then
-        RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin
-        cargo tarpaulin --out Xml &&
-        bash <(curl -s https://codecov.io/bash)
-      fi
