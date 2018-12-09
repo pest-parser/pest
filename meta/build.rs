@@ -5,12 +5,10 @@ use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
-use std::process::{Command};
+use std::process::Command;
 
 fn display_digest(digest: &[u8]) -> String {
-    digest.iter()
-        .map(|byte| format!("{:02x}", byte))
-        .collect()
+    digest.iter().map(|byte| format!("{:02x}", byte)).collect()
 }
 
 fn main() {
@@ -49,14 +47,16 @@ fn main() {
 
             // This "dynamic linking" is probably so fragile I don't even want to hear it
             let status = Command::new(manifest_dir.join("../target/debug/pest_bootstrap"))
-                .spawn().unwrap_or_else(|_| {
+                .spawn()
+                .unwrap_or_else(|_| {
                     panic!(
                         "Bootstrap failed because no bootstrap executable was found. \
-                        Please run `cargo build --package pest_bootstrap` or `cargo bootstrap` \
-                        and then try again.",
+                         Please run `cargo build --package pest_bootstrap` or `cargo bootstrap` \
+                         and then try again.",
                     )
                 })
-                .wait().unwrap();
+                .wait()
+                .unwrap();
             if !status.success() {
                 panic!("Bootstrap failed");
             }
@@ -64,6 +64,9 @@ fn main() {
             println!("       Fresh `meta/src/grammar.rs`");
         }
     } else {
-        assert!(grammar_rs_path.exists(), "package is broken; does not contain grammar.rs");
+        assert!(
+            grammar_rs_path.exists(),
+            "package is broken; does not contain grammar.rs"
+        );
     }
 }

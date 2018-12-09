@@ -29,20 +29,20 @@ pub struct Pairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
     start: usize,
-    end: usize
+    end: usize,
 }
 
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &str,
     start: usize,
-    end: usize
+    end: usize,
 ) -> Pairs<R> {
     Pairs {
         queue,
         input,
         start,
-        end
+        end,
     }
 }
 
@@ -107,7 +107,8 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     #[inline]
     pub fn concat(&self) -> String {
-        self.clone().fold(String::new(), |string, pair| string + pair.as_str())
+        self.clone()
+            .fold(String::new(), |string, pair| string + pair.as_str())
     }
 
     /// Flattens the `Pairs`.
@@ -182,7 +183,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
             QueueableToken::Start {
                 end_token_index, ..
             } => end_token_index,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -191,7 +192,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
             QueueableToken::End {
                 start_token_index, ..
             } => start_token_index,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -249,8 +250,10 @@ impl<'i, R: RuleType> fmt::Display for Pairs<'i, R> {
 
 impl<'i, R: PartialEq> PartialEq for Pairs<'i, R> {
     fn eq(&self, other: &Pairs<'i, R>) -> bool {
-        Rc::ptr_eq(&self.queue, &other.queue) && ptr::eq(self.input, other.input)
-            && self.start == other.start && self.end == other.end
+        Rc::ptr_eq(&self.queue, &other.queue)
+            && ptr::eq(self.input, other.input)
+            && self.start == other.start
+            && self.end == other.end
     }
 }
 
@@ -267,8 +270,8 @@ impl<'i, R: Hash> Hash for Pairs<'i, R> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::Parser;
     use super::super::super::macros::tests::*;
+    use super::super::super::Parser;
 
     #[test]
     fn as_str() {
@@ -291,12 +294,12 @@ mod tests {
         assert_eq!(
             format!("{:?}", pairs),
             "[\
-                Pair { rule: a, span: Span { str: \"abc\", start: 0, end: 3 }, inner: [\
-                    Pair { rule: b, span: Span { str: \"b\", start: 1, end: 2 }, inner: [] }\
-                ] }, \
-                Pair { rule: c, span: Span { str: \"e\", start: 4, end: 5 }, inner: [] }\
-            ]"
-        .to_owned()
+             Pair { rule: a, span: Span { str: \"abc\", start: 0, end: 3 }, inner: [\
+             Pair { rule: b, span: Span { str: \"b\", start: 1, end: 2 }, inner: [] }\
+             ] }, \
+             Pair { rule: c, span: Span { str: \"e\", start: 4, end: 5 }, inner: [] }\
+             ]"
+            .to_owned()
         );
     }
 

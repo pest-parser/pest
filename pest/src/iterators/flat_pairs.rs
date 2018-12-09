@@ -23,20 +23,20 @@ pub struct FlatPairs<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
     start: usize,
-    end: usize
+    end: usize,
 }
 
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &str,
     start: usize,
-    end: usize
+    end: usize,
 ) -> FlatPairs<R> {
     FlatPairs {
         queue,
         input,
         start,
-        end
+        end,
     }
 }
 
@@ -87,7 +87,7 @@ impl<'i, R: RuleType> FlatPairs<'i, R> {
     fn is_start(&self, index: usize) -> bool {
         match self.queue[index] {
             QueueableToken::Start { .. } => true,
-            QueueableToken::End { .. } => false
+            QueueableToken::End { .. } => false,
         }
     }
 }
@@ -136,15 +136,15 @@ impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
             queue: Rc::clone(&self.queue),
             input: self.input,
             start: self.start,
-            end: self.end
+            end: self.end,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::Parser;
     use super::super::super::macros::tests::*;
+    use super::super::super::Parser;
 
     #[test]
     fn iter_for_flat_pairs() {

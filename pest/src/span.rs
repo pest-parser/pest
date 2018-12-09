@@ -28,7 +28,7 @@ pub struct Span<'i> {
     /// # Safety
     ///
     /// Must be a valid character boundary index into `input`.
-    end: usize
+    end: usize,
 }
 
 impl<'i> Span<'i> {

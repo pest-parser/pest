@@ -25,7 +25,7 @@
 //! * API reference on [docs.rs]
 //! * play with grammars and share them on our [fiddle]
 //! * leave feedback, ask questions, or greet us on [Gitter]
-//! 
+//!
 //! [book]: https://pest-parser.github.io/book
 //! [docs.rs]: https://docs.rs/pest
 //! [fiddle]: https://pest-parser.github.io/#editor
@@ -62,7 +62,7 @@
 extern crate ucd_trie;
 
 pub use parser::Parser;
-pub use parser_state::{state, Atomicity, Lookahead, ParseResult, ParserState, MatchDir};
+pub use parser_state::{state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState};
 pub use position::Position;
 pub use span::Span;
 use std::fmt::Debug;

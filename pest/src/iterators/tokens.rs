@@ -12,9 +12,9 @@ use std::rc::Rc;
 use std::str;
 
 use super::queueable_token::QueueableToken;
-use RuleType;
 use position;
 use token::Token;
+use RuleType;
 
 /// An iterator over [`Token`]s. It is created by [`Pair::tokens`] and [`Pairs::tokens`].
 ///
@@ -29,7 +29,7 @@ pub struct Tokens<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
     start: usize,
-    end: usize
+    end: usize,
 }
 
 // TODO(safety): QueueableTokens must be valid indices into input.
@@ -37,13 +37,17 @@ pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &str,
     start: usize,
-    end: usize
+    end: usize,
 ) -> Tokens<R> {
     if cfg!(debug_assertions) {
         for tok in queue.iter() {
             match *tok {
-                QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } =>
-                    assert!(input.get(input_pos..).is_some(), "💥 UNSAFE `Tokens` CREATED 💥")
+                QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } => {
+                    assert!(
+                        input.get(input_pos..).is_some(),
+                        "💥 UNSAFE `Tokens` CREATED 💥"
+                    )
+                }
             }
         }
     }
@@ -52,7 +56,7 @@ pub fn new<R: RuleType>(
         queue,
         input,
         start,
-        end
+        end,
     }
 }
 
@@ -61,17 +65,17 @@ impl<'i, R: RuleType> Tokens<'i, R> {
         match self.queue[index] {
             QueueableToken::Start {
                 end_token_index,
-                input_pos
+                input_pos,
             } => {
                 let rule = match self.queue[end_token_index] {
                     QueueableToken::End { rule, .. } => rule,
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 };
 
                 Token::Start {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::Position::new_unchecked(self.input, input_pos) }
+                    pos: unsafe { position::Position::new_unchecked(self.input, input_pos) },
                 }
             }
             QueueableToken::End {
@@ -80,7 +84,7 @@ impl<'i, R: RuleType> Tokens<'i, R> {
                 Token::End {
                     rule,
                     // QueueableTokens are safely created.
-                    pos: unsafe { position::Position::new_unchecked(self.input, input_pos) }
+                    pos: unsafe { position::Position::new_unchecked(self.input, input_pos) },
                 }
             }
         }
@@ -125,9 +129,9 @@ impl<'i, R: RuleType> fmt::Debug for Tokens<'i, R> {
 
 #[cfg(test)]
 mod tests {
-    use super::Token;
-    use super::super::super::Parser;
     use super::super::super::macros::tests::*;
+    use super::super::super::Parser;
+    use super::Token;
 
     #[test]
     fn double_ended_iter_for_tokens() {

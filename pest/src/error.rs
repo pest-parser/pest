@@ -14,9 +14,9 @@ use std::error;
 use std::fmt;
 use std::mem;
 
-use RuleType;
 use position::Position;
 use span::Span;
+use RuleType;
 
 /// Parse-related error type.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -40,13 +40,13 @@ pub enum ErrorVariant<R> {
         /// Positive attempts
         positives: Vec<R>,
         /// Negative attempts
-        negatives: Vec<R>
+        negatives: Vec<R>,
     },
     /// Custom error with a message
     CustomError {
         /// Short explanation
-        message: String
-    }
+        message: String,
+    },
 }
 
 /// Where an `Error` has occurred.
@@ -55,7 +55,7 @@ pub enum InputLocation {
     /// `Error` was created by `Error::new_from_pos`
     Pos(usize),
     /// `Error` was created by `Error::new_from_span`
-    Span((usize, usize))
+    Span((usize, usize)),
 }
 
 /// Line/column where an `Error` has occurred.
@@ -64,7 +64,7 @@ pub enum LineColLocation {
     /// Line/column pair if `Error` was created by `Error::new_from_pos`
     Pos((usize, usize)),
     /// Line/column pairs if `Error` was created by `Error::new_from_span`
-    Span((usize, usize), (usize, usize))
+    Span((usize, usize), (usize, usize)),
 }
 
 impl<R: RuleType> Error<R> {
@@ -102,7 +102,7 @@ impl<R: RuleType> Error<R> {
             path: None,
             line: pos.line_of().to_owned(),
             continued_line: None,
-            line_col: LineColLocation::Pos(pos.line_col())
+            line_col: LineColLocation::Pos(pos.line_col()),
         }
     }
 
@@ -148,7 +148,7 @@ impl<R: RuleType> Error<R> {
             path: None,
             line: span.start_pos().line_of().to_owned(),
             continued_line,
-            line_col: LineColLocation::Span(span.start_pos().line_col(), span.end_pos().line_col())
+            line_col: LineColLocation::Span(span.start_pos().line_col(), span.end_pos().line_col()),
         }
     }
 
@@ -219,17 +219,17 @@ impl<R: RuleType> Error<R> {
     /// ```
     pub fn renamed_rules<F>(mut self, f: F) -> Error<R>
     where
-        F: FnMut(&R) -> String
+        F: FnMut(&R) -> String,
     {
         let variant = match self.variant {
             ErrorVariant::ParsingError {
                 positives,
-                negatives
+                negatives,
             } => {
                 let message = Error::parsing_error_message(&positives, &negatives, f);
                 ErrorVariant::CustomError { message }
             }
-            variant => variant
+            variant => variant,
         };
 
         self.variant = variant;
@@ -240,14 +240,14 @@ impl<R: RuleType> Error<R> {
     fn start(&self) -> (usize, usize) {
         match self.line_col {
             LineColLocation::Pos(line_col) => line_col,
-            LineColLocation::Span(start_line_col, _) => start_line_col
+            LineColLocation::Span(start_line_col, _) => start_line_col,
         }
     }
 
     fn spacing(&self) -> String {
         let line = match self.line_col {
             LineColLocation::Pos((line, _)) => line,
-            LineColLocation::Span((start_line, _), (end_line, _)) => cmp::max(start_line, end_line)
+            LineColLocation::Span((start_line, _), (end_line, _)) => cmp::max(start_line, end_line),
         };
 
         let line_str_len = format!("{}", line).len();
@@ -275,7 +275,7 @@ impl<R: RuleType> Error<R> {
 
                 Some(end)
             }
-            _ => None
+            _ => None,
         };
         let offset = start - 1;
 
@@ -304,17 +304,15 @@ impl<R: RuleType> Error<R> {
         match self.variant {
             ErrorVariant::ParsingError {
                 ref positives,
-                ref negatives
+                ref negatives,
             } => Error::parsing_error_message(positives, negatives, |r| format!("{:?}", r)),
-            ErrorVariant::CustomError { ref message } => {
-                message.clone()
-            }
+            ErrorVariant::CustomError { ref message } => message.clone(),
         }
     }
 
     fn parsing_error_message<F>(positives: &[R], negatives: &[R], mut f: F) -> String
     where
-        F: FnMut(&R) -> String
+        F: FnMut(&R) -> String,
     {
         match (negatives.is_empty(), positives.is_empty()) {
             (false, false) => format!(
@@ -324,13 +322,13 @@ impl<R: RuleType> Error<R> {
             ),
             (false, true) => format!("unexpected {}", Error::enumerate(negatives, &mut f)),
             (true, false) => format!("expected {}", Error::enumerate(positives, &mut f)),
-            (true, true) => "unknown parsing error".to_owned()
+            (true, true) => "unknown parsing error".to_owned(),
         }
     }
 
     fn enumerate<F>(rules: &[R], f: &mut F) -> String
     where
-        F: FnMut(&R) -> String
+        F: FnMut(&R) -> String,
     {
         match rules.len() {
             1 => f(&rules[0]),
@@ -349,7 +347,11 @@ impl<R: RuleType> Error<R> {
 
     pub(crate) fn format(&self) -> String {
         let spacing = self.spacing();
-        let path = self.path.as_ref().map(|path| format!("{}:", path)).unwrap_or_default();
+        let path = self
+            .path
+            .as_ref()
+            .map(|path| format!("{}:", path))
+            .unwrap_or_default();
 
         let pair = (self.line_col.clone(), &self.continued_line);
         if let (LineColLocation::Span(_, end), &Some(ref continued_line)) = pair {
@@ -426,15 +428,15 @@ impl<'i, R: RuleType> error::Error for Error<R> {
     fn description(&self) -> &str {
         match self.variant {
             ErrorVariant::ParsingError { .. } => "parsing error",
-            ErrorVariant::CustomError { ref message } => message
+            ErrorVariant::CustomError { ref message } => message,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::position;
+    use super::*;
 
     #[test]
     fn display_parsing_error_mixed() {
@@ -443,9 +445,9 @@ mod tests {
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2, 3],
-                negatives: vec![4, 5, 6]
+                negatives: vec![4, 5, 6],
             },
-            pos
+            pos,
         );
 
         assert_eq!(
@@ -457,7 +459,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -468,9 +471,9 @@ mod tests {
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2],
-                negatives: vec![]
+                negatives: vec![],
             },
-            pos
+            pos,
         );
 
         assert_eq!(
@@ -482,7 +485,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = expected 1 or 2",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -493,9 +497,9 @@ mod tests {
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![],
-                negatives: vec![4, 5, 6]
+                negatives: vec![4, 5, 6],
             },
-            pos
+            pos,
         );
 
         assert_eq!(
@@ -507,7 +511,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -518,9 +523,9 @@ mod tests {
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![],
-                negatives: vec![]
+                negatives: vec![],
             },
-            pos
+            pos,
         );
 
         assert_eq!(
@@ -532,7 +537,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = unknown parsing error",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -542,9 +548,9 @@ mod tests {
         let pos = position::Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::CustomError {
-                message: "error: big one".to_owned()
+                message: "error: big one".to_owned(),
             },
-            pos
+            pos,
         );
 
         assert_eq!(
@@ -556,7 +562,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = error: big one",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -567,9 +574,9 @@ mod tests {
         let end = position::Position::new(input, 9).unwrap();
         let error: Error<u32> = Error::new_from_span(
             ErrorVariant::CustomError {
-                message: "error: big one".to_owned()
+                message: "error: big one".to_owned(),
             },
-            start.span(&end)
+            start.span(&end),
         );
 
         assert_eq!(
@@ -582,7 +589,8 @@ mod tests {
                 "  |  ^^",
                 "  |",
                 "  = error: big one",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -593,9 +601,9 @@ mod tests {
         let end = position::Position::new(input, 9).unwrap();
         let error: Error<u32> = Error::new_from_span(
             ErrorVariant::CustomError {
-                message: "error: big one".to_owned()
+                message: "error: big one".to_owned(),
             },
-            start.span(&end)
+            start.span(&end),
         );
 
         assert_eq!(
@@ -609,7 +617,8 @@ mod tests {
                 "  |  ^^",
                 "  |",
                 "  = error: big one",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -620,9 +629,9 @@ mod tests {
         let end = position::Position::new(input, 8).unwrap();
         let error: Error<u32> = Error::new_from_span(
             ErrorVariant::CustomError {
-                message: "error: big one".to_owned()
+                message: "error: big one".to_owned(),
             },
-            start.span(&end)
+            start.span(&end),
         );
 
         assert_eq!(
@@ -635,7 +644,8 @@ mod tests {
                 "  | ^----^",
                 "  |",
                 "  = error: big one",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -646,10 +656,11 @@ mod tests {
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2, 3],
-                negatives: vec![4, 5, 6]
+                negatives: vec![4, 5, 6],
             },
-            pos
-        ).renamed_rules(|n| format!("{}", n + 1));
+            pos,
+        )
+        .renamed_rules(|n| format!("{}", n + 1));
 
         assert_eq!(
             format!("{}", error),
@@ -660,7 +671,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = unexpected 5, 6, or 7; expected 2, 3, or 4",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -671,10 +683,11 @@ mod tests {
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2, 3],
-                negatives: vec![4, 5, 6]
+                negatives: vec![4, 5, 6],
             },
-            pos
-        ).with_path("file.rs");
+            pos,
+        )
+        .with_path("file.rs");
 
         assert_eq!(
             format!("{}", error),
@@ -685,7 +698,8 @@ mod tests {
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 }

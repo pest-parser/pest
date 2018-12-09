@@ -189,7 +189,6 @@ macro_rules! parses_to {
 macro_rules! fails_with {
     ( parser: $parser:expr, input: $string:expr, rule: $rule:expr,
       positives: $positives:expr, negatives: $negatives:expr, pos: $pos:expr ) => {
-
         #[allow(unused_mut)]
         #[allow(unused_variables)]
         {
@@ -197,19 +196,22 @@ macro_rules! fails_with {
             let error = vm.parse($rule, $string).unwrap_err();
 
             match error.variant {
-                ::pest::error::ErrorVariant::ParsingError { positives, negatives } => {
+                ::pest::error::ErrorVariant::ParsingError {
+                    positives,
+                    negatives,
+                } => {
                     let positives: Vec<&str> = $positives;
                     let negatives: Vec<&str> = $negatives;
 
                     assert_eq!(positives, positives);
                     assert_eq!(negatives, negatives);
                 }
-                _ => unreachable!()
+                _ => unreachable!(),
             };
 
             match error.location {
                 ::pest::error::InputLocation::Pos(pos) => assert_eq!(pos, $pos),
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         }
     };

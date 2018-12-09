@@ -2,16 +2,16 @@ extern crate pest;
 
 use std::io::{self, Write};
 
-use pest::{state, ParseResult, Parser, ParserState};
 use pest::error::Error;
 use pest::iterators::Pairs;
+use pest::{state, ParseResult, Parser, ParserState};
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum Rule {
     expr,
     paren,
-    paren_end
+    paren_end,
 }
 
 struct ParenParser;
@@ -42,7 +42,7 @@ impl Parser<Rule> for ParenParser {
         state(input, |state| match rule {
             Rule::expr => expr(state),
             Rule::paren => paren(state),
-            _ => unreachable!()
+            _ => unreachable!(),
         })
     }
 }
@@ -69,7 +69,7 @@ fn main() {
 
         match ParenParser::parse(Rule::expr, &line) {
             Ok(pairs) => println!("{:?}", expr(pairs)),
-            Err(e) => println!("\n{}", e)
+            Err(e) => println!("\n{}", e),
         };
     }
 }

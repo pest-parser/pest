@@ -10,10 +10,10 @@
 #[macro_use]
 extern crate pest;
 
-use pest::{state, ParseResult, Parser, ParserState};
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
+use pest::{state, ParseResult, Parser, ParserState};
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -26,7 +26,7 @@ enum Rule {
     times,
     divide,
     modulus,
-    power
+    power,
 }
 
 struct CalculatorParser;
@@ -104,7 +104,7 @@ impl Parser<Rule> for CalculatorParser {
 
         state(input, |state| match rule {
             Rule::expression => expression(state),
-            _ => unreachable!()
+            _ => unreachable!(),
         })
     }
 }
@@ -118,13 +118,13 @@ fn consume<'i>(pair: Pair<'i, Rule>, climber: &PrecClimber<Rule>) -> i32 {
         Rule::divide => lhs / rhs,
         Rule::modulus => lhs % rhs,
         Rule::power => lhs.pow(rhs as u32),
-        _ => unreachable!()
+        _ => unreachable!(),
     };
 
     match pair.as_rule() {
         Rule::expression => climber.climb(pair.into_inner(), primary, infix),
         Rule::number => pair.as_str().parse().unwrap(),
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }
 
@@ -190,7 +190,8 @@ fn expression() {
 fn prec_climb() {
     let climber = PrecClimber::new(vec![
         Operator::new(Rule::plus, Assoc::Left) | Operator::new(Rule::minus, Assoc::Left),
-        Operator::new(Rule::times, Assoc::Left) | Operator::new(Rule::divide, Assoc::Left)
+        Operator::new(Rule::times, Assoc::Left)
+            | Operator::new(Rule::divide, Assoc::Left)
             | Operator::new(Rule::modulus, Assoc::Left),
         Operator::new(Rule::power, Assoc::Right),
     ]);

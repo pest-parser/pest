@@ -15,5 +15,5 @@ pub enum Token<'i, R> {
     /// The starting `Position` of a matched `Rule`
     Start { rule: R, pos: Position<'i> },
     /// The ending `Position` of a matched `Rule`
-    End { rule: R, pos: Position<'i> }
+    End { rule: R, pos: Position<'i> },
 }

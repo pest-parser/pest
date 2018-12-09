@@ -16,8 +16,8 @@ use std::str;
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
-use RuleType;
 use span::{self, Span};
+use RuleType;
 
 /// A matching pair of [`Token`]s and everything between them.
 ///
@@ -35,7 +35,7 @@ pub struct Pair<'i, R> {
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
     /// Token index into `queue`.
-    start: usize
+    start: usize,
 }
 
 // TODO(safety): QueueableTokens must be valid indices into input.
@@ -43,8 +43,12 @@ pub fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &str, start: u
     if cfg!(debug_assertions) {
         for tok in queue.iter() {
             match *tok {
-                QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } =>
-                    assert!(input.get(input_pos..).is_some(), "💥 UNSAFE `Pair` CREATED 💥")
+                QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } => {
+                    assert!(
+                        input.get(input_pos..).is_some(),
+                        "💥 UNSAFE `Pair` CREATED 💥"
+                    )
+                }
             }
         }
     }
@@ -52,7 +56,7 @@ pub fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &str, start: u
     Pair {
         queue,
         input,
-        start
+        start,
     }
 }
 
@@ -82,7 +86,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
     pub fn as_rule(&self) -> R {
         match self.queue[self.pair()] {
             QueueableToken::End { rule, .. } => rule,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -235,7 +239,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
             QueueableToken::Start {
                 end_token_index, ..
             } => end_token_index,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -285,7 +289,8 @@ impl<'i, R: RuleType> fmt::Display for Pair<'i, R> {
 
 impl<'i, R: PartialEq> PartialEq for Pair<'i, R> {
     fn eq(&self, other: &Pair<'i, R>) -> bool {
-        Rc::ptr_eq(&self.queue, &other.queue) && ptr::eq(self.input, other.input)
+        Rc::ptr_eq(&self.queue, &other.queue)
+            && ptr::eq(self.input, other.input)
             && self.start == other.start
     }
 }

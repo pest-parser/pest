@@ -55,28 +55,33 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
             Expr::Rep(expr) => OptimizedExpr::Rep(Box::new(to_optimized(*expr))),
             Expr::Skip(strings) => OptimizedExpr::Skip(strings),
             Expr::Push(expr) => OptimizedExpr::Push(Box::new(to_optimized(*expr))),
-            Expr::RepOnce(_) | Expr::RepExact(..) | Expr::RepMin(..) | Expr::RepMax(..) | Expr::RepMinMax(..) => {
-                unreachable!("No valid transformation to OptimizedRule")
-            }
+            Expr::RepOnce(_)
+            | Expr::RepExact(..)
+            | Expr::RepMin(..)
+            | Expr::RepMax(..)
+            | Expr::RepMinMax(..) => unreachable!("No valid transformation to OptimizedRule"),
         }
     }
 
     OptimizedRule {
         name: rule.name,
         ty: rule.ty,
-        expr: to_optimized(rule.expr)
+        expr: to_optimized(rule.expr),
     }
 }
 
 fn to_hash_map(rules: &[OptimizedRule]) -> HashMap<String, OptimizedExpr> {
-    rules.iter().map(|r| (r.name.clone(), r.expr.clone())).collect()
+    rules
+        .iter()
+        .map(|r| (r.name.clone(), r.expr.clone()))
+        .collect()
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OptimizedRule {
     pub name: String,
     pub ty: RuleType,
-    pub expr: OptimizedExpr
+    pub expr: OptimizedExpr,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -94,7 +99,7 @@ pub enum OptimizedExpr {
     Rep(Box<OptimizedExpr>),
     Skip(Vec<String>),
     Push(Box<OptimizedExpr>),
-    RestoreOnErr(Box<OptimizedExpr>)
+    RestoreOnErr(Box<OptimizedExpr>),
 }
 
 impl OptimizedExpr {
@@ -104,11 +109,11 @@ impl OptimizedExpr {
 
     pub fn map_top_down<F>(self, mut f: F) -> OptimizedExpr
     where
-        F: FnMut(OptimizedExpr) -> OptimizedExpr
+        F: FnMut(OptimizedExpr) -> OptimizedExpr,
     {
         fn map_internal<F>(expr: OptimizedExpr, f: &mut F) -> OptimizedExpr
         where
-            F: FnMut(OptimizedExpr) -> OptimizedExpr
+            F: FnMut(OptimizedExpr) -> OptimizedExpr,
         {
             let expr = f(expr);
 
@@ -144,7 +149,7 @@ impl OptimizedExpr {
                     let mapped = Box::new(map_internal(*expr, f));
                     OptimizedExpr::Push(mapped)
                 }
-                expr => expr
+                expr => expr,
             }
         }
 
@@ -153,11 +158,11 @@ impl OptimizedExpr {
 
     pub fn map_bottom_up<F>(self, mut f: F) -> OptimizedExpr
     where
-        F: FnMut(OptimizedExpr) -> OptimizedExpr
+        F: FnMut(OptimizedExpr) -> OptimizedExpr,
     {
         fn map_internal<F>(expr: OptimizedExpr, f: &mut F) -> OptimizedExpr
         where
-            F: FnMut(OptimizedExpr) -> OptimizedExpr
+            F: FnMut(OptimizedExpr) -> OptimizedExpr,
         {
             let mapped = match expr {
                 OptimizedExpr::PosPred(expr) => {
@@ -191,7 +196,7 @@ impl OptimizedExpr {
                     let mapped = Box::new(map_internal(*expr, f));
                     OptimizedExpr::Push(mapped)
                 }
-                expr => expr
+                expr => expr,
             };
 
             f(mapped)
@@ -204,7 +209,7 @@ impl OptimizedExpr {
 pub struct OptimizedExprTopDownIterator {
     current: Option<OptimizedExpr>,
     next: Option<OptimizedExpr>,
-    right_branches: Vec<OptimizedExpr>
+    right_branches: Vec<OptimizedExpr>,
 }
 
 impl OptimizedExprTopDownIterator {
@@ -212,7 +217,7 @@ impl OptimizedExprTopDownIterator {
         let mut iter = OptimizedExprTopDownIterator {
             current: None,
             next: None,
-            right_branches: vec![]
+            right_branches: vec![],
         };
         iter.iterate_expr(expr.clone());
         iter
@@ -265,289 +270,253 @@ mod tests {
 
     #[test]
     fn rotate() {
-        let rules = vec![
-            Rule {
-                name: "rule".to_owned(),
-                ty: RuleType::Normal,
-                expr: Expr::Choice(
+        let rules = vec![Rule {
+            name: "rule".to_owned(),
+            ty: RuleType::Normal,
+            expr: Expr::Choice(
+                Box::new(Expr::Choice(
                     Box::new(Expr::Choice(
-                        Box::new(Expr::Choice(
-                            Box::new(Expr::Str("a".to_owned())),
-                            Box::new(Expr::Str("b".to_owned()))
-                        )),
-                        Box::new(Expr::Str("c".to_owned()))
+                        Box::new(Expr::Str("a".to_owned())),
+                        Box::new(Expr::Str("b".to_owned())),
                     )),
-                    Box::new(Expr::Str("d".to_owned()))
-                )
-            },
-        ];
-        let rotated = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Normal,
-                expr: OptimizedExpr::Choice(
-                    Box::new(OptimizedExpr::Str("a".to_owned())),
+                    Box::new(Expr::Str("c".to_owned())),
+                )),
+                Box::new(Expr::Str("d".to_owned())),
+            ),
+        }];
+        let rotated = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Normal,
+            expr: OptimizedExpr::Choice(
+                Box::new(OptimizedExpr::Str("a".to_owned())),
+                Box::new(OptimizedExpr::Choice(
+                    Box::new(OptimizedExpr::Str("b".to_owned())),
                     Box::new(OptimizedExpr::Choice(
-                        Box::new(OptimizedExpr::Str("b".to_owned())),
-                        Box::new(OptimizedExpr::Choice(
-                            Box::new(OptimizedExpr::Str("c".to_owned())),
-                            Box::new(OptimizedExpr::Str("d".to_owned()))
-                        ))
-                    ))
-                )
-            },
-        ];
+                        Box::new(OptimizedExpr::Str("c".to_owned())),
+                        Box::new(OptimizedExpr::Str("d".to_owned())),
+                    )),
+                )),
+            ),
+        }];
 
         assert_eq!(optimize(rules), rotated);
     }
 
     #[test]
     fn skip() {
-        let rules = vec![
-            Rule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: Expr::Rep(Box::new(Expr::Seq(
-                    Box::new(Expr::NegPred(Box::new(Expr::Choice(
-                        Box::new(Expr::Str("a".to_owned())),
-                        Box::new(Expr::Str("b".to_owned()))
-                    )))),
-                    Box::new(Expr::Ident("ANY".to_owned()))
-                )))
-            },
-        ];
-        let skipped = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: OptimizedExpr::Skip(vec!["a".to_owned(), "b".to_owned()])
-            },
-        ];
+        let rules = vec![Rule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: Expr::Rep(Box::new(Expr::Seq(
+                Box::new(Expr::NegPred(Box::new(Expr::Choice(
+                    Box::new(Expr::Str("a".to_owned())),
+                    Box::new(Expr::Str("b".to_owned())),
+                )))),
+                Box::new(Expr::Ident("ANY".to_owned())),
+            ))),
+        }];
+        let skipped = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: OptimizedExpr::Skip(vec!["a".to_owned(), "b".to_owned()]),
+        }];
 
         assert_eq!(optimize(rules), skipped);
     }
 
     #[test]
     fn concat_strings() {
-        let rules = vec![
-            Rule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: Expr::Seq(
-                    Box::new(Expr::Seq(
-                        Box::new(Expr::Str("a".to_owned())),
-                        Box::new(Expr::Str("b".to_owned()))
-                    )),
-                    Box::new(Expr::Seq(
-                        Box::new(Expr::Str("c".to_owned())),
-                        Box::new(Expr::Str("d".to_owned()))
-                    ))
-                )
-            },
-        ];
-        let concatenated = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: OptimizedExpr::Str("abcd".to_owned())
-            },
-        ];
+        let rules = vec![Rule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: Expr::Seq(
+                Box::new(Expr::Seq(
+                    Box::new(Expr::Str("a".to_owned())),
+                    Box::new(Expr::Str("b".to_owned())),
+                )),
+                Box::new(Expr::Seq(
+                    Box::new(Expr::Str("c".to_owned())),
+                    Box::new(Expr::Str("d".to_owned())),
+                )),
+            ),
+        }];
+        let concatenated = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: OptimizedExpr::Str("abcd".to_owned()),
+        }];
 
         assert_eq!(optimize(rules), concatenated);
     }
 
     #[test]
     fn unroll_loop_exact() {
-        let rules = vec![
-            Rule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: Expr::RepExact(Box::new(Expr::Ident("a".to_owned())), 3)
-            },
-        ];
-        let unrolled = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: OptimizedExpr::Seq(
+        let rules = vec![Rule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: Expr::RepExact(Box::new(Expr::Ident("a".to_owned())), 3),
+        }];
+        let unrolled = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: OptimizedExpr::Seq(
+                Box::new(OptimizedExpr::Ident("a".to_owned())),
+                Box::new(OptimizedExpr::Seq(
                     Box::new(OptimizedExpr::Ident("a".to_owned())),
-                    Box::new(OptimizedExpr::Seq(
-                        Box::new(OptimizedExpr::Ident("a".to_owned())),
-                        Box::new(OptimizedExpr::Ident("a".to_owned()))
-                    ))
-                )
-            },
-        ];
+                    Box::new(OptimizedExpr::Ident("a".to_owned())),
+                )),
+            ),
+        }];
 
         assert_eq!(optimize(rules), unrolled);
     }
 
     #[test]
     fn unroll_loop_max() {
-        let rules = vec![
-            Rule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: Expr::RepMax(Box::new(Expr::Str("a".to_owned())), 3)
-            },
-        ];
-        let unrolled = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: OptimizedExpr::Seq(
+        let rules = vec![Rule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: Expr::RepMax(Box::new(Expr::Str("a".to_owned())), 3),
+        }];
+        let unrolled = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: OptimizedExpr::Seq(
+                Box::new(OptimizedExpr::Opt(Box::new(OptimizedExpr::Str(
+                    "a".to_owned(),
+                )))),
+                Box::new(OptimizedExpr::Seq(
                     Box::new(OptimizedExpr::Opt(Box::new(OptimizedExpr::Str(
-                        "a".to_owned()
+                        "a".to_owned(),
                     )))),
-                    Box::new(OptimizedExpr::Seq(
-                        Box::new(OptimizedExpr::Opt(Box::new(OptimizedExpr::Str(
-                            "a".to_owned()
-                        )))),
-                        Box::new(OptimizedExpr::Opt(Box::new(OptimizedExpr::Str(
-                            "a".to_owned()
-                        ))))
-                    ))
-                )
-            },
-        ];
+                    Box::new(OptimizedExpr::Opt(Box::new(OptimizedExpr::Str(
+                        "a".to_owned(),
+                    )))),
+                )),
+            ),
+        }];
 
         assert_eq!(optimize(rules), unrolled);
     }
 
     #[test]
     fn unroll_loop_min() {
-        let rules = vec![
-            Rule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: Expr::RepMin(Box::new(Expr::Str("a".to_owned())), 2)
-            },
-        ];
-        let unrolled = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: OptimizedExpr::Seq(
+        let rules = vec![Rule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: Expr::RepMin(Box::new(Expr::Str("a".to_owned())), 2),
+        }];
+        let unrolled = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: OptimizedExpr::Seq(
+                Box::new(OptimizedExpr::Str("a".to_owned())),
+                Box::new(OptimizedExpr::Seq(
                     Box::new(OptimizedExpr::Str("a".to_owned())),
-                    Box::new(OptimizedExpr::Seq(
-                        Box::new(OptimizedExpr::Str("a".to_owned())),
-                        Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Str(
-                            "a".to_owned()
-                        ))))
-                    ))
-                )
-            },
-        ];
+                    Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Str(
+                        "a".to_owned(),
+                    )))),
+                )),
+            ),
+        }];
 
         assert_eq!(optimize(rules), unrolled);
     }
 
     #[test]
     fn unroll_loop_min_max() {
-        let rules = vec![
-            Rule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: Expr::RepMinMax(Box::new(Expr::Str("a".to_owned())), 2, 3)
-            },
-        ];
-        let unrolled = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: OptimizedExpr::Seq(
-                    /* TODO possible room for improvement here:
-                     * if the sequences were rolled out in the opposite
-                     * order, we could further optimize the strings
-                     * in cases like this.
-                    Box::new(Expr::Str("aa".to_owned())),
-                    Box::new(Expr::Opt(
-                        Box::new(Expr::Str("a".to_owned()))
-                    ))
-                    */
+        let rules = vec![Rule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: Expr::RepMinMax(Box::new(Expr::Str("a".to_owned())), 2, 3),
+        }];
+        let unrolled = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: OptimizedExpr::Seq(
+                /* TODO possible room for improvement here:
+                 * if the sequences were rolled out in the opposite
+                 * order, we could further optimize the strings
+                 * in cases like this.
+                Box::new(Expr::Str("aa".to_owned())),
+                Box::new(Expr::Opt(
+                    Box::new(Expr::Str("a".to_owned()))
+                ))
+                */
+                Box::new(OptimizedExpr::Str("a".to_owned())),
+                Box::new(OptimizedExpr::Seq(
                     Box::new(OptimizedExpr::Str("a".to_owned())),
-                    Box::new(OptimizedExpr::Seq(
-                        Box::new(OptimizedExpr::Str("a".to_owned())),
-                        Box::new(OptimizedExpr::Opt(Box::new(OptimizedExpr::Str(
-                            "a".to_owned()
-                        ))))
-                    ))
-                )
-            },
-        ];
+                    Box::new(OptimizedExpr::Opt(Box::new(OptimizedExpr::Str(
+                        "a".to_owned(),
+                    )))),
+                )),
+            ),
+        }];
 
         assert_eq!(optimize(rules), unrolled);
     }
 
     #[test]
     fn concat_insensitive_strings() {
-        let rules = vec![
-            Rule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: Expr::Seq(
-                    Box::new(Expr::Seq(
-                        Box::new(Expr::Insens("a".to_owned())),
-                        Box::new(Expr::Insens("b".to_owned()))
-                    )),
-                    Box::new(Expr::Seq(
-                        Box::new(Expr::Insens("c".to_owned())),
-                        Box::new(Expr::Insens("d".to_owned()))
-                    ))
-                )
-            },
-        ];
-        let concatenated = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: OptimizedExpr::Insens("abcd".to_owned())
-            },
-        ];
+        let rules = vec![Rule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: Expr::Seq(
+                Box::new(Expr::Seq(
+                    Box::new(Expr::Insens("a".to_owned())),
+                    Box::new(Expr::Insens("b".to_owned())),
+                )),
+                Box::new(Expr::Seq(
+                    Box::new(Expr::Insens("c".to_owned())),
+                    Box::new(Expr::Insens("d".to_owned())),
+                )),
+            ),
+        }];
+        let concatenated = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Atomic,
+            expr: OptimizedExpr::Insens("abcd".to_owned()),
+        }];
 
         assert_eq!(optimize(rules), concatenated);
     }
 
     #[test]
     fn long_common_sequence() {
-        let rules = vec![
-            Rule {
-                name: "rule".to_owned(),
-                ty: RuleType::Silent,
-                expr: Expr::Choice(
+        let rules = vec![Rule {
+            name: "rule".to_owned(),
+            ty: RuleType::Silent,
+            expr: Expr::Choice(
+                Box::new(Expr::Seq(
+                    Box::new(Expr::Ident("a".to_owned())),
+                    Box::new(Expr::Seq(
+                        Box::new(Expr::Ident("b".to_owned())),
+                        Box::new(Expr::Ident("c".to_owned())),
+                    )),
+                )),
+                Box::new(Expr::Seq(
                     Box::new(Expr::Seq(
                         Box::new(Expr::Ident("a".to_owned())),
-                        Box::new(Expr::Seq(
-                            Box::new(Expr::Ident("b".to_owned())),
-                            Box::new(Expr::Ident("c".to_owned()))
-                        ))
+                        Box::new(Expr::Ident("b".to_owned())),
                     )),
-                    Box::new(Expr::Seq(
-                        Box::new(Expr::Seq(
-                            Box::new(Expr::Ident("a".to_owned())),
-                            Box::new(Expr::Ident("b".to_owned()))
-                        )),
-                        Box::new(Expr::Ident("d".to_owned()))
-                    ))
-                )
-            },
-        ];
-        let optimized = vec![
-            OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Silent,
-                expr: OptimizedExpr::Seq(
-                    Box::new(OptimizedExpr::Ident("a".to_owned())),
-                    Box::new(OptimizedExpr::Seq(
-                        Box::new(OptimizedExpr::Ident("b".to_owned())),
-                        Box::new(OptimizedExpr::Choice(
-                            Box::new(OptimizedExpr::Ident("c".to_owned())),
-                            Box::new(OptimizedExpr::Ident("d".to_owned()))
-                        ))
-                    ))
-                )
-            },
-        ];
+                    Box::new(Expr::Ident("d".to_owned())),
+                )),
+            ),
+        }];
+        let optimized = vec![OptimizedRule {
+            name: "rule".to_owned(),
+            ty: RuleType::Silent,
+            expr: OptimizedExpr::Seq(
+                Box::new(OptimizedExpr::Ident("a".to_owned())),
+                Box::new(OptimizedExpr::Seq(
+                    Box::new(OptimizedExpr::Ident("b".to_owned())),
+                    Box::new(OptimizedExpr::Choice(
+                        Box::new(OptimizedExpr::Ident("c".to_owned())),
+                        Box::new(OptimizedExpr::Ident("d".to_owned())),
+                    )),
+                )),
+            ),
+        }];
 
         assert_eq!(optimize(rules), optimized);
     }

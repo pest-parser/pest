@@ -10,10 +10,10 @@
 extern crate pest;
 extern crate pest_meta;
 
-use pest::{Atomicity, ParseResult, ParserState, MatchDir};
 use pest::error::Error;
 use pest::iterators::Pairs;
 use pest::unicode;
+use pest::{Atomicity, MatchDir, ParseResult, ParserState};
 use pest_meta::ast::RuleType;
 use pest_meta::optimizer::{OptimizedExpr, OptimizedRule};
 
@@ -22,7 +22,7 @@ use std::collections::HashMap;
 mod macros;
 
 pub struct Vm {
-    rules: HashMap<String, OptimizedRule>
+    rules: HashMap<String, OptimizedRule>,
 }
 
 impl Vm {
@@ -34,7 +34,7 @@ impl Vm {
     pub fn parse<'a, 'i>(
         &'a self,
         rule: &'a str,
-        input: &'i str
+        input: &'i str,
     ) -> Result<Pairs<'i, &str>, Error<&str>> {
         pest::state(input, |state| self.parse_rule(rule, state))
     }
@@ -42,7 +42,7 @@ impl Vm {
     fn parse_rule<'a, 'i>(
         &'a self,
         rule: &'a str,
-        state: Box<ParserState<'i, &'a str>>
+        state: Box<ParserState<'i, &'a str>>,
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match rule {
             "ANY" => return state.skip(1),
@@ -58,28 +58,32 @@ impl Vm {
             "ASCII_BIN_DIGIT" => return state.match_range('0'..'1'),
             "ASCII_OCT_DIGIT" => return state.match_range('0'..'7'),
             "ASCII_HEX_DIGIT" => {
-                return state.match_range('0'..'9')
+                return state
+                    .match_range('0'..'9')
                     .or_else(|state| state.match_range('a'..'f'))
-                    .or_else(|state| state.match_range('A'..'F'))
-            },
+                    .or_else(|state| state.match_range('A'..'F'));
+            }
             "ASCII_ALPHA_LOWER" => return state.match_range('a'..'z'),
             "ASCII_ALPHA_UPPER" => return state.match_range('A'..'Z'),
             "ASCII_ALPHA" => {
-                return state.match_range('a'..'z')
-                    .or_else(|state| state.match_range('A'..'Z'))
-            },
+                return state
+                    .match_range('a'..'z')
+                    .or_else(|state| state.match_range('A'..'Z'));
+            }
             "ASCII_ALPHANUMERIC" => {
-                return state.match_range('a'..'z')
+                return state
+                    .match_range('a'..'z')
                     .or_else(|state| state.match_range('A'..'Z'))
-                    .or_else(|state| state.match_range('0'..'9'))
-            },
+                    .or_else(|state| state.match_range('0'..'9'));
+            }
             "ASCII" => return state.match_range('\x00'..'\x7f'),
             "NEWLINE" => {
-                return state.match_string("\n")
+                return state
+                    .match_string("\n")
                     .or_else(|state| state.match_string("\r\n"))
-                    .or_else(|state| state.match_string("\r"))
-            },
-            _ => ()
+                    .or_else(|state| state.match_string("\r"));
+            }
+            _ => (),
         };
 
         if let Some(rule) = self.rules.get(rule) {
@@ -103,7 +107,7 @@ impl Vm {
                     }),
                     RuleType::NonAtomic => state.atomic(Atomicity::Atomic, |state| {
                         state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
-                    })
+                    }),
                 }
             } else {
                 match rule.ty {
@@ -123,7 +127,7 @@ impl Vm {
                     }
                     RuleType::NonAtomic => state.atomic(Atomicity::NonAtomic, move |state| {
                         state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
-                    })
+                    }),
                 }
             }
         } else {
@@ -140,7 +144,7 @@ impl Vm {
     fn parse_expr<'a, 'i>(
         &'a self,
         expr: &'a OptimizedExpr,
-        state: Box<ParserState<'i, &'a str>>
+        state: Box<ParserState<'i, &'a str>>,
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match *expr {
             OptimizedExpr::Str(ref string) => state.match_string(string),
@@ -152,7 +156,9 @@ impl Vm {
                 state.match_range(start..end)
             }
             OptimizedExpr::Ident(ref name) => self.parse_rule(name, state),
-            OptimizedExpr::PeekSlice(start, end) => state.stack_match_peek_slice(start, end, MatchDir::BottomToTop),
+            OptimizedExpr::PeekSlice(start, end) => {
+                state.stack_match_peek_slice(start, end, MatchDir::BottomToTop)
+            }
             OptimizedExpr::PosPred(ref expr) => {
                 state.lookahead(true, |state| self.parse_expr(expr, state))
             }
@@ -164,7 +170,8 @@ impl Vm {
                     .and_then(|state| self.skip(state))
                     .and_then(|state| self.parse_expr(rhs, state))
             }),
-            OptimizedExpr::Choice(ref lhs, ref rhs) => self.parse_expr(lhs, state)
+            OptimizedExpr::Choice(ref lhs, ref rhs) => self
+                .parse_expr(lhs, state)
                 .or_else(|state| self.parse_expr(rhs, state)),
             OptimizedExpr::Opt(ref expr) => state.optional(|state| self.parse_expr(expr, state)),
             OptimizedExpr::Rep(ref expr) => state.sequence(|state| {
@@ -180,10 +187,12 @@ impl Vm {
                 })
             }),
             OptimizedExpr::Push(ref expr) => state.stack_push(|state| self.parse_expr(expr, state)),
-            OptimizedExpr::Skip(ref strings) => state.skip_until(&strings
-                .iter()
-                .map(|state| state.as_str())
-                .collect::<Vec<&str>>()),
+            OptimizedExpr::Skip(ref strings) => state.skip_until(
+                &strings
+                    .iter()
+                    .map(|state| state.as_str())
+                    .collect::<Vec<&str>>(),
+            ),
             OptimizedExpr::RestoreOnErr(ref expr) => {
                 state.restore_on_err(|state| self.parse_expr(expr, state))
             }
@@ -192,39 +201,47 @@ impl Vm {
 
     fn skip<'a, 'i>(
         &'a self,
-        state: Box<ParserState<'i, &'a str>>
+        state: Box<ParserState<'i, &'a str>>,
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match (
             self.rules.contains_key("WHITESPACE"),
-            self.rules.contains_key("COMMENT")
+            self.rules.contains_key("COMMENT"),
         ) {
             (false, false) => Ok(state),
-            (true, false) => if state.atomicity() == Atomicity::NonAtomic {
-                state.repeat(|state| self.parse_rule("WHITESPACE", state))
-            } else {
-                Ok(state)
-            },
-            (false, true) => if state.atomicity() == Atomicity::NonAtomic {
-                state.repeat(|state| self.parse_rule("COMMENT", state))
-            } else {
-                Ok(state)
-            },
-            (true, true) => if state.atomicity() == Atomicity::NonAtomic {
-                state.sequence(|state| {
-                    state
-                        .repeat(|state| self.parse_rule("WHITESPACE", state))
-                        .and_then(|state| {
-                            state.repeat(|state| {
-                                state.sequence(|state| {
-                                    self.parse_rule("COMMENT", state).and_then(|state| {
-                                        state.repeat(|state| self.parse_rule("WHITESPACE", state))
+            (true, false) => {
+                if state.atomicity() == Atomicity::NonAtomic {
+                    state.repeat(|state| self.parse_rule("WHITESPACE", state))
+                } else {
+                    Ok(state)
+                }
+            }
+            (false, true) => {
+                if state.atomicity() == Atomicity::NonAtomic {
+                    state.repeat(|state| self.parse_rule("COMMENT", state))
+                } else {
+                    Ok(state)
+                }
+            }
+            (true, true) => {
+                if state.atomicity() == Atomicity::NonAtomic {
+                    state.sequence(|state| {
+                        state
+                            .repeat(|state| self.parse_rule("WHITESPACE", state))
+                            .and_then(|state| {
+                                state.repeat(|state| {
+                                    state.sequence(|state| {
+                                        self.parse_rule("COMMENT", state).and_then(|state| {
+                                            state.repeat(|state| {
+                                                self.parse_rule("WHITESPACE", state)
+                                            })
+                                        })
                                     })
                                 })
                             })
-                        })
-                })
-            } else {
-                Ok(state)
+                    })
+                } else {
+                    Ok(state)
+                }
             }
         }
     }
