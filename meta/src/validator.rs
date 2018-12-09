@@ -16,7 +16,7 @@ use pest::Span;
 use parser::{ParserExpr, ParserNode, ParserRule, Rule};
 use UNICODE_PROPERTY_NAMES;
 
-#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+#[allow(clippy::needless_pass_by_value)]
 pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Error<Rule>>> {
     let mut rust_keywords = HashSet::new();
     rust_keywords.insert("abstract");
@@ -139,10 +139,10 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
 
     let defaults = called_rules.difference(&definitions);
 
-    Ok(defaults.map(|string| *string).collect())
+    Ok(defaults.cloned().collect())
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher, ptr_arg))]
+#[allow(clippy::implicit_hasher, clippy::ptr_arg)]
 pub fn validate_rust_keywords<'i>(
     definitions: &Vec<Span<'i>>,
     rust_keywords: &HashSet<&str>,
@@ -165,7 +165,7 @@ pub fn validate_rust_keywords<'i>(
     errors
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher, ptr_arg))]
+#[allow(clippy::implicit_hasher, clippy::ptr_arg)]
 pub fn validate_pest_keywords<'i>(
     definitions: &Vec<Span<'i>>,
     pest_keywords: &HashSet<&str>,
@@ -188,7 +188,7 @@ pub fn validate_pest_keywords<'i>(
     errors
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
+#[allow(clippy::ptr_arg)]
 pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
     let mut defined = HashSet::new();
@@ -211,7 +211,7 @@ pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Ru
     errors
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(implicit_hasher, ptr_arg))]
+#[allow(clippy::implicit_hasher, clippy::ptr_arg)]
 pub fn validate_undefined<'i>(
     definitions: &Vec<Span<'i>>,
     called_rules: &Vec<Span<'i>>,
@@ -236,7 +236,7 @@ pub fn validate_undefined<'i>(
     errors
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(ptr_arg))]
+#[allow(clippy::ptr_arg)]
 pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
@@ -408,7 +408,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<E
     let map = to_hash_map(rules);
 
     rules
-        .into_iter()
+        .iter()
         .filter_map(|rule| {
             if rule.name == "whitespace" || rule.name == "comment" {
                 if is_non_failing(&rule.node.expr, &map, &mut vec![]) {
@@ -449,7 +449,7 @@ fn to_hash_map<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> HashMap<String, &'a P
     rules.iter().map(|r| (r.name.clone(), &r.node)).collect()
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+#[allow(clippy::needless_pass_by_value)]
 fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec<Error<Rule>> {
     fn check_expr<'a, 'i: 'a>(
         node: &'a ParserNode<'i>,

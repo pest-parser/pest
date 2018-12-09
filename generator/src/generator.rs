@@ -18,7 +18,7 @@ use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 use pest_meta::UNICODE_PROPERTY_NAMES;
 
-#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+#[allow(clippy::needless_pass_by_value)]
 pub fn generate(
     name: Ident,
     generics: &Generics,
@@ -45,6 +45,7 @@ pub fn generate(
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let parser_impl = quote! {
+        #[allow(clippy::all)]
         impl #impl_generics ::pest::Parser<Rule> for #name #ty_generics #where_clause {
             fn parse<'i>(
                 rule: Rule,
@@ -935,6 +936,7 @@ mod tests {
                     a
                 }
 
+                #[allow(clippy::all)]
                 impl ::pest::Parser<Rule> for MyParser {
                     fn parse<'i>(
                         rule: Rule,

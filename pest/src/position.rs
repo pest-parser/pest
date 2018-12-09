@@ -49,12 +49,9 @@ impl<'i> Position<'i> {
     /// assert_eq!(Position::new(heart, 1), None);
     /// assert_ne!(Position::new(heart, cheart.len_utf8()), None);
     /// ```
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(input: &str, pos: usize) -> Option<Position> {
-        if input.get(pos..).is_none() {
-            None
-        } else {
-            Some(Position { input, pos })
-        }
+        input.get(pos..).map(|_| Position { input, pos })
     }
 
     /// Creates a `Position` at the start of a `&str`.

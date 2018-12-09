@@ -3,7 +3,7 @@
 //! We rely on dead code elimination to remove the tables that aren't needed.
 
 #![allow(bad_style)]
-#![cfg_attr(feature = "cargo-clippy", allow(clippy))]
+#![allow(clippy::all)]
 
 macro_rules! char_property_functions {
     {$(
