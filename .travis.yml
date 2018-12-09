@@ -32,9 +32,9 @@ matrix:
     - name: coverage
       rust: nightly-2018-12-08 # Update this when updating tarpaulin
       env: RUSTFLAGS="--cfg procmacro2_semver_exempt"
-      install: cargo install cargo-tarpaulin --version 0.6.10
+      install: cargo install cargo-tarpaulin --version 0.6.10 || true
       before_script: cargo bootstrap
-      script: cargo tarpaulin --out Xml
+      script: cargo tarpaulin --verbose --skip-clean --out Xml
       after_success: bash <(curl -s https://codecov.io/bash)
   allow_failures:
     - name: style # TODO(CAD97): Fix this build and require it
