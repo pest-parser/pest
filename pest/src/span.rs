@@ -182,9 +182,9 @@ impl<'i> Span<'i> {
     }
 
     /// Iterates over all lines (partially) covered by this span.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// # use pest;
     /// # #[allow(non_camel_case_types)]
@@ -200,7 +200,10 @@ impl<'i> Span<'i> {
     /// ```
     #[inline]
     pub fn lines(&self) -> Lines {
-        Lines { span: self, pos: self.start }
+        Lines {
+            span: self,
+            pos: self.start,
+        }
     }
 }
 
@@ -231,9 +234,9 @@ impl<'i> Hash for Span<'i> {
 }
 
 /// Line iterator for Spans, created by [`Span::lines()`].
-/// 
+///
 /// Iterates all lines that are at least partially covered by the span.
-/// 
+///
 /// [`Span::lines()`]: struct.Span.html#method.lines
 pub struct Lines<'i> {
     span: &'i Span<'i>,
@@ -243,9 +246,13 @@ pub struct Lines<'i> {
 impl<'i> Iterator for Lines<'i> {
     type Item = &'i str;
     fn next(&mut self) -> Option<&'i str> {
-        if self.pos > self.span.end { return None }
+        if self.pos > self.span.end {
+            return None;
+        }
         let pos = position::Position::new(self.span.input, self.pos)?;
-        if pos.at_end() { return None }
+        if pos.at_end() {
+            return None;
+        }
         let line = pos.line_of();
         self.pos = pos.find_line_end();
         Some(line)

@@ -64,7 +64,7 @@ extern crate ucd_trie;
 pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState};
 pub use position::Position;
-pub use span::{Span, Lines};
+pub use span::{Lines, Span};
 use std::fmt::Debug;
 use std::hash::Hash;
 pub use token::Token;

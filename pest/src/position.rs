@@ -201,21 +201,24 @@ impl<'i> Position<'i> {
         // Safe since start and end can only be valid UTF-8 borders.
         &self.input[self.find_line_start()..self.find_line_end()]
     }
-    
+
     pub(crate) fn find_line_start(&self) -> usize {
-        if self.input.is_empty() { return 0 };
+        if self.input.is_empty() {
+            return 0;
+        };
         // Position's pos is always a UTF-8 border.
-        let start = self.input
+        let start = self
+            .input
             .char_indices()
             .rev()
             .skip_while(|&(i, _)| i >= self.pos)
             .find(|&(_, c)| c == '\n');
         match start {
             Some((i, _)) => i + 1,
-            None => 0
+            None => 0,
         }
     }
-    
+
     pub(crate) fn find_line_end(&self) -> usize {
         if self.input.is_empty() {
             0
@@ -230,7 +233,7 @@ impl<'i> Position<'i> {
                 .find(|&(_, c)| c == '\n');
             match end {
                 Some((i, _)) => i + 1,
-                None => self.input.len()
+                None => self.input.len(),
             }
         }
     }

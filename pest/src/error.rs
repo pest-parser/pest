@@ -137,7 +137,7 @@ impl<R: RuleType> Error<R> {
     #[allow(clippy::needless_pass_by_value)]
     pub fn new_from_span(variant: ErrorVariant<R>, span: Span) -> Error<R> {
         let end = span.end_pos();
-        
+
         let mut end_line_col = end.line_col();
         // end position is after a \n, so we want to point to the visual lf symbol
         if end_line_col.1 == 1 {
@@ -146,7 +146,7 @@ impl<R: RuleType> Error<R> {
             let lc = visual_end.line_col();
             end_line_col = (lc.0, lc.1 + 1);
         };
-        
+
         let mut line_iter = span.lines();
         let start_line = visualize_whitespace(line_iter.next().unwrap_or(""));
         let continued_line = line_iter.last().map(visualize_whitespace);
@@ -157,7 +157,7 @@ impl<R: RuleType> Error<R> {
             path: None,
             line: start_line,
             continued_line,
-            line_col: LineColLocation::Span(span.start_pos().line_col(), end_line_col)
+            line_col: LineColLocation::Span(span.start_pos().line_col(), end_line_col),
         }
     }
 
@@ -672,9 +672,9 @@ mod tests {
 
         let error: Error<u32> = Error::new_from_span(
             ErrorVariant::CustomError {
-                message: "error: big one".to_owned()
+                message: "error: big one".to_owned(),
             },
-            start.span(&end)
+            start.span(&end),
         );
 
         assert_eq!(
@@ -686,7 +686,8 @@ mod tests {
                 "  | ^-----^",
                 "  |",
                 "  = error: big one",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
@@ -700,9 +701,9 @@ mod tests {
 
         let error: Error<u32> = Error::new_from_span(
             ErrorVariant::CustomError {
-                message: "error: empty".to_owned()
+                message: "error: empty".to_owned(),
             },
-            start.span(&end)
+            start.span(&end),
         );
 
         assert_eq!(
@@ -714,7 +715,8 @@ mod tests {
                 "  | ^",
                 "  |",
                 "  = error: empty",
-            ].join("\n")
+            ]
+            .join("\n")
         );
     }
 
