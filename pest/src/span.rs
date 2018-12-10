@@ -196,7 +196,7 @@ impl<'i> Span<'i> {
     /// let start_pos = state.position().clone();
     /// state = state.match_string("b\nc").unwrap();
     /// let span = start_pos.span(&state.position().clone());
-    /// assert_eq!(span.lines().collect(), vec!["b\n", "c"]);
+    /// assert_eq!(span.lines().collect::<Vec<_>>(), vec!["b\n", "c"]);
     /// ```
     #[inline]
     pub fn lines(&self) -> Lines {
@@ -230,9 +230,11 @@ impl<'i> Hash for Span<'i> {
     }
 }
 
-/// Line iterator for Spans
+/// Line iterator for Spans, created by [`Span::lines()`].
 /// 
 /// Iterates all lines that are at least partially covered by the span.
+/// 
+/// [`Span::lines()`]: struct.Span.html#method.lines
 pub struct Lines<'i> {
     span: &'i Span<'i>,
     pos: usize,
