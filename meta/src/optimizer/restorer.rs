@@ -103,7 +103,7 @@ mod tests {
         let rules = vec![OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
-            expr: Opt(Box::new(Str(String::from("a")))),
+            expr: box_tree!(Opt(Str("a".to_string()))),
         }];
 
         assert_eq!(
@@ -117,15 +117,13 @@ mod tests {
         let rules = vec![OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
-            expr: Rep(Box::new(Push(Box::new(Str(String::from("a")))))),
+            expr: box_tree!(Rep(Push(Str("a".to_string())))),
         }];
 
         let restored = OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
-            expr: Rep(Box::new(RestoreOnErr(Box::new(Push(Box::new(Str(
-                String::from("a"),
-            ))))))),
+            expr: box_tree!(Rep(RestoreOnErr(Push(Str("a".to_string()))))),
         };
 
         assert_eq!(
@@ -139,21 +137,16 @@ mod tests {
         let rules = vec![OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
-            expr: Choice(
-                Box::new(Push(Box::new(Str(String::from("a"))))),
-                Box::new(Str(String::from("a"))),
-            ),
+            expr: box_tree!(Choice(Push(Str("a".to_string())), Str("a".to_string()))),
         }];
 
         let restored = OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
-            expr: Choice(
-                Box::new(RestoreOnErr(Box::new(Push(Box::new(Str(String::from(
-                    "a",
-                ))))))),
-                Box::new(Str(String::from("a"))),
-            ),
+            expr: box_tree!(Choice(
+                RestoreOnErr(Push(Str("a".to_string()))),
+                Str("a".to_string())
+            )),
         };
 
         assert_eq!(
