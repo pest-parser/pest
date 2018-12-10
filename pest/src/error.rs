@@ -148,7 +148,7 @@ impl<R: RuleType> Error<R> {
         };
         
         let mut line_iter = span.lines();
-        let start_line = line_iter.next().unwrap_or_else(|| "".to_owned());
+        let start_line = line_iter.next().unwrap_or("".to_owned());
         let continued_line = line_iter.last();
 
         Error {
