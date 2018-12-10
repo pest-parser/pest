@@ -100,7 +100,7 @@ impl<R: RuleType> Error<R> {
             variant,
             location: InputLocation::Pos(pos.pos()),
             path: None,
-            line: pos.line_of().to_owned(),
+            line: visualize_whitespace(pos.line_of()),
             continued_line: None,
             line_col: LineColLocation::Pos(pos.line_col()),
         }
@@ -148,8 +148,8 @@ impl<R: RuleType> Error<R> {
         };
         
         let mut line_iter = span.lines();
-        let start_line = line_iter.next().unwrap_or("".to_owned());
-        let continued_line = line_iter.last();
+        let start_line = visualize_whitespace(line_iter.next().unwrap_or(""));
+        let continued_line = line_iter.last().map(visualize_whitespace);
 
         Error {
             variant,
@@ -440,6 +440,10 @@ impl<'i, R: RuleType> error::Error for Error<R> {
             ErrorVariant::CustomError { ref message } => message,
         }
     }
+}
+
+fn visualize_whitespace(input: &str) -> String {
+    input.to_owned().replace('\r', "␍").replace('\n', "␊")
 }
 
 #[cfg(test)]

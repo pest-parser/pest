@@ -181,6 +181,23 @@ impl<'i> Span<'i> {
         &self.input[self.start..self.end]
     }
 
+    /// Iterates over all lines (partially) covered by this span.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "a\nb\nc";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input).skip(2).unwrap();
+    /// let start_pos = state.position().clone();
+    /// state = state.match_string("b\nc").unwrap();
+    /// let span = start_pos.span(&state.position().clone());
+    /// assert_eq!(span.lines().collect(), vec!["b\n", "c"]);
+    /// ```
     #[inline]
     pub fn lines(&self) -> Lines {
         Lines { span: self, pos: self.start }
@@ -213,14 +230,17 @@ impl<'i> Hash for Span<'i> {
     }
 }
 
+/// Line iterator for Spans
+/// 
+/// Iterates all lines that are at least partially covered by the span.
 pub struct Lines<'i> {
     span: &'i Span<'i>,
     pos: usize,
 }
 
 impl<'i> Iterator for Lines<'i> {
-    type Item = String;
-    fn next(&mut self) -> Option<String> {
+    type Item = &'i str;
+    fn next(&mut self) -> Option<&'i str> {
         if self.pos > self.span.end { return None }
         let pos = position::Position::new(self.span.input, self.pos)?;
         if pos.at_end() { return None }
@@ -254,8 +274,8 @@ mod tests {
         let lines: Vec<_> = span.lines().collect();
         println!("{:?}", lines);
         assert_eq!(lines.len(), 2);
-        assert_eq!(lines[0], "abc␊".to_owned());
-        assert_eq!(lines[1], "def␊".to_owned());
+        assert_eq!(lines[0], "abc\n".to_owned());
+        assert_eq!(lines[1], "def\n".to_owned());
     }
 
     #[test]
@@ -266,7 +286,7 @@ mod tests {
         let lines: Vec<_> = span.lines().collect();
         println!("{:?}", lines);
         assert_eq!(lines.len(), 2);
-        assert_eq!(lines[0], "def␊".to_owned());
+        assert_eq!(lines[0], "def\n".to_owned());
         assert_eq!(lines[1], "ghi".to_owned());
     }
 }
