@@ -18,7 +18,7 @@ proc-macro = true
 [dependencies]
 # for tests, included transitively anyway
 pest = { path = "../pest", version = "2.0" }
-pest_generator = { path = "../generator", version = "2.0" }
+pest_generator = { path = "../generator", version = "2.0.1" }
 
 [badges]
 codecov = { repository = "pest-parser/pest" }
