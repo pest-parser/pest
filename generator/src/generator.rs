@@ -8,7 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::PathBuf;
 
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, TokenStreamExt};
@@ -22,7 +22,7 @@ use pest_meta::UNICODE_PROPERTY_NAMES;
 pub fn generate(
     name: Ident,
     generics: &Generics,
-    path: &Path,
+    path: Option<PathBuf>,
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>,
     include_grammar: bool,
@@ -31,7 +31,12 @@ pub fn generate(
 
     let builtins = generate_builtin_rules();
     let include_fix = if include_grammar {
-        generate_include(&name, &path.to_str().expect("non-Unicode path"))
+        match path {
+            Some(ref path) => {
+                generate_include(&name, path.to_str().expect("non-Unicode path"))
+            },
+            None => quote!()
+        }
     } else {
         quote!()
     };
@@ -925,7 +930,7 @@ mod tests {
         let defaults = vec!["ANY"];
 
         assert_eq!(
-            generate(name, &generics, Path::new("test.pest"), rules, defaults, true).to_string(),
+            generate(name, &generics, Some(PathBuf::from("test.pest")), rules, defaults, true).to_string(),
             quote! {
                 #[allow(non_upper_case_globals)]
                 const _PEST_GRAMMAR_MyParser: &'static str = include_str!("test.pest");

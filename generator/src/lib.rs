@@ -36,25 +36,32 @@ use pest_meta::{optimizer, unwrap_or_report, validator};
 
 pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
-    let (name, generics, path) = parse_derive(ast);
+    let (name, generics, content) = parse_derive(ast);
 
-    let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
-    let path = Path::new(&root).join("src/").join(&path);
-    let file_name = match path.file_name() {
-        Some(file_name) => file_name,
-        None => panic!("grammar attribute should point to a file"),
-    };
+    let (data, path) = match content {
+        GrammarSource::File(ref path) => {
+            let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
+            let path = Path::new(&root).join("src/").join(&path);
+            let file_name = match path.file_name() {
+                Some(file_name) => file_name,
+                None => panic!("grammar attribute should point to a file"),
+            };
 
-    let data = match read_file(&path) {
-        Ok(data) => data,
-        Err(error) => panic!("error opening {:?}: {}", file_name, error),
+            let data = match read_file(&path) {
+                Ok(data) => data,
+                Err(error) => panic!("error opening {:?}: {}", file_name, error),
+            };
+            (data, Some(path.clone()))
+        },
+        GrammarSource::Inline(content) => {
+            (content, None)
+        },
     };
 
     let pairs = match parser::parse(Rule::grammar_rules, &data) {
         Ok(pairs) => pairs,
         Err(error) => panic!(
-            "error parsing {:?}\n\n{}",
-            file_name,
+            "error parsing \n{}",
             error.renamed_rules(|rule| match *rule {
                 Rule::grammar_rule => "rule".to_owned(),
                 Rule::_push => "PUSH".to_owned(),
@@ -90,7 +97,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
 
-    generator::generate(name, &generics, &path, optimized, defaults, include_grammar)
+    generator::generate(name, &generics, path, optimized, defaults, include_grammar)
 }
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
@@ -100,7 +107,13 @@ fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
     Ok(string)
 }
 
-fn parse_derive(ast: DeriveInput) -> (Ident, Generics, String) {
+#[derive(Debug, PartialEq)]
+enum GrammarSource {
+    File(String),
+    Inline(String)
+}
+
+fn parse_derive(ast: DeriveInput) -> (Ident, Generics, GrammarSource) {
     let name = ast.ident;
     let generics = ast.generics;
 
@@ -108,24 +121,30 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, String) {
         .attrs
         .iter()
         .filter(|attr| match attr.interpret_meta() {
-            Some(Meta::NameValue(name_value)) => name_value.ident == "grammar",
+            Some(Meta::NameValue(name_value)) => (name_value.ident == "grammar" || name_value.ident == "grammar_inline"),
             _ => false,
         })
         .collect();
 
-    let filename = match grammar.len() {
-        0 => panic!("a grammar file needs to be provided with the #[grammar = \"...\"] attribute"),
-        1 => get_filename(grammar[0]),
+    let argument = match grammar.len() {
+        0 => panic!("a grammar file needs to be provided with the #[grammar = \"PATH\"] or #[grammar_inline = \"GRAMMAR CONTENTS\"] attribute"),
+        1 => get_attribute(grammar[0]),
         _ => panic!("only 1 grammar file can be provided"),
     };
 
-    (name, generics, filename)
+    (name, generics, argument)
 }
 
-fn get_filename(attr: &Attribute) -> String {
+fn get_attribute(attr: &Attribute) -> GrammarSource {
     match attr.interpret_meta() {
         Some(Meta::NameValue(name_value)) => match name_value.lit {
-            Lit::Str(filename) => filename.value(),
+            Lit::Str(string) => {
+                if name_value.ident == "grammar" {
+                    GrammarSource::File(string.value())
+                } else {
+                    GrammarSource::Inline(string.value())
+                }
+            }
             _ => panic!("grammar attribute must be a string"),
         },
         _ => panic!("grammar attribute must be of the form `grammar = \"...\"`"),
@@ -135,7 +154,20 @@ fn get_filename(attr: &Attribute) -> String {
 #[cfg(test)]
 mod tests {
     use super::parse_derive;
+    use super::GrammarSource;
     use syn;
+
+    #[test]
+    fn derive_inline_file() {
+        let definition = "
+            #[other_attr]
+            #[grammar_inline = \"GRAMMAR\"]
+            pub struct MyParser<'a, T>;
+        ";
+        let ast = syn::parse_str(definition).unwrap();
+        let (_, _, filename) = parse_derive(ast);
+        assert_eq!(filename, GrammarSource::Inline("GRAMMAR".to_string()));
+    }
 
     #[test]
     fn derive_ok() {
@@ -146,7 +178,7 @@ mod tests {
         ";
         let ast = syn::parse_str(definition).unwrap();
         let (_, _, filename) = parse_derive(ast);
-        assert_eq!(filename, "myfile.pest");
+        assert_eq!(filename, GrammarSource::File("myfile.pest".to_string()));
     }
 
     #[test]
