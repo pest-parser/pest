@@ -32,10 +32,8 @@ pub fn generate(
     let builtins = generate_builtin_rules();
     let include_fix = if include_grammar {
         match path {
-            Some(ref path) => {
-                generate_include(&name, path.to_str().expect("non-Unicode path"))
-            },
-            None => quote!()
+            Some(ref path) => generate_include(&name, path.to_str().expect("non-Unicode path")),
+            None => quote!(),
         }
     } else {
         quote!()

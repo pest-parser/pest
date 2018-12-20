@@ -52,10 +52,8 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
                 Err(error) => panic!("error opening {:?}: {}", file_name, error),
             };
             (data, Some(path.clone()))
-        },
-        GrammarSource::Inline(content) => {
-            (content, None)
-        },
+        }
+        GrammarSource::Inline(content) => (content, None),
     };
 
     let pairs = match parser::parse(Rule::grammar_rules, &data) {
@@ -110,7 +108,7 @@ fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
 #[derive(Debug, PartialEq)]
 enum GrammarSource {
     File(String),
-    Inline(String)
+    Inline(String),
 }
 
 fn parse_derive(ast: DeriveInput) -> (Ident, Generics, GrammarSource) {
@@ -121,7 +119,9 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, GrammarSource) {
         .attrs
         .iter()
         .filter(|attr| match attr.interpret_meta() {
-            Some(Meta::NameValue(name_value)) => (name_value.ident == "grammar" || name_value.ident == "grammar_inline"),
+            Some(Meta::NameValue(name_value)) => {
+                (name_value.ident == "grammar" || name_value.ident == "grammar_inline")
+            }
             _ => false,
         })
         .collect();
