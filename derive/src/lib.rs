@@ -292,7 +292,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 
-#[proc_macro_derive(Parser, attributes(grammar))]
+#[proc_macro_derive(Parser, attributes(grammar, grammar_inline))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
     pest_generator::derive_parser(input.into(), true).into()
 }
