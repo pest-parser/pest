@@ -43,6 +43,10 @@
 //! struct MyParser;
 //! ```
 //!
+//! ## Inline grammars
+//!
+//! Grammars can also be inlined by using the `#[grammar_inline = "..."]` attribute.
+//!
 //! ## Grammar
 //!
 //! A grammar is a series of rules separated by whitespace, possibly containing comments.

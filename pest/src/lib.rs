@@ -54,6 +54,10 @@
 //!
 //! The syntax of `.pest` files is documented in the [`pest_derive` crate].
 //!
+//! ## Inline grammars
+//!
+//! Grammars can also be inlined by using the `#[grammar_inline = "..."]` attribute.
+//!
 //! [`Parser`]: trait.Parser.html
 //! [`pest_derive` crate]: https://docs.rs/pest_derive/
 
