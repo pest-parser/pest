@@ -180,6 +180,31 @@ impl<'i> Span<'i> {
         // Span's start and end positions are always a UTF-8 borders.
         &self.input[self.start..self.end]
     }
+
+    /// Iterates over all lines (partially) covered by this span.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {}
+    ///
+    /// let input = "a\nb\nc";
+    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input).skip(2).unwrap();
+    /// let start_pos = state.position().clone();
+    /// state = state.match_string("b\nc").unwrap();
+    /// let span = start_pos.span(&state.position().clone());
+    /// assert_eq!(span.lines().collect::<Vec<_>>(), vec!["b\n", "c"]);
+    /// ```
+    #[inline]
+    pub fn lines(&self) -> Lines {
+        Lines {
+            span: self,
+            pos: self.start,
+        }
+    }
 }
 
 impl<'i> fmt::Debug for Span<'i> {
@@ -208,6 +233,32 @@ impl<'i> Hash for Span<'i> {
     }
 }
 
+/// Line iterator for Spans, created by [`Span::lines()`].
+///
+/// Iterates all lines that are at least partially covered by the span.
+///
+/// [`Span::lines()`]: struct.Span.html#method.lines
+pub struct Lines<'i> {
+    span: &'i Span<'i>,
+    pos: usize,
+}
+
+impl<'i> Iterator for Lines<'i> {
+    type Item = &'i str;
+    fn next(&mut self) -> Option<&'i str> {
+        if self.pos > self.span.end {
+            return None;
+        }
+        let pos = position::Position::new(self.span.input, self.pos)?;
+        if pos.at_end() {
+            return None;
+        }
+        let line = pos.line_of();
+        self.pos = pos.find_line_end();
+        Some(line)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,5 +274,28 @@ mod tests {
         let span = start.clone().span(&end.clone());
 
         assert_eq!(span.split(), (start, end));
+    }
+
+    #[test]
+    fn lines_mid() {
+        let input = "abc\ndef\nghi";
+        let span = Span::new(input, 1, 7).unwrap();
+        let lines: Vec<_> = span.lines().collect();
+        println!("{:?}", lines);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0], "abc\n".to_owned());
+        assert_eq!(lines[1], "def\n".to_owned());
+    }
+
+    #[test]
+    fn lines_eof() {
+        let input = "abc\ndef\nghi";
+        let span = Span::new(input, 5, 11).unwrap();
+        assert!(span.end_pos().at_end());
+        let lines: Vec<_> = span.lines().collect();
+        println!("{:?}", lines);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0], "def\n".to_owned());
+        assert_eq!(lines[1], "ghi".to_owned());
     }
 }

@@ -100,7 +100,7 @@ impl<R: RuleType> Error<R> {
             variant,
             location: InputLocation::Pos(pos.pos()),
             path: None,
-            line: pos.line_of().to_owned(),
+            line: visualize_whitespace(pos.line_of()),
             continued_line: None,
             line_col: LineColLocation::Pos(pos.line_col()),
         }
@@ -136,19 +136,28 @@ impl<R: RuleType> Error<R> {
     /// ```
     #[allow(clippy::needless_pass_by_value)]
     pub fn new_from_span(variant: ErrorVariant<R>, span: Span) -> Error<R> {
-        let continued_line = if span.start_pos().line_col().0 != span.end_pos().line_col().0 {
-            Some(span.end_pos().line_of().to_owned())
-        } else {
-            None
+        let end = span.end_pos();
+
+        let mut end_line_col = end.line_col();
+        // end position is after a \n, so we want to point to the visual lf symbol
+        if end_line_col.1 == 1 {
+            let mut visual_end = end.clone();
+            visual_end.skip_back(1);
+            let lc = visual_end.line_col();
+            end_line_col = (lc.0, lc.1 + 1);
         };
+
+        let mut line_iter = span.lines();
+        let start_line = visualize_whitespace(line_iter.next().unwrap_or(""));
+        let continued_line = line_iter.last().map(visualize_whitespace);
 
         Error {
             variant,
-            location: InputLocation::Span((span.start(), span.end())),
+            location: InputLocation::Span((span.start(), end.pos())),
             path: None,
-            line: span.start_pos().line_of().to_owned(),
+            line: start_line,
             continued_line,
-            line_col: LineColLocation::Span(span.start_pos().line_col(), span.end_pos().line_col()),
+            line_col: LineColLocation::Span(span.start_pos().line_col(), end_line_col),
         }
     }
 
@@ -433,6 +442,10 @@ impl<'i, R: RuleType> error::Error for Error<R> {
     }
 }
 
+fn visualize_whitespace(input: &str) -> String {
+    input.to_owned().replace('\r', "␍").replace('\n', "␊")
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::position;
@@ -455,7 +468,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd",
+                "2 | cd␊",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
@@ -481,7 +494,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd",
+                "2 | cd␊",
                 "  |  ^---",
                 "  |",
                 "  = expected 1 or 2",
@@ -507,7 +520,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd",
+                "2 | cd␊",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6",
@@ -533,7 +546,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd",
+                "2 | cd␊",
                 "  |  ^---",
                 "  |",
                 "  = unknown parsing error",
@@ -558,7 +571,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd",
+                "2 | cd␊",
                 "  |  ^---",
                 "  |",
                 "  = error: big one",
@@ -584,7 +597,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd",
+                "2 | cd␊",
                 "3 | efgh",
                 "  |  ^^",
                 "  |",
@@ -611,7 +624,7 @@ mod tests {
             vec![
                 " --> 1:2",
                 "  |",
-                "1 | ab",
+                "1 | ab␊",
                 "  | ...",
                 "3 | efgh",
                 "  |  ^^",
@@ -639,11 +652,69 @@ mod tests {
             vec![
                 " --> 1:6",
                 "  |",
-                "1 | abcdef",
+                "1 | abcdef␊",
                 "2 | gh",
                 "  | ^----^",
                 "  |",
                 "  = error: big one",
+            ]
+            .join("\n")
+        );
+    }
+
+    #[test]
+    fn display_custom_span_end_after_newline() {
+        let input = "abcdef\n";
+        let start = position::Position::new(input, 0).unwrap();
+        let end = position::Position::new(input, 7).unwrap();
+        assert!(start.at_start());
+        assert!(end.at_end());
+
+        let error: Error<u32> = Error::new_from_span(
+            ErrorVariant::CustomError {
+                message: "error: big one".to_owned(),
+            },
+            start.span(&end),
+        );
+
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 1:1",
+                "  |",
+                "1 | abcdef␊",
+                "  | ^-----^",
+                "  |",
+                "  = error: big one",
+            ]
+            .join("\n")
+        );
+    }
+
+    #[test]
+    fn display_custom_span_empty() {
+        let input = "";
+        let start = position::Position::new(input, 0).unwrap();
+        let end = position::Position::new(input, 0).unwrap();
+        assert!(start.at_start());
+        assert!(end.at_end());
+
+        let error: Error<u32> = Error::new_from_span(
+            ErrorVariant::CustomError {
+                message: "error: empty".to_owned(),
+            },
+            start.span(&end),
+        );
+
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> 1:1",
+                "  |",
+                "1 | ",
+                "  | ^",
+                "  |",
+                "  = error: empty",
             ]
             .join("\n")
         );
@@ -667,7 +738,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd",
+                "2 | cd␊",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 5, 6, or 7; expected 2, 3, or 4",
@@ -694,7 +765,7 @@ mod tests {
             vec![
                 " --> file.rs:2:2",
                 "  |",
-                "2 | cd",
+                "2 | cd␊",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
