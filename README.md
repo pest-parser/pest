@@ -150,6 +150,7 @@ Digit:   2
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
 * [hexdino](https://github.com/Luz/hexdino)
 * [Huia](https://gitlab.com/jimsy/huia/)
+* [jql](https://github.com/yamafaktory/jql)
 * [json5-rs](https://github.com/callum-oakley/json5-rs)
 * [mt940](https://github.com/svenstaro/mt940-rs)
 * [py_literal](https://github.com/jturner314/py_literal)
