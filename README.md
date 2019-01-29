@@ -146,6 +146,7 @@ Digit:   2
 * [brain](https://github.com/brain-lang/brain)
 * [Chelone](https://github.com/Aaronepower/chelone)
 * [comrak](https://github.com/kivikakk/comrak)
+* [elastic-rs](https://github.com/cch123/elastic-rs)
 * [graphql-parser](https://github.com/Keats/graphql-parser)
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
 * [hexdino](https://github.com/Luz/hexdino)
