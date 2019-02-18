@@ -1,0 +1,13 @@
+http = _{ SOI ~ request* ~ EOI }
+request = { request_line ~ header+ ~ NEWLINE }
+
+request_line = { token ~ " "+ ~ request_target ~ " "+ ~ "HTTP/" ~ version ~ NEWLINE }
+request_target = { (!" " ~ ANY)+ }
+version = { (ASCII_DIGIT | ".")+ }
+
+header = { token ~ ":" ~ h_space+ ~ header_value+ ~ NEWLINE }
+header_value = { (!NEWLINE ~ ANY)+ }
+
+h_space = { " " | "\t" }
+token = { (!separator ~ ANY)+ }
+separator = { " " | "\"" | "," | "/" | ":" | ";" | "=" | "?" | "@" | "\\" | "(" | ")" | "<" | ">" | "[" | "]" | "{" | "}" }
