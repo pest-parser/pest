@@ -65,6 +65,11 @@
 
 extern crate ucd_trie;
 
+#[cfg(feature = "pretty-print")]
+extern crate serde;
+#[cfg(feature = "pretty-print")]
+extern crate serde_json;
+
 pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState};
 pub use position::Position;
