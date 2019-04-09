@@ -13,6 +13,7 @@ use std::cmp;
 use std::error;
 use std::fmt;
 use std::mem;
+use std::path;
 
 use position::Position;
 use span::Span;
@@ -244,6 +245,16 @@ impl<R: RuleType> Error<R> {
         self.variant = variant;
 
         self
+    }
+
+    /// Returns the path to the file that raised the error, if any.
+    pub fn path(&self) -> Option<&str> {
+        self.path.as_ref().map(String::as_str)
+    }
+
+    /// Return the line that raised the error.
+    pub fn line(&self) -> &str {
+        self.line.as_str()
     }
 
     fn start(&self) -> (usize, usize) {
