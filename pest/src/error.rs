@@ -13,7 +13,6 @@ use std::cmp;
 use std::error;
 use std::fmt;
 use std::mem;
-use std::path;
 
 use position::Position;
 use span::Span;
