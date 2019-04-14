@@ -44,7 +44,11 @@ pub struct Pair<'i, R> {
 /// # Safety
 ///
 /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
-pub unsafe fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &str, start: usize) -> Pair<R> {
+pub unsafe fn new<R: RuleType>(
+    queue: Rc<Vec<QueueableToken<R>>>,
+    input: &str,
+    start: usize,
+) -> Pair<R> {
     Pair {
         queue,
         input,
