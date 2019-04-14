@@ -141,7 +141,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     #[inline]
     pub fn flatten(self) -> FlatPairs<'i, R> {
-        flat_pairs::new(self.queue, self.input, self.start, self.end)
+        unsafe { flat_pairs::new(self.queue, self.input, self.start, self.end) }
     }
 
     /// Returns the `Tokens` for the `Pairs`.
@@ -175,7 +175,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     #[inline]
     pub fn peek(&self) -> Option<Pair<'i, R>> {
         if self.start < self.end {
-            Some(pair::new(Rc::clone(&self.queue), self.input, self.start))
+            Some(unsafe { pair::new(Rc::clone(&self.queue), self.input, self.start) })
         } else {
             None
         }
@@ -233,7 +233,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
 
         self.end = self.pair_from_end();
 
-        let pair = pair::new(Rc::clone(&self.queue), self.input, self.end);
+        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.end) };
 
         Some(pair)
     }
