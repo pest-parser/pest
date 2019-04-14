@@ -11,8 +11,14 @@ categories = ["parsing"]
 license = "MIT/Apache-2.0"
 readme = "_README.md"
 
+[features]
+# Enables the `to_json` function for `Pair` and `Pairs`
+pretty-print = ["serde", "serde_json"]
+
 [dependencies]
 ucd-trie = "0.1.1"
+serde = { version = "1.0.89", optional = true }
+serde_json = { version = "1.0.39", optional = true}
 
 [badges]
 codecov = { repository = "pest-parser/pest" }
