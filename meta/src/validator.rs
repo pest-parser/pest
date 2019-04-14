@@ -109,7 +109,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     let definitions: Vec<_> = pairs
         .clone()
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
-        .map(|pair| pair.into_inner().next().unwrap().into_span())
+        .map(|pair| pair.into_inner().next().unwrap().as_span())
         .collect();
     let called_rules: Vec<_> = pairs
         .clone()
@@ -119,7 +119,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
                 .flatten()
                 .skip(1)
                 .filter(|pair| pair.as_rule() == Rule::identifier)
-                .map(|pair| pair.into_span())
+                .map(|pair| pair.as_span())
         })
         .collect();
 

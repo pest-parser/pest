@@ -135,7 +135,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// #     state.rule(Rule::ab, |s| s.match_string("ab"))
     /// }).unwrap().next().unwrap();
     ///
-    /// assert_eq!(pair.into_span().as_str(), "ab");
+    /// assert_eq!(pair.as_span().as_str(), "ab");
     /// ```
     #[inline]
     #[deprecated(since = "2.0.0", note = "Please use `as_span` instead")]
