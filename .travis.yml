@@ -30,11 +30,11 @@ matrix:
         - cargo bootstrap
       script: cargo test --all --verbose
     - name: coverage
-      rust: nightly-2018-12-08 # Update this when updating tarpaulin
+      rust: nightly-2019-04-13 # Update this when updating tarpaulin
       env: RUSTFLAGS="--cfg procmacro2_semver_exempt"
-      install: cargo install cargo-tarpaulin --version 0.6.10 || true
+      install: cargo install cargo-tarpaulin --version 0.7.0 || true
       before_script: cargo bootstrap
-      script: cargo tarpaulin --verbose --skip-clean --out Xml
+      script: cargo tarpaulin --verbose --out Xml --ciserver travis-ci
       after_success: bash <(curl -s https://codecov.io/bash)
   allow_failures:
     - name: coverage # So builds don't have to wait on it
