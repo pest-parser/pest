@@ -21,7 +21,7 @@ matrix:
       - rustup component add rustfmt
       before_script: cargo bootstrap
       script:
-      - cargo clippy --all -- -D warnings
+      - cargo clippy --all --tests -- -D warnings
       - cargo fmt --all -- --check
     - name: minimal versions
       rust: nightly-2018-12-08 # Arbitrary nightly for unstable cargo feature -- make this MSRV build later?
