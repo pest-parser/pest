@@ -23,4 +23,5 @@ maintenance = { status = "actively-developed" }
 travis-ci = { repository = "pest-parser/pest" }
 
 [build-dependencies]
-sha-1 = "0.7.0"
+sha-1 = "0.8"
+byteorder = "1.1" # pest-parser#390 RustCrypto/utils#23 RustCrypto/hashes#79
