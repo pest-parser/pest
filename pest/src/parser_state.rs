@@ -1160,15 +1160,13 @@ mod test {
 
     #[test]
     fn test_restoring_on_err() {
-
         // This corresponds roughly to Pest syntax:
         //
         // stack_use = @{ PUSH("A")+ ~ "B" ~ POP_ALL }
         // will_fail = @{ stack_use ~ "F" }
         // expr = @{ will_fail | stack_use }
 
-
-        use ::Parser;
+        use Parser;
         struct StackUseError;
 
         #[allow(non_camel_case_types)]
@@ -1184,20 +1182,23 @@ mod test {
                 rule: Rule,
                 input: &'i str,
             ) -> Result<::iterators::Pairs<'i, Rule>, ::error::Error<Rule>> {
-
-                pub fn stack_use(state: Box<ParserState<Rule>>) -> ::ParseResult<Box<ParserState<Rule>>> {
+                pub fn stack_use(
+                    state: Box<ParserState<Rule>>,
+                ) -> ::ParseResult<Box<ParserState<Rule>>> {
                     state.rule(Rule::stack_use, |state| {
                         state.sequence(|state| {
-                            state.sequence(|state| {
-                                    state
-                                        .stack_push(|state| state.match_string("A"))
-                                        .and_then(|state| {
+                            state
+                                .sequence(|state| {
+                                    state.stack_push(|state| state.match_string("A")).and_then(
+                                        |state| {
                                             state.repeat(|state| {
                                                 state.restore_on_err(|state| {
-                                                    state.stack_push(|state| state.match_string("A"))
+                                                    state
+                                                        .stack_push(|state| state.match_string("A"))
                                                 })
                                             })
-                                        })
+                                        },
+                                    )
                                 })
                                 .and_then(|state| state.match_string("B"))
                                 .and_then(|state| state.stack_match_pop())
@@ -1205,9 +1206,13 @@ mod test {
                     })
                 }
 
-                pub fn will_fail(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+                pub fn will_fail(
+                    state: Box<ParserState<Rule>>,
+                ) -> ParseResult<Box<ParserState<Rule>>> {
                     state.rule(Rule::will_fail, |state| {
-                        state.sequence(|state| stack_use(state).and_then(|state| state.match_string("F")))
+                        state.sequence(|state| {
+                            stack_use(state).and_then(|state| state.match_string("F"))
+                        })
                     })
                 }
 
