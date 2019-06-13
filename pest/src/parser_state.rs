@@ -1089,7 +1089,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
         match f(self.checkpoint()) {
-            Ok(state) => Ok(state),
+            Ok(state) => Ok(state.checkpoint_ok()),
             Err(state) => Err(state.restore()),
         }
     }
@@ -1098,6 +1098,14 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     #[inline]
     pub(crate) fn checkpoint(mut self: Box<Self>) -> Box<Self> {
         self.stack.snapshot();
+        self
+    }
+
+    // The checkpoint was cleared successfully
+    // so remove it without touching other stack state.
+    #[inline]
+    pub(crate) fn checkpoint_ok(mut self: Box<Self>) -> Box<Self> {
+        self.stack.clear_snapshot();
         self
     }
 

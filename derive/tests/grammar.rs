@@ -783,6 +783,20 @@ fn repeat_mutate_stack() {
 }
 
 #[test]
+fn stack_resume_after_fail() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "a,b,c,cba",
+        rule: Rule::stack_resume_after_fail,
+        tokens: [
+            stack_resume_after_fail(0, 9, [
+                repeat_mutate_stack_pop_all(0, 9)
+            ])
+        ]
+    };
+}
+
+#[test]
 fn checkpoint_restore() {
     parses_to! {
         parser: GrammarParser,

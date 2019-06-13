@@ -64,6 +64,11 @@ impl<T: Clone> Stack<T> {
         self.snapshots.push(self.ops.len());
     }
 
+    /// The parsing after the last snapshot was successful so clearing it.
+    pub fn clear_snapshot(&mut self) {
+        self.snapshots.pop();
+    }
+
     /// Rewinds the `Stack` to the most recent `snapshot()`. If no `snapshot()` has been taken, this
     /// function return the stack to its initial state.
     pub fn restore(&mut self) {
