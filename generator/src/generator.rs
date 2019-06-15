@@ -606,7 +606,7 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
 
         OptimizedExpr::RepOnce(expr) => {
             let expr = generate_expr_atomic(*expr);
-   
+
             quote! {
                 state.sequence(|state| {
                     #expr.and_then(|state| {
