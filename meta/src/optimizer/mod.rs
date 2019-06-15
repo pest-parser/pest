@@ -64,10 +64,9 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
             Expr::Skip(strings) => OptimizedExpr::Skip(strings),
             Expr::Push(expr) => OptimizedExpr::Push(Box::new(to_optimized(*expr))),
             Expr::RepOnce(expr) => OptimizedExpr::RepOnce(Box::new(to_optimized(*expr))),
-            | Expr::RepExact(..)
-            | Expr::RepMin(..)
-            | Expr::RepMax(..)
-            | Expr::RepMinMax(..) => unreachable!("No valid transformation to OptimizedRule"),
+            Expr::RepExact(..) | Expr::RepMin(..) | Expr::RepMax(..) | Expr::RepMinMax(..) => {
+                unreachable!("No valid transformation to OptimizedRule")
+            }
         }
     }
 
