@@ -77,11 +77,14 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     #[inline]
     pub fn as_str(&self) -> &'i str {
-        let start = self.pos(self.start);
-        let end = self.pos(self.end - 1);
-
-        // Generated positions always come from Positions and are UTF-8 borders.
-        &self.input[start..end]
+        if self.start < self.end {
+            let start = self.pos(self.start);
+            let end = self.pos(self.end - 1);
+            // Generated positions always come from Positions and are UTF-8 borders.
+            &self.input[start..end]
+        } else {
+            ""
+        }
     }
 
     /// Captures inner token `Pair`s and concatenates resulting `&str`s. This does not capture
@@ -353,6 +356,13 @@ mod tests {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
         assert_eq!(pairs.as_str(), "abcde");
+    }
+
+    #[test]
+    fn as_str_empty() {
+        let mut pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
+
+        assert_eq!(pairs.nth(1).unwrap().into_inner().as_str(), "");
     }
 
     #[test]
