@@ -287,9 +287,13 @@ impl<R: RuleType> Error<R> {
             _ => None,
         };
         let offset = start - 1;
+        let line_chars = self.line.chars();
 
-        for _ in 0..offset {
-            underline.push(' ');
+        for c in line_chars.take(offset) {
+            match c {
+                '\t' => underline.push('\t'),
+                _ => underline.push(' '),
+            }
         }
 
         if let Some(end) = end {
@@ -767,6 +771,33 @@ mod tests {
                 "  |",
                 "2 | cd␊",
                 "  |  ^---",
+                "  |",
+                "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
+            ]
+            .join("\n")
+        );
+    }
+
+    #[test]
+    fn underline_with_tabs() {
+        let input = "a\txbc";
+        let pos = position::Position::new(input, 2).unwrap();
+        let error: Error<u32> = Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![1, 2, 3],
+                negatives: vec![4, 5, 6],
+            },
+            pos,
+        )
+        .with_path("file.rs");
+
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> file.rs:1:3",
+                "  |",
+                "1 | a	xbc",
+                "  |  	^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
             ]
