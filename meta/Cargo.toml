@@ -23,4 +23,4 @@ maintenance = { status = "actively-developed" }
 travis-ci = { repository = "pest-parser/pest" }
 
 [build-dependencies]
-sha-1 = "0.8"
+sha-1 = { version = "0.8", default-features = false }
