@@ -63,11 +63,10 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
             Expr::Rep(expr) => OptimizedExpr::Rep(Box::new(to_optimized(*expr))),
             Expr::Skip(strings) => OptimizedExpr::Skip(strings),
             Expr::Push(expr) => OptimizedExpr::Push(Box::new(to_optimized(*expr))),
-            Expr::RepOnce(_)
-            | Expr::RepExact(..)
-            | Expr::RepMin(..)
-            | Expr::RepMax(..)
-            | Expr::RepMinMax(..) => unreachable!("No valid transformation to OptimizedRule"),
+            Expr::RepOnce(expr) => OptimizedExpr::RepOnce(Box::new(to_optimized(*expr))),
+            Expr::RepExact(..) | Expr::RepMin(..) | Expr::RepMax(..) | Expr::RepMinMax(..) => {
+                unreachable!("No valid transformation to OptimizedRule")
+            }
         }
     }
 
@@ -105,6 +104,7 @@ pub enum OptimizedExpr {
     Choice(Box<OptimizedExpr>, Box<OptimizedExpr>),
     Opt(Box<OptimizedExpr>),
     Rep(Box<OptimizedExpr>),
+    RepOnce(Box<OptimizedExpr>),
     Skip(Vec<String>),
     Push(Box<OptimizedExpr>),
     RestoreOnErr(Box<OptimizedExpr>),

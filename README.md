@@ -159,6 +159,7 @@ Digit:   2
 * [tera](https://github.com/Keats/tera)
 * [ui_gen](https://github.com/emoon/ui_gen)
 * [ukhasnet-parser](https://github.com/adamgreig/ukhasnet-parser)
+* [prisma](https://github.com/prisma/prisma)
 
 ## Special thanks
 
