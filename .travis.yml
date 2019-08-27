@@ -5,7 +5,10 @@ cache: cargo
 os:
   - linux
 
-matrix:
+services:
+  - docker
+
+jobs:
   include:
     - name: stable
       rust: stable
@@ -36,6 +39,21 @@ matrix:
       before_script: cargo bootstrap
       script: cargo tarpaulin --verbose --out Xml --ciserver travis-ci
       after_success: bash <(curl -s https://codecov.io/bash)
+    - stage: Fuzz regression
+      rust: nightly
+      dist: bionic
+      script:
+        - cargo install --list | grep cargo-fuzz || cargo install cargo-fuzz
+        - cargo bootstrap
+        - ./fuzzit.sh local-regression
+    - stage: Fuzz
+      if: branch = master AND type IN (push)
+      rust: nightly
+      dist: bionic
+      script:
+        - cargo install --list | grep cargo-fuzz || cargo install cargo-fuzz
+        - cargo bootstrap
+        - ./fuzzit.sh fuzzing
   allow_failures:
     - name: coverage # So builds don't have to wait on it
   fast_finish: true
