@@ -140,6 +140,7 @@ Digit:   2
 ## Projects using pest
 
 * [pest_meta](https://github.com/pest-parser/pest/blob/master/meta/src/grammar.pest) (bootstrapped)
+* [AshPaper](https://github.com/shnewto/ashpaper)
 * [brain](https://github.com/brain-lang/brain)
 * [Chelone](https://github.com/Aaronepower/chelone)
 * [comrak](https://github.com/kivikakk/comrak)
