@@ -120,7 +120,7 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, GrammarSource) {
         .iter()
         .filter(|attr| match attr.parse_meta() {
             Ok(Meta::NameValue(name_value)) => {
-                (name_value.path.is_ident("grammar") || name_value.path.is_ident("grammar_inline"))
+                name_value.path.is_ident("grammar") || name_value.path.is_ident("grammar_inline")
             }
             _ => false,
         })

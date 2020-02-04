@@ -187,7 +187,7 @@ fn consume_rules_with_spans<'i>(
         .map(|pair| {
             let mut pairs = pair.into_inner().peekable();
 
-            let span = pairs.next().unwrap().into_span();
+            let span = pairs.next().unwrap().as_span();
             let name = span.as_str().to_owned();
 
             pairs.next().unwrap(); // assignment_operator
@@ -235,7 +235,7 @@ fn consume_expr<'i>(
 
                 ParserNode {
                     expr: node.expr,
-                    span: pair.into_span().start_pos().span(&end),
+                    span: pair.as_span().start_pos().span(&end),
                 }
             }
             Rule::positive_predicate_operator => {
@@ -244,7 +244,7 @@ fn consume_expr<'i>(
 
                 ParserNode {
                     expr: ParserExpr::PosPred(Box::new(node)),
-                    span: pair.into_span().start_pos().span(&end),
+                    span: pair.as_span().start_pos().span(&end),
                 }
             }
             Rule::negative_predicate_operator => {
@@ -253,14 +253,14 @@ fn consume_expr<'i>(
 
                 ParserNode {
                     expr: ParserExpr::NegPred(Box::new(node)),
-                    span: pair.into_span().start_pos().span(&end),
+                    span: pair.as_span().start_pos().span(&end),
                 }
             }
             other_rule => {
                 let node = match other_rule {
                     Rule::expression => consume_expr(pair.into_inner().peekable(), climber)?,
                     Rule::_push => {
-                        let start = pair.clone().into_span().start_pos();
+                        let start = pair.clone().as_span().start_pos();
                         let mut pairs = pair.into_inner();
                         pairs.next().unwrap(); // opening_paren
                         let pair = pairs.next().unwrap();
@@ -296,36 +296,36 @@ fn consume_expr<'i>(
                         };
                         ParserNode {
                             expr: ParserExpr::PeekSlice(start, end),
-                            span: pair.into_span(),
+                            span: pair.as_span(),
                         }
                     }
                     Rule::identifier => ParserNode {
                         expr: ParserExpr::Ident(pair.as_str().to_owned()),
-                        span: pair.clone().into_span(),
+                        span: pair.clone().as_span(),
                     },
                     Rule::string => {
                         let string = unescape(pair.as_str()).expect("incorrect string literal");
                         ParserNode {
                             expr: ParserExpr::Str(string[1..string.len() - 1].to_owned()),
-                            span: pair.clone().into_span(),
+                            span: pair.clone().as_span(),
                         }
                     }
                     Rule::insensitive_string => {
                         let string = unescape(pair.as_str()).expect("incorrect string literal");
                         ParserNode {
                             expr: ParserExpr::Insens(string[2..string.len() - 1].to_owned()),
-                            span: pair.clone().into_span(),
+                            span: pair.clone().as_span(),
                         }
                     }
                     Rule::range => {
                         let mut pairs = pair.into_inner();
                         let pair = pairs.next().unwrap();
                         let start = unescape(pair.as_str()).expect("incorrect char literal");
-                        let start_pos = pair.clone().into_span().start_pos();
+                        let start_pos = pair.clone().as_span().start_pos();
                         pairs.next();
                         let pair = pairs.next().unwrap();
                         let end = unescape(pair.as_str()).expect("incorrect char literal");
-                        let end_pos = pair.clone().into_span().end_pos();
+                        let end_pos = pair.clone().as_span().end_pos();
 
                         ParserNode {
                             expr: ParserExpr::Range(
@@ -348,21 +348,21 @@ fn consume_expr<'i>(
                                 let start = node.span.start_pos();
                                 ParserNode {
                                     expr: ParserExpr::Opt(Box::new(node)),
-                                    span: start.span(&pair.into_span().end_pos()),
+                                    span: start.span(&pair.as_span().end_pos()),
                                 }
                             }
                             Rule::repeat_operator => {
                                 let start = node.span.start_pos();
                                 ParserNode {
                                     expr: ParserExpr::Rep(Box::new(node)),
-                                    span: start.span(&pair.into_span().end_pos()),
+                                    span: start.span(&pair.as_span().end_pos()),
                                 }
                             }
                             Rule::repeat_once_operator => {
                                 let start = node.span.start_pos();
                                 ParserNode {
                                     expr: ParserExpr::RepOnce(Box::new(node)),
-                                    span: start.span(&pair.into_span().end_pos()),
+                                    span: start.span(&pair.as_span().end_pos()),
                                 }
                             }
                             Rule::repeat_exact => {
@@ -378,7 +378,7 @@ fn consume_expr<'i>(
                                         ErrorVariant::CustomError {
                                             message: "number cannot overflow u32".to_owned(),
                                         },
-                                        number.into_span(),
+                                        number.as_span(),
                                     )]);
                                 };
 
@@ -387,7 +387,7 @@ fn consume_expr<'i>(
                                         ErrorVariant::CustomError {
                                             message: "cannot repeat 0 times".to_owned(),
                                         },
-                                        number.into_span(),
+                                        number.as_span(),
                                     );
 
                                     return Err(vec![error]);
@@ -396,7 +396,7 @@ fn consume_expr<'i>(
                                 let start = node.span.start_pos();
                                 ParserNode {
                                     expr: ParserExpr::RepExact(Box::new(node), num),
-                                    span: start.span(&pair.into_span().end_pos()),
+                                    span: start.span(&pair.as_span().end_pos()),
                                 }
                             }
                             Rule::repeat_min => {
@@ -412,14 +412,14 @@ fn consume_expr<'i>(
                                         ErrorVariant::CustomError {
                                             message: "number cannot overflow u32".to_owned(),
                                         },
-                                        min_number.into_span(),
+                                        min_number.as_span(),
                                     )]);
                                 };
 
                                 let start = node.span.start_pos();
                                 ParserNode {
                                     expr: ParserExpr::RepMin(Box::new(node), min),
-                                    span: start.span(&pair.into_span().end_pos()),
+                                    span: start.span(&pair.as_span().end_pos()),
                                 }
                             }
                             Rule::repeat_max => {
@@ -436,7 +436,7 @@ fn consume_expr<'i>(
                                         ErrorVariant::CustomError {
                                             message: "number cannot overflow u32".to_owned(),
                                         },
-                                        max_number.into_span(),
+                                        max_number.as_span(),
                                     )]);
                                 };
 
@@ -445,7 +445,7 @@ fn consume_expr<'i>(
                                         ErrorVariant::CustomError {
                                             message: "cannot repeat 0 times".to_owned(),
                                         },
-                                        max_number.into_span(),
+                                        max_number.as_span(),
                                     );
 
                                     return Err(vec![error]);
@@ -454,7 +454,7 @@ fn consume_expr<'i>(
                                 let start = node.span.start_pos();
                                 ParserNode {
                                     expr: ParserExpr::RepMax(Box::new(node), max),
-                                    span: start.span(&pair.into_span().end_pos()),
+                                    span: start.span(&pair.as_span().end_pos()),
                                 }
                             }
                             Rule::repeat_min_max => {
@@ -470,7 +470,7 @@ fn consume_expr<'i>(
                                         ErrorVariant::CustomError {
                                             message: "number cannot overflow u32".to_owned(),
                                         },
-                                        min_number.into_span(),
+                                        min_number.as_span(),
                                     )]);
                                 };
 
@@ -484,7 +484,7 @@ fn consume_expr<'i>(
                                         ErrorVariant::CustomError {
                                             message: "number cannot overflow u32".to_owned(),
                                         },
-                                        max_number.into_span(),
+                                        max_number.as_span(),
                                     )]);
                                 };
 
@@ -493,7 +493,7 @@ fn consume_expr<'i>(
                                         ErrorVariant::CustomError {
                                             message: "cannot repeat 0 times".to_owned(),
                                         },
-                                        max_number.into_span(),
+                                        max_number.as_span(),
                                     );
 
                                     return Err(vec![error]);
@@ -502,7 +502,7 @@ fn consume_expr<'i>(
                                 let start = node.span.start_pos();
                                 ParserNode {
                                     expr: ParserExpr::RepMinMax(Box::new(node), min, max),
-                                    span: start.span(&pair.into_span().end_pos()),
+                                    span: start.span(&pair.as_span().end_pos()),
                                 }
                             }
                             Rule::closing_paren => {
@@ -510,7 +510,7 @@ fn consume_expr<'i>(
 
                                 ParserNode {
                                     expr: node.expr,
-                                    span: start.span(&pair.into_span().end_pos()),
+                                    span: start.span(&pair.as_span().end_pos()),
                                 }
                             }
                             _ => unreachable!(),
