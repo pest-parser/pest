@@ -33,9 +33,9 @@ jobs:
         - cargo bootstrap
       script: cargo test --all --verbose
     - name: coverage
-      rust: nightly-2019-04-13 # Update this when updating tarpaulin
+      rust: nightly
       env: RUSTFLAGS="--cfg procmacro2_semver_exempt"
-      install: cargo install cargo-tarpaulin --version 0.7.0 || true
+      install: cargo install cargo-tarpaulin --version 0.10.2
       before_script: cargo bootstrap
       script: cargo tarpaulin --verbose --out Xml --ciserver travis-ci
       after_success: bash <(curl -s https://codecov.io/bash)
