@@ -40,6 +40,7 @@ jobs:
       script: cargo tarpaulin --verbose --out Xml --ciserver travis-ci
       after_success: bash <(curl -s https://codecov.io/bash)
     - stage: Fuzz regression
+      if: branch = master AND type IN (push)
       rust: nightly
       dist: bionic
       script:
