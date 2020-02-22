@@ -7,7 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 use proc_macro2::{Span, TokenStream};
@@ -43,7 +42,13 @@ pub fn generate(
     let skip = generate_skip(&rules);
 
     let mut rules: Vec<_> = rules.into_iter().map(generate_rule).collect();
-    rules.extend(defaults.into_iter().map(|name| builtins[name].clone()));
+    rules.extend(builtins.into_iter().filter_map(|(builtin, tokens)| {
+        if defaults.contains(&builtin) {
+            Some(tokens)
+        } else {
+            None
+        }
+    }));
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
@@ -89,8 +94,8 @@ pub fn generate(
 
 // Note: All builtin rules should be validated as pest builtins in meta/src/validator.rs.
 // Some should also be keywords.
-fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
-    let mut builtins = HashMap::new();
+fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
+    let mut builtins = Vec::new();
 
     insert_builtin!(builtins, ANY, state.skip(1));
     insert_public_builtin!(
@@ -147,15 +152,14 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     for property in UNICODE_PROPERTY_NAMES {
         let property_ident: Ident = syn::parse_str(property).unwrap();
         // insert manually for #property substitution
-        builtins.insert(property, quote! {
+        builtins.push((property, quote! {
             #[inline]
             #[allow(dead_code, non_snake_case, unused_variables)]
             fn #property_ident(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.match_char_by(::pest::unicode::#property_ident)
             }
-        });
+        }));
     }
-
     builtins
 }
 
