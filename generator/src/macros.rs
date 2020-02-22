@@ -9,13 +9,13 @@
 
 macro_rules! insert_builtin {
     ($builtin: expr, $name: ident, $pattern: expr) => {
-        $builtin.insert(stringify!($name), generate_rule!($name, $pattern));
+        $builtin.push((stringify!($name), generate_rule!($name, $pattern)));
     };
 }
 
 macro_rules! insert_public_builtin {
     ($builtin: expr, $name: ident, $pattern: expr) => {
-        $builtin.insert(stringify!($name), generate_public_rule!($name, $pattern));
+        $builtin.push((stringify!($name), generate_public_rule!($name, $pattern)));
     };
 }
 
