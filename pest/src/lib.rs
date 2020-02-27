@@ -85,6 +85,7 @@ mod parser;
 mod parser_state;
 mod position;
 pub mod prec_climber;
+pub mod static_prec_climber;
 mod span;
 mod stack;
 mod token;
