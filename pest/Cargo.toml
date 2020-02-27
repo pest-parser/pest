@@ -14,6 +14,8 @@ readme = "_README.md"
 [features]
 # Enables the `to_json` function for `Pair` and `Pairs`
 pretty-print = ["serde", "serde_json"]
+# Enable const fn constructor for `PrecClimber` (requires nightly)
+const_prec_climber = []
 
 [dependencies]
 ucd-trie = "0.1.1"

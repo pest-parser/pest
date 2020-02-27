@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+#![cfg_attr(const_prec_climber, feature(const_fn))]
+
 //! # pest. The Elegant Parser
 //!
 //! pest is a general purpose parser written in Rust with a focus on accessibility, correctness,
@@ -85,7 +87,6 @@ mod parser;
 mod parser_state;
 mod position;
 pub mod prec_climber;
-pub mod static_prec_climber;
 mod span;
 mod stack;
 mod token;
