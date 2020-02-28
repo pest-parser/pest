@@ -88,6 +88,7 @@ macro_rules! prec_climber {
         $( [ $( $rules:ident )* ] )*
     ) => {
         $(
+            #[allow(non_upper_case_globals)]
             const $rule: u32 = $precedence;
         )*
         prec_climber!(
