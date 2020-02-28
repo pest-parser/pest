@@ -39,14 +39,30 @@ use RuleType;
 ///     R   power,
 /// ];
 /// ```
-#[cfg(const_prec_climber)]
+#[cfg(feature = "const_prec_climber")]
 #[macro_export]
 macro_rules! prec_climber {
-    ( __assoc L ) => { $crate::prec_climber::Assoc::Left };
-    ( __assoc R ) => { $crate::prec_climber::Assoc::Right };
+    (
+        $( $assoc:ident $rule:ident $( | $rules:ident )* ),+ $(,)?
+    ) => {{
+        prec_climber!(
+            @precedences { 1u32 }
+            $( [ $rule $( $rules )* ] )*
+        );
+
+        $crate::prec_climber::PrecClimber::new_const(
+            prec_climber!(
+                @array
+                $( $assoc $rule $(, $assoc $rules )* ),*
+            )
+        )
+    }};
+
+    ( @assoc L ) => { $crate::prec_climber::Assoc::Left };
+    ( @assoc R ) => { $crate::prec_climber::Assoc::Right };
 
     (
-        __array
+        @array
         $(
             $assoc:ident $rule:ident
         ),*
@@ -56,18 +72,18 @@ macro_rules! prec_climber {
                 (
                     Rule::$rule,
                     $rule,
-                    prec_climber!( __assoc $assoc ),
+                    prec_climber!( @assoc $assoc ),
                 )
             ),*
         ]
     };
 
     (
-        __precedences { $precedence:expr }
+        @precedences { $precedence:expr }
     ) => {};
 
     (
-        __precedences { $precedence:expr }
+        @precedences { $precedence:expr }
         [ $( $rule:ident )* ]
         $( [ $( $rules:ident )* ] )*
     ) => {
@@ -75,28 +91,10 @@ macro_rules! prec_climber {
             const $rule: u32 = $precedence;
         )*
         prec_climber!(
-            __precedences { 1u32 + $precedence }
+            @precedences { 1u32 + $precedence }
             $( [ $( $rules )* ] )*
         );
     };
-
-    (
-        $( $assoc:ident $rule:ident $( | $rules:ident )* ),+ $(,)?
-    ) => {{
-        prec_climber!(
-            __precedences { 1u32 }
-            $( [ $rule $( $rules )* ] )*
-        );
-
-        $crate::prec_climber::PrecClimber::new_const(
-            std::borrow::Cow::Borrowed(
-                prec_climber!(
-                    __array
-                    $( $assoc $rule $(, $assoc $rules )* ),*
-                )
-            )
-        )
-    }};
 }
 
 /// Associativity of an [`Operator`].
@@ -173,7 +171,7 @@ pub struct PrecClimber<R: Clone + 'static> {
     ops: Cow<'static, [(R, u32, Assoc)]>,
 }
 
-#[cfg(const_prec_climber)]
+#[cfg(feature = "const_prec_climber")]
 impl<R: Clone + 'static> PrecClimber<R> {
     /// Creates a new `PrecClimber` directly from a static slice of
     /// `(rule: Rule, precedence: u32, associativity: Assoc)` tuples.
