@@ -935,12 +935,14 @@ mod tests {
             expr: OptimizedExpr::Str("b".to_owned()),
         }];
         let defaults = vec!["ANY"];
-
+        let mut current_dir = std::env::current_dir().expect("Unable to get current directory");
+        current_dir.push("test.pest");
+        let test_path = current_dir.to_str().expect("path contains invalid unicode");
         assert_eq!(
             generate(name, &generics, Some(PathBuf::from("test.pest")), rules, defaults, true).to_string(),
             quote! {
                 #[allow(non_upper_case_globals)]
-                const _PEST_GRAMMAR_MyParser: &'static str = include_str!("test.pest");
+                const _PEST_GRAMMAR_MyParser: &'static str = include_str!(#test_path);
 
                 #[allow(dead_code, non_camel_case_types)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
