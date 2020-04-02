@@ -13,6 +13,7 @@ use std::cmp;
 use std::error;
 use std::fmt;
 use std::mem;
+use std::borrow::Cow;
 
 use position::Position;
 use span::Span;
@@ -314,13 +315,7 @@ impl<R: RuleType> Error<R> {
     }
 
     fn message(&self) -> String {
-        match self.variant {
-            ErrorVariant::ParsingError {
-                ref positives,
-                ref negatives,
-            } => Error::parsing_error_message(positives, negatives, |r| format!("{:?}", r)),
-            ErrorVariant::CustomError { ref message } => message.clone(),
-        }
+        self.variant.message().to_string()
     }
 
     fn parsing_error_message<F>(positives: &[R], negatives: &[R], mut f: F) -> String
@@ -427,6 +422,18 @@ impl<R: RuleType> Error<R> {
                 underline = self.underline(),
                 message = self.message()
             )
+        }
+    }
+}
+
+impl<R: RuleType> ErrorVariant<R> {
+    pub fn message(&self) -> Cow<str> {
+        match self {
+            ErrorVariant::ParsingError {
+                ref positives,
+                ref negatives,
+            } => Cow::Owned(Error::parsing_error_message(positives, negatives, |r| format!("{:?}", r))),
+            ErrorVariant::CustomError { ref message } => Cow::Borrowed(message),
         }
     }
 }
