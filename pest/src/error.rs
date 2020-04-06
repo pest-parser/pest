@@ -427,6 +427,28 @@ impl<R: RuleType> Error<R> {
 }
 
 impl<R: RuleType> ErrorVariant<R> {
+    ///
+    /// Returns the error message for [`ErrorVariant`]
+    ///
+    /// If [`ErrorVariant`] is [`CustomError`], it returns a 
+    /// [`Cow::Borrowed`] reference to [`message`]. If [`ErrorVariant`] is [`ParsingError`], a
+    /// [`Cow::Owned`] containing "expected [positives] [negatives]" is returned. 
+    ///
+    /// [`ErrorVariant`]: enum.ErrorVariant.html
+    /// [`CustomError`]: enum.ErrorVariant.html#variant.CustomError
+    /// [`ParsingError`]: enum.ErrorVariant.html#variant.ParsingError
+    /// [`Cow::Owned`]: https://doc.rust-lang.org/std/borrow/enum.Cow.html#variant.Owned
+    /// [`Cow::Borrowed`]: https://doc.rust-lang.org/std/borrow/enum.Cow.html#variant.Borrowed
+    /// [`message`]: enum.ErrorVariant.html#variant.CustomError.field.message
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::error::ErrorVariant;
+    /// let variant = ErrorVariant::CustomError {
+    ///     message: String::from("unexpected error")
+    /// };
+    ///
+    /// println!("{}", variant.message());
     pub fn message(&self) -> Cow<str> {
         match self {
             ErrorVariant::ParsingError {
