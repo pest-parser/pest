@@ -66,19 +66,26 @@ impl<'i> Span<'i> {
     ///
     /// TODO better docs
     pub fn sub_span(&self, range: impl std::ops::RangeBounds<usize>) -> Option<Span> {
-        Span::new(
-            self.input,
-            match range.start_bound() {
-                std::ops::Bound::Included(offset) => self.start + offset,
-                std::ops::Bound::Excluded(offset) => self.start + offset + 1,
-                std::ops::Bound::Unbounded => self.start,
-            },
-            match range.end_bound() {
-                std::ops::Bound::Included(offset) => self.start + offset + 1,
-                std::ops::Bound::Excluded(offset) => self.start + offset,
-                std::ops::Bound::Unbounded => self.end,
-            },
-        )
+        let start = match range.start_bound() {
+            std::ops::Bound::Included(&offset) => offset,
+            std::ops::Bound::Excluded(&offset) => offset + 1,
+            std::ops::Bound::Unbounded => 0,
+        };
+        let end = match range.end_bound() {
+            std::ops::Bound::Included(&offset) => Some(offset + 1),
+            std::ops::Bound::Excluded(&offset) => Some(offset),
+            std::ops::Bound::Unbounded => None,
+        };
+        let s = self.as_str();
+        if s.get(start..end.unwrap_or(s.len())).is_some() {
+            Span::new(
+                self.input,
+                self.start + start,
+                end.map(|n| self.start + n).unwrap_or(self.end),
+            )
+        } else {
+            None
+        }
     }
 
     /// Returns the `Span`'s start byte position as a `usize`.
@@ -314,6 +321,16 @@ mod tests {
         assert_eq!(span.sub_span(1..).unwrap().as_str(), "bcde");
         assert_eq!(span.sub_span(1..3).unwrap().as_str(), "bc");
         assert_eq!(span.sub_span(1..=3).unwrap().as_str(), "bcd");
+    }
+
+    #[test]
+    fn sub_span_out_of_range() {
+        let input = "abc";
+        let span = Span::new(input, 0, 1).unwrap();
+        assert_eq!(span.sub_span(..).unwrap().as_str(), "a");
+
+        // Even though `input` has this character, a sub span cannot be created.
+        assert_eq!(span.sub_span(..2), None);
     }
 
     #[test]
