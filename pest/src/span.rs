@@ -65,7 +65,7 @@ impl<'i> Span<'i> {
     /// Attempts to create a new span based on a sub-range.
     ///
     /// TODO better docs
-    pub fn sub_span(&self, range: impl std::ops::RangeBounds<usize>) -> Option<Span> {
+    pub fn sub_span(&self, range: impl std::ops::RangeBounds<usize>) -> Option<Span<'i>> {
         let start = match range.start_bound() {
             std::ops::Bound::Included(&offset) => offset,
             std::ops::Bound::Excluded(&offset) => offset + 1,
@@ -225,7 +225,7 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.lines().collect::<Vec<_>>(), vec!["b\n", "c"]);
     /// ```
     #[inline]
-    pub fn lines(&self) -> Lines {
+    pub fn lines(&self) -> Lines<'i> {
         Lines {
             inner: self.lines_span(),
         }
@@ -233,9 +233,9 @@ impl<'i> Span<'i> {
 
     /// TODO better docs
     #[inline]
-    pub fn lines_span(&self) -> LinesSpan {
+    pub fn lines_span(&self) -> LinesSpan<'i> {
         LinesSpan {
-            span: self,
+            span: self.clone(),
             pos: self.start,
         }
     }
@@ -287,7 +287,7 @@ impl<'i> Iterator for Lines<'i> {
 ///
 /// TODO better docs
 pub struct LinesSpan<'i> {
-    span: &'i Span<'i>,
+    span: Span<'i>,
     pos: usize,
 }
 
