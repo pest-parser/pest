@@ -231,6 +231,8 @@ impl<'i> Span<'i> {
         }
     }
 
+    /// Unlike `Span::lines`, will not emit the entire line for partially covered lines. Use `Span::start_pos().line_of()` if this behavior is desired.
+    ///
     /// TODO better docs
     #[inline]
     pub fn lines_span(&self) -> LinesSpan<'i> {
@@ -303,7 +305,9 @@ impl<'i> Iterator for LinesSpan<'i> {
         }
         let line_start = self.pos;
         self.pos = pos.find_line_end();
-        Some(unsafe { Span::new_unchecked(self.span.input, line_start, self.pos) })
+        Some(unsafe {
+            Span::new_unchecked(self.span.input, line_start, self.pos.min(self.span.end))
+        })
     }
 }
 
@@ -369,6 +373,19 @@ mod tests {
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0].as_str(), "bc\n".to_owned()); // `Span::lines_span` preserves the "partial" coverage of the span.
         assert_eq!(lines[1].as_str(), "def\n".to_owned());
+    }
+
+    /// Assures that a `Span` that ends in a newline character behaves as if nothing else exists after it.
+    #[test]
+    fn lines_span_end_of_line() {
+        let input = "abc\ndef";
+        let span = Span::new(input, 0, 4).unwrap();
+        let lines: Vec<_> = span.lines_span().collect();
+        println!("{:?}", lines);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].as_str(), "abc\n".to_owned());
+        assert_eq!(lines[1].as_str(), "".to_owned());
+        assert_eq!(lines[1].start_pos().line_of(), "def".to_owned());
     }
 
     #[test]
