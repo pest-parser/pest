@@ -28,6 +28,7 @@ pub fn factor(rule: Rule) -> Rule {
                                 )
                             }
                         }
+                        // Converts `(l1 ~ l2) | l1` to `l1 ~ l2?`, avoiding trying to match `l1` twice.
                         (Expr::Seq(l1, l2), r) => {
                             if *l1 == r {
                                 Expr::Seq(
@@ -38,6 +39,7 @@ pub fn factor(rule: Rule) -> Rule {
                                 Expr::Choice(Box::new(Expr::Seq(l1, l2)), Box::new(r))
                             }
                         }
+                        // Converts `l | (l ~ r2)` to `l` since `(l ~ r2)` will never match if `l` didn't.
                         (l, Expr::Seq(r1, r2)) => {
                             if l == *r1 {
                                 l
