@@ -28,6 +28,16 @@ pub fn factor(rule: Rule) -> Rule {
                                 )
                             }
                         }
+                        (Expr::Seq(l1, l2), r) => {
+                            if *l1 == r {
+                                Expr::Seq(
+                                    l1,
+                                    Box::new(Expr::Opt(l2))
+                                )
+                            } else {
+                                Expr::Choice(Box::new(Expr::Seq(l1, l2)), Box::new(r))
+                            }
+                        }
                         (lhs, rhs) => Expr::Choice(Box::new(lhs), Box::new(rhs)),
                     },
                     expr => expr,
