@@ -20,7 +20,8 @@ pub fn list(rule: Rule) -> Rule {
                     Expr::Seq(l, r) => match *l {
                         Expr::Rep(l) => match *l {
                             Expr::Seq(l1, l2) => match *r {
-                                // Converts `(rule ~ rest)* ~ rule?` to `rule ~ (rest ~ rule)* ~ rest?`
+                                // Converts `(rule ~ rest)* ~ rule?` to `rule ~ (rest ~ rule)* ~ rest?`,
+                                // avoiding matching the last `rule` twice if the input doesn't end with `rest`.
                                 Expr::Opt(r) if l1 == r => {
                                     Expr::Seq(
                                         l1,
@@ -33,7 +34,8 @@ pub fn list(rule: Rule) -> Rule {
                                         ))
                                     )
                                 },
-                                // Converts `(rule ~ rest)* ~ rule` to `rule ~ (rest ~ rule)*`
+                                // Converts `(rule ~ rest)* ~ rule` to `rule ~ (rest ~ rule)*`,
+                                // avoiding matching the last `rule` twice.
                                 r if *l1 == r => {
                                     Expr::Seq(
                                         l1,
