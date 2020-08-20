@@ -19,36 +19,22 @@ pub fn list(rule: Rule) -> Rule {
                 match expr {
                     Expr::Seq(l, r) => match *l {
                         Expr::Rep(l) => match *l {
-                            Expr::Seq(l1, l2) => match *r {
-                                // Converts `(rule ~ rest)* ~ rule?` to `rule ~ (rest ~ rule)* ~ rest?`,
-                                // avoiding matching the last `rule` twice if the input doesn't end with `rest`.
-                                Expr::Opt(r) if l1 == r => {
-                                    Expr::Seq(
-                                        l1,
-                                        Box::new(Expr::Seq(
-                                            Box::new(Expr::Rep(Box::new(Expr::Seq(
-                                                l2.clone(),
-                                                r
-                                            )))),
-                                            Box::new(Expr::Opt(l2))
-                                        ))
-                                    )
-                                },
+                            Expr::Seq(l1, l2) => {
                                 // Converts `(rule ~ rest)* ~ rule` to `rule ~ (rest ~ rule)*`,
                                 // avoiding matching the last `rule` twice.
-                                r if *l1 == r => {
+                                if l1 == r {
                                     Expr::Seq(
                                         l1,
                                         Box::new(Expr::Rep(Box::new(Expr::Seq(
                                             l2,
-                                            Box::new(r)
+                                            r
                                         ))))
                                     )
                                 }
-                                r => {
+                                else {
                                     Expr::Seq(
                                         Box::new(Expr::Rep(Box::new(Expr::Seq(l1, l2)))),
-                                        Box::new(r)
+                                        r
                                     )
                                 }
                             }
