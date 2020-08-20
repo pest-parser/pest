@@ -31,10 +31,7 @@ pub fn factor(rule: Rule) -> Rule {
                         // Converts `(rule ~ rest) | rule` to `rule ~ rest?`, avoiding trying to match `rule` twice.
                         (Expr::Seq(l1, l2), r) => {
                             if *l1 == r {
-                                Expr::Seq(
-                                    l1,
-                                    Box::new(Expr::Opt(l2))
-                                )
+                                Expr::Seq(l1, Box::new(Expr::Opt(l2)))
                             } else {
                                 Expr::Choice(Box::new(Expr::Seq(l1, l2)), Box::new(r))
                             }

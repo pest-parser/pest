@@ -23,28 +23,18 @@ pub fn list(rule: Rule) -> Rule {
                                 // Converts `(rule ~ rest)* ~ rule` to `rule ~ (rest ~ rule)*`,
                                 // avoiding matching the last `rule` twice.
                                 if l1 == r {
-                                    Expr::Seq(
-                                        l1,
-                                        Box::new(Expr::Rep(Box::new(Expr::Seq(
-                                            l2,
-                                            r
-                                        ))))
-                                    )
-                                }
-                                else {
-                                    Expr::Seq(
-                                        Box::new(Expr::Rep(Box::new(Expr::Seq(l1, l2)))),
-                                        r
-                                    )
+                                    Expr::Seq(l1, Box::new(Expr::Rep(Box::new(Expr::Seq(l2, r)))))
+                                } else {
+                                    Expr::Seq(Box::new(Expr::Rep(Box::new(Expr::Seq(l1, l2)))), r)
                                 }
                             }
-                            expr => Expr::Seq(Box::new(Expr::Rep(Box::new(expr))), r)
-                        }
-                        expr => Expr::Seq(Box::new(expr), r)
-                    }
-                    expr => expr
+                            expr => Expr::Seq(Box::new(Expr::Rep(Box::new(expr))), r),
+                        },
+                        expr => Expr::Seq(Box::new(expr), r),
+                    },
+                    expr => expr,
                 }
-            })
-        }
+            }),
+        },
     }
 }
