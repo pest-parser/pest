@@ -20,6 +20,7 @@ macro_rules! box_tree {
 
 mod concatenator;
 mod factorizer;
+mod lister;
 mod restorer;
 mod rotater;
 mod skipper;
@@ -33,6 +34,7 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<OptimizedRule> {
         .map(unroller::unroll)
         .map(concatenator::concatenate)
         .map(factorizer::factor)
+        .map(lister::list)
         .map(rule_to_optimized_rule)
         .collect();
 
