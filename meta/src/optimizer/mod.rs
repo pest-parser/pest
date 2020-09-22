@@ -568,4 +568,38 @@ mod tests {
 
         assert_eq!(optimize(rules), optimized);
     }
+
+    #[test]
+    fn lister() {
+        let rules = {
+            use ast::Expr::*;
+            vec![Rule {
+                name: "rule".to_owned(),
+                ty: RuleType::Silent,
+                expr: box_tree!(Seq(
+                    Rep(Seq(
+                        Ident(String::from("a")),
+                        Ident(String::from("b"))
+                    )),
+                    Ident(String::from("a"))
+                )),
+            }]
+        };
+        let optimized = {
+            use optimizer::OptimizedExpr::*;
+            vec![OptimizedRule {
+                name: "rule".to_owned(),
+                ty: RuleType::Silent,
+                expr: box_tree!(Seq(
+                    Ident(String::from("a")),
+                    Rep(Seq(
+                        Ident(String::from("b")),
+                        Ident(String::from("a"))
+                    ))
+                )),
+            }]
+        };
+
+        assert_eq!(optimize(rules), optimized);
+    }
 }
