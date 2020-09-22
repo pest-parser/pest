@@ -509,4 +509,35 @@ mod tests {
 
         assert_eq!(optimize(rules), optimized);
     }
+
+    #[test]
+    fn short_common_sequence() {
+        let rules = {
+            use ast::Expr::*;
+            vec![Rule {
+                name: "rule".to_owned(),
+                ty: RuleType::Silent,
+                expr: box_tree!(Choice(
+                    Seq(
+                        Ident(String::from("a")),
+                        Ident(String::from("b"))
+                    ),
+                    Ident(String::from("a"))
+                )),
+            }]
+        };
+        let optimized = {
+            use optimizer::OptimizedExpr::*;
+            vec![OptimizedRule {
+                name: "rule".to_owned(),
+                ty: RuleType::Silent,
+                expr: box_tree!(Seq(
+                    Ident(String::from("a")),
+                    Opt(Ident(String::from("b")))
+                )),
+            }]
+        };
+
+        assert_eq!(optimize(rules), optimized);
+    }
 }
