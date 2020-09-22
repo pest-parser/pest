@@ -540,4 +540,32 @@ mod tests {
 
         assert_eq!(optimize(rules), optimized);
     }
+
+    #[test]
+    fn impossible_common_sequence() {
+        let rules = {
+            use ast::Expr::*;
+            vec![Rule {
+                name: "rule".to_owned(),
+                ty: RuleType::Silent,
+                expr: box_tree!(Choice(
+                    Ident(String::from("a")),
+                    Seq(
+                        Ident(String::from("a")),
+                        Ident(String::from("b"))
+                    )
+                )),
+            }]
+        };
+        let optimized = {
+            use optimizer::OptimizedExpr::*;
+            vec![OptimizedRule {
+                name: "rule".to_owned(),
+                ty: RuleType::Silent,
+                expr: box_tree!(Ident(String::from("a"))),
+            }]
+        };
+
+        assert_eq!(optimize(rules), optimized);
+    }
 }
