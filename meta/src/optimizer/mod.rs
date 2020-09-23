@@ -518,10 +518,7 @@ mod tests {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
                 expr: box_tree!(Choice(
-                    Seq(
-                        Ident(String::from("a")),
-                        Ident(String::from("b"))
-                    ),
+                    Seq(Ident(String::from("a")), Ident(String::from("b"))),
                     Ident(String::from("a"))
                 )),
             }]
@@ -531,10 +528,7 @@ mod tests {
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
-                expr: box_tree!(Seq(
-                    Ident(String::from("a")),
-                    Opt(Ident(String::from("b")))
-                )),
+                expr: box_tree!(Seq(Ident(String::from("a")), Opt(Ident(String::from("b"))))),
             }]
         };
 
@@ -550,10 +544,7 @@ mod tests {
                 ty: RuleType::Silent,
                 expr: box_tree!(Choice(
                     Ident(String::from("a")),
-                    Seq(
-                        Ident(String::from("a")),
-                        Ident(String::from("b"))
-                    )
+                    Seq(Ident(String::from("a")), Ident(String::from("b")))
                 )),
             }]
         };
@@ -577,10 +568,7 @@ mod tests {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
                 expr: box_tree!(Seq(
-                    Rep(Seq(
-                        Ident(String::from("a")),
-                        Ident(String::from("b"))
-                    )),
+                    Rep(Seq(Ident(String::from("a")), Ident(String::from("b")))),
                     Ident(String::from("a"))
                 )),
             }]
@@ -592,10 +580,7 @@ mod tests {
                 ty: RuleType::Silent,
                 expr: box_tree!(Seq(
                     Ident(String::from("a")),
-                    Rep(Seq(
-                        Ident(String::from("b")),
-                        Ident(String::from("a"))
-                    ))
+                    Rep(Seq(Ident(String::from("b")), Ident(String::from("a"))))
                 )),
             }]
         };
