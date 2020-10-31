@@ -444,7 +444,7 @@ impl<R: RuleType> ErrorVariant<R> {
     ///
     /// ```
     /// # use pest::error::ErrorVariant;
-    /// let variant = ErrorVariant::CustomError {
+    /// let variant = ErrorVariant::<()>::CustomError {
     ///     message: String::from("unexpected error")
     /// };
     ///
