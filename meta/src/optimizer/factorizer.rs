@@ -10,29 +10,25 @@
 use ast::*;
 
 pub fn factor(rule: Rule) -> Rule {
-    match rule {
-        Rule { name, ty, expr } => Rule {
-            name,
-            ty,
-            expr: expr.map_top_down(|expr| {
-                // TODO: Use box syntax when it gets stabilized.
-                match expr {
-                    Expr::Choice(lhs, rhs) => match (*lhs, *rhs) {
-                        (Expr::Seq(l1, r1), Expr::Seq(l2, r2)) => {
-                            if l1 == l2 {
-                                Expr::Seq(l1, Box::new(Expr::Choice(r1, r2)))
-                            } else {
-                                Expr::Choice(
-                                    Box::new(Expr::Seq(l1, r1)),
-                                    Box::new(Expr::Seq(l2, r2)),
-                                )
-                            }
+    let Rule { name, ty, expr } = rule;
+    Rule {
+        name,
+        ty,
+        expr: expr.map_top_down(|expr| {
+            // TODO: Use box syntax when it gets stabilized.
+            match expr {
+                Expr::Choice(lhs, rhs) => match (*lhs, *rhs) {
+                    (Expr::Seq(l1, r1), Expr::Seq(l2, r2)) => {
+                        if l1 == l2 {
+                            Expr::Seq(l1, Box::new(Expr::Choice(r1, r2)))
+                        } else {
+                            Expr::Choice(Box::new(Expr::Seq(l1, r1)), Box::new(Expr::Seq(l2, r2)))
                         }
-                        (lhs, rhs) => Expr::Choice(Box::new(lhs), Box::new(rhs)),
-                    },
-                    expr => expr,
-                }
-            }),
-        },
+                    }
+                    (lhs, rhs) => Expr::Choice(Box::new(lhs), Box::new(rhs)),
+                },
+                expr => expr,
+            }
+        }),
     }
 }
