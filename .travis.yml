@@ -18,7 +18,7 @@ jobs:
         cargo test --all --verbose &&
         cargo doc --all --verbose
     - name: style
-      rust: 1.31.0 # Pinned warnings
+      rust: 1.47.0 # Pinned warnings
       install:
       - rustup component add clippy
       - rustup component add rustfmt
