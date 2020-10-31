@@ -9,11 +9,11 @@
 
 //! Types for different kinds of parsing failures.
 
+use std::borrow::Cow;
 use std::cmp;
 use std::error;
 use std::fmt;
 use std::mem;
-use std::borrow::Cow;
 
 use position::Position;
 use span::Span;
@@ -430,9 +430,9 @@ impl<R: RuleType> ErrorVariant<R> {
     ///
     /// Returns the error message for [`ErrorVariant`]
     ///
-    /// If [`ErrorVariant`] is [`CustomError`], it returns a 
+    /// If [`ErrorVariant`] is [`CustomError`], it returns a
     /// [`Cow::Borrowed`] reference to [`message`]. If [`ErrorVariant`] is [`ParsingError`], a
-    /// [`Cow::Owned`] containing "expected [positives] [negatives]" is returned. 
+    /// [`Cow::Owned`] containing "expected [positives] [negatives]" is returned.
     ///
     /// [`ErrorVariant`]: enum.ErrorVariant.html
     /// [`CustomError`]: enum.ErrorVariant.html#variant.CustomError
@@ -454,7 +454,9 @@ impl<R: RuleType> ErrorVariant<R> {
             ErrorVariant::ParsingError {
                 ref positives,
                 ref negatives,
-            } => Cow::Owned(Error::parsing_error_message(positives, negatives, |r| format!("{:?}", r))),
+            } => Cow::Owned(Error::parsing_error_message(positives, negatives, |r| {
+                format!("{:?}", r)
+            })),
             ErrorVariant::CustomError { ref message } => Cow::Borrowed(message),
         }
     }
