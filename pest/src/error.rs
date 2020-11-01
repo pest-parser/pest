@@ -9,6 +9,7 @@
 
 //! Types for different kinds of parsing failures.
 
+use std::borrow::Cow;
 use std::cmp;
 use std::error;
 use std::fmt;
@@ -314,13 +315,7 @@ impl<R: RuleType> Error<R> {
     }
 
     fn message(&self) -> String {
-        match self.variant {
-            ErrorVariant::ParsingError {
-                ref positives,
-                ref negatives,
-            } => Error::parsing_error_message(positives, negatives, |r| format!("{:?}", r)),
-            ErrorVariant::CustomError { ref message } => message.clone(),
-        }
+        self.variant.message().to_string()
     }
 
     fn parsing_error_message<F>(positives: &[R], negatives: &[R], mut f: F) -> String
@@ -427,6 +422,42 @@ impl<R: RuleType> Error<R> {
                 underline = self.underline(),
                 message = self.message()
             )
+        }
+    }
+}
+
+impl<R: RuleType> ErrorVariant<R> {
+    ///
+    /// Returns the error message for [`ErrorVariant`]
+    ///
+    /// If [`ErrorVariant`] is [`CustomError`], it returns a
+    /// [`Cow::Borrowed`] reference to [`message`]. If [`ErrorVariant`] is [`ParsingError`], a
+    /// [`Cow::Owned`] containing "expected [positives] [negatives]" is returned.
+    ///
+    /// [`ErrorVariant`]: enum.ErrorVariant.html
+    /// [`CustomError`]: enum.ErrorVariant.html#variant.CustomError
+    /// [`ParsingError`]: enum.ErrorVariant.html#variant.ParsingError
+    /// [`Cow::Owned`]: https://doc.rust-lang.org/std/borrow/enum.Cow.html#variant.Owned
+    /// [`Cow::Borrowed`]: https://doc.rust-lang.org/std/borrow/enum.Cow.html#variant.Borrowed
+    /// [`message`]: enum.ErrorVariant.html#variant.CustomError.field.message
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::error::ErrorVariant;
+    /// let variant = ErrorVariant::<()>::CustomError {
+    ///     message: String::from("unexpected error")
+    /// };
+    ///
+    /// println!("{}", variant.message());
+    pub fn message(&self) -> Cow<str> {
+        match self {
+            ErrorVariant::ParsingError {
+                ref positives,
+                ref negatives,
+            } => Cow::Owned(Error::parsing_error_message(positives, negatives, |r| {
+                format!("{:?}", r)
+            })),
+            ErrorVariant::CustomError { ref message } => Cow::Borrowed(message),
         }
     }
 }

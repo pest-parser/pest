@@ -153,6 +153,7 @@ Digit:   2
 * [jql](https://github.com/yamafaktory/jql)
 * [json5-rs](https://github.com/callum-oakley/json5-rs)
 * [mt940](https://github.com/svenstaro/mt940-rs)
+* [Myoxine](https://github.com/d3bate/myoxine)
 * [py_literal](https://github.com/jturner314/py_literal)
 * [rouler](https://github.com/jarcane/rouler)
 * [RuSh](https://github.com/lwandrebeck/RuSh)

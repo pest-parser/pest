@@ -605,7 +605,7 @@ mod tests {
         let pos1 = Position::from_start(input1);
         let pos2 = Position::from_start(input2);
 
-        pos1.cmp(&pos2);
+        let _ = pos1.cmp(&pos2);
     }
 
     #[test]

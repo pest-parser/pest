@@ -18,7 +18,7 @@ jobs:
         cargo test --all --verbose &&
         cargo doc --all --verbose
     - name: style
-      rust: 1.31.0 # Pinned warnings
+      rust: 1.47.0 # Pinned warnings
       install:
       - rustup component add clippy
       - rustup component add rustfmt
@@ -27,7 +27,7 @@ jobs:
       - cargo clippy --all -- -D warnings
       - cargo fmt --all -- --check
     - name: minimal versions
-      rust: nightly-2018-12-08 # Arbitrary nightly for unstable cargo feature -- make this MSRV build later?
+      rust: nightly-2020-01-01 # Arbitrary nightly for unstable cargo feature -- make this MSRV build later?
       before_script:
         - cargo -Z minimal-versions generate-lockfile
         - cargo bootstrap

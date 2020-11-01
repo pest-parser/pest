@@ -125,13 +125,9 @@ pub enum ParserExpr<'i> {
 }
 
 fn convert_rule(rule: ParserRule) -> AstRule {
-    match rule {
-        ParserRule { name, ty, node, .. } => {
-            let expr = convert_node(node);
-
-            AstRule { name, ty, expr }
-        }
-    }
+    let ParserRule { name, ty, node, .. } = rule;
+    let expr = convert_node(node);
+    AstRule { name, ty, expr }
 }
 
 fn convert_node(node: ParserNode) -> Expr {
