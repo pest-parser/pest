@@ -9,17 +9,22 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
-      - name: Install Rust toolchain
+      - name: Install Rust toolchains - Stable
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           components: rustfmt, clippy
-      - name: Build Grammar Bootstraping Executable
+          default: true
+      - name: Install Rust toolchains - Nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+      - name: Bootstraping Grammars - Building
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --package pest_bootstrap
-      - name: Run Grammar Bootstrap
+      - name: Bootstraping Grammars - Executing
         uses: actions-rs/cargo@v1
         with:
           command: run
@@ -49,3 +54,8 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+      - name: Minimal versions
+        uses: actions-rs/cargo@v1
+        with:
+          command: minimal-versions generate-lockfile
+          toolchain: nightly # minimal-versions is unstable
