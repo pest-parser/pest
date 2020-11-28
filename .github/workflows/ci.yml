@@ -14,8 +14,8 @@ jobs:
         with:
           toolchain: nightly
       - name: Minimal versions - Switch to Nightly
-        run: rustup default nightly # minimal-versions requires nightly
-      -name: Minimal versions - Run cargo
-        run: cargo -Z minimal-versions generate-lockfile && # Doesn't seem to work with actions-rs/cargo
+        run: rustup default nightly
+      - name: Minimal versions - Run cargo
+        run: cargo -Z minimal-versions generate-lockfile
       - name: Minimal versions - Switch back to Stable
         run: rustup default stable
