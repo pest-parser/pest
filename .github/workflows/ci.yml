@@ -1,0 +1,14 @@
+name: Pest Continuous Integration
+
+on: [push]
+
+jobs:
+  steps:
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Run Bootstrap script
+      uses: actions-rs/cargo@v1
+      with:
+        command: bootstrap
