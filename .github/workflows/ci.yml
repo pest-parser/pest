@@ -19,43 +19,8 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
-      - name: Bootstraping Grammars - Building
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --package pest_bootstrap
-      - name: Bootstraping Grammars - Executing
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --package pest_bootstrap
-      - name: Cargo Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --all --verbose
-      - name: Cargo Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --verbose
-      - name: Cargo Doc
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --all --verbose
-      - name: Cargo Clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all -- -D warnings
-      - name: Cargo Fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
       - name: Minimal versions
         uses: actions-rs/cargo@v1
         with:
-          command: minimal-versions generate-lockfile
+          command: -Z minimal-versions generate-lockfile
           toolchain: nightly # minimal-versions is unstable
