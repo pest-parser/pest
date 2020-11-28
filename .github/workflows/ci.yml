@@ -9,13 +9,75 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
+      - name: Install Rust toolchains - Stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+          default: true
       - name: Install Rust toolchains - Nightly
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
-      - name: Minimal versions - Switch to Nightly
+      - name: Bootstraping Grammars - Building
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --package pest_bootstrap
+      - name: Bootstraping Grammars - Executing
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --package pest_bootstrap
+      - name: Cargo Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all --verbose
+      - name: Cargo Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --verbose
+      - name: Cargo Doc
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --all --verbose
+      - name: Cargo Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all -- -D warnings
+      - name: Cargo Fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+      - name: Switch to Nightly
         run: rustup default nightly
-      - name: Minimal versions - Run cargo
+      - name: Minimal versions - Generate lockfile
         run: cargo -Z minimal-versions generate-lockfile
-      - name: Minimal versions - Switch back to Stable
-        run: rustup default stable
+      - name: Minimal versions - Retest
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --verbose
+          toolchain: stable
+      - name: Show active toolchain
+        run: rustup show active-toolchain
+      - name: Coverage - Tarpaulin
+        env:
+          RUSTFLAGS: --cfg procmacro2_semver_exempt
+        uses: actions-rs/tarpaulin@v0.1.0
+        with:
+          args: --verbose
+          out-type: Xml
+      - name: Coverage - Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./cobertura.xml
+          flags: unittests
+          name: pest-ci-coverage
+          fail_ci_if_error: false
+          verbose: true
