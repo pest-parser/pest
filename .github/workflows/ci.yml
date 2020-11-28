@@ -3,9 +3,9 @@ name: Pest Continuous Integration
 on: [push]
 
 jobs:
+  name: Pest Continuous Integration
+  runs-on: ubuntu-latest
   steps:
-    name: Pest Continuous Integration
-    runs-on: ubuntu-latest
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
