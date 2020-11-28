@@ -11,6 +11,8 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+      - name: Find cargo.toml
+        run: ls -al
       - name: Bootstrapping grammars
         uses: actions-rs/cargo@v1
         with:
