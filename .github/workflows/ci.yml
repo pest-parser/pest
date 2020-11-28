@@ -14,8 +14,6 @@ jobs:
         with:
           toolchain: nightly
       - name: Minimal versions
-        uses: actions-rs/cargo@v1
-        with:
-          command:
-          args: -Z minimal-versions generate-lockfile
-          toolchain: nightly # minimal-versions is unstable
+        run: rustup default nightly # minimal-versions requires nightly
+        run: cargo -Z minimal-versions generate-lockfile # Doesn't seem to work with actions-rs/cargo
+        run: rustup default stable
