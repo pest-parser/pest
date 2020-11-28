@@ -11,9 +11,8 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - name: Check PWD
-        run: pwd
-      - name: Run Bootstrap script
+      - name: Bootstrapping grammars
         uses: actions-rs/cargo@v1
         with:
-          command: bootstrap
+          command: run
+          args: bootstrap
