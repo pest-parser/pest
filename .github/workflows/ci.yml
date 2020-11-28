@@ -7,12 +7,12 @@ jobs:
     name: Pest Continuous Integration
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - name: Find cargo.toml
-        run: ls -al
       - name: Bootstrapping grammars
         uses: actions-rs/cargo@v1
         with:
