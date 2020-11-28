@@ -22,5 +22,6 @@ jobs:
       - name: Minimal versions
         uses: actions-rs/cargo@v1
         with:
-          command: -Z minimal-versions generate-lockfile
+          command:
+          arguments: -Z minimal-versions generate-lockfile
           toolchain: nightly # minimal-versions is unstable
