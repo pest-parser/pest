@@ -102,8 +102,12 @@ jobs:
           version: latest
           use-tool-cache: true
       - name: Fuzz Testing - Regressions
+        env:
+          FUZZIT_API_KEY: ${{ secrets.FuzzitApiKey }}
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
         run: ./fuzzit.sh local-regression
       - name: Fuzz Testing - Fuzzing
+        env:
+          FUZZIT_API_KEY: ${{ secrets.FuzzitApiKey }}
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
         run: ./fuzzit.sh fuzzing
