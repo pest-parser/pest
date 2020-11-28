@@ -13,8 +13,13 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - name: Bootstrapping grammars
+      - name: Build Grammar Bootstraping Executable
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --package pest_bootstrap
+      - name: Run Grammar Bootstrap
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: bootstrap
+          args: --package pest_bootstrap
