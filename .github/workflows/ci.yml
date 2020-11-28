@@ -3,14 +3,15 @@ name: Pest Continuous Integration
 on: [push]
 
 jobs:
-  name: Pest Continuous Integration2
-  runs-on: ubuntu-latest
-  steps:
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-    - name: Run Bootstrap script
-      uses: actions-rs/cargo@v1
-      with:
-        command: bootstrap
+  run-ci:
+    name: Pest Continuous Integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Run Bootstrap script
+        uses: actions-rs/cargo@v1
+        with:
+          command: bootstrap
