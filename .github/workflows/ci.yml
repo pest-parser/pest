@@ -13,6 +13,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          components: rustfmt, clippy
       - name: Build Grammar Bootstraping Executable
         uses: actions-rs/cargo@v1
         with:
@@ -23,3 +24,29 @@ jobs:
         with:
           command: run
           args: --package pest_bootstrap
+      - name: Cargo Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all --verbose
+            - name: Cargo Build
+      - name: Cargo Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --verbose
+      - name: Cargo Doc
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --all --verbose
+      - name: Cargo Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all -- -D warnings
+      - name: Cargo Fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: fmt --all -- --check
