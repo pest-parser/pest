@@ -64,8 +64,6 @@ jobs:
           command: test
           args: --all --verbose
           toolchain: stable
-      - name: Show active toolchain
-        run: rustup show active-toolchain
       - name: Coverage - Install Tarpaulin
         uses: actions-rs/install@v0.1
         with:
@@ -87,3 +85,15 @@ jobs:
           name: pest-ci-coverage
           fail_ci_if_error: false
           verbose: true
+      - name: Coverage - Install Tarpaulin
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-fuzz
+          version: latest
+          use-tool-cache: true
+      - name: Fuzz Testing - Regressions
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: ./fuzzit.sh local-regression
+      - name: Fuzz Testing - Fuzzing
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: ./fuzzit.sh fuzzing
