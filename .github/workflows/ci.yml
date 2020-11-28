@@ -6,7 +6,7 @@ on:
       - staging
       - trying
       - master
-  pull-request:
+  pull_request:
     branches:
       - staging
       - trying
