@@ -66,13 +66,19 @@ jobs:
           toolchain: stable
       - name: Show active toolchain
         run: rustup show active-toolchain
-      - name: Coverage - Tarpaulin
+      - name: Coverage - Install Tarpaulin
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-tarpaulin
+          version: latest
+          use-tool-cache: true
+      - name: Coverage - Run Tarpaulin
         env:
           RUSTFLAGS: --cfg procmacro2_semver_exempt
-        uses: actions-rs/tarpaulin@v0.1.0
+        uses: actions-rs/cargo@v1
         with:
-          args: --verbose
-          out-type: Xml
+          command: tarpaulin
+          args: --verbose --out Xml
       - name: Coverage - Codecov
         uses: codecov/codecov-action@v1
         with:
