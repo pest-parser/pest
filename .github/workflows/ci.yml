@@ -9,12 +9,6 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
-      - name: Install Rust toolchains - Stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
-          default: true
       - name: Install Rust toolchains - Nightly
         uses: actions-rs/toolchain@v1
         with:
@@ -23,5 +17,5 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command:
-          arguments: -Z minimal-versions generate-lockfile
+          args: -Z minimal-versions generate-lockfile
           toolchain: nightly # minimal-versions is unstable
