@@ -3,7 +3,7 @@ name: Pest Continuous Integration
 on: [push]
 
 jobs:
-  name: Pest Continuous Integration
+  name: Pest Continuous Integration2
   runs-on: ubuntu-latest
   steps:
     - name: Install Rust toolchain
