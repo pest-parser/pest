@@ -1,6 +1,16 @@
 name: Pest Continuous Integration
 
-on: [push]
+on:
+  push:
+    branches:
+      - staging
+      - trying
+      - master
+  pull-request:
+    branches:
+      - staging
+      - trying
+      - master
 
 jobs:
   run-ci:
