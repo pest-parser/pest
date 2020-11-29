@@ -109,6 +109,12 @@ jobs:
         with:
           command: run
           args: --package pest_bootstrap
+      - name: Cargo Build
+      # Installing Tarpaulin is the longest task in the CI - if we build first, we're building while other jobs are still running
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all --verbose
       - name: Install Tarpaulin
         uses: actions-rs/install@v0.1
         with:
