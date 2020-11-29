@@ -82,12 +82,12 @@ jobs:
           command: run
           args: --package pest_bootstrap
       - name: Cargo minimal-versions
-          run: cargo -Z minimal-versions generate-lockfile
+        run: cargo -Z minimal-versions generate-lockfile
       - name: Cargo test
-          uses: actions-rs/cargo@v1
-          with:
-            command: test
-            args: --all --verbose
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --verbose
 
   coverage:
     name: Test Coverage
