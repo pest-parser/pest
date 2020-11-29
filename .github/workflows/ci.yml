@@ -99,6 +99,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly-2020-01-01
+          default: true
       - name: Bootstraping Grammars - Building
         uses: actions-rs/cargo@v1
         with:
@@ -142,6 +143,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          default: true
       - name: Install Cargo Fuzz
         uses: actions-rs/install@v0.1
         with:
