@@ -30,7 +30,7 @@ function fuzz {
     (
         cd $DIR
         cargo fuzz run $FUZZER -- -runs=0
-        $ROOT/fuzzit create job --type $TYPE $TARGET ./fuzz/target/x86_64-unknown-linux-gnu/debug/$FUZZER
+        $ROOT/fuzzit create job --type $TYPE $TARGET ./fuzz/target/x86_64-unknown-linux-gnu/release/$FUZZER
     )
 }
 fuzz parser parse meta
