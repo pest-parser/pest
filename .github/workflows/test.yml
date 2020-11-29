@@ -1,0 +1,42 @@
+name: Pest Continuous Integration
+
+on: push
+
+jobs:
+  fuzzing:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Install Rust Nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+      - name: Show Toolchain Version
+        run: rustup show active-toolchain
+      - name: Install Cargo Fuzz
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-fuzz
+          version: latest
+          use-tool-cache: true
+      - name: Bootstraping Grammars - Building
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --package pest_bootstrap
+      - name: Bootstraping Grammars - Executing
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --package pest_bootstrap
+      - name: Fuzz Testing - Regressions
+        env:
+          FUZZIT_API_KEY: ${{ secrets.FuzzitApiKey }}
+        run: ./fuzzit.sh local-regression
+      - name: Fuzz Testing - Fuzzing
+        env:
+          FUZZIT_API_KEY: ${{ secrets.FuzzitApiKey }}
+        run: ./fuzzit.sh fuzzing
