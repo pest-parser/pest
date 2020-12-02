@@ -1,0 +1,170 @@
+name: pest Continuous Integration
+
+on:
+  push:
+    branches:
+      - staging
+      - trying
+      - master
+  pull_request:
+    branches:
+      - staging
+      - trying
+      - master
+
+jobs:
+  testing:
+    name: Unit, Style, and Lint Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Install Rust Stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.47.0 # Pinned warnings
+          components: rustfmt, clippy
+      - name: Bootstraping Grammars - Building
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --package pest_bootstrap
+      - name: Bootstraping Grammars - Executing
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --package pest_bootstrap
+      - name: Cargo Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all --verbose
+      - name: Cargo Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --verbose
+      - name: Cargo Doc
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --all --verbose
+      - name: Cargo Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all -- -D warnings
+      - name: Cargo Fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  dependency:
+    name: Minimal Versions Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Install Rust Nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2020-01-01 # minimal-versions is unstable - Version is arbitrary, use MSRV?
+          default: true
+      - name: Bootstraping Grammars - Building
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --package pest_bootstrap
+      - name: Bootstraping Grammars - Executing
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --package pest_bootstrap
+      - name: Cargo minimal-versions
+        run: cargo -Z minimal-versions generate-lockfile
+      - name: Cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --verbose
+
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Install Rust Nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2020-01-01
+          default: true
+      - name: Bootstraping Grammars - Building
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --package pest_bootstrap
+      - name: Bootstraping Grammars - Executing
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --package pest_bootstrap
+      - name: Install Tarpaulin
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-tarpaulin
+          version: latest
+          use-tool-cache: true
+      - name: Run Tarpaulin
+        env:
+          RUSTFLAGS: --cfg procmacro2_semver_exempt
+        uses: actions-rs/cargo@v1
+        with:
+          command: tarpaulin
+          args: --verbose --out Xml
+      - name: Upload Results to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./cobertura.xml
+          flags: unittests
+          name: pest-ci-coverage
+          fail_ci_if_error: false
+          verbose: true
+
+  fuzzing:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Install Rust Nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+      - name: Install Cargo Fuzz
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-fuzz
+          version: latest
+          use-tool-cache: true
+      - name: Bootstraping Grammars - Building
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --package pest_bootstrap
+      - name: Bootstraping Grammars - Executing
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --package pest_bootstrap
+      - name: Fuzz Testing - Regressions
+        env:
+          FUZZIT_API_KEY: ${{ secrets.FuzzitApiKey }}
+        run: ./fuzzit.sh local-regression
+      - name: Fuzz Testing - Fuzzing
+        env:
+          FUZZIT_API_KEY: ${{ secrets.FuzzitApiKey }}
+        run: ./fuzzit.sh fuzzing
