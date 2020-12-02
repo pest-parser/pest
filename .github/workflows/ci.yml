@@ -1,4 +1,4 @@
-name: Pest Continuous Integration
+name: pest Continuous Integration
 
 on:
   push:
