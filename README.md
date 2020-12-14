@@ -163,8 +163,10 @@ Digit:   2
 * [ui_gen](https://github.com/emoon/ui_gen)
 * [ukhasnet-parser](https://github.com/adamgreig/ukhasnet-parser)
 * [ZoKrates](https://github.com/ZoKrates/ZoKrates)
+* [Vector](https://github.com/timberio/vector)
 
 ## Special thanks
 
 A special round of applause goes to prof. Marius Minea for his guidance and all
 pest contributors, some of which being none other than my friends.
+
