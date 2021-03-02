@@ -18,7 +18,11 @@ use pest::{Parser, Span};
 use ast::{Expr, Rule as AstRule, RuleType};
 use validator;
 
+#[cfg(feature = "bootstrap-in-src")]
 include!("grammar.rs");
+
+#[cfg(not(feature = "bootstrap-in-src"))]
+include!(concat!(env!("OUT_DIR"), "/__pest_grammar.rs"));
 
 pub fn parse(rule: Rule, data: &str) -> Result<Pairs<Rule>, Error<Rule>> {
     PestParser::parse(rule, data)

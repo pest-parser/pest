@@ -17,3 +17,8 @@ quote = "1.0"
 codecov = { repository = "pest-parser/pest" }
 maintenance = { status = "actively-developed" }
 travis-ci = { repository = "pest-parser/pest" }
+
+[features]
+# Whether or not the bootstrapper should put the generated .rs file in the
+# source tree or in the output tree
+bootstrap-in-src = []

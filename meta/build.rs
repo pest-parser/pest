@@ -4,11 +4,17 @@ extern crate sha1;
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
+use std::ffi::OsString;
+use std::str::FromStr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use sha1::{Digest, Sha1};
-use cargo::{core::{Workspace, compiler::CompileMode}, ops::{self, Packages, CompileOptions}, util::config::Config};
+use cargo::{
+    core::{Workspace, compiler::CompileMode},
+    ops::{self, Packages, CompileOptions},
+    util::{config::Config, interning::InternedString}
+};
 
 fn display_digest(digest: &[u8]) -> String {
     digest.iter().map(|byte| format!("{:02x}", byte)).collect()
@@ -70,7 +76,15 @@ fn main() {
 
             let mut opts = CompileOptions::new(&config, CompileMode::Build).unwrap();
             opts.spec = Packages::Packages(vec!["pest_bootstrap".to_owned()]);
-            ops::compile(&workspace, &opts).unwrap();
+            opts.features = vec!["bootstrap-in-src".to_owned()];
+            opts.build_config.requested_profile = InternedString::new("bootstrap");
+
+            let path = if should_bootstrap_in_src() {
+                OsString::from(grammar_rs_path)
+            } else {
+                format!("{}/__pest_grammar.rs", env::var("OUT_DIR").unwrap()).parse::<OsString>().unwrap()
+            };
+            ops::run(&workspace, &opts, &[path]).unwrap();
         } else {
             println!("       Fresh `meta/src/grammar.rs`");
         }
@@ -81,3 +95,10 @@ fn main() {
         );
     }
 }
+
+#[cfg(feature = "bootstrap-in-src")]
+fn should_bootstrap_in_src() -> bool { true }
+
+#[cfg(not(feature = "bootstrap-in-src"))]
+fn should_bootstrap_in_src() -> bool { false }
+>>>>>>> 838adc9 (more bootstrapping logic)
