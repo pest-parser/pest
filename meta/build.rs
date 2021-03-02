@@ -1,11 +1,14 @@
+extern crate cargo;
 extern crate sha1;
 
-use sha1::{Digest, Sha1};
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+use sha1::{Digest, Sha1};
+use cargo::{core::{Workspace, compiler::CompileMode}, ops::{self, Packages, CompileOptions}, util::config::Config};
 
 fn display_digest(digest: &[u8]) -> String {
     digest.iter().map(|byte| format!("{:02x}", byte)).collect()
@@ -18,6 +21,7 @@ fn main() {
     // We want to publish `grammar.rs` and not `grammar.pest`,
     // so putting it in `src` is the simplest way to do so.
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+
     let grammar_pest_path = manifest_dir.join("src/grammar.pest");
     let grammar_rs_path = manifest_dir.join("src/grammar.rs");
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
@@ -46,20 +50,27 @@ fn main() {
             writeln!(hash_file, "{}", current_hash).unwrap();
 
             // This "dynamic linking" is probably so fragile I don't even want to hear it
-            let status = Command::new(manifest_dir.join("../target/debug/pest_bootstrap"))
-                .spawn()
-                .unwrap_or_else(|_| {
-                    panic!(
-                        "Bootstrap failed because no bootstrap executable was found. \
-                         Please run `cargo build --package pest_bootstrap` or `cargo bootstrap` \
-                         and then try again.",
-                    )
-                })
-                .wait()
-                .unwrap();
-            if !status.success() {
-                panic!("Bootstrap failed");
-            }
+            // let status = Command::new(manifest_dir.join("../target/debug/pest_bootstrap"))
+            //     .spawn()
+            //     .unwrap_or_else(|_| {
+            //         panic!(
+            //             "Bootstrap failed because no bootstrap executable was found. \
+            //              Please run `cargo build --package pest_bootstrap` or `cargo bootstrap` \
+            //              and then try again.",
+            //         )
+            //     })
+            //     .wait()
+            //     .unwrap();
+            // if !status.success() {
+            //     panic!("Bootstrap failed");
+            // }
+            let config = Config::default().unwrap();
+            let workspace_manifest = manifest_dir.join("../Cargo.toml").canonicalize().unwrap();
+            let workspace = Workspace::new(&workspace_manifest, &config).unwrap();
+
+            let mut opts = CompileOptions::new(&config, CompileMode::Build).unwrap();
+            opts.spec = Packages::Packages(vec!["bootstrap".to_owned()]);
+            ops::compile(&workspace, &opts).unwrap();
         } else {
             println!("       Fresh `meta/src/grammar.rs`");
         }

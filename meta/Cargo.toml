@@ -24,3 +24,4 @@ travis-ci = { repository = "pest-parser/pest" }
 
 [build-dependencies]
 sha-1 = { version = "0.9", default-features = false }
+cargo = "0.51.0"
