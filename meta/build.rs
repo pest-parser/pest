@@ -69,7 +69,7 @@ fn main() {
             let workspace = Workspace::new(&workspace_manifest, &config).unwrap();
 
             let mut opts = CompileOptions::new(&config, CompileMode::Build).unwrap();
-            opts.spec = Packages::Packages(vec!["bootstrap".to_owned()]);
+            opts.spec = Packages::Packages(vec!["pest_bootstrap".to_owned()]);
             ops::compile(&workspace, &opts).unwrap();
         } else {
             println!("       Fresh `meta/src/grammar.rs`");
