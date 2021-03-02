@@ -76,7 +76,9 @@ fn main() {
 
             let mut opts = CompileOptions::new(&config, CompileMode::Build).unwrap();
             opts.spec = Packages::Packages(vec!["pest_bootstrap".to_owned()]);
-            opts.features = vec!["bootstrap-in-src".to_owned()];
+            if should_bootstrap_in_src() {
+                opts.features = vec!["bootstrap-in-src".to_owned()];
+            }
             opts.build_config.requested_profile = InternedString::new("bootstrap");
 
             let path = if should_bootstrap_in_src() {
@@ -101,4 +103,3 @@ fn should_bootstrap_in_src() -> bool { true }
 
 #[cfg(not(feature = "bootstrap-in-src"))]
 fn should_bootstrap_in_src() -> bool { false }
->>>>>>> 838adc9 (more bootstrapping logic)
