@@ -1,3 +1,4 @@
+#![no_std]
 // pest. The Elegant Parser
 // Copyright (c) 2018 Dragoș Tiselice
 //
@@ -65,6 +66,7 @@
 
 #![doc(html_root_url = "https://docs.rs/pest")]
 
+extern crate alloc;
 extern crate ucd_trie;
 
 #[cfg(feature = "pretty-print")]
@@ -72,12 +74,12 @@ extern crate serde;
 #[cfg(feature = "pretty-print")]
 extern crate serde_json;
 
+use core::fmt::Debug;
+use core::hash::Hash;
 pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState};
 pub use position::Position;
 pub use span::{Lines, Span};
-use std::fmt::Debug;
-use std::hash::Hash;
 pub use token::Token;
 
 pub mod error;
