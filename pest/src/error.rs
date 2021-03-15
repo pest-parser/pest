@@ -472,7 +472,7 @@ impl<R: RuleType> fmt::Display for Error<R> {
     }
 }
 
-/*
+#[cfg(feature = "std")]
 impl<'i, R: RuleType> std::error::Error for Error<R> {
     fn description(&self) -> &str {
         match self.variant {
@@ -481,7 +481,6 @@ impl<'i, R: RuleType> std::error::Error for Error<R> {
         }
     }
 }
-*/
 
 fn visualize_whitespace(input: &str) -> String {
     input.to_owned().replace('\r', "␍").replace('\n', "␊")

@@ -606,8 +606,8 @@ mod tests {
         let _ = pos1.cmp(&pos2);
     }
 
-    /*
     #[test]
+    #[cfg(feature = "std")]
     fn hash() {
         use std::collections::HashSet;
 
@@ -617,5 +617,4 @@ mod tests {
 
         positions.insert(start);
     }
-    */
 }

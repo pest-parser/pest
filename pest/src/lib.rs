@@ -1,4 +1,3 @@
-#![no_std]
 // pest. The Elegant Parser
 // Copyright (c) 2018 Dragoș Tiselice
 //
@@ -8,6 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 #![cfg_attr(feature = "const_prec_climber", feature(const_fn))]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 //! # pest. The Elegant Parser
 //!
@@ -66,6 +66,8 @@
 #![doc(html_root_url = "https://docs.rs/pest")]
 
 extern crate alloc;
+#[cfg(feature = "std")]
+extern crate core;
 extern crate ucd_trie;
 
 #[cfg(feature = "pretty-print")]
