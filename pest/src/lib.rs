@@ -6,8 +6,8 @@
 // license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
+#![no_std]
 #![cfg_attr(feature = "const_prec_climber", feature(const_fn))]
-#![cfg_attr(not(feature = "std"), no_std)]
 
 //! # pest. The Elegant Parser
 //!
@@ -67,7 +67,7 @@
 
 extern crate alloc;
 #[cfg(feature = "std")]
-extern crate core;
+extern crate std;
 extern crate ucd_trie;
 
 #[cfg(feature = "pretty-print")]
