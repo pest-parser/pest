@@ -22,7 +22,7 @@ jobs:
       - name: Install Rust Stable
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.47.0 # Pinned warnings
+          toolchain: 1.51.0 # Pinned warnings
           components: rustfmt, clippy
       - name: Install gcc
         run: sudo apt-get update && sudo apt-get install -y gcc

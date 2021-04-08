@@ -32,9 +32,9 @@ where
         panic!(
             "grammar error\n\n{}",
             &e.into_iter()
-            .map(|error| format!("{}", error))
-            .collect::<Vec<_>>()
-            .join("\n\n")
+                .map(|error| format!("{}", error))
+                .collect::<Vec<_>>()
+                .join("\n\n")
         )
     })
 }
