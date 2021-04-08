@@ -24,6 +24,8 @@ jobs:
         with:
           toolchain: 1.47.0 # Pinned warnings
           components: rustfmt, clippy
+      - name: Install gcc
+        run: sudo apt-get update && sudo apt-get install -y gcc
       - name: Bootstraping Grammars - Building
         uses: actions-rs/cargo@v1
         with:
@@ -64,30 +66,33 @@ jobs:
     name: Minimal Versions Testing
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v2
-      - name: Install Rust Nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly-2020-01-01 # minimal-versions is unstable - Version is arbitrary, use MSRV?
-          default: true
-      - name: Bootstraping Grammars - Building
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --package pest_bootstrap
-      - name: Bootstraping Grammars - Executing
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --package pest_bootstrap
-      - name: Cargo minimal-versions
-        run: cargo -Z minimal-versions generate-lockfile
-      - name: Cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --verbose
+    - name: Checkout source code
+      uses: actions/checkout@v2
+    - name: Install gcc
+      run: sudo apt-get update && sudo apt-get install -y gcc
+    - name: Install Rust Nightly
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly-2021-01-01
+        default: true
+        profile: minimal
+    - name: Bootstraping Grammars - Building
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --package pest_bootstrap
+    - name: Bootstraping Grammars - Executing
+      uses: actions-rs/cargo@v1
+      with:
+        command: run
+        args: --package pest_bootstrap
+    - name: Cargo minimal-versions
+      run: cargo -Z minimal-versions generate-lockfile
+    - name: Cargo test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --all --verbose
 
   coverage:
     name: Test Coverage
@@ -98,8 +103,11 @@ jobs:
       - name: Install Rust Nightly
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2020-01-01
+          toolchain: nightly-2021-01-01
+          profile: minimal
           default: true
+      - name: Install gcc
+        run: sudo apt-get update && sudo apt-get install -y gcc libssl-dev pkg-config
       - name: Bootstraping Grammars - Building
         uses: actions-rs/cargo@v1
         with:
