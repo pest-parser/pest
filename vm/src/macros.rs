@@ -169,11 +169,13 @@ macro_rules! parses_to {
                         ) => {
                             assert!(
                                 format!("{}", first_rule) == "EOI",
-                                format!("expected end of input, but found {:?}", rest)
+                                "expected end of input, but found {:?}",
+                                rest,
                             );
                             assert!(
                                 format!("{}", second_rule) == "EOI",
-                                format!("expected end of input, but found {:?}", rest)
+                                "expected end of input, but found {:?}",
+                                rest,
                             );
                         }
                         _ => panic!("expected end of input, but found {:?}", rest)
