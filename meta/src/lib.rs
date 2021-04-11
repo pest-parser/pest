@@ -30,11 +30,11 @@ where
 {
     result.unwrap_or_else(|e| {
         panic!(
-            "grammar error\n\n".to_owned()
-                + &e.into_iter()
-                    .map(|error| format!("{}", error))
-                    .collect::<Vec<_>>()
-                    .join("\n\n")
+            "grammar error\n\n{}",
+            e.into_iter()
+                .map(|error| format!("{}", error))
+                .collect::<Vec<_>>()
+                .join("\n\n")
         )
     })
 }
