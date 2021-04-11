@@ -63,6 +63,7 @@ pub fn generate(
                 ::pest::error::Error<Rule>
             > {
                 mod rules {
+                    #![allow(clippy::upper_case_acronyms)]
                     pub mod hidden {
                         use super::super::Rule;
                         #skip
@@ -183,7 +184,7 @@ fn generate_enum(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
         .map(|rule| Ident::new(rule.name.as_str(), Span::call_site()));
     if uses_eoi {
         quote! {
-            #[allow(dead_code, non_camel_case_types)]
+            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
             pub enum Rule {
                 EOI,
@@ -192,7 +193,7 @@ fn generate_enum(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
         }
     } else {
         quote! {
-            #[allow(dead_code, non_camel_case_types)]
+            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
             pub enum Rule {
                 #( #rules ),*
@@ -641,7 +642,7 @@ mod tests {
         assert_eq!(
             generate_enum(&rules, false).to_string(),
             quote! {
-                #[allow(dead_code, non_camel_case_types)]
+                #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
                     f
@@ -944,7 +945,7 @@ mod tests {
                 #[allow(non_upper_case_globals)]
                 const _PEST_GRAMMAR_MyParser: &'static str = include_str!(#test_path);
 
-                #[allow(dead_code, non_camel_case_types)]
+                #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
                     a
@@ -960,6 +961,7 @@ mod tests {
                         ::pest::error::Error<Rule>
                     > {
                         mod rules {
+                            #![allow(clippy::upper_case_acronyms)]
                             pub mod hidden {
                                 use super::super::Rule;
 
