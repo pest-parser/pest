@@ -62,6 +62,32 @@ impl<'i> Span<'i> {
         }
     }
 
+    /// Attempts to create a new span based on a sub-range.
+    ///
+    /// TODO better docs
+    pub fn sub_span(&self, range: impl std::ops::RangeBounds<usize>) -> Option<Span<'i>> {
+        let start = match range.start_bound() {
+            std::ops::Bound::Included(&offset) => offset,
+            std::ops::Bound::Excluded(&offset) => offset + 1,
+            std::ops::Bound::Unbounded => 0,
+        };
+        let end = match range.end_bound() {
+            std::ops::Bound::Included(&offset) => Some(offset + 1),
+            std::ops::Bound::Excluded(&offset) => Some(offset),
+            std::ops::Bound::Unbounded => None,
+        };
+        let s = self.as_str();
+        if s.get(start..end.unwrap_or(s.len())).is_some() {
+            Span::new(
+                self.input,
+                self.start + start,
+                end.map(|n| self.start + n).unwrap_or(self.end),
+            )
+        } else {
+            None
+        }
+    }
+
     /// Returns the `Span`'s start byte position as a `usize`.
     ///
     /// # Examples
@@ -199,9 +225,19 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.lines().collect::<Vec<_>>(), vec!["b\n", "c"]);
     /// ```
     #[inline]
-    pub fn lines(&self) -> Lines {
+    pub fn lines(&self) -> Lines<'i> {
         Lines {
-            span: self,
+            inner: self.lines_span(),
+        }
+    }
+
+    /// Unlike `Span::lines`, will not emit the entire line for partially covered lines. Use `Span::start_pos().line_of()` if this behavior is desired.
+    ///
+    /// TODO better docs
+    #[inline]
+    pub fn lines_span(&self) -> LinesSpan<'i> {
+        LinesSpan {
+            span: self.clone(),
             pos: self.start,
         }
     }
@@ -239,13 +275,27 @@ impl<'i> Hash for Span<'i> {
 ///
 /// [`Span::lines()`]: struct.Span.html#method.lines
 pub struct Lines<'i> {
-    span: &'i Span<'i>,
-    pos: usize,
+    inner: LinesSpan<'i>,
 }
 
 impl<'i> Iterator for Lines<'i> {
     type Item = &'i str;
     fn next(&mut self) -> Option<&'i str> {
+        self.inner.next().map(|span| span.start_pos().line_of())
+    }
+}
+
+/// Like `Lines`, but returns `Span`s to preserve source mapping information. `Lines` simply calls this and `span.start_pos().line_of()`.
+///
+/// TODO better docs
+pub struct LinesSpan<'i> {
+    span: Span<'i>,
+    pos: usize,
+}
+
+impl<'i> Iterator for LinesSpan<'i> {
+    type Item = Span<'i>;
+    fn next(&mut self) -> Option<Span<'i>> {
         if self.pos > self.span.end {
             return None;
         }
@@ -253,15 +303,53 @@ impl<'i> Iterator for Lines<'i> {
         if pos.at_end() {
             return None;
         }
-        let line = pos.line_of();
+        let line_start = self.pos;
         self.pos = pos.find_line_end();
-        Some(line)
+        Some(unsafe {
+            Span::new_unchecked(self.span.input, line_start, self.pos.min(self.span.end))
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sub_span() {
+        let input = "abcde";
+        let span = Span::new(input, 0, input.len()).unwrap();
+        assert_eq!(span.sub_span(..).unwrap().as_str(), "abcde");
+        assert_eq!(span.sub_span(..3).unwrap().as_str(), "abc");
+        assert_eq!(span.sub_span(..=3).unwrap().as_str(), "abcd");
+        assert_eq!(span.sub_span(1..).unwrap().as_str(), "bcde");
+        assert_eq!(span.sub_span(1..3).unwrap().as_str(), "bc");
+        assert_eq!(span.sub_span(1..=3).unwrap().as_str(), "bcd");
+    }
+
+    #[test]
+    fn sub_span_out_of_range() {
+        let input = "abc";
+        let span = Span::new(input, 0, 1).unwrap();
+        assert_eq!(span.sub_span(..).unwrap().as_str(), "a");
+
+        // Even though `input` has this character, a sub span cannot be created.
+        assert_eq!(span.sub_span(..2), None);
+    }
+
+    #[test]
+    fn sub_span_preserve_input() {
+        let input = "abc";
+        let span = Span::new(input, 1, input.len()).unwrap();
+
+        // The user can no longer access `span.input` to see the leading `a`.
+        assert_eq!(span.as_str(), "bc");
+
+        // If the user wants to process a portion of `span`, they can do so preserving the original `span.input`.
+        let sub_span = span.sub_span(1..2).unwrap();
+        assert_eq!(sub_span.as_str(), "c");
+        assert_eq!(sub_span.start_pos().line_of(), "abc");
+    }
 
     #[test]
     fn split() {
@@ -274,6 +362,30 @@ mod tests {
         let span = start.clone().span(&end.clone());
 
         assert_eq!(span.split(), (start, end));
+    }
+
+    #[test]
+    fn lines_span_mid() {
+        let input = "abc\ndef\nghi";
+        let span = Span::new(input, 1, 7).unwrap();
+        let lines: Vec<_> = span.lines_span().collect();
+        println!("{:?}", lines);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].as_str(), "bc\n".to_owned()); // `Span::lines_span` preserves the "partial" coverage of the span.
+        assert_eq!(lines[1].as_str(), "def\n".to_owned());
+    }
+
+    /// Assures that a `Span` that ends in a newline character behaves as if nothing else exists after it.
+    #[test]
+    fn lines_span_end_of_line() {
+        let input = "abc\ndef";
+        let span = Span::new(input, 0, 4).unwrap();
+        let lines: Vec<_> = span.lines_span().collect();
+        println!("{:?}", lines);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[0].as_str(), "abc\n".to_owned());
+        assert_eq!(lines[1].as_str(), "".to_owned());
+        assert_eq!(lines[1].start_pos().line_of(), "def".to_owned());
     }
 
     #[test]

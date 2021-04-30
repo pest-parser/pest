@@ -75,7 +75,7 @@ extern crate serde_json;
 pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState};
 pub use position::Position;
-pub use span::{Lines, Span};
+pub use span::{Lines, LinesSpan, Span};
 use std::fmt::Debug;
 use std::hash::Hash;
 pub use token::Token;
