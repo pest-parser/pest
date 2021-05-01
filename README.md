@@ -169,4 +169,3 @@ Digit:   2
 
 A special round of applause goes to prof. Marius Minea for his guidance and all
 pest contributors, some of which being none other than my friends.
-
