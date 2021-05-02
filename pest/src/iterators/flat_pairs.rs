@@ -7,8 +7,9 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::fmt;
-use std::rc::Rc;
+use alloc::rc::Rc;
+use alloc::vec::Vec;
+use core::fmt;
 
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
@@ -151,6 +152,8 @@ impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
 mod tests {
     use super::super::super::macros::tests::*;
     use super::super::super::Parser;
+    use alloc::vec;
+    use alloc::vec::Vec;
 
     #[test]
     fn iter_for_flat_pairs() {

@@ -9,11 +9,15 @@
 
 //! Types for different kinds of parsing failures.
 
-use std::borrow::Cow;
-use std::cmp;
-use std::error;
-use std::fmt;
-use std::mem;
+use alloc::borrow::Cow;
+use alloc::borrow::ToOwned;
+use alloc::format;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use core::cmp;
+use core::fmt;
+use core::mem;
 
 use position::Position;
 use span::Span;
@@ -468,7 +472,8 @@ impl<R: RuleType> fmt::Display for Error<R> {
     }
 }
 
-impl<'i, R: RuleType> error::Error for Error<R> {
+#[cfg(feature = "std")]
+impl<'i, R: RuleType> std::error::Error for Error<R> {
     fn description(&self) -> &str {
         match self.variant {
             ErrorVariant::ParsingError { .. } => "parsing error",
@@ -485,6 +490,7 @@ fn visualize_whitespace(input: &str) -> String {
 mod tests {
     use super::super::position;
     use super::*;
+    use alloc::vec;
 
     #[test]
     fn display_parsing_error_mixed() {

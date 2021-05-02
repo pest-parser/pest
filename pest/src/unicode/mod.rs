@@ -5,6 +5,8 @@
 #![allow(bad_style)]
 #![allow(clippy::all)]
 
+use alloc::boxed::Box;
+
 macro_rules! char_property_functions {
     {$(
         mod $module:ident;

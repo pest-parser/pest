@@ -7,8 +7,11 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::ops::Range;
-use std::rc::Rc;
+use alloc::boxed::Box;
+use alloc::rc::Rc;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::ops::Range;
 
 use error::{Error, ErrorVariant};
 use iterators::{pairs, QueueableToken};

@@ -7,9 +7,10 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::fmt;
-use std::rc::Rc;
-use std::str;
+use alloc::rc::Rc;
+use alloc::vec::Vec;
+use core::fmt;
+use core::str;
 
 use super::queueable_token::QueueableToken;
 use position;
@@ -132,6 +133,7 @@ mod tests {
     use super::super::super::macros::tests::*;
     use super::super::super::Parser;
     use super::Token;
+    use alloc::vec::Vec;
 
     #[test]
     fn double_ended_iter_for_tokens() {

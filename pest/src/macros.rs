@@ -318,6 +318,9 @@ pub mod tests {
     use super::super::error::Error;
     use super::super::iterators::Pairs;
     use super::super::{state, Parser};
+    use alloc::format;
+    use alloc::vec;
+    use alloc::vec::Vec;
 
     #[allow(non_camel_case_types)]
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

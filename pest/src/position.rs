@@ -7,12 +7,12 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::cmp::Ordering;
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::ops::Range;
-use std::ptr;
-use std::str;
+use core::cmp::Ordering;
+use core::fmt;
+use core::hash::{Hash, Hasher};
+use core::ops::Range;
+use core::ptr;
+use core::str;
 
 use span;
 
@@ -427,8 +427,6 @@ impl<'i> Hash for Position<'i> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use super::*;
 
     #[test]
@@ -609,7 +607,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn hash() {
+        use std::collections::HashSet;
+
         let input = "a";
         let start = Position::from_start(input);
         let mut positions = HashSet::new();

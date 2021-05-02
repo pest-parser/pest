@@ -9,9 +9,11 @@
 
 //! Constructs useful in infix operator parsing with the precedence climbing method.
 
-use std::borrow::Cow;
-use std::iter::Peekable;
-use std::ops::BitOr;
+use alloc::borrow::Cow;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use core::iter::Peekable;
+use core::ops::BitOr;
 
 use iterators::Pair;
 use RuleType;

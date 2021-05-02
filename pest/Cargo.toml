@@ -12,6 +12,9 @@ license = "MIT/Apache-2.0"
 readme = "_README.md"
 
 [features]
+default = ["std"]
+# Implements `std::error::Error` for the `Error` type
+std = []
 # Enables the `to_json` function for `Pair` and `Pairs`
 pretty-print = ["serde", "serde_json"]
 # Enable const fn constructor for `PrecClimber` (requires nightly)
