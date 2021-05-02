@@ -290,7 +290,6 @@
 //! * `NEWLINE` - matches either "\n" or "\r\n" or "\r"
 
 #![doc(html_root_url = "https://docs.rs/pest_derive")]
-
 extern crate pest_generator;
 extern crate proc_macro;
 
