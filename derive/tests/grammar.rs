@@ -9,9 +9,9 @@
 #![no_std]
 #![allow(unknown_lints, clippy)]
 
+extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
-extern crate alloc;
 use alloc::{format, vec::Vec};
 
 #[macro_use]

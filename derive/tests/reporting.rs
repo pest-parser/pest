@@ -8,9 +8,9 @@
 // modified, or distributed except according to those terms.
 #![no_std]
 
+extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
-extern crate alloc;
 use alloc::vec;
 
 #[macro_use]
