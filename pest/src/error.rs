@@ -196,6 +196,35 @@ impl<R: RuleType> Error<R> {
         self
     }
 
+    /// Returns the path set using [`Error::with_path()`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::error::{Error, ErrorVariant};
+    /// # use pest::Position;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[allow(dead_code)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// # enum Rule {
+    /// #     open_paren,
+    /// #     closed_paren
+    /// # }
+    /// # let input = "";
+    /// # let pos = Position::from_start(input);
+    /// # let error = Error::new_from_pos(
+    /// #     ErrorVariant::ParsingError {
+    /// #         positives: vec![Rule::open_paren],
+    /// #         negatives: vec![Rule::closed_paren]
+    /// #     },
+    /// #     pos);
+    /// let error = error.with_path("file.rs");
+    /// assert_eq!(Some("file.rs"), error.path());
+    /// ```
+    pub fn path(&self) -> Option<&str> {
+        self.path.as_deref()
+    }
+
     /// Renames all `Rule`s if this is a [`ParsingError`]. It does nothing when called on a
     /// [`CustomError`].
     ///
