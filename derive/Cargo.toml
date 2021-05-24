@@ -15,10 +15,14 @@ readme = "_README.md"
 name = "pest_derive"
 proc-macro = true
 
+[features]
+default = ["std"]
+std = ["pest/std", "pest_generator/std"]
+
 [dependencies]
 # for tests, included transitively anyway
-pest = { path = "../pest", version = "2.1.0" }
-pest_generator = { path = "../generator", version = "2.1.0" }
+pest = { path = "../pest", version = "2.1.0", default-features = false }
+pest_generator = { path = "../generator", version = "2.1.0", default-features = false }
 
 [badges]
 codecov = { repository = "pest-parser/pest" }
