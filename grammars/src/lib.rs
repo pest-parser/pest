@@ -19,6 +19,13 @@ extern crate pest_derive;
 
 pub use pest::Parser;
 
+pub mod http {
+    /// HTTP parser.
+    #[derive(Parser)]
+    #[grammar = "grammars/http.pest"]
+    pub struct HttpParser;
+}
+
 pub mod json {
     /// JSON parser.
     #[derive(Parser)]
