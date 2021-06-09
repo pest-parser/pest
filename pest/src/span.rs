@@ -32,6 +32,11 @@ pub struct Span<'i> {
 }
 
 impl<'i> Span<'i> {
+    /// Get the original input that this `Span` refers to without being indexed from `start` to
+    /// `end`.
+    pub fn input(&self) -> &'i str {
+        self.input
+    }
     /// Create a new `Span` without checking invariants. (Checked with `debug_assertions`.)
     ///
     /// # Safety
