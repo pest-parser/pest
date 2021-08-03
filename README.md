@@ -164,6 +164,7 @@ Digit:   2
 * [ukhasnet-parser](https://github.com/adamgreig/ukhasnet-parser)
 * [ZoKrates](https://github.com/ZoKrates/ZoKrates)
 * [Vector](https://github.com/timberio/vector)
+* [AutoCorrect](https://github.com/huacnlee/autocorrect)
 
 ## Special thanks
 
