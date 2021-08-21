@@ -33,7 +33,7 @@ struct LeftRecursiveParser;
 ///     function_call = {
 ///         (  variable
 ///         |  symbol+
-///         |  function_call
+///         |  *function_call
 ///         ) ~ argument_list
 ///     }
 ///

@@ -36,7 +36,7 @@ struct LeftRecursiveParser;
 ///     callable_variable = {
 ///         variable
 ///         |  symbol+
-///         |  function_call
+///         |  *function_call
 ///     }
 ///
 impl Parser<Rule> for LeftRecursiveParser {

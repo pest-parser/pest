@@ -64,7 +64,7 @@ pub struct ParserState<'i, R: RuleType> {
     atomicity: Atomicity,
     stack: Stack<Span<'i>>,
 
-    recursive_play: bool,
+    recursive_played: bool,
     recursive_count: u8,
     recursive_max: u8,
 }
@@ -130,7 +130,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             atomicity: Atomicity::NonAtomic,
             stack: Stack::new(),
 
-            recursive_play: false,
+            recursive_played: false,
             recursive_count: 0,
             recursive_max: 0,
         })
@@ -468,47 +468,36 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
+    /// Process a left recursive rule `f` by simulating the input against a finite bound recursion.
+    /// Then increase the bound on successful trial (and continue the match).
+    /// Returns state when error occurred after recursing on deepest depth possible.
+    ///
+    /// It's called simulation because this function run the parent rule where it is contained.
+    ///
     pub fn recursive<F>(mut self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
     where
         F: FnMut(Box<Self>) -> ParseResult<Box<Self>>,
     {
-        // std::println!("START recursive. Iterating {} vs {}.\n  - State: {:?}", self.recursive_count, self.recursive_max, self);
-
-        // init recursive state
-        // 0. Setup a loop
-        // 1. For each iteration, setup maximum expansion bound
-        // 2. For each bound set iterate set a counter
-        // 3. Clone the state and test for the function
-        //    - If the test success then we will continue for next iteration
-        //    - If the test failed, then we stop and reverse the result
-
-        // In the middle of left-bound expansion
-
-        if self.recursive_play && self.recursive_count >= self.recursive_max {
-            // std::println!("- Pretend to be error");
+        if self.recursive_played && self.recursive_count >= self.recursive_max {
+            // Act like the recursion not existed at all
             return Err(self);
         }
 
         let mut results = vec!();
-        if !self.recursive_play {
+        if !self.recursive_played {
             let mut simself = self.clone();
 
             loop {
-                // std::println!("- Subiterating {}", simself.recursive_count);
-
-                // Try to consume the input
-                simself.recursive_play = true;
+                simself.recursive_played = true;
 
                 results.insert(0, f(simself.clone()));
-                // std::println!("- Result:\n  - Current: {:?}\n  - Prev: {:?}", result, prevresult);
-                simself.recursive_play = false;
+                simself.recursive_played = false;
                 if results.get(0).unwrap().is_err() {
-                    // This is good as it matched our string
                     if simself.recursive_max <= 1 {
-                        // std::println!("- Only single match.");
                         return Err(self);
                     } else {
-                        // std::println!("- Matching {} times", simself.recursive_max - 1);
+                        // Get the state after parsing this rule to the depth.
+                        // Excluding the parent rule state.
                         return match results.get(2) {
                             Some(result) => result.clone(),
                             None => Err(self),
