@@ -63,6 +63,10 @@ pub struct ParserState<'i, R: RuleType> {
     attempt_pos: usize,
     atomicity: Atomicity,
     stack: Stack<Span<'i>>,
+
+    recursive_play: bool,
+    recursive_count: u8,
+    recursive_max: u8,
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -125,6 +129,10 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             attempt_pos: 0,
             atomicity: Atomicity::NonAtomic,
             stack: Stack::new(),
+
+            recursive_play: false,
+            recursive_count: 0,
+            recursive_max: 0,
         })
     }
 
@@ -458,6 +466,64 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             Ok(state) | Err(state) => Ok(state),
         }
     }
+
+    #[inline]
+    pub fn recursive<F>(mut self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
+    where
+        F: FnMut(Box<Self>) -> ParseResult<Box<Self>>,
+    {
+        // std::println!("START recursive. Iterating {} vs {}.\n  - State: {:?}", self.recursive_count, self.recursive_max, self);
+
+        // init recursive state
+        // 0. Setup a loop
+        // 1. For each iteration, setup maximum expansion bound
+        // 2. For each bound set iterate set a counter
+        // 3. Clone the state and test for the function
+        //    - If the test success then we will continue for next iteration
+        //    - If the test failed, then we stop and reverse the result
+
+        // In the middle of left-bound expansion
+
+        if self.recursive_play && self.recursive_count >= self.recursive_max {
+            // std::println!("- Pretend to be error");
+            return Err(self);
+        }
+
+        let mut results = vec!();
+        if !self.recursive_play {
+            let mut simself = self.clone();
+
+            loop {
+                // std::println!("- Subiterating {}", simself.recursive_count);
+
+                // Try to consume the input
+                simself.recursive_play = true;
+
+                results.insert(0, f(simself.clone()));
+                // std::println!("- Result:\n  - Current: {:?}\n  - Prev: {:?}", result, prevresult);
+                simself.recursive_play = false;
+                if results.get(0).unwrap().is_err() {
+                    // This is good as it matched our string
+                    if simself.recursive_max <= 1 {
+                        // std::println!("- Only single match.");
+                        return Err(self);
+                    } else {
+                        // std::println!("- Matching {} times", simself.recursive_max - 1);
+                        return match results.get(2) {
+                            Some(result) => result.clone(),
+                            None => Err(self),
+                        };
+                    }
+                }
+                simself.recursive_max += 1;
+            }
+        } else {
+            self.recursive_count += 1;
+
+            return f(self);
+        }
+    }
+
 
     /// Attempts to match a single character based on a filter function. Returns `Ok` with the
     /// updated `Box<ParserState>` if successful, or `Err` with the updated `Box<ParserState>`
