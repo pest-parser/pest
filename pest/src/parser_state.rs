@@ -53,7 +53,7 @@ pub enum MatchDir {
 /// The complete state of a [`Parser`].
 ///
 /// [`Parser`]: trait.Parser.html
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ParserState<'i, R: RuleType> {
     position: Position<'i>,
     queue: Vec<QueueableToken<R>>,

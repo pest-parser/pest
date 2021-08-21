@@ -13,7 +13,7 @@ use core::ops::{Index, Range};
 
 /// Implementation of a `Stack` which maintains an log of `StackOp`s in order to rewind the stack
 /// to a previous state.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Stack<T: Clone> {
     ops: Vec<StackOp<T>>,
     cache: Vec<T>,
@@ -110,7 +110,7 @@ impl<T: Clone> Index<Range<usize>> for Stack<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum StackOp<T> {
     Push(T),
     Pop(T),
