@@ -12,6 +12,7 @@ use alloc::rc::Rc;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::Range;
+use std::collections::HashMap;
 
 use error::{Error, ErrorVariant};
 use iterators::{pairs, QueueableToken};
@@ -64,9 +65,8 @@ pub struct ParserState<'i, R: RuleType> {
     atomicity: Atomicity,
     stack: Stack<Span<'i>>,
 
-    recursive_played: bool,
-    recursive_count: u8,
-    recursive_max: u8,
+    //                           (count, max)
+    recursive_bounds: HashMap<R, (u8, u8)>,
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -130,9 +130,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             atomicity: Atomicity::NonAtomic,
             stack: Stack::new(),
 
-            recursive_played: false,
-            recursive_count: 0,
-            recursive_max: 0,
+            recursive_bounds: HashMap::new(),
         })
     }
 
@@ -474,40 +472,39 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///
     /// It's called simulation because this function run the parent rule where it is contained.
     ///
-    pub fn recursive<F>(mut self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
+    pub fn recursive<F>(mut self: Box<Self>, rule: R, mut f: F) -> ParseResult<Box<Self>>
     where
         F: FnMut(Box<Self>) -> ParseResult<Box<Self>>,
     {
-        if self.recursive_played && self.recursive_count >= self.recursive_max {
-            // Act like the recursion not existed at all
-            return Err(self);
+        let bound = self.recursive_bounds.get(&rule);
+        if let Some((count, max)) = bound {
+            if count >= max {
+                return Err(self);
+            }
         }
 
-        let mut results = vec!();
-        if !self.recursive_played {
-            let mut simself = self.clone();
-
+        if bound.is_none() {
+            self.recursive_bounds.insert(rule, (0, 0));
+            let init_state = self.clone();
+            let mut lastiter_state = self.clone();
             loop {
-                simself.recursive_played = true;
-
-                results.insert(0, f(simself.clone()));
-                simself.recursive_played = false;
-                if results.get(0).unwrap().is_err() {
-                    if simself.recursive_max <= 1 {
-                        return Err(self);
-                    } else {
-                        // Get the state after parsing this rule to the depth.
-                        // Excluding the parent rule state.
-                        return match results.get(2) {
-                            Some(result) => result.clone(),
-                            None => Err(self),
-                        };
-                    }
+                let r = f(self);
+                if let Err(_) = r {
+                    return Ok(lastiter_state);
                 }
-                simself.recursive_max += 1;
+
+                lastiter_state = r.as_ref().unwrap().clone();
+                let rb = lastiter_state.recursive_bounds.clone();
+                self = init_state.clone();
+                self.recursive_bounds = rb;
+
+                let b = self.recursive_bounds.get_mut(&rule).unwrap();
+                b.0 = 0;
+                b.1 += 1;
             }
         } else {
-            self.recursive_count += 1;
+            let b = self.recursive_bounds.get_mut(&rule).unwrap();
+            b.0 += 1;
 
             return f(self);
         }
