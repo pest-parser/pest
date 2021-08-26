@@ -93,7 +93,10 @@ impl Parser<Rule> for LeftRecursiveParser {
         }
 
         fn symbol(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
-            state.rule(Rule::symbol, |s| s.repeat(|s| s.match_range('A'..'z')))
+            state.rule(Rule::symbol, |s| {
+                s.match_range('A'..'z')
+                .and_then(|s| s.repeat(|s| s.match_range('A'..'z')))
+            })
         }
 
         state(input, |state| match rule {
