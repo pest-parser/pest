@@ -29,14 +29,14 @@ struct LeftRecursiveParser;
 
 /// Represent these indirect recursive syntax.
 ///
-///     function_call = {
+///     function_call = *{
 ///         callable_variable ~ argument_list
 ///     }
 ///
 ///     callable_variable = {
 ///         variable
 ///         |  symbol+
-///         |  *function_call
+///         |  function_call
 ///     }
 ///
 impl Parser<Rule> for LeftRecursiveParser {
@@ -70,7 +70,7 @@ impl Parser<Rule> for LeftRecursiveParser {
 
         fn callable_var(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
             state.rule(Rule::callable_var, |s| {
-                s.recursive(|s| function_call(s))
+                function_call(s)
                 .or_else(|s| variable(s))
                 .or_else(|s| symbol(s))
             })
@@ -78,8 +78,10 @@ impl Parser<Rule> for LeftRecursiveParser {
 
         fn function_call(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
             state.rule(Rule::function_call, |s| {
-                callable_var(s)
-                .and_then(|s| argument_list(s))
+                s.recursive(Rule::callable_var, |s| {
+                    callable_var(s)
+                    .and_then(|s| argument_list(s))
+                })
             })
         }
 

@@ -30,10 +30,10 @@ struct LeftRecursiveParser;
 
 /// Represent this simple recursive syntax.
 ///
-///     function_call = {
-///         (  variable
+///     function_call = *{
+///         (  function_call
 ///         |  symbol+
-///         |  *function_call
+///         |  variable
 ///         ) ~ argument_list
 ///     }
 ///
@@ -57,10 +57,12 @@ impl Parser<Rule> for LeftRecursiveParser {
 
         fn function_call(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
             state.rule(Rule::function_call, |s| {
-                s.recursive(|s| function_call(s))
-                .or_else(|s| variable(s))
-                .or_else(|s| symbol(s))
-                .and_then(|s| argument_list(s))
+                s.recursive(Rule::function_call, |s| {
+                    function_call(s)
+                    .or_else(|s| variable(s))
+                    .or_else(|s| symbol(s))
+                    .and_then(|s| argument_list(s))
+                })
             })
         }
 
