@@ -494,6 +494,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 }
 
                 lastiter_state = r.as_ref().unwrap().clone();
+                let b = lastiter_state.recursive_bounds.get(&rule).unwrap();
+                if b.0 != b.1 {
+                    // It doesn't hit any deeper
+                    break Ok(lastiter_state);
+                }
+
                 let rb = lastiter_state.recursive_bounds.clone();
                 self = init_state.clone();
                 self.recursive_bounds = rb;
