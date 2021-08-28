@@ -24,6 +24,7 @@ jobs:
         with:
           toolchain: 1.51.0 # Pinned warnings
           components: rustfmt, clippy
+          override: true
       - name: Install gcc
         run: sudo apt-get update && sudo apt-get install -y gcc
       - name: Bootstraping Grammars - Building
