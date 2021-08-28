@@ -255,7 +255,7 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rul
 
 fn is_non_progressing<'i>(
     expr: &ParserExpr<'i>,
-    rules: &HashMap<String, &ParserNode<'i>>,
+    rules: &HashMap<String, &ParserRule<'i>>,
     trace: &mut Vec<String>,
 ) -> bool {
     match *expr {
@@ -266,7 +266,7 @@ fn is_non_progressing<'i>(
             }
 
             if !trace.contains(ident) {
-                if let Some(node) = rules.get(ident) {
+                if let Some(ParserRule { node, .. }) = rules.get(ident) {
                     trace.push(ident.clone());
                     let result = is_non_progressing(&node.expr, rules, trace);
                     trace.pop().unwrap();
@@ -293,14 +293,14 @@ fn is_non_progressing<'i>(
 
 fn is_non_failing<'i>(
     expr: &ParserExpr<'i>,
-    rules: &HashMap<String, &ParserNode<'i>>,
+    rules: &HashMap<String, &ParserRule<'i>>,
     trace: &mut Vec<String>,
 ) -> bool {
     match *expr {
         ParserExpr::Str(ref string) => string.is_empty(),
         ParserExpr::Ident(ref ident) => {
             if !trace.contains(ident) {
-                if let Some(node) = rules.get(ident) {
+                if let Some(ParserRule { node, .. }) = rules.get(ident) {
                     trace.push(ident.clone());
                     let result = is_non_failing(&node.expr, rules, trace);
                     trace.pop().unwrap();
@@ -445,20 +445,21 @@ fn validate_left_recursion<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Error
     left_recursion(to_hash_map(rules))
 }
 
-fn to_hash_map<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> HashMap<String, &'a ParserNode<'i>> {
-    rules.iter().map(|r| (r.name.clone(), &r.node)).collect()
+fn to_hash_map<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> HashMap<String, &'a ParserRule<'i>> {
+    rules.iter().map(|r| (r.name.clone(), r)).collect()
 }
 
 #[allow(clippy::needless_pass_by_value)]
-fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec<Error<Rule>> {
+fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserRule<'i>>) -> Vec<Error<Rule>> {
     fn check_expr<'a, 'i: 'a>(
         node: &'a ParserNode<'i>,
-        rules: &'a HashMap<String, &ParserNode<'i>>,
+        rules: &'a HashMap<String, &ParserRule<'i>>,
         trace: &mut Vec<String>,
     ) -> Option<Error<Rule>> {
         match node.expr.clone() {
             ParserExpr::Ident(other) => {
-                if trace[0] == other {
+                let is_marked_recursive = rules.get(&other).as_ref().map_or(false, |r| r.rec);
+                if trace[0] == other && !is_marked_recursive {
                     trace.push(other);
                     let chain = trace
                         .iter()
@@ -469,18 +470,21 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
                     return Some(Error::new_from_span(
                         ErrorVariant::CustomError {
                             message: format!(
-                                "rule {} is left-recursive ({}); pest::prec_climber might be useful \
-                                 in this case",
+                                "rule {} is left-recursive ({}). Consider using pest::prec_climber for operators \
+                                 or recursive marker `*`, i.e. `{} = *{{ ... }}`.",
                                 node.span.as_str(),
-                                chain
+                                chain,
+                                node.span.as_str(),
                             )
                         },
                         node.span.clone()
                     ));
+                } else if trace[0] == other {
+                    trace.push(other.clone());
                 }
 
                 if !trace.contains(&other) {
-                    if let Some(node) = rules.get(&other) {
+                    if let Some(ParserRule { node, .. } ) = rules.get(&other) {
                         trace.push(other);
                         let result = check_expr(node, rules, trace);
                         trace.pop().unwrap();
@@ -513,7 +517,7 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
 
     let mut errors = vec![];
 
-    for (ref name, ref node) in &rules {
+    for (ref name, ParserRule { ref node, .. }) in &rules {
         let name = (*name).clone();
 
         if let Some(error) = check_expr(node, &rules, &mut vec![name]) {
@@ -654,6 +658,23 @@ mod tests {
     #[test]
     #[should_panic(expected = "grammar error
 
+ --> 1:7
+  |
+1 | a = { (\"hello\"?)* }
+  |       ^---------^
+  |
+  = expression inside repetition cannot fail and will repeat infinitely")]
+    fn non_failing_optional_repetition() {
+        let input = "a = { (\"hello\"?)* }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap(),
+        ));
+    }
+
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
  --> 1:18
   |
 1 | a = { \"\" } b = { a* }
@@ -723,7 +744,7 @@ mod tests {
 1 | a = { a }
   |       ^
   |
-  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> a). Consider using pest::prec_climber for operators or recursive marker `*`, i.e. `a = *{ ... }`.")]
     fn simple_left_recursion() {
         let input = "a = { a }";
         unwrap_or_report(consume_rules(
@@ -739,14 +760,14 @@ mod tests {
 1 | a = { b } b = { a }
   |       ^
   |
-  = rule b is left-recursive (b -> a -> b); pest::prec_climber might be useful in this case
+  = rule b is left-recursive (b -> a -> b). Consider using pest::prec_climber for operators or recursive marker `*`, i.e. `b = *{ ... }`.
 
  --> 1:17
   |
 1 | a = { b } b = { a }
   |                 ^
   |
-  = rule a is left-recursive (a -> b -> a); pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> b -> a). Consider using pest::prec_climber for operators or recursive marker `*`, i.e. `a = *{ ... }`.")]
     fn indirect_left_recursion() {
         let input = "a = { b } b = { a }";
         unwrap_or_report(consume_rules(
@@ -762,7 +783,7 @@ mod tests {
 1 | a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }
   |                                       ^
   |
-  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> a). Consider using pest::prec_climber for operators or recursive marker `*`, i.e. `a = *{ ... }`.")]
     fn non_failing_left_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }";
         unwrap_or_report(consume_rules(
@@ -778,7 +799,7 @@ mod tests {
 1 | a = { \"a\" | a }
   |             ^
   |
-  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> a). Consider using pest::prec_climber for operators or recursive marker `*`, i.e. `a = *{ ... }`.")]
     fn non_primary_choice_left_recursion() {
         let input = "a = { \"a\" | a }";
         unwrap_or_report(consume_rules(

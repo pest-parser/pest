@@ -34,6 +34,7 @@ pub fn parse(rule: Rule, data: &str) -> Result<Pairs<Rule>, Error<Rule>> {
 pub struct ParserRule<'i> {
     pub name: String,
     pub span: Span<'i>,
+    pub rec: bool,
     pub ty: RuleType,
     pub node: ParserNode<'i>,
 }
@@ -131,9 +132,9 @@ pub enum ParserExpr<'i> {
 }
 
 fn convert_rule(rule: ParserRule) -> AstRule {
-    let ParserRule { name, ty, node, .. } = rule;
+    let ParserRule { name, ty, rec, node, .. } = rule;
     let expr = convert_node(node);
-    AstRule { name, ty, expr }
+    AstRule { name, ty, rec, expr }
 }
 
 fn convert_node(node: ParserNode) -> Expr {
@@ -192,6 +193,11 @@ fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<E
 
             pairs.next().unwrap(); // assignment_operator
 
+            let rec = pairs.peek().unwrap().as_rule() == Rule::recursive_modifier;
+            if rec {
+                pairs.next();
+            }
+
             let ty = if pairs.peek().unwrap().as_rule() != Rule::opening_brace {
                 match pairs.next().unwrap().as_rule() {
                     Rule::silent_modifier => RuleType::Silent,
@@ -211,6 +217,7 @@ fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<E
             Ok(ParserRule {
                 name,
                 span,
+                rec,
                 ty,
                 node,
             })
@@ -896,6 +903,33 @@ mod tests {
     }
 
     #[test]
+    fn recursive() {
+        parses_to! {
+            parser: PestParser,
+            input: "recursive_rule = *{ recursive_rule | a }",
+            rule: Rule::grammar_rule,
+            tokens: [
+                grammar_rule(0, 40, [
+                    identifier(0, 14),
+                    assignment_operator(15, 16),
+                    recursive_modifier(17, 18),
+                    opening_brace(18, 19),
+                    expression(20, 39, [
+                        term(20, 35, [
+                            identifier(20, 34),
+                        ]),
+                        choice_operator(35, 36),
+                        term(37, 39, [
+                            identifier(37, 38),
+                        ]),
+                    ]),
+                    closing_brace(39, 40),
+                ]),
+            ]
+        };
+    }
+
+    #[test]
     fn identifier() {
         parses_to! {
             parser: PestParser,
@@ -1041,10 +1075,11 @@ mod tests {
     fn wrong_modifier() {
         fails_with! {
             parser: PestParser,
-            input: "a = *{}",
+            input: "a = &{}",
             rule: Rule::grammar_rules,
             positives: vec![
                 Rule::opening_brace,
+                Rule::recursive_modifier,
                 Rule::silent_modifier,
                 Rule::atomic_modifier,
                 Rule::compound_atomic_modifier,
@@ -1234,6 +1269,7 @@ mod tests {
             ast,
             vec![AstRule {
                 name: "rule".to_owned(),
+                rec: false,
                 ty: RuleType::Silent,
                 expr: Expr::Choice(
                     Box::new(Expr::Seq(
@@ -1272,6 +1308,7 @@ mod tests {
             ast,
             vec![AstRule {
                 name: "rule".to_owned(),
+                rec: false,
                 ty: RuleType::Silent,
                 expr: Expr::Seq(
                     Box::new(Expr::PeekSlice(-4, None)),

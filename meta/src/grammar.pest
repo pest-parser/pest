@@ -10,7 +10,7 @@
 grammar_rules = _{ SOI ~ grammar_rule+ ~ EOI }
 
 grammar_rule = {
-    identifier ~ assignment_operator ~ modifier? ~
+    identifier ~ assignment_operator ~ recursive_modifier? ~ modifier? ~
     opening_brace ~ expression ~ closing_brace
 }
 
@@ -29,6 +29,7 @@ modifier = _{
     non_atomic_modifier
 }
 
+recursive_modifier       = { "*" }
 silent_modifier          = { "_" }
 atomic_modifier          = { "@" }
 compound_atomic_modifier = { "$" }
