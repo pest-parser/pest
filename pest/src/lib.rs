@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 #![no_std]
-#![cfg_attr(feature = "const_prec_climber", feature(const_fn))]
+#![cfg_attr(feature = "const_prec_climber", feature(const_fn_trait_bound))]
 
 //! # pest. The Elegant Parser
 //!
