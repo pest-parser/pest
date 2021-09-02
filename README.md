@@ -166,6 +166,7 @@ Digit:   2
 * [ZoKrates](https://github.com/ZoKrates/ZoKrates)
 * [Vector](https://github.com/timberio/vector)
 * [AutoCorrect](https://github.com/huacnlee/autocorrect)
+* [yaml-peg](https://github.com/aofdev/yaml-peg)
 
 ## Special thanks
 
