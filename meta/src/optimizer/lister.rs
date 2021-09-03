@@ -10,10 +10,11 @@
 use ast::*;
 
 pub fn list(rule: Rule) -> Rule {
-    let Rule { name, ty, expr } = rule;
+    let Rule { name, ty, rec, expr } = rule;
     Rule {
         name,
         ty,
+        rec,
         expr: expr.map_bottom_up(|expr| {
             // TODO: Use box syntax when it gets stabilized.
             match expr {

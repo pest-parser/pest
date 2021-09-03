@@ -10,10 +10,11 @@
 use ast::*;
 
 pub fn concatenate(rule: Rule) -> Rule {
-    let Rule { name, ty, expr } = rule;
+    let Rule { name, ty, rec, expr } = rule;
     Rule {
         name,
         ty,
+        rec,
         expr: expr.map_bottom_up(|expr| {
             if ty == RuleType::Atomic {
                 // TODO: Use box syntax when it gets stabilized.

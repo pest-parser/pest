@@ -233,6 +233,16 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
         generate_expr(rule.expr)
     };
 
+    let expr = if rule.rec {
+        quote! {
+            state.recursive(Rule::#name, |state| {
+                #expr
+            })
+        }
+    } else {
+        expr
+    };
+
     match rule.ty {
         RuleType::Normal => quote! {
             #[inline]
@@ -629,6 +639,7 @@ mod tests {
         let rules = vec![OptimizedRule {
             name: "f".to_owned(),
             ty: RuleType::Normal,
+            rec: false,
             expr: OptimizedExpr::Ident("g".to_owned()),
         }];
 
@@ -920,12 +931,44 @@ mod tests {
     }
 
     #[test]
+    fn generate_from_recursive_rule() {
+        let rule = OptimizedRule {
+            name: "f".to_owned(),
+            ty: RuleType::Normal,
+            rec: true,
+            expr: OptimizedExpr::Choice(
+                Box::new(OptimizedExpr::Ident("f".to_owned())),
+                Box::new(OptimizedExpr::Ident("g".to_owned())),
+            ),
+        };
+
+        assert_eq!(
+            generate_rule(rule).to_string(),
+            quote! {
+                #[inline]
+                #[allow (non_snake_case , unused_variables)]
+                pub fn f (state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+                    state.rule(Rule::f, |state| {
+                        state.recursive(Rule::f, |state| {
+                            self::f(state).or_else(|state| {
+                                self::g(state)
+                            })
+                        })
+                    })
+                }
+            }
+            .to_string()
+        );
+    }
+
+    #[test]
     fn generate_complete() {
         let name = Ident::new("MyParser", Span::call_site());
         let generics = Generics::default();
         let rules = vec![OptimizedRule {
             name: "a".to_owned(),
             ty: RuleType::Silent,
+            rec: false,
             expr: OptimizedExpr::Str("b".to_owned()),
         }];
         let defaults = vec!["ANY"];

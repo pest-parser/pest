@@ -12,6 +12,7 @@ use alloc::rc::Rc;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::Range;
+use std::collections::HashMap;
 
 use error::{Error, ErrorVariant};
 use iterators::{pairs, QueueableToken};
@@ -53,7 +54,7 @@ pub enum MatchDir {
 /// The complete state of a [`Parser`].
 ///
 /// [`Parser`]: trait.Parser.html
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ParserState<'i, R: RuleType> {
     position: Position<'i>,
     queue: Vec<QueueableToken<R>>,
@@ -63,6 +64,9 @@ pub struct ParserState<'i, R: RuleType> {
     attempt_pos: usize,
     atomicity: Atomicity,
     stack: Stack<Span<'i>>,
+
+    //                           (count, max)
+    recursive_bounds: HashMap<R, (u8, u8)>,
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -125,6 +129,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             attempt_pos: 0,
             atomicity: Atomicity::NonAtomic,
             stack: Stack::new(),
+
+            recursive_bounds: HashMap::new(),
         })
     }
 
@@ -458,6 +464,58 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             Ok(state) | Err(state) => Ok(state),
         }
     }
+
+    #[inline]
+    /// Process a left recursive rule `f` by simulating the input against a finite bound recursion.
+    /// Then increase the bound on successful trial (and continue the match).
+    /// Returns state when error occurred after recursing on deepest depth possible.
+    ///
+    /// It's called simulation because this function run the parent rule where it is contained.
+    ///
+    pub fn recursive<F>(mut self: Box<Self>, rule: R, mut f: F) -> ParseResult<Box<Self>>
+    where
+        F: FnMut(Box<Self>) -> ParseResult<Box<Self>>,
+    {
+        let bound = self.recursive_bounds.get(&rule);
+        if let Some((count, max)) = bound {
+            if count >= max {
+                return Err(self);
+            }
+        }
+
+        if bound.is_none() {
+            self.recursive_bounds.insert(rule, (0, 0));
+            let init_state = self.clone();
+            let mut lastiter_state = self.clone();
+            loop {
+                let r = f(self);
+                if let Err(_) = r {
+                    return Ok(lastiter_state);
+                }
+
+                lastiter_state = r.as_ref().unwrap().clone();
+                let b = lastiter_state.recursive_bounds.get(&rule).unwrap();
+                if b.0 != b.1 {
+                    // It doesn't hit any deeper
+                    break Ok(lastiter_state);
+                }
+
+                let rb = lastiter_state.recursive_bounds.clone();
+                self = init_state.clone();
+                self.recursive_bounds = rb;
+
+                let b = self.recursive_bounds.get_mut(&rule).unwrap();
+                b.0 = 0;
+                b.1 += 1;
+            }
+        } else {
+            let b = self.recursive_bounds.get_mut(&rule).unwrap();
+            b.0 += 1;
+
+            return f(self);
+        }
+    }
+
 
     /// Attempts to match a single character based on a filter function. Returns `Ok` with the
     /// updated `Box<ParserState>` if successful, or `Err` with the updated `Box<ParserState>`

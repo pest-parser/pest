@@ -28,10 +28,11 @@ pub fn skip(rule: Rule) -> Rule {
         }
     }
 
-    let Rule { name, ty, expr } = rule;
+    let Rule { name, ty, rec, expr } = rule;
     Rule {
         name,
         ty,
+        rec,
         expr: if ty == RuleType::Atomic {
             expr.map_top_down(|expr| {
                 // TODO: Use box syntax when it gets stabilized.

@@ -76,6 +76,7 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
     OptimizedRule {
         name: rule.name,
         ty: rule.ty,
+        rec: rule.rec,
         expr: to_optimized(rule.expr),
     }
 }
@@ -91,6 +92,7 @@ fn to_hash_map(rules: &[OptimizedRule]) -> HashMap<String, OptimizedExpr> {
 pub struct OptimizedRule {
     pub name: String,
     pub ty: RuleType,
+    pub rec: bool,
     pub expr: OptimizedExpr,
 }
 
@@ -285,6 +287,7 @@ mod tests {
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Normal,
+                rec: false,
                 expr: box_tree!(Choice(
                     Choice(
                         Choice(Str(String::from("a")), Str(String::from("b"))),
@@ -299,6 +302,7 @@ mod tests {
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Normal,
+                rec: false,
                 expr: box_tree!(Choice(
                     Str(String::from("a")),
                     Choice(
@@ -319,6 +323,7 @@ mod tests {
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
+                rec: false,
                 expr: box_tree!(Rep(Seq(
                     NegPred(Choice(Str(String::from("a")), Str(String::from("b")))),
                     Ident(String::from("ANY"))
@@ -328,6 +333,7 @@ mod tests {
         let skipped = vec![OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Atomic,
+            rec: false,
             expr: OptimizedExpr::Skip(vec![String::from("a"), String::from("b")]),
         }];
 
@@ -341,6 +347,7 @@ mod tests {
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
+                rec: false,
                 expr: box_tree!(Seq(
                     Seq(Str(String::from("a")), Str(String::from("b"))),
                     Seq(Str(String::from("c")), Str(String::from("d")))
@@ -350,6 +357,7 @@ mod tests {
         let concatenated = vec![OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Atomic,
+            rec: false,
             expr: OptimizedExpr::Str(String::from("abcd")),
         }];
 
@@ -361,6 +369,7 @@ mod tests {
         let rules = vec![Rule {
             name: "rule".to_owned(),
             ty: RuleType::Atomic,
+            rec: false,
             expr: Expr::RepExact(Box::new(Expr::Ident(String::from("a"))), 3),
         }];
         let unrolled = {
@@ -368,6 +377,7 @@ mod tests {
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
+                rec: false,
                 expr: box_tree!(Seq(
                     Ident(String::from("a")),
                     Seq(Ident(String::from("a")), Ident(String::from("a")))
@@ -383,6 +393,7 @@ mod tests {
         let rules = vec![Rule {
             name: "rule".to_owned(),
             ty: RuleType::Atomic,
+            rec: false,
             expr: Expr::RepMax(Box::new(Expr::Str("a".to_owned())), 3),
         }];
         let unrolled = {
@@ -390,6 +401,7 @@ mod tests {
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
+                rec: false,
                 expr: box_tree!(Seq(
                     Opt(Str(String::from("a"))),
                     Seq(Opt(Str(String::from("a"))), Opt(Str(String::from("a"))))
@@ -405,6 +417,7 @@ mod tests {
         let rules = vec![Rule {
             name: "rule".to_owned(),
             ty: RuleType::Atomic,
+            rec: false,
             expr: Expr::RepMin(Box::new(Expr::Str("a".to_owned())), 2),
         }];
         let unrolled = {
@@ -412,6 +425,7 @@ mod tests {
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
+                rec: false,
                 expr: box_tree!(Seq(
                     Str(String::from("a")),
                     Seq(Str(String::from("a")), Rep(Str(String::from("a"))))
@@ -427,6 +441,7 @@ mod tests {
         let rules = vec![Rule {
             name: "rule".to_owned(),
             ty: RuleType::Atomic,
+            rec: false,
             expr: Expr::RepMinMax(Box::new(Expr::Str("a".to_owned())), 2, 3),
         }];
         let unrolled = {
@@ -434,6 +449,7 @@ mod tests {
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
+                rec: false,
                 /* TODO possible room for improvement here:
                  * if the sequences were rolled out in the opposite
                  * order, we could further optimize the strings
@@ -458,6 +474,7 @@ mod tests {
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
+                rec: false,
                 expr: box_tree!(Seq(
                     Seq(Insens(String::from("a")), Insens(String::from("b"))),
                     Seq(Insens(String::from("c")), Insens(String::from("d")))
@@ -467,6 +484,7 @@ mod tests {
         let concatenated = vec![OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Atomic,
+            rec: false,
             expr: OptimizedExpr::Insens(String::from("abcd")),
         }];
 
@@ -480,6 +498,7 @@ mod tests {
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
+                rec: false,
                 expr: box_tree!(Choice(
                     Seq(
                         Ident(String::from("a")),
@@ -497,6 +516,7 @@ mod tests {
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
+                rec: false,
                 expr: box_tree!(Seq(
                     Ident(String::from("a")),
                     Seq(
@@ -517,6 +537,7 @@ mod tests {
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
+                rec: false,
                 expr: box_tree!(Choice(
                     Seq(Ident(String::from("a")), Ident(String::from("b"))),
                     Ident(String::from("a"))
@@ -528,6 +549,7 @@ mod tests {
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
+                rec: false,
                 expr: box_tree!(Seq(Ident(String::from("a")), Opt(Ident(String::from("b"))))),
             }]
         };
@@ -542,6 +564,7 @@ mod tests {
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
+                rec: false,
                 expr: box_tree!(Choice(
                     Ident(String::from("a")),
                     Seq(Ident(String::from("a")), Ident(String::from("b")))
@@ -553,6 +576,7 @@ mod tests {
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
+                rec: false,
                 expr: box_tree!(Ident(String::from("a"))),
             }]
         };
@@ -567,6 +591,7 @@ mod tests {
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
+                rec: false,
                 expr: box_tree!(Seq(
                     Rep(Seq(Ident(String::from("a")), Ident(String::from("b")))),
                     Ident(String::from("a"))
@@ -578,6 +603,7 @@ mod tests {
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
+                rec: false,
                 expr: box_tree!(Seq(
                     Ident(String::from("a")),
                     Rep(Seq(Ident(String::from("b")), Ident(String::from("a"))))

@@ -11,6 +11,7 @@
 pub struct Rule {
     pub name: String,
     pub ty: RuleType,
+    pub rec: bool,
     pub expr: Expr,
 }
 

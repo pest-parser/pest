@@ -10,10 +10,11 @@
 use ast::*;
 
 pub fn unroll(rule: Rule) -> Rule {
-    let Rule { name, ty, expr } = rule;
+    let Rule { name, ty, rec, expr } = rule;
     Rule {
         name,
         ty,
+        rec,
         expr: expr.map_bottom_up(|expr| match expr {
             Expr::RepOnce(expr) => Expr::Seq(expr.clone(), Box::new(Expr::Rep(expr))),
             Expr::RepExact(expr, num) => (1..num + 1)
