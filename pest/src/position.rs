@@ -17,7 +17,7 @@ use core::str;
 use span;
 
 /// A cursor position in a `&str` which provides useful methods to manually parse that string.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Position<'i> {
     input: &'i str,
     /// # Safety:

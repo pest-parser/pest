@@ -143,13 +143,14 @@ Digit:   2
 * [pest_meta](https://github.com/pest-parser/pest/blob/master/meta/src/grammar.pest) (bootstrapped)
 * [AshPaper](https://github.com/shnewto/ashpaper)
 * [brain](https://github.com/brain-lang/brain)
-* [Chelone](https://github.com/Aaronepower/chelone)
+* [cicada](https://github.com/mitnk/cicada)
 * [comrak](https://github.com/kivikakk/comrak)
 * [elastic-rs](https://github.com/cch123/elastic-rs)
 * [graphql-parser](https://github.com/Keats/graphql-parser)
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
 * [hexdino](https://github.com/Luz/hexdino)
 * [Huia](https://gitlab.com/jimsy/huia/)
+* [insta](https://github.com/mitsuhiko/insta)
 * [jql](https://github.com/yamafaktory/jql)
 * [json5-rs](https://github.com/callum-oakley/json5-rs)
 * [mt940](https://github.com/svenstaro/mt940-rs)
@@ -164,6 +165,8 @@ Digit:   2
 * [ukhasnet-parser](https://github.com/adamgreig/ukhasnet-parser)
 * [ZoKrates](https://github.com/ZoKrates/ZoKrates)
 * [Vector](https://github.com/timberio/vector)
+* [AutoCorrect](https://github.com/huacnlee/autocorrect)
+* [yaml-peg](https://github.com/aofdev/yaml-peg)
 
 ## Special thanks
 
