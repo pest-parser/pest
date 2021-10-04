@@ -6,12 +6,9 @@
 // license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
-#![no_std]
 #![allow(unknown_lints, clippy)]
-
+#![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
-#[cfg(feature = "std")]
-extern crate std;
 use alloc::{format, vec::Vec};
 
 #[macro_use]
