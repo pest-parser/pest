@@ -150,6 +150,7 @@ Digit:   2
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
 * [hexdino](https://github.com/Luz/hexdino)
 * [Huia](https://gitlab.com/jimsy/huia/)
+* [insta](https://github.com/mitsuhiko/insta)
 * [jql](https://github.com/yamafaktory/jql)
 * [json5-rs](https://github.com/callum-oakley/json5-rs)
 * [mt940](https://github.com/svenstaro/mt940-rs)
@@ -164,6 +165,8 @@ Digit:   2
 * [ukhasnet-parser](https://github.com/adamgreig/ukhasnet-parser)
 * [ZoKrates](https://github.com/ZoKrates/ZoKrates)
 * [Vector](https://github.com/timberio/vector)
+* [AutoCorrect](https://github.com/huacnlee/autocorrect)
+* [yaml-peg](https://github.com/aofdev/yaml-peg)
 
 ## Special thanks
 

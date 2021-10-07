@@ -9,6 +9,8 @@
 
 use alloc::format;
 use alloc::rc::Rc;
+#[cfg(feature = "pretty-print")]
+use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt;
 use core::hash::{Hash, Hasher};

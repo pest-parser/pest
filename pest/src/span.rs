@@ -18,7 +18,7 @@ use position;
 ///
 /// [two `Position`s]: struct.Position.html#method.span
 /// [`Pair`]: ../iterators/struct.Pair.html#method.span
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Span<'i> {
     input: &'i str,
     /// # Safety

@@ -24,6 +24,7 @@ jobs:
         with:
           toolchain: 1.51.0 # Pinned warnings
           components: rustfmt, clippy
+          default: true
       - name: Install gcc
         run: sudo apt-get update && sudo apt-get install -y gcc
       - name: Bootstraping Grammars - Building
@@ -103,11 +104,10 @@ jobs:
       - name: Install Rust Nightly
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2021-01-01
+          toolchain: nightly-2021-08-01
           profile: minimal
+          components: llvm-tools-preview
           default: true
-      - name: Install gcc
-        run: sudo apt-get update && sudo apt-get install -y gcc libssl-dev pkg-config
       - name: Bootstraping Grammars - Building
         uses: actions-rs/cargo@v1
         with:
@@ -118,23 +118,14 @@ jobs:
         with:
           command: run
           args: --package pest_bootstrap
-      - name: Install Tarpaulin
-        uses: actions-rs/install@v0.1
-        with:
-          crate: cargo-tarpaulin
-          version: latest
-          use-tool-cache: true
-      - name: Run Tarpaulin
-        env:
-          RUSTFLAGS: --cfg procmacro2_semver_exempt
-        uses: actions-rs/cargo@v1
-        with:
-          command: tarpaulin
-          args: --verbose --out Xml
+      - name: Install cargo-llvm-cov
+        run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/latest/download/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
+      - name: Generate code coverage
+        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
       - name: Upload Results to Codecov
         uses: codecov/codecov-action@v1
         with:
-          file: ./cobertura.xml
+          file: lcov.info
           flags: unittests
           name: pest-ci-coverage
           fail_ci_if_error: false
