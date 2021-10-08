@@ -1,7 +1,7 @@
 [package]
 name = "pest"
 description = "The Elegant Parser"
-version = "2.1.1"
+version = "2.1.3"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest-parser.github.io/"
 repository = "https://github.com/pest-parser/pest"
@@ -12,8 +12,13 @@ license = "MIT/Apache-2.0"
 readme = "_README.md"
 
 [features]
+default = ["std"]
+# Implements `std::error::Error` for the `Error` type
+std = []
 # Enables the `to_json` function for `Pair` and `Pairs`
 pretty-print = ["serde", "serde_json"]
+# Enable const fn constructor for `PrecClimber` (requires nightly)
+const_prec_climber = []
 
 [dependencies]
 ucd-trie = "0.1.1"

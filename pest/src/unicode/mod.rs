@@ -5,6 +5,8 @@
 #![allow(bad_style)]
 #![allow(clippy::all)]
 
+use alloc::boxed::Box;
+
 macro_rules! char_property_functions {
     {$(
         mod $module:ident;
@@ -49,7 +51,7 @@ char_property_functions! {
     ];
 }
 
-pub fn by_name(name: &str) -> Option<Box<Fn(char) -> bool>> {
+pub fn by_name(name: &str) -> Option<Box<dyn Fn(char) -> bool>> {
     for property in binary::BY_NAME {
         if name == property.0.to_uppercase() {
             return Some(Box::new(move |c| property.1.contains_char(c)));

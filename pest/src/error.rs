@@ -9,10 +9,15 @@
 
 //! Types for different kinds of parsing failures.
 
-use std::cmp;
-use std::error;
-use std::fmt;
-use std::mem;
+use alloc::borrow::Cow;
+use alloc::borrow::ToOwned;
+use alloc::format;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use core::cmp;
+use core::fmt;
+use core::mem;
 
 use position::Position;
 use span::Span;
@@ -191,6 +196,35 @@ impl<R: RuleType> Error<R> {
         self
     }
 
+    /// Returns the path set using [`Error::with_path()`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::error::{Error, ErrorVariant};
+    /// # use pest::Position;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[allow(dead_code)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// # enum Rule {
+    /// #     open_paren,
+    /// #     closed_paren
+    /// # }
+    /// # let input = "";
+    /// # let pos = Position::from_start(input);
+    /// # let error = Error::new_from_pos(
+    /// #     ErrorVariant::ParsingError {
+    /// #         positives: vec![Rule::open_paren],
+    /// #         negatives: vec![Rule::closed_paren]
+    /// #     },
+    /// #     pos);
+    /// let error = error.with_path("file.rs");
+    /// assert_eq!(Some("file.rs"), error.path());
+    /// ```
+    pub fn path(&self) -> Option<&str> {
+        self.path.as_deref()
+    }
+
     /// Renames all `Rule`s if this is a [`ParsingError`]. It does nothing when called on a
     /// [`CustomError`].
     ///
@@ -287,9 +321,13 @@ impl<R: RuleType> Error<R> {
             _ => None,
         };
         let offset = start - 1;
+        let line_chars = self.line.chars();
 
-        for _ in 0..offset {
-            underline.push(' ');
+        for c in line_chars.take(offset) {
+            match c {
+                '\t' => underline.push('\t'),
+                _ => underline.push(' '),
+            }
         }
 
         if let Some(end) = end {
@@ -310,13 +348,7 @@ impl<R: RuleType> Error<R> {
     }
 
     fn message(&self) -> String {
-        match self.variant {
-            ErrorVariant::ParsingError {
-                ref positives,
-                ref negatives,
-            } => Error::parsing_error_message(positives, negatives, |r| format!("{:?}", r)),
-            ErrorVariant::CustomError { ref message } => message.clone(),
-        }
+        self.variant.message().to_string()
     }
 
     fn parsing_error_message<F>(positives: &[R], negatives: &[R], mut f: F) -> String
@@ -427,13 +459,50 @@ impl<R: RuleType> Error<R> {
     }
 }
 
+impl<R: RuleType> ErrorVariant<R> {
+    ///
+    /// Returns the error message for [`ErrorVariant`]
+    ///
+    /// If [`ErrorVariant`] is [`CustomError`], it returns a
+    /// [`Cow::Borrowed`] reference to [`message`]. If [`ErrorVariant`] is [`ParsingError`], a
+    /// [`Cow::Owned`] containing "expected [positives] [negatives]" is returned.
+    ///
+    /// [`ErrorVariant`]: enum.ErrorVariant.html
+    /// [`CustomError`]: enum.ErrorVariant.html#variant.CustomError
+    /// [`ParsingError`]: enum.ErrorVariant.html#variant.ParsingError
+    /// [`Cow::Owned`]: https://doc.rust-lang.org/std/borrow/enum.Cow.html#variant.Owned
+    /// [`Cow::Borrowed`]: https://doc.rust-lang.org/std/borrow/enum.Cow.html#variant.Borrowed
+    /// [`message`]: enum.ErrorVariant.html#variant.CustomError.field.message
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::error::ErrorVariant;
+    /// let variant = ErrorVariant::<()>::CustomError {
+    ///     message: String::from("unexpected error")
+    /// };
+    ///
+    /// println!("{}", variant.message());
+    pub fn message(&self) -> Cow<str> {
+        match self {
+            ErrorVariant::ParsingError {
+                ref positives,
+                ref negatives,
+            } => Cow::Owned(Error::parsing_error_message(positives, negatives, |r| {
+                format!("{:?}", r)
+            })),
+            ErrorVariant::CustomError { ref message } => Cow::Borrowed(message),
+        }
+    }
+}
+
 impl<R: RuleType> fmt::Display for Error<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.format())
     }
 }
 
-impl<'i, R: RuleType> error::Error for Error<R> {
+#[cfg(feature = "std")]
+impl<'i, R: RuleType> std::error::Error for Error<R> {
     fn description(&self) -> &str {
         match self.variant {
             ErrorVariant::ParsingError { .. } => "parsing error",
@@ -450,6 +519,7 @@ fn visualize_whitespace(input: &str) -> String {
 mod tests {
     use super::super::position;
     use super::*;
+    use alloc::vec;
 
     #[test]
     fn display_parsing_error_mixed() {
@@ -767,6 +837,33 @@ mod tests {
                 "  |",
                 "2 | cd␊",
                 "  |  ^---",
+                "  |",
+                "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
+            ]
+            .join("\n")
+        );
+    }
+
+    #[test]
+    fn underline_with_tabs() {
+        let input = "a\txbc";
+        let pos = position::Position::new(input, 2).unwrap();
+        let error: Error<u32> = Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![1, 2, 3],
+                negatives: vec![4, 5, 6],
+            },
+            pos,
+        )
+        .with_path("file.rs");
+
+        assert_eq!(
+            format!("{}", error),
+            vec![
+                " --> file.rs:1:3",
+                "  |",
+                "1 | a	xbc",
+                "  |  	^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
             ]

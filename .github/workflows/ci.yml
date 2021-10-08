@@ -1,0 +1,169 @@
+name: pest Continuous Integration
+
+on:
+  push:
+    branches:
+      - staging
+      - trying
+      - master
+  pull_request:
+    branches:
+      - staging
+      - trying
+      - master
+
+jobs:
+  testing:
+    name: Unit, Style, and Lint Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Install Rust Stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.51.0 # Pinned warnings
+          components: rustfmt, clippy
+          default: true
+      - name: Install gcc
+        run: sudo apt-get update && sudo apt-get install -y gcc
+      - name: Bootstraping Grammars - Building
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --package pest_bootstrap
+      - name: Bootstraping Grammars - Executing
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --package pest_bootstrap
+      - name: Cargo Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all --verbose
+      - name: Cargo Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --verbose
+      - name: Cargo Doc
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --all --verbose
+      - name: Cargo Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all -- -D warnings
+      - name: Cargo Fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  dependency:
+    name: Minimal Versions Testing
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v2
+    - name: Install gcc
+      run: sudo apt-get update && sudo apt-get install -y gcc
+    - name: Install Rust Nightly
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly-2021-01-01
+        default: true
+        profile: minimal
+    - name: Bootstraping Grammars - Building
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --package pest_bootstrap
+    - name: Bootstraping Grammars - Executing
+      uses: actions-rs/cargo@v1
+      with:
+        command: run
+        args: --package pest_bootstrap
+    - name: Cargo minimal-versions
+      run: cargo -Z minimal-versions generate-lockfile
+    - name: Cargo test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --all --verbose
+
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+      - name: Install Rust Nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2021-08-01
+          profile: minimal
+          components: llvm-tools-preview
+          default: true
+      - name: Bootstraping Grammars - Building
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --package pest_bootstrap
+      - name: Bootstraping Grammars - Executing
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --package pest_bootstrap
+      - name: Install cargo-llvm-cov
+        run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/latest/download/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
+      - name: Generate code coverage
+        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+      - name: Upload Results to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          file: lcov.info
+          flags: unittests
+          name: pest-ci-coverage
+          fail_ci_if_error: false
+          verbose: true
+
+# fuzzing: # fuzzit is now offline
+#   name: Fuzz Testing
+#   runs-on: ubuntu-latest
+#   if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+#   steps:
+#     - name: Checkout source code
+#       uses: actions/checkout@v2
+#     - name: Install Rust Nightly
+#       uses: actions-rs/toolchain@v1
+#       with:
+#         toolchain: nightly
+#         default: true
+#     - name: Install Cargo Fuzz
+#       uses: actions-rs/install@v0.1
+#       with:
+#         crate: cargo-fuzz
+#         version: latest
+#         use-tool-cache: true
+#     - name: Bootstraping Grammars - Building
+#       uses: actions-rs/cargo@v1
+#       with:
+#         command: build
+#         args: --package pest_bootstrap
+#     - name: Bootstraping Grammars - Executing
+#       uses: actions-rs/cargo@v1
+#       with:
+#         command: run
+#         args: --package pest_bootstrap
+#     - name: Fuzz Testing - Regressions
+#       env:
+#         FUZZIT_API_KEY: ${{ secrets.FuzzitApiKey }}
+#       run: ./fuzzit.sh local-regression
+#     - name: Fuzz Testing - Fuzzing
+#       env:
+#         FUZZIT_API_KEY: ${{ secrets.FuzzitApiKey }}
+#       run: ./fuzzit.sh fuzzing

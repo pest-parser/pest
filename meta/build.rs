@@ -33,8 +33,8 @@ fn main() {
             s
         });
         let current_grammar = fs::read_to_string(grammar_pest_path).unwrap();
-        sha.input(current_grammar.as_bytes());
-        let current_hash = display_digest(&sha.result());
+        sha.update(current_grammar.as_bytes());
+        let current_hash = display_digest(&sha.finalize());
 
         // If `grammar.pest` has changed
         if !grammar_rs_path.exists()

@@ -7,9 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::collections::HashMap;
-use std::path::PathBuf;
-
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, TokenStreamExt};
 use syn::{self, Generics, Ident};
@@ -22,7 +19,7 @@ use pest_meta::UNICODE_PROPERTY_NAMES;
 pub fn generate(
     name: Ident,
     generics: &Generics,
-    path: Option<PathBuf>,
+    path: Option<String>,
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>,
     include_grammar: bool,
@@ -32,7 +29,7 @@ pub fn generate(
     let builtins = generate_builtin_rules();
     let include_fix = if include_grammar {
         match path {
-            Some(ref path) => generate_include(&name, path.to_str().expect("non-Unicode path")),
+            Some(ref path) => generate_include(&name, path),
             None => quote!(),
         }
     } else {
@@ -43,7 +40,13 @@ pub fn generate(
     let skip = generate_skip(&rules);
 
     let mut rules: Vec<_> = rules.into_iter().map(generate_rule).collect();
-    rules.extend(defaults.into_iter().map(|name| builtins[name].clone()));
+    rules.extend(builtins.into_iter().filter_map(|(builtin, tokens)| {
+        if defaults.contains(&builtin) {
+            Some(tokens)
+        } else {
+            None
+        }
+    }));
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
@@ -58,6 +61,7 @@ pub fn generate(
                 ::pest::error::Error<Rule>
             > {
                 mod rules {
+                    #![allow(clippy::upper_case_acronyms)]
                     pub mod hidden {
                         use super::super::Rule;
                         #skip
@@ -89,8 +93,8 @@ pub fn generate(
 
 // Note: All builtin rules should be validated as pest builtins in meta/src/validator.rs.
 // Some should also be keywords.
-fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
-    let mut builtins = HashMap::new();
+fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
+    let mut builtins = Vec::new();
 
     insert_builtin!(builtins, ANY, state.skip(1));
     insert_public_builtin!(
@@ -147,15 +151,14 @@ fn generate_builtin_rules() -> HashMap<&'static str, TokenStream> {
     for property in UNICODE_PROPERTY_NAMES {
         let property_ident: Ident = syn::parse_str(property).unwrap();
         // insert manually for #property substitution
-        builtins.insert(property, quote! {
+        builtins.push((property, quote! {
             #[inline]
             #[allow(dead_code, non_snake_case, unused_variables)]
             fn #property_ident(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
                 state.match_char_by(::pest::unicode::#property_ident)
             }
-        });
+        }));
     }
-
     builtins
 }
 
@@ -174,7 +177,7 @@ fn generate_enum(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
         .map(|rule| Ident::new(rule.name.as_str(), Span::call_site()));
     if uses_eoi {
         quote! {
-            #[allow(dead_code, non_camel_case_types)]
+            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
             pub enum Rule {
                 EOI,
@@ -183,7 +186,7 @@ fn generate_enum(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
         }
     } else {
         quote! {
-            #[allow(dead_code, non_camel_case_types)]
+            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
             pub enum Rule {
                 #( #rules ),*
@@ -670,7 +673,7 @@ mod tests {
         assert_eq!(
             generate_enum(&rules, false).to_string(),
             quote! {
-                #[allow(dead_code, non_camel_case_types)]
+                #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
                     f
@@ -964,14 +967,13 @@ mod tests {
             expr: OptimizedExpr::Str("b".to_owned()),
         }];
         let defaults = vec!["ANY"];
-
         assert_eq!(
-            generate(name, &generics, Some(PathBuf::from("test.pest")), rules, defaults, true).to_string(),
+            generate(name, &generics, Some(String::from("test.pest")), rules, defaults, true).to_string(),
             quote! {
                 #[allow(non_upper_case_globals)]
                 const _PEST_GRAMMAR_MyParser: &'static str = include_str!("test.pest");
 
-                #[allow(dead_code, non_camel_case_types)]
+                #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
                     a
@@ -987,6 +989,7 @@ mod tests {
                         ::pest::error::Error<Rule>
                     > {
                         mod rules {
+                            #![allow(clippy::upper_case_acronyms)]
                             pub mod hidden {
                                 use super::super::Rule;
 

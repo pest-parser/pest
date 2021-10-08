@@ -9,13 +9,15 @@
 
 macro_rules! insert_builtin {
     ($builtin: expr, $name: ident, $pattern: expr) => {
-        $builtin.insert(stringify!($name), generate_rule!($name, $pattern));
+        #[allow(clippy::vec_init_then_push)]
+        $builtin.push((stringify!($name), generate_rule!($name, $pattern)));
     };
 }
 
 macro_rules! insert_public_builtin {
     ($builtin: expr, $name: ident, $pattern: expr) => {
-        $builtin.insert(stringify!($name), generate_public_rule!($name, $pattern));
+        #[allow(clippy::vec_init_then_push)]
+        $builtin.push((stringify!($name), generate_public_rule!($name, $pattern)));
     };
 }
 

@@ -7,10 +7,10 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::ptr;
-use std::str;
+use core::fmt;
+use core::hash::{Hash, Hasher};
+use core::ptr;
+use core::str;
 
 use position;
 
@@ -18,7 +18,7 @@ use position;
 ///
 /// [two `Position`s]: struct.Position.html#method.span
 /// [`Pair`]: ../iterators/struct.Pair.html#method.span
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Span<'i> {
     input: &'i str,
     /// # Safety
@@ -32,6 +32,11 @@ pub struct Span<'i> {
 }
 
 impl<'i> Span<'i> {
+    /// Get the original input that this `Span` refers to without being indexed from `start` to
+    /// `end`.
+    pub fn input(&self) -> &'i str {
+        self.input
+    }
     /// Create a new `Span` without checking invariants. (Checked with `debug_assertions`.)
     ///
     /// # Safety
@@ -262,6 +267,8 @@ impl<'i> Iterator for Lines<'i> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::borrow::ToOwned;
+    use alloc::vec::Vec;
 
     #[test]
     fn split() {
@@ -281,7 +288,7 @@ mod tests {
         let input = "abc\ndef\nghi";
         let span = Span::new(input, 1, 7).unwrap();
         let lines: Vec<_> = span.lines().collect();
-        println!("{:?}", lines);
+        //println!("{:?}", lines);
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0], "abc\n".to_owned());
         assert_eq!(lines[1], "def\n".to_owned());
@@ -293,7 +300,7 @@ mod tests {
         let span = Span::new(input, 5, 11).unwrap();
         assert!(span.end_pos().at_end());
         let lines: Vec<_> = span.lines().collect();
-        println!("{:?}", lines);
+        //println!("{:?}", lines);
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0], "def\n".to_owned());
         assert_eq!(lines[1], "ghi".to_owned());

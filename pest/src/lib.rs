@@ -6,6 +6,8 @@
 // license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
+#![no_std]
+#![cfg_attr(feature = "const_prec_climber", feature(const_fn_trait_bound))]
 
 //! # pest. The Elegant Parser
 //!
@@ -63,6 +65,9 @@
 
 #![doc(html_root_url = "https://docs.rs/pest")]
 
+extern crate alloc;
+#[cfg(feature = "std")]
+extern crate std;
 extern crate ucd_trie;
 
 #[cfg(feature = "pretty-print")]
@@ -70,12 +75,12 @@ extern crate serde;
 #[cfg(feature = "pretty-print")]
 extern crate serde_json;
 
+use core::fmt::Debug;
+use core::hash::Hash;
 pub use parser::Parser;
 pub use parser_state::{state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState};
 pub use position::Position;
 pub use span::{Lines, Span};
-use std::fmt::Debug;
-use std::hash::Hash;
 pub use token::Token;
 
 pub mod error;

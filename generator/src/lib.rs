@@ -39,19 +39,19 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let (name, generics, content) = parse_derive(ast);
 
     let (data, path) = match content {
-        GrammarSource::File(ref path) => {
+        GrammarSource::File(path) => {
             let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
-            let path = Path::new(&root).join("src/").join(&path);
-            let file_name = match path.file_name() {
+            let full_path = Path::new(&root).join("src/").join(&path);
+            let file_name = match full_path.file_name() {
                 Some(file_name) => file_name,
                 None => panic!("grammar attribute should point to a file"),
             };
 
-            let data = match read_file(&path) {
+            let data = match read_file(&full_path) {
                 Ok(data) => data,
                 Err(error) => panic!("error opening {:?}: {}", file_name, error),
             };
-            (data, Some(path.clone()))
+            (data, Some(path))
         }
         GrammarSource::Inline(content) => (content, None),
     };
@@ -118,9 +118,9 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, GrammarSource) {
     let grammar: Vec<&Attribute> = ast
         .attrs
         .iter()
-        .filter(|attr| match attr.interpret_meta() {
-            Some(Meta::NameValue(name_value)) => {
-                (name_value.ident == "grammar" || name_value.ident == "grammar_inline")
+        .filter(|attr| match attr.parse_meta() {
+            Ok(Meta::NameValue(name_value)) => {
+                name_value.path.is_ident("grammar") || name_value.path.is_ident("grammar_inline")
             }
             _ => false,
         })
@@ -136,10 +136,10 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, GrammarSource) {
 }
 
 fn get_attribute(attr: &Attribute) -> GrammarSource {
-    match attr.interpret_meta() {
-        Some(Meta::NameValue(name_value)) => match name_value.lit {
+    match attr.parse_meta() {
+        Ok(Meta::NameValue(name_value)) => match name_value.lit {
             Lit::Str(string) => {
-                if name_value.ident == "grammar" {
+                if name_value.path.is_ident("grammar") {
                     GrammarSource::File(string.value())
                 } else {
                     GrammarSource::Inline(string.value())

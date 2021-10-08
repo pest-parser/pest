@@ -10,8 +10,8 @@ publish = false
 license = "MIT/Apache-2.0"
 
 [dependencies]
-pest_generator = "2.1.0" # Use the crates-io version, which (should be) known-good
-quote = "0.6.8"
+pest_generator = "2.1.1" # Use the crates-io version, which (should be) known-good
+quote = "1.0"
 
 [badges]
 codecov = { repository = "pest-parser/pest" }

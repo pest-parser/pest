@@ -17,7 +17,7 @@ use parser::{ParserExpr, ParserNode, ParserRule, Rule};
 use UNICODE_PROPERTY_NAMES;
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Error<Rule>>> {
+pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>> {
     let mut rust_keywords = HashSet::new();
     rust_keywords.insert("abstract");
     rust_keywords.insert("alignof");
@@ -109,7 +109,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
     let definitions: Vec<_> = pairs
         .clone()
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
-        .map(|pair| pair.into_inner().next().unwrap().into_span())
+        .map(|pair| pair.into_inner().next().unwrap().as_span())
         .collect();
     let called_rules: Vec<_> = pairs
         .clone()
@@ -119,7 +119,7 @@ pub fn validate_pairs<'i>(pairs: Pairs<'i, Rule>) -> Result<Vec<&'i str>, Vec<Er
                 .flatten()
                 .skip(1)
                 .filter(|pair| pair.as_rule() == Rule::identifier)
-                .map(|pair| pair.into_span())
+                .map(|pair| pair.as_span())
         })
         .collect();
 
@@ -189,7 +189,7 @@ pub fn validate_pest_keywords<'i>(
 }
 
 #[allow(clippy::ptr_arg)]
-pub fn validate_already_defined<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule>> {
+pub fn validate_already_defined(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
     let mut defined = HashSet::new();
 
@@ -259,7 +259,7 @@ fn is_non_progressing<'i>(
     trace: &mut Vec<String>,
 ) -> bool {
     match *expr {
-        ParserExpr::Str(ref string) => string == "",
+        ParserExpr::Str(ref string) => string.is_empty(),
         ParserExpr::Ident(ref ident) => {
             if ident == "soi" || ident == "eoi" {
                 return true;
@@ -297,7 +297,7 @@ fn is_non_failing<'i>(
     trace: &mut Vec<String>,
 ) -> bool {
     match *expr {
-        ParserExpr::Str(ref string) => string == "",
+        ParserExpr::Str(ref string) => string.is_empty(),
         ParserExpr::Ident(ref ident) => {
             if !trace.contains(ident) {
                 if let Some(node) = rules.get(ident) {

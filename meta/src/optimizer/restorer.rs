@@ -14,13 +14,9 @@ pub fn restore_on_err(
     rule: OptimizedRule,
     rules: &HashMap<String, OptimizedExpr>,
 ) -> OptimizedRule {
-    match rule {
-        OptimizedRule { name, ty, expr } => {
-            let expr = expr.map_bottom_up(|expr| wrap_branching_exprs(expr, rules));
-
-            OptimizedRule { name, ty, expr }
-        }
-    }
+    let OptimizedRule { name, ty, expr } = rule;
+    let expr = expr.map_bottom_up(|expr| wrap_branching_exprs(expr, rules));
+    OptimizedRule { name, ty, expr }
 }
 
 fn wrap_branching_exprs(

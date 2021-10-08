@@ -9,12 +9,96 @@
 
 //! Constructs useful in infix operator parsing with the precedence climbing method.
 
-use std::collections::HashMap;
-use std::iter::Peekable;
-use std::ops::BitOr;
+use alloc::borrow::Cow;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use core::iter::Peekable;
+use core::ops::BitOr;
 
 use iterators::Pair;
 use RuleType;
+
+/// Macro for more convenient const fn definition of `prec_climber::PrecClimber`.
+///
+/// # Examples
+///
+/// ```
+/// # use pest::prec_climber::{Assoc, PrecClimber};
+/// # use pest::prec_climber;
+/// # #[allow(non_camel_case_types)]
+/// # #[allow(dead_code)]
+/// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+/// # enum Rule {
+/// #     plus,
+/// #     minus,
+/// #     times,
+/// #     divide,
+/// #     power
+/// # }
+/// static CLIMBER: PrecClimber<Rule> = prec_climber![
+///     L   plus | minus,
+///     L   times | divide,
+///     R   power,
+/// ];
+/// ```
+#[cfg(feature = "const_prec_climber")]
+#[macro_export]
+macro_rules! prec_climber {
+    (
+        $( $assoc:ident $rule:ident $( | $rules:ident )* ),+ $(,)?
+    ) => {{
+        prec_climber!(
+            @precedences { 1u32 }
+            $( [ $rule $( $rules )* ] )*
+        );
+
+        $crate::prec_climber::PrecClimber::new_const(
+            prec_climber!(
+                @array
+                $( $assoc $rule $(, $assoc $rules )* ),*
+            )
+        )
+    }};
+
+    ( @assoc L ) => { $crate::prec_climber::Assoc::Left };
+    ( @assoc R ) => { $crate::prec_climber::Assoc::Right };
+
+    (
+        @array
+        $(
+            $assoc:ident $rule:ident
+        ),*
+    ) => {
+        &[
+            $(
+                (
+                    Rule::$rule,
+                    $rule,
+                    prec_climber!( @assoc $assoc ),
+                )
+            ),*
+        ]
+    };
+
+    (
+        @precedences { $precedence:expr }
+    ) => {};
+
+    (
+        @precedences { $precedence:expr }
+        [ $( $rule:ident )* ]
+        $( [ $( $rules:ident )* ] )*
+    ) => {
+        $(
+            #[allow(non_upper_case_globals)]
+            const $rule: u32 = $precedence;
+        )*
+        prec_climber!(
+            @precedences { 1u32 + $precedence }
+            $( [ $( $rules )* ] )*
+        );
+    };
+}
 
 /// Associativity of an [`Operator`].
 ///
@@ -86,11 +170,54 @@ impl<R: RuleType> BitOr for Operator<R> {
 /// [1]: https://en.wikipedia.org/wiki/Operator-precedence_parser#Precedence_climbing_method
 /// [`Pairs`]: ../iterators/struct.Pairs.html
 #[derive(Debug)]
-pub struct PrecClimber<R: RuleType> {
-    ops: HashMap<R, (u32, Assoc)>,
+pub struct PrecClimber<R: Clone + 'static> {
+    ops: Cow<'static, [(R, u32, Assoc)]>,
+}
+
+#[cfg(feature = "const_prec_climber")]
+impl<R: Clone + 'static> PrecClimber<R> {
+    /// Creates a new `PrecClimber` directly from a static slice of
+    /// `(rule: Rule, precedence: u32, associativity: Assoc)` tuples.
+    ///
+    /// Precedence starts from `1`.  Entries don't have to be ordered in any way, but it's easier to read when
+    /// sorted.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest::prec_climber::{Assoc, PrecClimber};
+    /// # #[allow(non_camel_case_types)]
+    /// # #[allow(dead_code)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// # enum Rule {
+    /// #     plus,
+    /// #     minus,
+    /// #     times,
+    /// #     divide,
+    /// #     power
+    /// # }
+    /// static CLIMBER: PrecClimber<Rule> = PrecClimber::new_const(&[
+    ///     (Rule::plus, 1, Assoc::Left), (Rule::minus, 1, Assoc::Left),
+    ///     (Rule::times, 2, Assoc::Left), (Rule::divide, 2, Assoc::Left),
+    ///     (Rule::power, 3, Assoc::Right)
+    /// ]);
+    /// ```
+    pub const fn new_const(ops: &'static [(R, u32, Assoc)]) -> PrecClimber<R> {
+        PrecClimber {
+            ops: Cow::Borrowed(ops),
+        }
+    }
 }
 
 impl<R: RuleType> PrecClimber<R> {
+    // find matching operator by `rule`
+    fn get(&self, rule: &R) -> Option<(u32, Assoc)> {
+        self.ops
+            .iter()
+            .find(|(r, _, _)| r == rule)
+            .map(|(_, precedence, assoc)| (*precedence, *assoc))
+    }
+
     /// Creates a new `PrecClimber` from the `Operator`s contained in `ops`. Every entry in the
     /// `Vec` has precedence *index + 1*. In order to have operators with same precedence, they need
     /// to be chained with `|` between them.
@@ -119,26 +246,26 @@ impl<R: RuleType> PrecClimber<R> {
         let ops = ops
             .into_iter()
             .zip(1..)
-            .fold(HashMap::new(), |mut map, (op, prec)| {
+            .fold(Vec::new(), |mut vec, (op, prec)| {
                 let mut next = Some(op);
 
                 while let Some(op) = next.take() {
-                    match op {
-                        Operator {
-                            rule,
-                            assoc,
-                            next: op_next,
-                        } => {
-                            map.insert(rule, (prec, assoc));
-                            next = op_next.map(|op| *op);
-                        }
-                    }
+                    let Operator {
+                        rule,
+                        assoc,
+                        next: op_next,
+                    } = op;
+
+                    vec.push((rule, prec, assoc));
+                    next = op_next.map(|op| *op);
                 }
 
-                map
+                vec
             });
 
-        PrecClimber { ops }
+        PrecClimber {
+            ops: Cow::Owned(ops),
+        }
     }
 
     /// Performs the precedence climbing algorithm on the `pairs` in a similar manner to map-reduce.
@@ -198,7 +325,7 @@ impl<R: RuleType> PrecClimber<R> {
     {
         while pairs.peek().is_some() {
             let rule = pairs.peek().unwrap().as_rule();
-            if let Some(&(prec, _)) = self.ops.get(&rule) {
+            if let Some((prec, _)) = self.get(&rule) {
                 if prec >= min_prec {
                     let op = pairs.next().unwrap();
                     let mut rhs = primary(pairs.next().expect(
@@ -208,7 +335,7 @@ impl<R: RuleType> PrecClimber<R> {
 
                     while pairs.peek().is_some() {
                         let rule = pairs.peek().unwrap().as_rule();
-                        if let Some(&(new_prec, assoc)) = self.ops.get(&rule) {
+                        if let Some((new_prec, assoc)) = self.get(&rule) {
                             if new_prec > prec || assoc == Assoc::Right && new_prec == prec {
                                 rhs = self.climb_rec(rhs, new_prec, pairs, primary, infix);
                             } else {
