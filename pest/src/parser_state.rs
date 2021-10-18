@@ -279,20 +279,57 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Tag a node
     ///
+    /// # Examples
+    ///
+    /// Try to recognize the one specified in a set of characters
+    ///
+    /// ```
+    /// use pest::{state, ParseResult, ParserState, iterators::Pair};
+    /// #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     character,
+    /// }
+    /// fn mark_c(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+    ///     state.sequence(|state| {
+    ///         character(state)
+    ///             .and_then(|state| character(state))
+    ///             .and_then(|state| character(state))
+    ///             .and_then(|state| state.tag_node("c"))
+    ///             .and_then(|state| character(state))
+    ///     })
+    /// }
+    /// fn character(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+    ///     state.rule(Rule::character, |state| state.match_range('a'..'z'))
+    /// }
+    ///
+    /// let input = "abcd";
+    /// let pairs = state(input, mark_c).unwrap();
+    /// // find all node tag as `c`
+    /// let find: Vec<Pair<Rule>> = pairs.filter(|s| s.as_node_tag() == Some("c")).collect();
+    /// assert_eq!(find[0].as_str(), "c")
+    /// ```
     #[inline]
     pub fn tag_node(mut self: Box<Self>, tag: &'i str) -> ParseResult<Box<Self>> {
-        if let Some(QueueableToken::End { tag: old, .. }) = self.queue.last_mut() { *old = Some(tag) }
+        if let Some(QueueableToken::End { tag: old, .. }) = self.queue.last_mut() {
+            *old = Some(tag)
+        }
         Ok(self)
     }
 
-    ///
+    /// tag the branch
     #[inline]
     pub fn tag_branch(mut self: Box<Self>, tag: &'i str) -> ParseResult<Box<Self>> {
-        if let Some(QueueableToken::End { branch_tag: old, .. }) = self.queue.last_mut() { *old = Some(tag) }
+        if let Some(QueueableToken::End {
+            branch_tag: old, ..
+        }) = self.queue.last_mut()
+        {
+            *old = Some(tag)
+        }
         Ok(self)
     }
-
 
     fn attempts_at(&self, pos: usize) -> usize {
         if self.attempt_pos == pos {

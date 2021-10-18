@@ -188,7 +188,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
 
     ///
     #[inline]
-    pub fn as_branch_tag(&self) -> Option<&'i str> {
+    pub fn as_branch_tag(&self) -> Option<&str> {
         match self.queue[self.pair()] {
             QueueableToken::End { branch_tag, .. } => branch_tag,
             _ => None,
@@ -287,9 +287,16 @@ impl<'i, R: RuleType> Pairs<'i, R> {
 
 impl<'i, R: RuleType> fmt::Debug for Pair<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Pair")
-            .field("rule", &self.as_rule())
-            .field("span", &self.as_span())
+        let pair = &mut f.debug_struct("Pair");
+        pair.field("rule", &self.as_rule());
+        // In order not to break compatibility
+        if let Some(s) = self.as_node_tag() {
+            pair.field("node_tag", &s);
+        }
+        if let Some(s) = self.as_branch_tag() {
+            pair.field("branch_tag", &s);
+        }
+        pair.field("span", &self.as_span())
             .field("inner", &self.clone().into_inner().collect::<Vec<_>>())
             .finish()
     }
