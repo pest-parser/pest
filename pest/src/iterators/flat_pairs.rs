@@ -26,6 +26,8 @@ pub struct FlatPairs<'i, R> {
     /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
+    tag: Option<&'i str>,
+    branch_tag: Option<&'i str>,
     start: usize,
     end: usize,
 }
@@ -33,15 +35,19 @@ pub struct FlatPairs<'i, R> {
 /// # Safety
 ///
 /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
-pub unsafe fn new<R: RuleType>(
+pub unsafe fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &str,
+    input: &'i str,
+    tag: Option<&'i str>,
+    branch_tag: Option<&'i str>,
     start: usize,
     end: usize,
-) -> FlatPairs<R> {
+) -> FlatPairs<'i,R> {
     FlatPairs {
         queue,
         input,
+        tag,
+        branch_tag,
         start,
         end,
     }
@@ -107,7 +113,7 @@ impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
             return None;
         }
 
-        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.start) };
+        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.tag, self.branch_tag, self.start) };
 
         self.next_start();
 
@@ -123,7 +129,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for FlatPairs<'i, R> {
 
         self.next_start_from_end();
 
-        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.end) };
+        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input,self.tag,self.branch_tag, self.end) };
 
         Some(pair)
     }
@@ -142,6 +148,8 @@ impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
         FlatPairs {
             queue: Rc::clone(&self.queue),
             input: self.input,
+            tag: self.tag,
+            branch_tag: self.branch_tag,
             start: self.start,
             end: self.end,
         }

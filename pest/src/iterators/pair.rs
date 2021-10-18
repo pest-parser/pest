@@ -41,6 +41,8 @@ pub struct Pair<'i, R> {
     /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &'i str,
+    tag: Option<&'i str>,
+    branch_tag: Option<&'i str>,
     /// Token index into `queue`.
     start: usize,
 }
@@ -48,15 +50,19 @@ pub struct Pair<'i, R> {
 /// # Safety
 ///
 /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
-pub unsafe fn new<R: RuleType>(
+pub unsafe fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &str,
+    input: &'i str,
+    tag: Option<&'i str>,
+    branch_tag: Option<&'i str>,
     start: usize,
-) -> Pair<R> {
+) -> Pair<'i,R> {
     Pair {
         queue,
         input,
         start,
+        tag,
+        branch_tag
     }
 }
 
@@ -202,7 +208,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
     pub fn into_inner(self) -> Pairs<'i, R> {
         let pair = self.pair();
 
-        pairs::new(self.queue, self.input, self.start + 1, pair)
+        pairs::new(self.queue, self.input, self.tag,self.branch_tag, self.start + 1, pair)
     }
 
     /// Returns the `Tokens` for the `Pair`.
@@ -263,7 +269,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// Create a new `Pairs` iterator containing just the single `Pair`.
     pub fn single(pair: Pair<'i, R>) -> Self {
         let end = pair.pair();
-        pairs::new(pair.queue, pair.input, pair.start, end)
+        pairs::new(pair.queue, pair.input, pair.tag, pair.branch_tag, pair.start, end)
     }
 }
 
