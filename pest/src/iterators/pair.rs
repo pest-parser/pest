@@ -39,7 +39,7 @@ pub struct Pair<'i, R> {
     /// # Safety
     ///
     /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
-    queue: Rc<Vec<QueueableToken<R>>>,
+    queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
     tag: Option<&'i str>,
     branch_tag: Option<&'i str>,
@@ -51,18 +51,18 @@ pub struct Pair<'i, R> {
 ///
 /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
 pub unsafe fn new<'i, R: RuleType>(
-    queue: Rc<Vec<QueueableToken<R>>>,
+    queue: Rc<Vec<QueueableToken<'i,R>>>,
     input: &'i str,
     tag: Option<&'i str>,
     branch_tag: Option<&'i str>,
     start: usize,
-) -> Pair<'i,R> {
+) -> Pair<'i, R> {
     Pair {
         queue,
         input,
         start,
         tag,
-        branch_tag
+        branch_tag,
     }
 }
 
@@ -183,6 +183,18 @@ impl<'i, R: RuleType> Pair<'i, R> {
         unsafe { span::Span::new_unchecked(self.input, start, end) }
     }
 
+    ///
+    #[inline]
+    pub fn node_tag(&self) -> Option<&'i str> {
+        self.tag
+    }
+
+    ///
+    #[inline]
+    pub fn branch_tag(&self) -> Option<&'i str> {
+        self.branch_tag
+    }
+
     /// Returns the inner `Pairs` between the `Pair`, consuming it.
     ///
     /// # Examples
@@ -208,7 +220,14 @@ impl<'i, R: RuleType> Pair<'i, R> {
     pub fn into_inner(self) -> Pairs<'i, R> {
         let pair = self.pair();
 
-        pairs::new(self.queue, self.input, self.tag,self.branch_tag, self.start + 1, pair)
+        pairs::new(
+            self.queue,
+            self.input,
+            self.tag,
+            self.branch_tag,
+            self.start + 1,
+            pair,
+        )
     }
 
     /// Returns the `Tokens` for the `Pair`.
@@ -269,7 +288,14 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// Create a new `Pairs` iterator containing just the single `Pair`.
     pub fn single(pair: Pair<'i, R>) -> Self {
         let end = pair.pair();
-        pairs::new(pair.queue, pair.input, pair.tag, pair.branch_tag, pair.start, end)
+        pairs::new(
+            pair.queue,
+            pair.input,
+            pair.tag,
+            pair.branch_tag,
+            pair.start,
+            end,
+        )
     }
 }
 

@@ -27,19 +27,19 @@ pub struct Tokens<'i, R> {
     /// # Safety:
     ///
     /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
-    queue: Rc<Vec<QueueableToken<R>>>,
+    queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
     start: usize,
     end: usize,
 }
 
 // TODO(safety): QueueableTokens must be valid indices into input.
-pub fn new<R: RuleType>(
-    queue: Rc<Vec<QueueableToken<R>>>,
-    input: &str,
+pub fn new<'i, R: RuleType>(
+    queue: Rc<Vec<QueueableToken<'i, R>>>,
+    input: &'i str,
     start: usize,
     end: usize,
-) -> Tokens<R> {
+) -> Tokens<'i,R> {
     if cfg!(debug_assertions) {
         for tok in queue.iter() {
             match *tok {

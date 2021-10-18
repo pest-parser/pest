@@ -13,8 +13,8 @@ mod flat_pairs;
 mod pair;
 pub(crate) mod pairs;
 mod queueable_token;
-mod tokens;
 mod tags;
+mod tokens;
 
 pub use self::flat_pairs::FlatPairs;
 pub use self::pair::Pair;

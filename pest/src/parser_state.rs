@@ -56,7 +56,7 @@ pub enum MatchDir {
 #[derive(Debug)]
 pub struct ParserState<'i, R: RuleType> {
     position: Position<'i>,
-    queue: Vec<QueueableToken<R>>,
+    queue: Vec<QueueableToken<'i,R>>,
     lookahead: Lookahead,
     pos_attempts: Vec<R>,
     neg_attempts: Vec<R>,
