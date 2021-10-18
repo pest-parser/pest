@@ -177,7 +177,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
         unsafe { span::Span::new_unchecked(self.input, start, end) }
     }
 
-    ///
+    /// Get current node tag
     #[inline]
     pub fn as_node_tag(&self) -> Option<&str> {
         match self.queue[self.pair()] {
@@ -186,7 +186,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
         }
     }
 
-    ///
+    /// Get current branch tag
     #[inline]
     pub fn as_branch_tag(&self) -> Option<&str> {
         match self.queue[self.pair()] {

@@ -279,7 +279,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
-    /// Tag a node
+    /// Tag current node
     ///
     /// # Examples
     ///
@@ -319,7 +319,50 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         Ok(self)
     }
 
-    /// tag the branch
+    /// Tag current branch
+    ///
+    /// # Examples
+    ///
+    /// Try to recognize the branch between add and mul
+    /// ```
+    /// use pest::{state, ParseResult, ParserState};
+    /// #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     number, // 0..9
+    ///     add,    // num + num
+    ///     mul,    // num * num
+    /// }
+    /// fn mark_branch(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+    ///     expr(state, Rule::mul, "*")
+    ///         .and_then(|state| state.tag_branch("mul"))
+    ///         .or_else(|state| expr(state, Rule::add, "+"))
+    ///         .and_then(|state| state.tag_branch("add"))
+    /// }
+    /// fn expr<'a>(
+    ///     state: Box<ParserState<'a, Rule>>,
+    ///     r: Rule,
+    ///     o: &'static str,
+    /// ) -> ParseResult<Box<ParserState<'a, Rule>>> {
+    ///     state.rule(r, |state| {
+    ///         state.sequence(|state| {
+    ///             number(state)
+    ///                 .and_then(|state| state.match_string(o))
+    ///                 .and_then(|state| number(state))
+    ///         })
+    ///     })
+    /// }
+    /// fn number(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+    ///     state.rule(Rule::number, |state| state.match_range('0'..'9'))
+    /// }
+    ///
+    /// let input = "1+1";
+    /// let pairs = state(input, mark_branch).unwrap();
+    /// assert_eq!(
+    ///     pairs.into_iter().next().unwrap().as_branch_tag(),
+    ///     Some("add")
+    /// )
+    /// ```
     #[inline]
     pub fn tag_branch(mut self: Box<Self>, tag: &'i str) -> ParseResult<Box<Self>> {
         if let Some(QueueableToken::End {
