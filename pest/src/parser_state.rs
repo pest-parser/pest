@@ -56,7 +56,7 @@ pub enum MatchDir {
 #[derive(Debug)]
 pub struct ParserState<'i, R: RuleType> {
     position: Position<'i>,
-    queue: Vec<QueueableToken<'i,R>>,
+    queue: Vec<QueueableToken<'i, R>>,
     lookahead: Lookahead,
     pos_attempts: Vec<R>,
     neg_attempts: Vec<R>,
@@ -249,6 +249,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     new_state.queue.push(QueueableToken::End {
                         start_token_index: index,
                         rule,
+                        tag: None,
+                        branch_tag: None,
                         input_pos: new_pos,
                     });
                 }
@@ -276,6 +278,21 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             }
         }
     }
+
+    ///
+    #[inline]
+    pub fn tag_node(mut self: Box<Self>, tag: &'i str) -> ParseResult<Box<Self>> {
+        if let Some(QueueableToken::End { tag: old, .. }) = self.queue.last_mut() { *old = Some(tag) }
+        Ok(self)
+    }
+
+    ///
+    #[inline]
+    pub fn tag_branch(mut self: Box<Self>, tag: &'i str) -> ParseResult<Box<Self>> {
+        if let Some(QueueableToken::End { branch_tag: old, .. }) = self.queue.last_mut() { *old = Some(tag) }
+        Ok(self)
+    }
+
 
     fn attempts_at(&self, pos: usize) -> usize {
         if self.attempt_pos == pos {

@@ -41,8 +41,6 @@ pub struct Pair<'i, R> {
     /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
     queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
-    tag: Option<&'i str>,
-    branch_tag: Option<&'i str>,
     /// Token index into `queue`.
     start: usize,
 }
@@ -51,18 +49,14 @@ pub struct Pair<'i, R> {
 ///
 /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
 pub unsafe fn new<'i, R: RuleType>(
-    queue: Rc<Vec<QueueableToken<'i,R>>>,
+    queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
-    tag: Option<&'i str>,
-    branch_tag: Option<&'i str>,
     start: usize,
 ) -> Pair<'i, R> {
     Pair {
         queue,
         input,
         start,
-        tag,
-        branch_tag,
     }
 }
 
@@ -185,14 +179,20 @@ impl<'i, R: RuleType> Pair<'i, R> {
 
     ///
     #[inline]
-    pub fn node_tag(&self) -> Option<&'i str> {
-        self.tag
+    pub fn as_node_tag(&self) -> Option<&str> {
+        match self.queue[self.pair()] {
+            QueueableToken::End { tag, .. } => tag,
+            _ => None,
+        }
     }
 
     ///
     #[inline]
-    pub fn branch_tag(&self) -> Option<&'i str> {
-        self.branch_tag
+    pub fn as_branch_tag(&self) -> Option<&'i str> {
+        match self.queue[self.pair()] {
+            QueueableToken::End { branch_tag, .. } => branch_tag,
+            _ => None,
+        }
     }
 
     /// Returns the inner `Pairs` between the `Pair`, consuming it.
@@ -220,14 +220,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
     pub fn into_inner(self) -> Pairs<'i, R> {
         let pair = self.pair();
 
-        pairs::new(
-            self.queue,
-            self.input,
-            self.tag,
-            self.branch_tag,
-            self.start + 1,
-            pair,
-        )
+        pairs::new(self.queue, self.input, self.start + 1, pair)
     }
 
     /// Returns the `Tokens` for the `Pair`.
@@ -288,14 +281,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// Create a new `Pairs` iterator containing just the single `Pair`.
     pub fn single(pair: Pair<'i, R>) -> Self {
         let end = pair.pair();
-        pairs::new(
-            pair.queue,
-            pair.input,
-            pair.tag,
-            pair.branch_tag,
-            pair.start,
-            end,
-        )
+        pairs::new(pair.queue, pair.input, pair.start, end)
     }
 }
 

@@ -39,7 +39,7 @@ pub fn new<'i, R: RuleType>(
     input: &'i str,
     start: usize,
     end: usize,
-) -> Tokens<'i,R> {
+) -> Tokens<'i, R> {
     if cfg!(debug_assertions) {
         for tok in queue.iter() {
             match *tok {
