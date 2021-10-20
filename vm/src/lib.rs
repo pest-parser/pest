@@ -133,8 +133,7 @@ impl Vm {
         } else {
             if let Some(property) = unicode::by_name(rule) {
                 // std::boxed::Box<dyn std::ops::Fn(char) -> bool> is not FnOnce(char)->bool
-                #[allow(clippy::redundant_closure)]
-                return state.match_char_by(|c| property(c));
+                return state.match_char_by(property);
             }
 
             panic!("undefined rule {}", rule);

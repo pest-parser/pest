@@ -19,8 +19,6 @@ use crate::ast::{Expr, Rule as AstRule, RuleType};
 use crate::validator;
 
 mod grammar {
-    #![allow(unknown_lints, clippy::all)]
-
     include!("grammar.rs");
 }
 

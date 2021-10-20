@@ -53,7 +53,6 @@ impl<'i> Span<'i> {
     /// assert_eq!(None, Span::new(input, 100, 0));
     /// assert!(Span::new(input, 0, input.len()).is_some());
     /// ```
-    #[allow(clippy::new_ret_no_self)]
     pub fn new(input: &str, start: usize, end: usize) -> Option<Span> {
         if input.get(start..end).is_some() {
             Some(Span { input, start, end })
