@@ -99,7 +99,7 @@ fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
     let mut builtins = Vec::new();
 
     insert_builtin!(builtins, ANY, state.skip(1));
-    insert_public_builtin!(
+    insert_builtin!(
         builtins,
         EOI,
         state.rule(Rule::EOI, |state| state.end_of_input())
