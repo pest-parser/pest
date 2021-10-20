@@ -514,7 +514,7 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
     let mut errors = vec![];
 
     for (name, node) in &rules {
-        let name = (*name).clone();
+        let name = name.clone();
 
         if let Some(error) = check_expr(node, &rules, &mut vec![name]) {
             errors.push(error);

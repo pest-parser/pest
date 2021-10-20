@@ -1228,7 +1228,7 @@ mod tests {
 
         let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs).unwrap();
-        let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule)).collect();
+        let ast: Vec<_> = ast.into_iter().map(convert_rule).collect();
 
         assert_eq!(
             ast,
@@ -1266,7 +1266,7 @@ mod tests {
 
         let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs).unwrap();
-        let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule)).collect();
+        let ast: Vec<_> = ast.into_iter().map(convert_rule).collect();
 
         assert_eq!(
             ast,

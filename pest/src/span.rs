@@ -279,7 +279,7 @@ mod tests {
     fn split() {
         let input = "a";
         let start = position::Position::from_start(input);
-        let mut end = start.clone();
+        let mut end = start;
 
         assert!(end.skip(1));
 

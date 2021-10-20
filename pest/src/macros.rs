@@ -16,10 +16,11 @@ macro_rules! consumes_to {
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
-                if rule != $rules::$name || pos.pos() != $start {
-                    panic!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-                }
+                assert!(
+                    rule == $rules::$name || pos.pos() == $start,
+                    "{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                )
             },
             token => panic!("{} but found {:?}", expected, token)
         };
@@ -28,10 +29,10 @@ macro_rules! consumes_to {
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
-                if rule != $rules::$name || pos.pos() != $end {
-                    panic!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-                }
+                assert!(rule == $rules::$name || pos.pos() == $end,
+                    "{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{} but found {:?}", expected, token)
         };
@@ -43,10 +44,10 @@ macro_rules! consumes_to {
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
-                if rule != $rules::$name || pos.pos() != $start {
-                    panic!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-                }
+                assert!(rule == $rules::$name || pos.pos() == $start,
+                    "{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{} but found {:?}", expected, token)
         };
@@ -55,10 +56,10 @@ macro_rules! consumes_to {
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
-                if rule != $rules::$name || pos.pos() != $end {
-                    panic!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-                }
+                assert!(rule == $rules::$name || pos.pos() == $end,
+                    "{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{} but found {:?}", expected, token)
         };
@@ -71,10 +72,10 @@ macro_rules! consumes_to {
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
-                if rule != $rules::$name || pos.pos() != $start {
-                    panic!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-                }
+                assert!(rule == $rules::$name || pos.pos() == $start,
+                    "{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{} but found {:?}", expected, token)
         };
@@ -85,10 +86,10 @@ macro_rules! consumes_to {
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
-                if rule != $rules::$name || pos.pos() != $end {
-                    panic!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-                }
+                assert!(rule == $rules::$name || pos.pos() == $end,
+                    "{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{} but found {:?}", expected, token)
         };
@@ -102,10 +103,10 @@ macro_rules! consumes_to {
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
-                if rule != $rules::$name || pos.pos() != $start {
-                    panic!("{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-                }
+                assert!(rule == $rules::$name || pos.pos() == $start,
+                    "{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{} but found {:?}", expected, token)
         };
@@ -116,10 +117,10 @@ macro_rules! consumes_to {
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
-                if rule != $rules::$name || pos.pos() != $end {
-                    panic!("{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-                }
+                assert!(rule == $rules::$name || pos.pos() == $end,
+                    "{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{} but found {:?}", expected, token)
         };
@@ -333,7 +334,7 @@ pub mod tests {
     pub struct AbcParser;
 
     impl Parser<Rule> for AbcParser {
-        fn parse<'i>(_: Rule, input: &'i str) -> Result<Pairs<'i, Rule>, Error<Rule>> {
+        fn parse(_: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
             state(input, |state| {
                 state
                     .rule(Rule::a, |s| {
