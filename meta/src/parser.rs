@@ -204,7 +204,15 @@ fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<E
 
             pairs.next().unwrap(); // opening_brace
 
-            let node = consume_expr(pairs.next().unwrap().into_inner().peekable(), &climber)?;
+            // skip initial infix operators
+            let mut inner_nodes = pairs.next().unwrap().into_inner().peekable();
+            if (inner_nodes.peek().unwrap().as_rule() == Rule::choice_operator)
+                || (inner_nodes.peek().unwrap().as_rule() == Rule::sequence_operator)
+            {
+                inner_nodes.next().unwrap();
+            }
+
+            let node = consume_expr(inner_nodes, &climber)?;
 
             Ok(ParserRule {
                 name,
@@ -1071,7 +1079,7 @@ mod tests {
             parser: PestParser,
             input: "a = {}",
             rule: Rule::grammar_rules,
-            positives: vec![Rule::term],
+            positives: vec![Rule::expression],
             negatives: vec![],
             pos: 5
         };

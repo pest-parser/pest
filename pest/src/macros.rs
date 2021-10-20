@@ -300,14 +300,14 @@ macro_rules! fails_with {
                     positives,
                     negatives,
                 } => {
-                    assert_eq!(positives, $positives);
-                    assert_eq!(negatives, $negatives);
+                    assert_eq!(positives, $positives, "positives");
+                    assert_eq!(negatives, $negatives, "negatives");
                 }
                 _ => unreachable!(),
             };
 
             match error.location {
-                $crate::error::InputLocation::Pos(pos) => assert_eq!(pos, $pos),
+                $crate::error::InputLocation::Pos(pos) => assert_eq!(pos, $pos, "pos"),
                 _ => unreachable!(),
             }
         }

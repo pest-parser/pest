@@ -221,6 +221,21 @@ fn sequence_compound_nested_space() {
 }
 
 #[test]
+fn sequence_prefix() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc1",
+        rule: Rule::sequence_prefix,
+        tokens: [
+            sequence_prefix(0, 4, [
+                string(0, 3),
+                range(3, 4)
+            ])
+        ]
+    };
+}
+
+#[test]
 fn choice_string() {
     parses_to! {
         parser: GrammarParser,
@@ -243,6 +258,20 @@ fn choice_range() {
         tokens: [
             choice(0, 1, [
                 range(0, 1)
+            ])
+        ]
+    };
+}
+
+#[test]
+fn choice_prefix() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::choice_prefix,
+        tokens: [
+            choice_prefix(0, 3, [
+                string(0, 3)
             ])
         ]
     };
