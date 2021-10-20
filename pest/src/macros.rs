@@ -17,7 +17,7 @@ macro_rules! consumes_to {
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
                 assert!(
-                    rule == $rules::$name || pos.pos() == $start,
+                    rule == $rules::$name && pos.pos() == $start,
                     "{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                     expected, rule, pos.pos(),
                 )
@@ -29,7 +29,7 @@ macro_rules! consumes_to {
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
-                assert!(rule == $rules::$name || pos.pos() == $end,
+                assert!(rule == $rules::$name && pos.pos() == $end,
                     "{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                     expected, rule, pos.pos(),
                 );
@@ -44,7 +44,7 @@ macro_rules! consumes_to {
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
-                assert!(rule == $rules::$name || pos.pos() == $start,
+                assert!(rule == $rules::$name && pos.pos() == $start,
                     "{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                     expected, rule, pos.pos(),
                 );
@@ -56,7 +56,7 @@ macro_rules! consumes_to {
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
-                assert!(rule == $rules::$name || pos.pos() == $end,
+                assert!(rule == $rules::$name && pos.pos() == $end,
                     "{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                     expected, rule, pos.pos(),
                 );
@@ -72,7 +72,7 @@ macro_rules! consumes_to {
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
-                assert!(rule == $rules::$name || pos.pos() == $start,
+                assert!(rule == $rules::$name && pos.pos() == $start,
                     "{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                     expected, rule, pos.pos(),
                 );
@@ -86,7 +86,7 @@ macro_rules! consumes_to {
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
-                assert!(rule == $rules::$name || pos.pos() == $end,
+                assert!(rule == $rules::$name && pos.pos() == $end,
                     "{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                     expected, rule, pos.pos(),
                 );
@@ -103,7 +103,7 @@ macro_rules! consumes_to {
                                $rules::$name, $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::Start { rule, pos } => {
-                assert!(rule == $rules::$name || pos.pos() == $start,
+                assert!(rule == $rules::$name && pos.pos() == $start,
                     "{} but found Start {{ rule: {:?}, pos: Position {{ {} }} }}",
                     expected, rule, pos.pos(),
                 );
@@ -117,7 +117,7 @@ macro_rules! consumes_to {
                                $rules::$name, $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             $crate::Token::End { rule, pos } => {
-                assert!(rule == $rules::$name || pos.pos() == $end,
+                assert!(rule == $rules::$name && pos.pos() == $end,
                     "{} but found End {{ rule: {:?}, pos: Position {{ {} }} }}",
                     expected, rule, pos.pos(),
                 );
