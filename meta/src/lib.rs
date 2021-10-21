@@ -9,8 +9,7 @@
 
 #![allow(clippy::range_plus_one)]
 
-#[macro_use]
-extern crate lazy_static;
+extern crate once_cell;
 
 extern crate maplit;
 #[cfg(test)]

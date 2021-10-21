@@ -7,7 +7,11 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::collections::{HashMap, HashSet};
+use once_cell::sync::Lazy;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Mutex,
+};
 
 use pest::error::{Error, ErrorVariant, InputLocation};
 use pest::iterators::Pairs;
@@ -16,9 +20,9 @@ use pest::Span;
 use parser::{ParserExpr, ParserNode, ParserRule, Rule};
 use UNICODE_PROPERTY_NAMES;
 
-lazy_static! {
-    static ref RUST_KEYWORDS: HashSet<&'static str> = {
-        let rust_keywords: HashSet<&'static str> = [
+static RUST_KEYWORDS: Lazy<Mutex<HashSet<&'static str>>> = Lazy::new(|| {
+    Mutex::new(
+        [
             "abstract", "alignof", "as", "become", "box", "break", "const", "continue", "crate",
             "do", "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl", "in",
             "let", "loop", "macro", "match", "mod", "move", "mut", "offsetof", "override", "priv",
@@ -28,20 +32,24 @@ lazy_static! {
         ]
         .iter()
         .cloned()
-        .collect();
-        rust_keywords
-    };
-    static ref PEST_KEYWORDS: HashSet<&'static str> = {
-        let pest_keywords: HashSet<&'static str> = [
+        .collect(),
+    )
+});
+
+static PEST_KEYWORDS: Lazy<Mutex<HashSet<&'static str>>> = Lazy::new(|| {
+    Mutex::new(
+        [
             "_", "ANY", "DROP", "EOI", "PEEK", "PEEK_ALL", "POP", "POP_ALL", "PUSH", "SOI",
         ]
         .iter()
         .cloned()
-        .collect();
-        pest_keywords
-    };
-    static ref BUILTINS: HashSet<&'static str> = {
-        let mut builtins: HashSet<&'static str> = [
+        .collect(),
+    )
+});
+
+static BUILTINS: Lazy<Mutex<HashSet<&'static str>>> = Lazy::new(|| {
+    Mutex::new(
+        [
             "ANY",
             "DROP",
             "EOI",
@@ -64,11 +72,10 @@ lazy_static! {
         ]
         .iter()
         .cloned()
-        .collect();
-        builtins.extend(UNICODE_PROPERTY_NAMES);
-        builtins
-    };
-}
+        .chain(UNICODE_PROPERTY_NAMES.iter().cloned())
+        .collect::<HashSet<&str>>(),
+    )
+});
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>> {
@@ -115,7 +122,7 @@ pub fn validate_rust_keywords<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule
     for definition in definitions {
         let name = definition.as_str();
 
-        if RUST_KEYWORDS.contains(name) {
+        if RUST_KEYWORDS.lock().unwrap().contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("{} is a rust keyword", name),
@@ -134,7 +141,7 @@ pub fn validate_pest_keywords<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule
     for definition in definitions {
         let name = definition.as_str();
 
-        if PEST_KEYWORDS.contains(name) {
+        if PEST_KEYWORDS.lock().unwrap().contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("{} is a pest keyword", name),
@@ -181,7 +188,7 @@ pub fn validate_undefined<'i>(
     for rule in called_rules {
         let name = rule.as_str();
 
-        if !definitions.contains(name) && !BUILTINS.contains(name) {
+        if !definitions.contains(name) && !BUILTINS.lock().unwrap().contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("rule {} is undefined", name),
