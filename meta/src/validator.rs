@@ -8,10 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use once_cell::sync::Lazy;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Mutex,
-};
+use std::collections::{HashMap, HashSet};
 
 use pest::error::{Error, ErrorVariant, InputLocation};
 use pest::iterators::Pairs;
@@ -20,61 +17,54 @@ use pest::Span;
 use parser::{ParserExpr, ParserNode, ParserRule, Rule};
 use UNICODE_PROPERTY_NAMES;
 
-static RUST_KEYWORDS: Lazy<Mutex<HashSet<&'static str>>> = Lazy::new(|| {
-    Mutex::new(
-        [
-            "abstract", "alignof", "as", "become", "box", "break", "const", "continue", "crate",
-            "do", "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl", "in",
-            "let", "loop", "macro", "match", "mod", "move", "mut", "offsetof", "override", "priv",
-            "proc", "pure", "pub", "ref", "return", "Self", "self", "sizeof", "static", "struct",
-            "super", "trait", "true", "type", "typeof", "unsafe", "unsized", "use", "virtual",
-            "where", "while", "yield",
-        ]
-        .iter()
-        .cloned()
-        .collect(),
-    )
+static RUST_KEYWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+    [
+        "abstract", "alignof", "as", "become", "box", "break", "const", "continue", "crate", "do",
+        "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl", "in", "let", "loop",
+        "macro", "match", "mod", "move", "mut", "offsetof", "override", "priv", "proc", "pure",
+        "pub", "ref", "return", "Self", "self", "sizeof", "static", "struct", "super", "trait",
+        "true", "type", "typeof", "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
+    ]
+    .iter()
+    .cloned()
+    .collect()
 });
 
-static PEST_KEYWORDS: Lazy<Mutex<HashSet<&'static str>>> = Lazy::new(|| {
-    Mutex::new(
-        [
-            "_", "ANY", "DROP", "EOI", "PEEK", "PEEK_ALL", "POP", "POP_ALL", "PUSH", "SOI",
-        ]
-        .iter()
-        .cloned()
-        .collect(),
-    )
+static PEST_KEYWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+    [
+        "_", "ANY", "DROP", "EOI", "PEEK", "PEEK_ALL", "POP", "POP_ALL", "PUSH", "SOI",
+    ]
+    .iter()
+    .cloned()
+    .collect()
 });
 
-static BUILTINS: Lazy<Mutex<HashSet<&'static str>>> = Lazy::new(|| {
-    Mutex::new(
-        [
-            "ANY",
-            "DROP",
-            "EOI",
-            "PEEK",
-            "PEEK_ALL",
-            "POP",
-            "POP_ALL",
-            "SOI",
-            "ASCII_DIGIT",
-            "ASCII_NONZERO_DIGIT",
-            "ASCII_BIN_DIGIT",
-            "ASCII_OCT_DIGIT",
-            "ASCII_HEX_DIGIT",
-            "ASCII_ALPHA_LOWER",
-            "ASCII_ALPHA_UPPER",
-            "ASCII_ALPHA",
-            "ASCII_ALPHANUMERIC",
-            "ASCII",
-            "NEWLINE",
-        ]
-        .iter()
-        .cloned()
-        .chain(UNICODE_PROPERTY_NAMES.iter().cloned())
-        .collect::<HashSet<&str>>(),
-    )
+static BUILTINS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+    [
+        "ANY",
+        "DROP",
+        "EOI",
+        "PEEK",
+        "PEEK_ALL",
+        "POP",
+        "POP_ALL",
+        "SOI",
+        "ASCII_DIGIT",
+        "ASCII_NONZERO_DIGIT",
+        "ASCII_BIN_DIGIT",
+        "ASCII_OCT_DIGIT",
+        "ASCII_HEX_DIGIT",
+        "ASCII_ALPHA_LOWER",
+        "ASCII_ALPHA_UPPER",
+        "ASCII_ALPHA",
+        "ASCII_ALPHANUMERIC",
+        "ASCII",
+        "NEWLINE",
+    ]
+    .iter()
+    .cloned()
+    .chain(UNICODE_PROPERTY_NAMES.iter().cloned())
+    .collect::<HashSet<&str>>()
 });
 
 #[allow(clippy::needless_pass_by_value)]
@@ -122,7 +112,7 @@ pub fn validate_rust_keywords<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule
     for definition in definitions {
         let name = definition.as_str();
 
-        if RUST_KEYWORDS.lock().unwrap().contains(name) {
+        if RUST_KEYWORDS.contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("{} is a rust keyword", name),
@@ -141,7 +131,7 @@ pub fn validate_pest_keywords<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule
     for definition in definitions {
         let name = definition.as_str();
 
-        if PEST_KEYWORDS.lock().unwrap().contains(name) {
+        if PEST_KEYWORDS.contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("{} is a pest keyword", name),
@@ -188,7 +178,7 @@ pub fn validate_undefined<'i>(
     for rule in called_rules {
         let name = rule.as_str();
 
-        if !definitions.contains(name) && !BUILTINS.lock().unwrap().contains(name) {
+        if !definitions.contains(name) && !BUILTINS.contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("rule {} is undefined", name),
