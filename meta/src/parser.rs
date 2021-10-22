@@ -45,57 +45,57 @@ pub struct ParserNode<'i> {
 }
 
 impl<'i> ParserNode<'i> {
-    pub fn filter_map_top_down<F, T>(self, mut f: F) -> Vec<T>
+    pub fn filter_map_top_down<F, T>(&self, f: F) -> Vec<T>
     where
-        F: FnMut(ParserNode<'i>) -> Option<T>,
+        F: Fn(&ParserNode<'i>) -> Option<T>,
     {
-        pub fn filter_internal<'i, F, T>(node: ParserNode<'i>, f: &mut F, result: &mut Vec<T>)
+        pub fn filter_internal<'i, F, T>(node: &ParserNode<'i>, f: &F, result: &mut Vec<T>)
         where
-            F: FnMut(ParserNode<'i>) -> Option<T>,
+            F: Fn(&ParserNode<'i>) -> Option<T>,
         {
-            if let Some(value) = f(node.clone()) {
+            if let Some(value) = f(node) {
                 result.push(value);
             }
 
-            match node.expr {
+            match &node.expr {
                 // TODO: Use box syntax when it gets stabilized.
                 ParserExpr::PosPred(node) => {
-                    filter_internal(*node, f, result);
+                    filter_internal(&*node, f, result);
                 }
                 ParserExpr::NegPred(node) => {
-                    filter_internal(*node, f, result);
+                    filter_internal(&*node, f, result);
                 }
                 ParserExpr::Seq(lhs, rhs) => {
-                    filter_internal(*lhs, f, result);
-                    filter_internal(*rhs, f, result);
+                    filter_internal(&*lhs, f, result);
+                    filter_internal(&*rhs, f, result);
                 }
                 ParserExpr::Choice(lhs, rhs) => {
-                    filter_internal(*lhs, f, result);
-                    filter_internal(*rhs, f, result);
+                    filter_internal(&*lhs, f, result);
+                    filter_internal(&*rhs, f, result);
                 }
                 ParserExpr::Rep(node) => {
-                    filter_internal(*node, f, result);
+                    filter_internal(&*node, f, result);
                 }
                 ParserExpr::RepOnce(node) => {
-                    filter_internal(*node, f, result);
+                    filter_internal(&*node, f, result);
                 }
                 ParserExpr::RepExact(node, _) => {
-                    filter_internal(*node, f, result);
+                    filter_internal(&*node, f, result);
                 }
                 ParserExpr::RepMin(node, _) => {
-                    filter_internal(*node, f, result);
+                    filter_internal(&*node, f, result);
                 }
                 ParserExpr::RepMax(node, _) => {
-                    filter_internal(*node, f, result);
+                    filter_internal(&*node, f, result);
                 }
                 ParserExpr::RepMinMax(node, ..) => {
-                    filter_internal(*node, f, result);
+                    filter_internal(&*node, f, result);
                 }
                 ParserExpr::Opt(node) => {
-                    filter_internal(*node, f, result);
+                    filter_internal(&*node, f, result);
                 }
                 ParserExpr::Push(node) => {
-                    filter_internal(*node, f, result);
+                    filter_internal(&*node, f, result);
                 }
                 _ => (),
             }
@@ -103,7 +103,7 @@ impl<'i> ParserNode<'i> {
 
         let mut result = vec![];
 
-        filter_internal(self, &mut f, &mut result);
+        filter_internal(self, &f, &mut result);
 
         result
     }
