@@ -187,10 +187,10 @@ fn is_non_progressing<'i>(
     rules: &HashMap<String, &ParserNode<'i>>,
     trace: &mut Vec<String>,
 ) -> bool {
-    match *expr {
-        ParserExpr::Str(ref string) => string.is_empty(),
-        ParserExpr::Ident(ref ident) => {
-            if ident == "soi" || ident == "eoi" {
+    match expr {
+        ParserExpr::Str(string) => string.is_empty(),
+        ParserExpr::Ident(ident) => {
+            if ident == "SOI" || ident == "EOI" {
                 return true;
             }
 
@@ -208,11 +208,11 @@ fn is_non_progressing<'i>(
         }
         ParserExpr::PosPred(_) => true,
         ParserExpr::NegPred(_) => true,
-        ParserExpr::Seq(ref lhs, ref rhs) => {
+        ParserExpr::Seq(lhs, rhs) => {
             is_non_progressing(&lhs.expr, rules, trace)
                 && is_non_progressing(&rhs.expr, rules, trace)
         }
-        ParserExpr::Choice(ref lhs, ref rhs) => {
+        ParserExpr::Choice(lhs, rhs) => {
             is_non_progressing(&lhs.expr, rules, trace)
                 || is_non_progressing(&rhs.expr, rules, trace)
         }
@@ -543,12 +543,12 @@ mod tests {
 
  --> 1:13
   |
-1 | COMMENT = { soi }
+1 | COMMENT = { SOI }
   |             ^-^
   |
   = COMMENT is non-progressing and will repeat infinitely")]
     fn non_progressing_comment() {
-        let input = "COMMENT = { soi }";
+        let input = "COMMENT = { SOI }";
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap(),
         ));
@@ -607,12 +607,12 @@ mod tests {
 
  --> 1:7
   |
-1 | a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }
+1 | a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (SOI | EOI))* }
   |       ^-------------------------------^
   |
   = expression inside repetition is non-progressing and will repeat infinitely")]
     fn non_progressing_repetition() {
-        let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }";
+        let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (SOI | EOI))* }";
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap(),
         ));
