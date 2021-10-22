@@ -176,7 +176,7 @@ pub fn consume_rules(pairs: Pairs<Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>
     }
 }
 
-fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<Error<Rule>>> {
+pub fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<Error<Rule>>> {
     let climber = PrecClimber::new(vec![
         Operator::new(Rule::choice_operator, Assoc::Left),
         Operator::new(Rule::sequence_operator, Assoc::Left),
