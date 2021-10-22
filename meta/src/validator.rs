@@ -12,7 +12,6 @@ use std::collections::{HashMap, HashSet};
 
 use pest::error::{Error, ErrorVariant, InputLocation};
 use pest::iterators::Pairs;
-use pest::Span;
 
 use parser::{ParserExpr, ParserNode, ParserRule, Rule};
 use UNICODE_PROPERTY_NAMES;
@@ -67,128 +66,93 @@ static BUILTINS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     .collect::<HashSet<&str>>()
 });
 
+/// Lexically validates the grammar rules: Checks that rule identifiers are
+/// unique and not a rust or pest keyword, and checks that each referenced rule
+/// identifier in a rule definition is either a pest built-in or an existing
+/// rule identifier.
+///
+/// Returns a list of the built-ins used, or the resulting errors.
+///
+/// Because pest grammars allow forward references in rule expressions,
+/// validation requires two full passes over the provided rules: The first
+/// analyzes each rule identifier (`a` in `a = { b ~ c }`), and the second
+/// analyzes each referenced identifier in the rule expressions (`b` and `c` in
+/// `a = { b ~ c }`).
 #[allow(clippy::needless_pass_by_value)]
-pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>> {
-    let definitions: Vec<_> = pairs
-        .clone()
-        .filter(|pair| pair.as_rule() == Rule::grammar_rule)
-        .map(|pair| pair.into_inner().next().unwrap().as_span())
-        .collect();
-    let called_rules: Vec<_> = pairs
-        .clone()
-        .filter(|pair| pair.as_rule() == Rule::grammar_rule)
-        .flat_map(|pair| {
-            pair.into_inner()
-                .flatten()
-                .skip(1)
-                .filter(|pair| pair.as_rule() == Rule::identifier)
-                .map(|pair| pair.as_span())
-        })
-        .collect();
+pub fn validate_pairs(grammar_rule_pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>> {
+    let mut errors = Vec::new();
+    let mut rule_identifiers = HashSet::new();
+    let mut referenced_rules = HashSet::new();
 
-    let mut errors = vec![];
+    // First loop checks rule identifiers
+    for rule_pair in grammar_rule_pairs.filter(|pair| pair.as_rule() == Rule::grammar_rule) {
+        let span = rule_pair.clone().into_inner().next().unwrap().as_span();
+        let name = span.as_str();
 
-    errors.extend(validate_rust_keywords(&definitions));
-    errors.extend(validate_pest_keywords(&definitions));
-    errors.extend(validate_already_defined(&definitions));
-    errors.extend(validate_undefined(&definitions, &called_rules));
-
-    if !errors.is_empty() {
-        return Err(errors);
-    }
-
-    let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
-    let called_rules: HashSet<_> = called_rules.iter().map(|span| span.as_str()).collect();
-
-    let defaults = called_rules.difference(&definitions);
-
-    Ok(defaults.cloned().collect())
-}
-
-#[allow(clippy::implicit_hasher, clippy::ptr_arg)]
-pub fn validate_rust_keywords<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule>> {
-    let mut errors = vec![];
-
-    for definition in definitions {
-        let name = definition.as_str();
-
-        if RUST_KEYWORDS.contains(name) {
-            errors.push(Error::new_from_span(
-                ErrorVariant::CustomError {
-                    message: format!("{} is a rust keyword", name),
-                },
-                definition.clone(),
-            ))
-        }
-    }
-
-    errors
-}
-
-pub fn validate_pest_keywords<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule>> {
-    let mut errors = vec![];
-
-    for definition in definitions {
-        let name = definition.as_str();
-
-        if PEST_KEYWORDS.contains(name) {
-            errors.push(Error::new_from_span(
-                ErrorVariant::CustomError {
-                    message: format!("{} is a pest keyword", name),
-                },
-                definition.clone(),
-            ))
-        }
-    }
-
-    errors
-}
-
-#[allow(clippy::ptr_arg)]
-pub fn validate_already_defined(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
-    let mut errors = vec![];
-    let mut defined = HashSet::new();
-
-    for definition in definitions {
-        let name = definition.as_str();
-
-        if defined.contains(&name) {
+        // If an identifier is both defined multiple times and a rust or pest keyword, only show
+        // the "already defined" error, as the first instance of the identifier will show the
+        // rust/pest keyword error.
+        if rule_identifiers.contains(&name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("rule {} already defined", name),
                 },
-                definition.clone(),
+                span.clone(),
             ))
         } else {
-            defined.insert(name);
+            rule_identifiers.insert(name);
+
+            if RUST_KEYWORDS.contains(name) {
+                errors.push(Error::new_from_span(
+                    ErrorVariant::CustomError {
+                        message: format!("{} is a rust keyword", name),
+                    },
+                    span.clone(),
+                ))
+            } else if PEST_KEYWORDS.contains(name) {
+                errors.push(Error::new_from_span(
+                    ErrorVariant::CustomError {
+                        message: format!("{} is a pest keyword", name),
+                    },
+                    span.clone(),
+                ))
+            }
         }
+
+        // Keep track of all rules that are references inside of definitions
+        referenced_rules.extend(
+            rule_pair
+                .into_inner()
+                .flatten()
+                .skip(1)
+                .filter(|pair| pair.as_rule() == Rule::identifier)
+                .map(|pair| pair.as_span()),
+        );
     }
 
-    errors
-}
+    let mut used_builtins = Vec::new();
 
-#[allow(clippy::implicit_hasher, clippy::ptr_arg)]
-pub fn validate_undefined<'i>(
-    definitions: &Vec<Span<'i>>,
-    called_rules: &Vec<Span<'i>>,
-) -> Vec<Error<Rule>> {
-    let mut errors = vec![];
-    let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
+    // Second loop checks for referenced rule identifiers
+    for span in referenced_rules {
+        let name = span.as_str();
 
-    for rule in called_rules {
-        let name = rule.as_str();
-
-        if !definitions.contains(name) && !BUILTINS.contains(name) {
+        if BUILTINS.contains(name) {
+            used_builtins.push(name);
+        } else if !rule_identifiers.contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("rule {} is undefined", name),
                 },
-                rule.clone(),
+                span.clone(),
             ))
         }
     }
 
-    errors
+    if errors.is_empty() {
+        Ok(used_builtins)
+    } else {
+        Err(errors)
+    }
 }
 
 #[allow(clippy::ptr_arg)]
@@ -529,6 +493,29 @@ mod tests {
   = rule a already defined")]
     fn already_defined() {
         let input = "a = { \"a\" } a = { \"a\" }";
+        unwrap_or_report(validate_pairs(
+            PestParser::parse(Rule::grammar_rules, input).unwrap(),
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:1
+  |
+1 | let = { \"a\" } let = { \"a\" }
+  | ^-^
+  |
+  = let is a rust keyword
+
+ --> 1:15
+  |
+1 | let = { \"a\" } let = { \"a\" }
+  |               ^-^
+  |
+  = rule let already defined")]
+    fn already_defined_with_keyword() {
+        let input = "let = { \"a\" } let = { \"a\" }";
         unwrap_or_report(validate_pairs(
             PestParser::parse(Rule::grammar_rules, input).unwrap(),
         ));
