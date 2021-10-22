@@ -14,31 +14,26 @@ macro_rules! insert_builtin {
     };
 }
 
-macro_rules! insert_public_builtin {
-    ($builtin: expr, $name: ident, $pattern: expr) => {
-        #[allow(clippy::vec_init_then_push)]
-        $builtin.push((stringify!($name), generate_public_rule!($name, $pattern)));
-    };
-}
-
+#[cfg(feature = "std")]
 macro_rules! generate_rule {
     ($name: ident, $pattern: expr) => {
         quote! {
             #[inline]
             #[allow(dead_code, non_snake_case, unused_variables)]
-            pub fn $name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+            pub fn $name(state: ::std::boxed::Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<::std::boxed::Box<::pest::ParserState<Rule>>> {
                 $pattern
             }
         }
     }
 }
 
-macro_rules! generate_public_rule {
+#[cfg(not(feature = "std"))]
+macro_rules! generate_rule {
     ($name: ident, $pattern: expr) => {
         quote! {
             #[inline]
             #[allow(dead_code, non_snake_case, unused_variables)]
-            pub fn $name(state: Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<Box<::pest::ParserState<Rule>>> {
+            pub fn $name(state: ::alloc::boxed::Box<::pest::ParserState<Rule>>) -> ::pest::ParseResult<::alloc::boxed::Box<::pest::ParserState<Rule>>> {
                 $pattern
             }
         }
