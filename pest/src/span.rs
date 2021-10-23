@@ -42,7 +42,7 @@ impl<'i> Span<'i> {
     /// # Safety
     ///
     /// `input[start..end]` must be a valid subslice; that is, said indexing should not panic.
-    pub(crate) unsafe fn new_unchecked(input: &str, start: usize, end: usize) -> Span {
+    pub fn new_unchecked(input: &str, start: usize, end: usize) -> Span {
         debug_assert!(input.get(start..end).is_some());
         Span { input, start, end }
     }
