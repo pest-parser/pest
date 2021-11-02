@@ -14,7 +14,6 @@ exclude = ["src/grammar.pest"]
 include = ["Cargo.toml", "src/**/*", "src/grammar.rs", "_README.md", "LICENSE-*"]
 
 [dependencies]
-maplit = "1.0"
 pest = { path = "../pest", version = "2.1.0" }
 
 [badges]
