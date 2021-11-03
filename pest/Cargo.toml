@@ -14,14 +14,14 @@ readme = "_README.md"
 [features]
 default = ["std"]
 # Implements `std::error::Error` for the `Error` type
-std = []
+std = ["ucd-trie/std"]
 # Enables the `to_json` function for `Pair` and `Pairs`
 pretty-print = ["serde", "serde_json"]
 # Enable const fn constructor for `PrecClimber` (requires nightly)
 const_prec_climber = []
 
 [dependencies]
-ucd-trie = "0.1.1"
+ucd-trie = { version = "0.1.1", default-features = false }
 serde = { version = "1.0.89", optional = true }
 serde_json = { version = "1.0.39", optional = true}
 
