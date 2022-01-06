@@ -167,6 +167,7 @@ Digit:   2
 * [Vector](https://github.com/timberio/vector)
 * [AutoCorrect](https://github.com/huacnlee/autocorrect)
 * [yaml-peg](https://github.com/aofdev/yaml-peg)
+* [caith](https://github.com/Geobert/caith) (a dice roller crate)
 
 ## Special thanks
 
