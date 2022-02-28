@@ -16,10 +16,5 @@ include = ["Cargo.toml", "src/**/*", "src/grammar.rs", "_README.md", "LICENSE-*"
 [dependencies]
 pest = { path = "../pest", version = "2.1.0" }
 
-[badges]
-codecov = { repository = "pest-parser/pest" }
-maintenance = { status = "actively-developed" }
-travis-ci = { repository = "pest-parser/pest" }
-
 [build-dependencies]
 sha-1 = { version = "0.10", default-features = false }
