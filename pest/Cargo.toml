@@ -24,8 +24,3 @@ const_prec_climber = []
 ucd-trie = { version = "0.1.1", default-features = false }
 serde = { version = "1.0.89", optional = true }
 serde_json = { version = "1.0.39", optional = true}
-
-[badges]
-codecov = { repository = "pest-parser/pest" }
-maintenance = { status = "actively-developed" }
-travis-ci = { repository = "pest-parser/pest" }

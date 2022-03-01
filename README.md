@@ -8,7 +8,7 @@
 [![Book](https://img.shields.io/badge/book-WIP-4d76ae.svg)](https://pest-parser.github.io/book)
 [![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)
 
-[![Build Status](https://travis-ci.org/pest-parser/pest.svg?branch=master)](https://travis-ci.org/pest-parser/pest)
+[![pest Continuous Integration](https://github.com/pest-parser/pest/actions/workflows/ci.yml/badge.svg)](https://github.com/pest-parser/pest/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/pest-parser/pest/branch/master/graph/badge.svg)](https://codecov.io/gh/pest-parser/pest)
 [![Fuzzit Status](https://app.fuzzit.dev/badge?org_id=pest-parser)](https://app.fuzzit.dev/orgs/pest-parser/dashboard)
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)

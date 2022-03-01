@@ -23,8 +23,3 @@ std = ["pest/std", "pest_generator/std"]
 # for tests, included transitively anyway
 pest = { path = "../pest", version = "2.1.0", default-features = false }
 pest_generator = { path = "../generator", version = "2.1.0", default-features = false }
-
-[badges]
-codecov = { repository = "pest-parser/pest" }
-maintenance = { status = "actively-developed" }
-travis-ci = { repository = "pest-parser/pest" }
