@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate quote;
 extern crate pest_generator;
+extern crate proc_macro2;
 
+use proc_macro2::TokenStream;
 use pest_generator::derive_parser;
 use std::{fs::File, io::prelude::*, path::Path};
 
@@ -17,7 +19,7 @@ fn main() {
 
     let derived = {
         let path = pest.to_string_lossy();
-        let pest = quote! {
+        let pest: TokenStream = quote! {
             #[grammar = #path]
             pub struct PestParser;
         };
