@@ -1,0 +1,8 @@
+tasks:
+  - init: |
+      cargo bootstrap
+      cargo build
+
+vscode:
+  extensions:
+    - matklad.rust-analyzer
