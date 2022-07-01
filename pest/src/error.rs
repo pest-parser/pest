@@ -101,11 +101,18 @@ impl<R: RuleType> Error<R> {
     /// ```
     #[allow(clippy::needless_pass_by_value)]
     pub fn new_from_pos(variant: ErrorVariant<R>, pos: Position) -> Error<R> {
+        let visualize_ws = pos.match_char('\n') || pos.match_char('\r');
+        let line_of = pos.line_of();
+        let line = if visualize_ws {
+            visualize_whitespace(line_of)
+        } else {
+            line_of.replace(&['\r', '\n'][..], "")
+        };
         Error {
             variant,
             location: InputLocation::Pos(pos.pos()),
             path: None,
-            line: visualize_whitespace(pos.line_of()),
+            line,
             continued_line: None,
             line_col: LineColLocation::Pos(pos.line_col()),
         }
@@ -142,19 +149,31 @@ impl<R: RuleType> Error<R> {
     #[allow(clippy::needless_pass_by_value)]
     pub fn new_from_span(variant: ErrorVariant<R>, span: Span) -> Error<R> {
         let end = span.end_pos();
-
         let mut end_line_col = end.line_col();
         // end position is after a \n, so we want to point to the visual lf symbol
         if end_line_col.1 == 1 {
-            let mut visual_end = end.clone();
+            let mut visual_end = end;
             visual_end.skip_back(1);
             let lc = visual_end.line_col();
             end_line_col = (lc.0, lc.1 + 1);
         };
 
         let mut line_iter = span.lines();
-        let start_line = visualize_whitespace(line_iter.next().unwrap_or(""));
-        let continued_line = line_iter.last().map(visualize_whitespace);
+        let sl = line_iter.next().unwrap_or("");
+        let mut chars = span.as_str().chars();
+        let visualize_ws = matches!(chars.next(), Some('\n') | Some('\r'))
+            || matches!(chars.last(), Some('\n') | Some('\r'));
+        let start_line = if visualize_ws {
+            visualize_whitespace(sl)
+        } else {
+            sl.to_owned().replace(&['\r', '\n'][..], "")
+        };
+        let ll = line_iter.last();
+        let continued_line = if visualize_ws {
+            ll.map(&str::to_owned)
+        } else {
+            ll.map(visualize_whitespace)
+        };
 
         Error {
             variant,
@@ -538,7 +557,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
@@ -564,7 +583,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = expected 1 or 2",
@@ -590,7 +609,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6",
@@ -616,7 +635,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = unknown parsing error",
@@ -641,7 +660,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = error: big one",
@@ -667,7 +686,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "3 | efgh",
                 "  |  ^^",
                 "  |",
@@ -694,7 +713,7 @@ mod tests {
             vec![
                 " --> 1:2",
                 "  |",
-                "1 | ab␊",
+                "1 | ab",
                 "  | ...",
                 "3 | efgh",
                 "  |  ^^",
@@ -722,7 +741,7 @@ mod tests {
             vec![
                 " --> 1:6",
                 "  |",
-                "1 | abcdef␊",
+                "1 | abcdef",
                 "2 | gh",
                 "  | ^----^",
                 "  |",
@@ -808,7 +827,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 5, 6, or 7; expected 2, 3, or 4",
@@ -835,7 +854,7 @@ mod tests {
             vec![
                 " --> file.rs:2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",

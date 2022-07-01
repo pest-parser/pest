@@ -318,6 +318,14 @@ impl<'i> Position<'i> {
         false
     }
 
+    /// Matches the char at the `Position` against a specified character and returns `true` if a match
+    /// was made. If no match was made, returns `false`.
+    /// `pos` will not be updated in either case.
+    #[inline]
+    pub(crate) fn match_char(&self, c: char) -> bool {
+        matches!(self.input[self.pos..].chars().next(), Some(cc) if c == cc)
+    }
+
     /// Matches the char at the `Position` against a filter function and returns `true` if a match
     /// was made. If no match was made, returns `false` and `pos` will not be updated.
     #[inline]
