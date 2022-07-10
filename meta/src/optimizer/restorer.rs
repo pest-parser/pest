@@ -8,7 +8,7 @@
 // modified, or distributed except according to those terms.
 use std::collections::HashMap;
 
-use optimizer::*;
+use crate::optimizer::*;
 
 pub fn restore_on_err(
     rule: OptimizedRule,
@@ -92,7 +92,7 @@ fn child_modifies_state(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use optimizer::OptimizedExpr::*;
+    use crate::optimizer::OptimizedExpr::*;
 
     #[test]
     fn restore_no_stack_children() {

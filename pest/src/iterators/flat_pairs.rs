@@ -14,7 +14,7 @@ use core::fmt;
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
-use RuleType;
+use crate::RuleType;
 
 /// An iterator over [`Pair`]s. It is created by [`Pairs::flatten`].
 ///

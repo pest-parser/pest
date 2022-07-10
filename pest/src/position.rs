@@ -14,7 +14,7 @@ use core::ops::Range;
 use core::ptr;
 use core::str;
 
-use span;
+use crate::span;
 
 /// A cursor position in a `&str` which provides useful methods to manually parse that string.
 #[derive(Clone, Copy)]

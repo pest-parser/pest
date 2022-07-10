@@ -19,9 +19,9 @@ use core::cmp;
 use core::fmt;
 use core::mem;
 
-use position::Position;
-use span::Span;
-use RuleType;
+use crate::position::Position;
+use crate::span::Span;
+use crate::RuleType;
 
 /// Parse-related error type.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
