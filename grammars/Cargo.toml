@@ -2,6 +2,7 @@
 name = "pest_grammars"
 description = "pest popular grammar implementations"
 version = "2.1.0"
+edition = "2018"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest-parser.github.io/"
 repository = "https://github.com/pest-parser/pest"
@@ -14,3 +15,10 @@ readme = "_README.md"
 [dependencies]
 pest = { path = "../pest", version = "2.1.0" }
 pest_derive = { path = "../derive", version = "2.1.0" }
+
+[dev-dependencies]
+bencher = "0.1"
+
+[[bench]]
+name = "json"
+harness = false

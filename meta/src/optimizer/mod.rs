@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use ast::*;
+use crate::ast::*;
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -281,7 +281,7 @@ mod tests {
     #[test]
     fn rotate() {
         let rules = {
-            use ast::Expr::*;
+            use crate::ast::Expr::*;
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Normal,
@@ -295,7 +295,7 @@ mod tests {
             }]
         };
         let rotated = {
-            use optimizer::OptimizedExpr::*;
+            use crate::optimizer::OptimizedExpr::*;
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Normal,
@@ -315,7 +315,7 @@ mod tests {
     #[test]
     fn skip() {
         let rules = {
-            use ast::Expr::*;
+            use crate::ast::Expr::*;
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
@@ -337,7 +337,7 @@ mod tests {
     #[test]
     fn concat_strings() {
         let rules = {
-            use ast::Expr::*;
+            use crate::ast::Expr::*;
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
@@ -364,7 +364,7 @@ mod tests {
             expr: Expr::RepExact(Box::new(Expr::Ident(String::from("a"))), 3),
         }];
         let unrolled = {
-            use optimizer::OptimizedExpr::*;
+            use crate::optimizer::OptimizedExpr::*;
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
@@ -386,7 +386,7 @@ mod tests {
             expr: Expr::RepMax(Box::new(Expr::Str("a".to_owned())), 3),
         }];
         let unrolled = {
-            use optimizer::OptimizedExpr::*;
+            use crate::optimizer::OptimizedExpr::*;
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
@@ -408,7 +408,7 @@ mod tests {
             expr: Expr::RepMin(Box::new(Expr::Str("a".to_owned())), 2),
         }];
         let unrolled = {
-            use optimizer::OptimizedExpr::*;
+            use crate::optimizer::OptimizedExpr::*;
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
@@ -430,7 +430,7 @@ mod tests {
             expr: Expr::RepMinMax(Box::new(Expr::Str("a".to_owned())), 2, 3),
         }];
         let unrolled = {
-            use optimizer::OptimizedExpr::*;
+            use crate::optimizer::OptimizedExpr::*;
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
@@ -454,7 +454,7 @@ mod tests {
     #[test]
     fn concat_insensitive_strings() {
         let rules = {
-            use ast::Expr::*;
+            use crate::ast::Expr::*;
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
@@ -476,7 +476,7 @@ mod tests {
     #[test]
     fn long_common_sequence() {
         let rules = {
-            use ast::Expr::*;
+            use crate::ast::Expr::*;
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
@@ -493,7 +493,7 @@ mod tests {
             }]
         };
         let optimized = {
-            use optimizer::OptimizedExpr::*;
+            use crate::optimizer::OptimizedExpr::*;
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
@@ -513,7 +513,7 @@ mod tests {
     #[test]
     fn short_common_sequence() {
         let rules = {
-            use ast::Expr::*;
+            use crate::ast::Expr::*;
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
@@ -524,7 +524,7 @@ mod tests {
             }]
         };
         let optimized = {
-            use optimizer::OptimizedExpr::*;
+            use crate::optimizer::OptimizedExpr::*;
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
@@ -538,7 +538,7 @@ mod tests {
     #[test]
     fn impossible_common_sequence() {
         let rules = {
-            use ast::Expr::*;
+            use crate::ast::Expr::*;
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
@@ -549,7 +549,7 @@ mod tests {
             }]
         };
         let optimized = {
-            use optimizer::OptimizedExpr::*;
+            use crate::optimizer::OptimizedExpr::*;
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
@@ -563,7 +563,7 @@ mod tests {
     #[test]
     fn lister() {
         let rules = {
-            use ast::Expr::*;
+            use crate::ast::Expr::*;
             vec![Rule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
@@ -574,7 +574,7 @@ mod tests {
             }]
         };
         let optimized = {
-            use optimizer::OptimizedExpr::*;
+            use crate::optimizer::OptimizedExpr::*;
             vec![OptimizedRule {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,

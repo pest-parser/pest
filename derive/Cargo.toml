@@ -2,6 +2,7 @@
 name = "pest_derive"
 description = "pest's derive macro"
 version = "2.1.0"
+edition = "2018"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest-parser.github.io/"
 repository = "https://github.com/pest-parser/pest"

@@ -13,12 +13,12 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::Range;
 
-use error::{Error, ErrorVariant};
-use iterators::{pairs, QueueableToken};
-use position::{self, Position};
-use span::Span;
-use stack::Stack;
-use RuleType;
+use crate::error::{Error, ErrorVariant};
+use crate::iterators::{pairs, QueueableToken};
+use crate::position::{self, Position};
+use crate::span::Span;
+use crate::stack::Stack;
+use crate::RuleType;
 
 /// The current lookahead status of a [`ParserState`].
 ///

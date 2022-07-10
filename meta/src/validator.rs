@@ -13,8 +13,8 @@ use pest::error::{Error, ErrorVariant, InputLocation};
 use pest::iterators::Pairs;
 use pest::Span;
 
-use parser::{ParserExpr, ParserNode, ParserRule, Rule};
-use UNICODE_PROPERTY_NAMES;
+use crate::parser::{ParserExpr, ParserNode, ParserRule, Rule};
+use crate::UNICODE_PROPERTY_NAMES;
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>> {
