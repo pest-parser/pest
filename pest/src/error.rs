@@ -43,7 +43,7 @@ pub struct Error<R: RuleType> {
 #[cfg_attr(feature = "std", derive(thiserror::Error))]
 pub enum ErrorVariant<R: RuleType> {
     /// Generated parsing error with expected and unexpected `Rule`s
-    #[cfg_attr(feature = "std", error("{}", self.message()))]
+    #[cfg_attr(feature = "std", error("parsing error: {}", self.message()))]
     ParsingError {
         /// Positive attempts
         positives: Vec<R>,
