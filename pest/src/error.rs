@@ -25,7 +25,7 @@ use crate::RuleType;
 /// Parse-related error type.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[cfg_attr(feature = "std", derive(thiserror::Error))]
-#[cfg_attr(feature = "std", error("An error was encountered while parsing:\n{}", self.format()))]
+#[cfg_attr(feature = "std", error("{}", self.format()))]
 pub struct Error<R: RuleType> {
     /// Variant of the error
     pub variant: ErrorVariant<R>,
