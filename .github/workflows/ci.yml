@@ -74,7 +74,7 @@ jobs:
     - name: Install Rust Nightly
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: nightly-2021-11-01
+        toolchain: nightly-2022-01-01
         default: true
         profile: minimal
     - name: Bootstraping Grammars - Building
