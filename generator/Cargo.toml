@@ -11,6 +11,7 @@ keywords = ["pest", "generator"]
 categories = ["parsing"]
 license = "MIT/Apache-2.0"
 readme = "_README.md"
+rust-version = "1.56"
 
 [features]
 default = ["std"]
