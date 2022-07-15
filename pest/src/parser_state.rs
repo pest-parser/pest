@@ -365,7 +365,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
         let token_index = self.queue.len();
-        let initial_pos = self.position.clone();
+        let initial_pos = self.position;
 
         let result = f(self);
 
@@ -745,7 +745,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             }
         };
 
-        let initial_pos = self.position.clone();
+        let initial_pos = self.position;
 
         let result = f(self.checkpoint());
 
@@ -846,13 +846,13 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
-        let start = self.position.clone();
+        let start = self.position;
 
         let result = f(self);
 
         match result {
             Ok(mut state) => {
-                let end = state.position.clone();
+                let end = state.position;
                 state.stack.push(start.span(&end));
                 Ok(state)
             }
@@ -958,7 +958,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             return Ok(self);
         }
 
-        let mut position = self.position.clone();
+        let mut position = self.position;
         let result = {
             let mut iter_b2t = self.stack[range].iter();
             let matcher = |span: &Span| position.match_string(span.as_str());
@@ -1019,7 +1019,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn stack_match_pop(mut self: Box<Self>) -> ParseResult<Box<Self>> {
-        let mut position = self.position.clone();
+        let mut position = self.position;
         let mut result = true;
         while let Some(span) = self.stack.pop() {
             result = position.match_string(span.as_str());

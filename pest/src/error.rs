@@ -354,13 +354,11 @@ impl<R: RuleType> Error<R> {
         }
 
         if let Some(end) = end {
+            underline.push('^');
             if end - start > 1 {
-                underline.push('^');
                 for _ in 2..(end - start) {
                     underline.push('-');
                 }
-                underline.push('^');
-            } else {
                 underline.push('^');
             }
         } else {
@@ -398,13 +396,14 @@ impl<R: RuleType> Error<R> {
             1 => f(&rules[0]),
             2 => format!("{} or {}", f(&rules[0]), f(&rules[1])),
             l => {
+                let non_separated = f(&rules[l - 1]);
                 let separated = rules
                     .iter()
                     .take(l - 1)
-                    .map(|r| f(r))
+                    .map(f)
                     .collect::<Vec<_>>()
                     .join(", ");
-                format!("{}, or {}", separated, f(&rules[l - 1]))
+                format!("{}, or {}", separated, non_separated)
             }
         }
     }
