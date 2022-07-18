@@ -174,7 +174,9 @@ Digit:   2
 * [Vector](https://github.com/timberio/vector)
 * [AutoCorrect](https://github.com/huacnlee/autocorrect)
 * [yaml-peg](https://github.com/aofdev/yaml-peg)
+* [qubit](https://github.com/abhimanyu003/qubit)
 * [caith](https://github.com/Geobert/caith) (a dice roller crate)
+* [Melody](https://github.com/yoav-lavi/melody)
 
 ## Special thanks
 
