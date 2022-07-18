@@ -14,7 +14,7 @@ use core::ops::Range;
 use core::ptr;
 use core::str;
 
-use span;
+use crate::span;
 
 /// A cursor position in a `&str` which provides useful methods to manually parse that string.
 #[derive(Clone, Copy)]
@@ -316,6 +316,14 @@ impl<'i> Position<'i> {
 
         self.pos = self.input.len();
         false
+    }
+
+    /// Matches the char at the `Position` against a specified character and returns `true` if a match
+    /// was made. If no match was made, returns `false`.
+    /// `pos` will not be updated in either case.
+    #[inline]
+    pub(crate) fn match_char(&self, c: char) -> bool {
+        matches!(self.input[self.pos..].chars().next(), Some(cc) if c == cc)
     }
 
     /// Matches the char at the `Position` against a filter function and returns `true` if a match

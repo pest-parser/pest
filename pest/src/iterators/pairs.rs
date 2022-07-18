@@ -23,7 +23,7 @@ use super::flat_pairs::{self, FlatPairs};
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
-use RuleType;
+use crate::RuleType;
 
 /// An iterator over [`Pair`]s. It is created by [`pest::state`] and [`Pair::into_inner`].
 ///

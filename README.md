@@ -1,3 +1,10 @@
+<div align="center">
+
+# [***Transferring maintenance & keeping pest alive: #606***](https://github.com/pest-parser/pest/discussions/606)
+
+</div>
+
+  
 <p align="center">
   <img src="https://raw.github.com/pest-parser/pest/master/pest-logo.svg?sanitize=true" width="80%"/>
 </p>
@@ -8,7 +15,7 @@
 [![Book](https://img.shields.io/badge/book-WIP-4d76ae.svg)](https://pest-parser.github.io/book)
 [![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)
 
-[![Build Status](https://travis-ci.org/pest-parser/pest.svg?branch=master)](https://travis-ci.org/pest-parser/pest)
+[![pest Continuous Integration](https://github.com/pest-parser/pest/actions/workflows/ci.yml/badge.svg)](https://github.com/pest-parser/pest/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/pest-parser/pest/branch/master/graph/badge.svg)](https://codecov.io/gh/pest-parser/pest)
 [![Fuzzit Status](https://app.fuzzit.dev/badge?org_id=pest-parser)](https://app.fuzzit.dev/orgs/pest-parser/dashboard)
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
@@ -168,6 +175,7 @@ Digit:   2
 * [AutoCorrect](https://github.com/huacnlee/autocorrect)
 * [yaml-peg](https://github.com/aofdev/yaml-peg)
 * [qubit](https://github.com/abhimanyu003/qubit)
+* [caith](https://github.com/Geobert/caith) (a dice roller crate)
 
 ## Special thanks
 

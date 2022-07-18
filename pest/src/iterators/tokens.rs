@@ -13,9 +13,9 @@ use core::fmt;
 use core::str;
 
 use super::queueable_token::QueueableToken;
-use position;
-use token::Token;
-use RuleType;
+use crate::position;
+use crate::token::Token;
+use crate::RuleType;
 
 /// An iterator over [`Token`]s. It is created by [`Pair::tokens`] and [`Pairs::tokens`].
 ///

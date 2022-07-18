@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use ast::*;
+use crate::ast::*;
 
 pub fn factor(rule: Rule) -> Rule {
     let Rule { name, ty, expr } = rule;

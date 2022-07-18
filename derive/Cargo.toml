@@ -2,6 +2,7 @@
 name = "pest_derive"
 description = "pest's derive macro"
 version = "2.1.0"
+edition = "2018"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest-parser.github.io/"
 repository = "https://github.com/pest-parser/pest"
@@ -10,6 +11,7 @@ keywords = ["pest", "parser", "peg", "grammar"]
 categories = ["parsing"]
 license = "MIT/Apache-2.0"
 readme = "_README.md"
+rust-version = "1.56"
 
 [lib]
 name = "pest_derive"
@@ -23,8 +25,3 @@ std = ["pest/std", "pest_generator/std"]
 # for tests, included transitively anyway
 pest = { path = "../pest", version = "2.1.0", default-features = false }
 pest_generator = { path = "../generator", version = "2.1.0", default-features = false }
-
-[badges]
-codecov = { repository = "pest-parser/pest" }
-maintenance = { status = "actively-developed" }
-travis-ci = { repository = "pest-parser/pest" }

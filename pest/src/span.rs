@@ -12,7 +12,7 @@ use core::hash::{Hash, Hasher};
 use core::ptr;
 use core::str;
 
-use position;
+use crate::position;
 
 /// A span over a `&str`. It is created from either [two `Position`s] or from a [`Pair`].
 ///
@@ -266,6 +266,16 @@ mod tests {
     use alloc::vec::Vec;
 
     #[test]
+    fn span_comp() {
+        let input = "abc\ndef\nghi";
+        let span = Span::new(input, 1, 7).unwrap();
+        let span2 = Span::new(input, 50, 51);
+        assert!(span2.is_none());
+        let span3 = Span::new(input, 0, 8).unwrap();
+        assert!(span != span3);
+    }
+
+    #[test]
     fn split() {
         let input = "a";
         let start = position::Position::from_start(input);
@@ -294,6 +304,7 @@ mod tests {
         let input = "abc\ndef\nghi";
         let span = Span::new(input, 5, 11).unwrap();
         assert!(span.end_pos().at_end());
+        assert_eq!(span.end(), 11);
         let lines: Vec<_> = span.lines().collect();
         //println!("{:?}", lines);
         assert_eq!(lines.len(), 2);

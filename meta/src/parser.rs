@@ -15,8 +15,8 @@ use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 use pest::{Parser, Span};
 
-use ast::{Expr, Rule as AstRule, RuleType};
-use validator;
+use crate::ast::{Expr, Rule as AstRule, RuleType};
+use crate::validator;
 
 mod grammar {
     #![allow(unknown_lints, clippy::all)]
