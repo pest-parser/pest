@@ -176,6 +176,7 @@ Digit:   2
 * [yaml-peg](https://github.com/aofdev/yaml-peg)
 * [qubit](https://github.com/abhimanyu003/qubit)
 * [caith](https://github.com/Geobert/caith) (a dice roller crate)
+* [Melody](https://github.com/yoav-lavi/melody)
 
 ## Special thanks
 
