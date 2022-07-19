@@ -106,7 +106,7 @@ pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>>
 }
 
 #[allow(clippy::implicit_hasher, clippy::ptr_arg)]
-pub fn validate_rust_keywords<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule>> {
+pub fn validate_rust_keywords(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
     for definition in definitions {
@@ -125,7 +125,7 @@ pub fn validate_rust_keywords<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule
     errors
 }
 
-pub fn validate_pest_keywords<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule>> {
+pub fn validate_pest_keywords(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
     for definition in definitions {
