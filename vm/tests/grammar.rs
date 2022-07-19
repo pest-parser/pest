@@ -16,7 +16,7 @@ use pest_meta::parser::Rule;
 use pest_meta::{optimizer, parser};
 use pest_vm::Vm;
 
-const GRAMMAR: &'static str = include_str!("grammar.pest");
+const GRAMMAR: &str = include_str!("grammar.pest");
 
 fn vm() -> Vm {
     let pairs = parser::parse(Rule::grammar_rules, GRAMMAR).unwrap();

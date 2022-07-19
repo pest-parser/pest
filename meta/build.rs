@@ -57,9 +57,7 @@ fn main() {
                 })
                 .wait()
                 .unwrap();
-            if !status.success() {
-                panic!("Bootstrap failed");
-            }
+            assert!(status.success(), "Bootstrap failed");
         } else {
             println!("       Fresh `meta/src/grammar.rs`");
         }

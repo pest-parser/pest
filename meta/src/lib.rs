@@ -7,8 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-#![allow(clippy::range_plus_one)]
-
 #[cfg(test)]
 #[macro_use]
 extern crate pest;

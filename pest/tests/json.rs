@@ -47,16 +47,16 @@ impl Parser<Rule> for JsonParser {
             state.rule(Rule::object, |s| {
                 s.sequence(|s| {
                     s.match_string("{")
-                        .and_then(|s| skip(s))
-                        .and_then(|s| pair(s))
-                        .and_then(|s| skip(s))
+                        .and_then(skip)
+                        .and_then(pair)
+                        .and_then(skip)
                         .and_then(|s| {
                             s.repeat(|s| {
                                 s.sequence(|s| {
                                     s.match_string(",")
-                                        .and_then(|s| skip(s))
-                                        .and_then(|s| pair(s))
-                                        .and_then(|s| skip(s))
+                                        .and_then(skip)
+                                        .and_then(pair)
+                                        .and_then(skip)
                                 })
                             })
                         })
@@ -65,7 +65,7 @@ impl Parser<Rule> for JsonParser {
                 .or_else(|s| {
                     s.sequence(|s| {
                         s.match_string("{")
-                            .and_then(|s| skip(s))
+                            .and_then(skip)
                             .and_then(|s| s.match_string("}"))
                     })
                 })
@@ -76,10 +76,10 @@ impl Parser<Rule> for JsonParser {
             state.rule(Rule::pair, |s| {
                 s.sequence(|s| {
                     string(s)
-                        .and_then(|s| skip(s))
+                        .and_then(skip)
                         .and_then(|s| s.match_string(":"))
-                        .and_then(|s| skip(s))
-                        .and_then(|s| value(s))
+                        .and_then(skip)
+                        .and_then(value)
                 })
             })
         }
@@ -88,16 +88,16 @@ impl Parser<Rule> for JsonParser {
             state.rule(Rule::array, |s| {
                 s.sequence(|s| {
                     s.match_string("[")
-                        .and_then(|s| skip(s))
-                        .and_then(|s| value(s))
-                        .and_then(|s| skip(s))
+                        .and_then(skip)
+                        .and_then(value)
+                        .and_then(skip)
                         .and_then(|s| {
                             s.repeat(|s| {
                                 s.sequence(|s| {
                                     s.match_string(",")
-                                        .and_then(|s| skip(s))
-                                        .and_then(|s| value(s))
-                                        .and_then(|s| skip(s))
+                                        .and_then(skip)
+                                        .and_then(value)
+                                        .and_then(skip)
                                 })
                             })
                         })
@@ -106,7 +106,7 @@ impl Parser<Rule> for JsonParser {
                 .or_else(|s| {
                     s.sequence(|s| {
                         s.match_string("[")
-                            .and_then(|s| skip(s))
+                            .and_then(skip)
                             .and_then(|s| s.match_string("]"))
                     })
                 })
@@ -116,11 +116,11 @@ impl Parser<Rule> for JsonParser {
         fn value(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
             state.rule(Rule::value, |s| {
                 string(s)
-                    .or_else(|s| number(s))
-                    .or_else(|s| object(s))
-                    .or_else(|s| array(s))
-                    .or_else(|s| bool(s))
-                    .or_else(|s| null(s))
+                    .or_else(number)
+                    .or_else(object)
+                    .or_else(array)
+                    .or_else(bool)
+                    .or_else(null)
             })
         }
 
@@ -154,7 +154,7 @@ impl Parser<Rule> for JsonParser {
                         .or_else(|s| s.match_string("n"))
                         .or_else(|s| s.match_string("r"))
                         .or_else(|s| s.match_string("t"))
-                        .or_else(|s| unicode(s))
+                        .or_else(unicode)
                 })
             })
         }
@@ -162,9 +162,9 @@ impl Parser<Rule> for JsonParser {
         fn unicode(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
             state.sequence(|s| {
                 s.match_string("u")
-                    .and_then(|s| hex(s))
-                    .and_then(|s| hex(s))
-                    .and_then(|s| hex(s))
+                    .and_then(hex)
+                    .and_then(hex)
+                    .and_then(hex)
             })
         }
 
@@ -179,15 +179,15 @@ impl Parser<Rule> for JsonParser {
             state.rule(Rule::number, |s| {
                 s.sequence(|s| {
                     s.optional(|s| s.match_string("-"))
-                        .and_then(|s| int(s))
+                        .and_then(int)
                         .and_then(|s| {
                             s.optional(|s| {
                                 s.sequence(|s| {
                                     s.match_string(".")
                                         .and_then(|s| s.match_range('0'..'9'))
                                         .and_then(|s| s.repeat(|s| s.match_range('0'..'9')))
-                                        .and_then(|s| s.optional(|s| exp(s)))
-                                        .or_else(|s| exp(s))
+                                        .and_then(|s| s.optional(exp))
+                                        .or_else(exp)
                                 })
                             })
                         })
@@ -211,7 +211,7 @@ impl Parser<Rule> for JsonParser {
                     .and_then(|s| {
                         s.optional(|s| s.match_string("+").or_else(|s| s.match_string("-")))
                     })
-                    .and_then(|s| int(s))
+                    .and_then(int)
             })
         }
 
@@ -451,15 +451,12 @@ fn ast() {
             .unwrap(),
     );
 
-    match ast {
-        Json::Object(pairs) => {
-            let vals: Vec<&Json> = pairs.values().collect();
+    if let Json::Object(pairs) = ast {
+        let vals: Vec<&Json> = pairs.values().collect();
 
-            assert_eq!(
-                **vals.get(0).unwrap(),
-                Json::Array(vec![Json::Null, Json::Bool(true), Json::Number(3.4)])
-            );
-        }
-        _ => {}
+        assert_eq!(
+            **vals.get(0).unwrap(),
+            Json::Array(vec![Json::Null, Json::Bool(true), Json::Number(3.4)])
+        );
     }
 }

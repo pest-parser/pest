@@ -16,7 +16,6 @@ use pest::Span;
 use crate::parser::{ParserExpr, ParserNode, ParserRule, Rule};
 use crate::UNICODE_PROPERTY_NAMES;
 
-#[allow(clippy::needless_pass_by_value)]
 pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>> {
     let mut rust_keywords = HashSet::new();
     rust_keywords.insert("abstract");
@@ -142,7 +141,7 @@ pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>>
     Ok(defaults.cloned().collect())
 }
 
-#[allow(clippy::implicit_hasher, clippy::ptr_arg)]
+#[allow(clippy::ptr_arg)]
 pub fn validate_rust_keywords<'i>(
     definitions: &Vec<Span<'i>>,
     rust_keywords: &HashSet<&str>,
@@ -165,7 +164,7 @@ pub fn validate_rust_keywords<'i>(
     errors
 }
 
-#[allow(clippy::implicit_hasher, clippy::ptr_arg)]
+#[allow(clippy::ptr_arg)]
 pub fn validate_pest_keywords<'i>(
     definitions: &Vec<Span<'i>>,
     pest_keywords: &HashSet<&str>,
@@ -211,7 +210,7 @@ pub fn validate_already_defined(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
     errors
 }
 
-#[allow(clippy::implicit_hasher, clippy::ptr_arg)]
+#[allow(clippy::ptr_arg)]
 pub fn validate_undefined<'i>(
     definitions: &Vec<Span<'i>>,
     called_rules: &Vec<Span<'i>>,
@@ -449,7 +448,6 @@ fn to_hash_map<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> HashMap<String, &'a P
     rules.iter().map(|r| (r.name.clone(), &r.node)).collect()
 }
 
-#[allow(clippy::needless_pass_by_value)]
 fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec<Error<Rule>> {
     fn check_expr<'a, 'i: 'a>(
         node: &'a ParserNode<'i>,
@@ -514,7 +512,7 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
     let mut errors = vec![];
 
     for (name, node) in &rules {
-        let name = (*name).clone();
+        let name = name.clone();
 
         if let Some(error) = check_expr(node, &rules, &mut vec![name]) {
             errors.push(error);
