@@ -103,7 +103,6 @@ impl<R: RuleType> Error<R> {
     ///
     /// println!("{}", error);
     /// ```
-    #[allow(clippy::needless_pass_by_value)]
     pub fn new_from_pos(variant: ErrorVariant<R>, pos: Position) -> Error<R> {
         let visualize_ws = pos.match_char('\n') || pos.match_char('\r');
         let line_of = pos.line_of();
@@ -150,7 +149,6 @@ impl<R: RuleType> Error<R> {
     ///
     /// println!("{}", error);
     /// ```
-    #[allow(clippy::needless_pass_by_value)]
     pub fn new_from_span(variant: ErrorVariant<R>, span: Span) -> Error<R> {
         let end = span.end_pos();
         let mut end_line_col = end.line_col();

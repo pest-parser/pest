@@ -16,12 +16,10 @@ macro_rules! consumes_to {
                                stringify!($name), $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             ::pest::Token::Start { rule, pos } => {
-                let message = format!("{} but found Start {{ rule: {}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-
-                if rule != stringify!($name) || pos.pos() != $start {
-                    panic!("{}", message);
-                }
+                assert!(rule == stringify!($name) && pos.pos() == $start,
+                    "{} but found Start {{ rule: {}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
@@ -30,12 +28,10 @@ macro_rules! consumes_to {
                                stringify!($name), $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             ::pest::Token::End { rule, pos } => {
-                let message = format!("{} but found End {{ rule: {}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-
-                if rule != stringify!($name) || pos.pos() != $end {
-                    panic!("{}", message);
-                }
+                assert!(rule == stringify!($name) && pos.pos() == $end,
+                    "{} but found End {{ rule: {}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
@@ -47,12 +43,10 @@ macro_rules! consumes_to {
                                stringify!($name), $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             ::pest::Token::Start { rule, pos } => {
-                let message = format!("{} but found Start {{ rule: {}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-
-                if rule != stringify!($name) || pos.pos() != $start {
-                    panic!("{}", message);
-                }
+                assert!(rule == stringify!($name) && pos.pos() == $start,
+                    "{} but found Start {{ rule: {}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
@@ -61,12 +55,10 @@ macro_rules! consumes_to {
                                stringify!($name), $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             ::pest::Token::End { rule, pos } => {
-                let message = format!("{} but found End {{ rule: {}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-
-                if rule != stringify!($name) || pos.pos() != $end {
-                    panic!("{}", message);
-                }
+                assert!(rule == stringify!($name) && pos.pos() == $end,
+                    "{} but found End {{ rule: {}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
@@ -79,12 +71,10 @@ macro_rules! consumes_to {
                                stringify!($name), $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             ::pest::Token::Start { rule, pos } => {
-                let message = format!("{} but found Start {{ rule: {}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-
-                if rule != stringify!($name) || pos.pos() != $start {
-                    panic!("{}", message);
-                }
+                assert!(rule == stringify!($name) && pos.pos() == $start,
+                    "{} but found Start {{ rule: {}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
@@ -95,12 +85,10 @@ macro_rules! consumes_to {
                                stringify!($name), $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             ::pest::Token::End { rule, pos } => {
-                let message = format!("{} but found End {{ rule: {}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-
-                if rule != stringify!($name) || pos.pos() != $end {
-                    panic!("{}", message);
-                }
+                assert!(rule == stringify!($name) && pos.pos() == $end,
+                    "{} but found End {{ rule: {}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
@@ -113,12 +101,10 @@ macro_rules! consumes_to {
                                stringify!($name), $start);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             ::pest::Token::Start { rule, pos } => {
-                let message = format!("{} but found Start {{ rule: {}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-
-                if rule != stringify!($name) || pos.pos() != $start {
-                    panic!("{}", message);
-                }
+                assert!(rule == stringify!($name) && pos.pos() == $start,
+                    "{} but found Start {{ rule: {}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
@@ -129,12 +115,10 @@ macro_rules! consumes_to {
                                stringify!($name), $end);
         match $tokens.next().expect(&format!("{} but found nothing", expected)) {
             ::pest::Token::End { rule, pos } => {
-                let message = format!("{} but found End {{ rule: {}, pos: Position {{ {} }} }}",
-                                      expected, rule, pos.pos());
-
-                if rule != stringify!($name) || pos.pos() != $end {
-                    panic!("{}", message);
-                }
+                assert!(rule == stringify!($name) && pos.pos() == $end,
+                    "{} but found End {{ rule: {}, pos: Position {{ {} }} }}",
+                    expected, rule, pos.pos(),
+                );
             },
             token => panic!("{}", format!("{} but found {:?}", expected, token))
         };
@@ -202,11 +186,11 @@ macro_rules! fails_with {
                     positives,
                     negatives,
                 } => {
-                    let positives: Vec<&str> = $positives;
-                    let negatives: Vec<&str> = $negatives;
+                    let quoted_positives: Vec<&str> = $positives;
+                    let quoted_negatives: Vec<&str> = $negatives;
 
-                    assert_eq!(positives, positives);
-                    assert_eq!(negatives, negatives);
+                    assert_eq!(quoted_positives, positives);
+                    assert_eq!(quoted_negatives, negatives);
                 }
                 _ => unreachable!(),
             };

@@ -114,7 +114,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// let input = "";
     /// let state: Box<pest::ParserState<&str>> = pest::ParserState::new(input);
     /// ```
-    #[allow(clippy::new_ret_no_self)]
     pub fn new(input: &'i str) -> Box<Self> {
         Box::new(ParserState {
             position: Position::from_start(input),
