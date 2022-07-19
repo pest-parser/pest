@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Usage question
+    url: https://github.com/pest-parser/pest/discussions/new?category=q-a
+    about: Support with using the library is offered through Discussions

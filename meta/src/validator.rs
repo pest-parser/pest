@@ -14,8 +14,8 @@ use pest::error::{Error, ErrorVariant, InputLocation};
 use pest::iterators::Pairs;
 use pest::Span;
 
-use parser::{ParserExpr, ParserNode, ParserRule, Rule};
-use UNICODE_PROPERTY_NAMES;
+use crate::parser::{ParserExpr, ParserNode, ParserRule, Rule};
+use crate::UNICODE_PROPERTY_NAMES;
 
 static RUST_KEYWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     [
@@ -117,7 +117,7 @@ pub fn validate_rust_keywords<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule
                 ErrorVariant::CustomError {
                     message: format!("{} is a rust keyword", name),
                 },
-                definition.clone(),
+                *definition,
             ))
         }
     }
@@ -136,7 +136,7 @@ pub fn validate_pest_keywords<'i>(definitions: &Vec<Span<'i>>) -> Vec<Error<Rule
                 ErrorVariant::CustomError {
                     message: format!("{} is a pest keyword", name),
                 },
-                definition.clone(),
+                *definition,
             ))
         }
     }
@@ -157,7 +157,7 @@ pub fn validate_already_defined(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
                 ErrorVariant::CustomError {
                     message: format!("rule {} already defined", name),
                 },
-                definition.clone(),
+                *definition,
             ))
         } else {
             defined.insert(name);
@@ -183,7 +183,7 @@ pub fn validate_undefined<'i>(
                 ErrorVariant::CustomError {
                     message: format!("rule {} is undefined", name),
                 },
-                rule.clone(),
+                *rule,
             ))
         }
     }
@@ -297,7 +297,7 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Error<Rul
                                      infinitely"
                                         .to_owned()
                             },
-                            node.span.clone()
+                            node.span
                         ))
                     } else if is_non_progressing(&other.expr, &map, &mut vec![]) {
                         Some(Error::new_from_span(
@@ -307,7 +307,7 @@ fn validate_repetition<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Error<Rul
                                      infinitely"
                                         .to_owned(),
                             },
-                            node.span.clone()
+                            node.span
                         ))
                     } else {
                         None
@@ -344,7 +344,7 @@ fn validate_choices<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Error<Rule>>
                                     "expression cannot fail; following choices cannot be reached"
                                         .to_owned(),
                             },
-                            node.span.clone(),
+                            node.span,
                         ))
                     } else {
                         None
@@ -374,7 +374,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<E
                                 &rule.name
                             ),
                         },
-                        rule.node.span.clone(),
+                        rule.node.span,
                     ))
                 } else if is_non_progressing(&rule.node.expr, &map, &mut vec![]) {
                     Some(Error::new_from_span(
@@ -384,7 +384,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<E
                                 &rule.name
                             ),
                         },
-                        rule.node.span.clone(),
+                        rule.node.span,
                     ))
                 } else {
                     None
@@ -430,7 +430,7 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
                                 chain
                             )
                         },
-                        node.span.clone()
+                        node.span
                     ));
                 }
 
@@ -454,21 +454,21 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
                 }
             }
             ParserExpr::Choice(ref lhs, ref rhs) => {
-                check_expr(&lhs, rules, trace).or_else(|| check_expr(&rhs, rules, trace))
+                check_expr(lhs, rules, trace).or_else(|| check_expr(rhs, rules, trace))
             }
-            ParserExpr::Rep(ref node) => check_expr(&node, rules, trace),
-            ParserExpr::RepOnce(ref node) => check_expr(&node, rules, trace),
-            ParserExpr::Opt(ref node) => check_expr(&node, rules, trace),
-            ParserExpr::PosPred(ref node) => check_expr(&node, rules, trace),
-            ParserExpr::NegPred(ref node) => check_expr(&node, rules, trace),
-            ParserExpr::Push(ref node) => check_expr(&node, rules, trace),
+            ParserExpr::Rep(ref node) => check_expr(node, rules, trace),
+            ParserExpr::RepOnce(ref node) => check_expr(node, rules, trace),
+            ParserExpr::Opt(ref node) => check_expr(node, rules, trace),
+            ParserExpr::PosPred(ref node) => check_expr(node, rules, trace),
+            ParserExpr::NegPred(ref node) => check_expr(node, rules, trace),
+            ParserExpr::Push(ref node) => check_expr(node, rules, trace),
             _ => None,
         }
     }
 
     let mut errors = vec![];
 
-    for (ref name, ref node) in &rules {
+    for (name, node) in &rules {
         let name = (*name).clone();
 
         if let Some(error) = check_expr(node, &rules, &mut vec![name]) {

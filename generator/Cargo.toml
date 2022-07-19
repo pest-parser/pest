@@ -2,6 +2,7 @@
 name = "pest_generator"
 description = "pest code generator"
 version = "2.1.4"
+edition = "2018"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest-parser.github.io/"
 repository = "https://github.com/pest-parser/pest"
@@ -10,6 +11,7 @@ keywords = ["pest", "generator"]
 categories = ["parsing"]
 license = "MIT/Apache-2.0"
 readme = "_README.md"
+rust-version = "1.56"
 
 [features]
 default = ["std"]
@@ -21,8 +23,3 @@ pest_meta = { path = "../meta", version = "2.1.0" }
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = "1.0"
-
-[badges]
-codecov = { repository = "pest-parser/pest" }
-maintenance = { status = "actively-developed" }
-travis-ci = { repository = "pest-parser/pest" }
