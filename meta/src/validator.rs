@@ -124,6 +124,7 @@ pub fn validate_rust_keywords(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
     errors
 }
 
+#[allow(clippy::ptr_arg)]
 pub fn validate_pest_keywords(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
