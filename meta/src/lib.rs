@@ -7,6 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+extern crate once_cell;
 #[cfg(test)]
 #[macro_use]
 extern crate pest;
@@ -38,7 +39,8 @@ where
 
 #[doc(hidden)]
 pub static UNICODE_PROPERTY_NAMES: &[&str] = &[
-    /* BINARY */ "ALPHABETIC",
+    /* BINARY */
+    "ALPHABETIC",
     "BIDI_CONTROL",
     "CASE_IGNORABLE",
     "CASED",
@@ -90,7 +92,8 @@ pub static UNICODE_PROPERTY_NAMES: &[&str] = &[
     "WHITE_SPACE",
     "XID_CONTINUE",
     "XID_START",
-    /* CATEGORY */ "CASED_LETTER",
+    /* CATEGORY */
+    "CASED_LETTER",
     "CLOSE_PUNCTUATION",
     "CONNECTOR_PUNCTUATION",
     "CONTROL",

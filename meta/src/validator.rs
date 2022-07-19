@@ -7,6 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use once_cell::sync::Lazy;
 use std::collections::{HashMap, HashSet};
 
 use pest::error::{Error, ErrorVariant, InputLocation};
@@ -16,95 +17,57 @@ use pest::Span;
 use crate::parser::{ParserExpr, ParserNode, ParserRule, Rule};
 use crate::UNICODE_PROPERTY_NAMES;
 
+static RUST_KEYWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+    [
+        "abstract", "alignof", "as", "become", "box", "break", "const", "continue", "crate", "do",
+        "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl", "in", "let", "loop",
+        "macro", "match", "mod", "move", "mut", "offsetof", "override", "priv", "proc", "pure",
+        "pub", "ref", "return", "Self", "self", "sizeof", "static", "struct", "super", "trait",
+        "true", "type", "typeof", "unsafe", "unsized", "use", "virtual", "where", "while", "yield",
+    ]
+    .iter()
+    .cloned()
+    .collect()
+});
+
+static PEST_KEYWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+    [
+        "_", "ANY", "DROP", "EOI", "PEEK", "PEEK_ALL", "POP", "POP_ALL", "PUSH", "SOI",
+    ]
+    .iter()
+    .cloned()
+    .collect()
+});
+
+static BUILTINS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+    [
+        "ANY",
+        "DROP",
+        "EOI",
+        "PEEK",
+        "PEEK_ALL",
+        "POP",
+        "POP_ALL",
+        "SOI",
+        "ASCII_DIGIT",
+        "ASCII_NONZERO_DIGIT",
+        "ASCII_BIN_DIGIT",
+        "ASCII_OCT_DIGIT",
+        "ASCII_HEX_DIGIT",
+        "ASCII_ALPHA_LOWER",
+        "ASCII_ALPHA_UPPER",
+        "ASCII_ALPHA",
+        "ASCII_ALPHANUMERIC",
+        "ASCII",
+        "NEWLINE",
+    ]
+    .iter()
+    .cloned()
+    .chain(UNICODE_PROPERTY_NAMES.iter().cloned())
+    .collect::<HashSet<&str>>()
+});
+
 pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>> {
-    let mut rust_keywords = HashSet::new();
-    rust_keywords.insert("abstract");
-    rust_keywords.insert("alignof");
-    rust_keywords.insert("as");
-    rust_keywords.insert("become");
-    rust_keywords.insert("box");
-    rust_keywords.insert("break");
-    rust_keywords.insert("const");
-    rust_keywords.insert("continue");
-    rust_keywords.insert("crate");
-    rust_keywords.insert("do");
-    rust_keywords.insert("else");
-    rust_keywords.insert("enum");
-    rust_keywords.insert("extern");
-    rust_keywords.insert("false");
-    rust_keywords.insert("final");
-    rust_keywords.insert("fn");
-    rust_keywords.insert("for");
-    rust_keywords.insert("if");
-    rust_keywords.insert("impl");
-    rust_keywords.insert("in");
-    rust_keywords.insert("let");
-    rust_keywords.insert("loop");
-    rust_keywords.insert("macro");
-    rust_keywords.insert("match");
-    rust_keywords.insert("mod");
-    rust_keywords.insert("move");
-    rust_keywords.insert("mut");
-    rust_keywords.insert("offsetof");
-    rust_keywords.insert("override");
-    rust_keywords.insert("priv");
-    rust_keywords.insert("proc");
-    rust_keywords.insert("pure");
-    rust_keywords.insert("pub");
-    rust_keywords.insert("ref");
-    rust_keywords.insert("return");
-    rust_keywords.insert("Self");
-    rust_keywords.insert("self");
-    rust_keywords.insert("sizeof");
-    rust_keywords.insert("static");
-    rust_keywords.insert("struct");
-    rust_keywords.insert("super");
-    rust_keywords.insert("trait");
-    rust_keywords.insert("true");
-    rust_keywords.insert("type");
-    rust_keywords.insert("typeof");
-    rust_keywords.insert("unsafe");
-    rust_keywords.insert("unsized");
-    rust_keywords.insert("use");
-    rust_keywords.insert("virtual");
-    rust_keywords.insert("where");
-    rust_keywords.insert("while");
-    rust_keywords.insert("yield");
-
-    let mut pest_keywords = HashSet::new();
-    pest_keywords.insert("_");
-    pest_keywords.insert("ANY");
-    pest_keywords.insert("DROP");
-    pest_keywords.insert("EOI");
-    pest_keywords.insert("PEEK");
-    pest_keywords.insert("PEEK_ALL");
-    pest_keywords.insert("POP");
-    pest_keywords.insert("POP_ALL");
-    pest_keywords.insert("PUSH");
-    pest_keywords.insert("SOI");
-
-    let mut builtins = HashSet::new();
-    builtins.insert("ANY");
-    builtins.insert("DROP");
-    builtins.insert("EOI");
-    builtins.insert("PEEK");
-    builtins.insert("PEEK_ALL");
-    builtins.insert("POP");
-    builtins.insert("POP_ALL");
-    builtins.insert("SOI");
-    builtins.insert("ASCII_DIGIT");
-    builtins.insert("ASCII_NONZERO_DIGIT");
-    builtins.insert("ASCII_BIN_DIGIT");
-    builtins.insert("ASCII_OCT_DIGIT");
-    builtins.insert("ASCII_HEX_DIGIT");
-    builtins.insert("ASCII_ALPHA_LOWER");
-    builtins.insert("ASCII_ALPHA_UPPER");
-    builtins.insert("ASCII_ALPHA");
-    builtins.insert("ASCII_ALPHANUMERIC");
-    builtins.insert("ASCII");
-    builtins.insert("NEWLINE");
-    builtins.extend(UNICODE_PROPERTY_NAMES);
-
     let definitions: Vec<_> = pairs
         .clone()
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
@@ -124,10 +87,10 @@ pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>>
 
     let mut errors = vec![];
 
-    errors.extend(validate_rust_keywords(&definitions, &rust_keywords));
-    errors.extend(validate_pest_keywords(&definitions, &pest_keywords));
+    errors.extend(validate_rust_keywords(&definitions));
+    errors.extend(validate_pest_keywords(&definitions));
     errors.extend(validate_already_defined(&definitions));
-    errors.extend(validate_undefined(&definitions, &called_rules, &builtins));
+    errors.extend(validate_undefined(&definitions, &called_rules));
 
     if !errors.is_empty() {
         return Err(errors);
@@ -142,16 +105,13 @@ pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>>
 }
 
 #[allow(clippy::ptr_arg)]
-pub fn validate_rust_keywords<'i>(
-    definitions: &Vec<Span<'i>>,
-    rust_keywords: &HashSet<&str>,
-) -> Vec<Error<Rule>> {
+pub fn validate_rust_keywords(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
     for definition in definitions {
         let name = definition.as_str();
 
-        if rust_keywords.contains(name) {
+        if RUST_KEYWORDS.contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("{} is a rust keyword", name),
@@ -165,16 +125,13 @@ pub fn validate_rust_keywords<'i>(
 }
 
 #[allow(clippy::ptr_arg)]
-pub fn validate_pest_keywords<'i>(
-    definitions: &Vec<Span<'i>>,
-    pest_keywords: &HashSet<&str>,
-) -> Vec<Error<Rule>> {
+pub fn validate_pest_keywords(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
     for definition in definitions {
         let name = definition.as_str();
 
-        if pest_keywords.contains(name) {
+        if PEST_KEYWORDS.contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("{} is a pest keyword", name),
@@ -214,7 +171,6 @@ pub fn validate_already_defined(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
 pub fn validate_undefined<'i>(
     definitions: &Vec<Span<'i>>,
     called_rules: &Vec<Span<'i>>,
-    builtins: &HashSet<&str>,
 ) -> Vec<Error<Rule>> {
     let mut errors = vec![];
     let definitions: HashSet<_> = definitions.iter().map(|span| span.as_str()).collect();
@@ -222,7 +178,7 @@ pub fn validate_undefined<'i>(
     for rule in called_rules {
         let name = rule.as_str();
 
-        if !definitions.contains(name) && !builtins.contains(name) {
+        if !definitions.contains(name) && !BUILTINS.contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: format!("rule {} is undefined", name),
