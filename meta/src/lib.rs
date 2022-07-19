@@ -10,7 +10,6 @@
 #![allow(clippy::range_plus_one)]
 
 extern crate once_cell;
-extern crate maplit;
 #[cfg(test)]
 #[macro_use]
 extern crate pest;
