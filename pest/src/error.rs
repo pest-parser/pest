@@ -246,6 +246,11 @@ impl<R: RuleType> Error<R> {
         self.path.as_deref()
     }
 
+    /// Returns the line that the error is on.
+    pub fn line(&self) -> &str {
+        self.line.as_str()
+    }
+
     /// Renames all `Rule`s if this is a [`ParsingError`]. It does nothing when called on a
     /// [`CustomError`].
     ///
