@@ -1107,7 +1107,6 @@ mod tests {
         };
     }
 
-
     #[test]
     fn wrong_op() {
         fails_with! {
