@@ -238,7 +238,7 @@ macro_rules! parses_to {
 /// * `input` - input to be tested against
 /// * `rule` - `Rule` which will be run
 /// * `positives` - positive `Rule` attempts that failed
-/// * `negative` - negative `Rule` attempts that failed
+/// * `negatives` - negative `Rule` attempts that failed
 /// * `pos` - byte position of failure
 ///
 /// # Examples

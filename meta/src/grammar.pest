@@ -34,7 +34,7 @@ atomic_modifier          = { "@" }
 compound_atomic_modifier = { "$" }
 non_atomic_modifier      = { "!" }
 
-expression =  { infix_operator? ~ term ~ (infix_operator ~ term)* }
+expression =  { choice_operator? ~ term ~ (infix_operator ~ term)* }
 term       =  { prefix_operator* ~ node ~ postfix_operator* }
 node       = _{ opening_paren ~ expression ~ closing_paren | terminal }
 terminal   = _{ _push | peek_slice | identifier | string | insensitive_string | range }
