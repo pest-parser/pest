@@ -40,12 +40,12 @@ impl Parser<Rule> for CalculatorParser {
                         s.repeat(|s| {
                             s.sequence(|s| {
                                 plus(s)
-                                    .or_else(|s| minus(s))
-                                    .or_else(|s| times(s))
-                                    .or_else(|s| divide(s))
-                                    .or_else(|s| modulus(s))
-                                    .or_else(|s| power(s))
-                                    .and_then(|s| primary(s))
+                                    .or_else(minus)
+                                    .or_else(times)
+                                    .or_else(divide)
+                                    .or_else(modulus)
+                                    .or_else(power)
+                                    .and_then(primary)
                             })
                         })
                     })
@@ -57,10 +57,10 @@ impl Parser<Rule> for CalculatorParser {
             state
                 .sequence(|s| {
                     s.match_string("(")
-                        .and_then(|s| expression(s))
+                        .and_then(expression)
                         .and_then(|s| s.match_string(")"))
                 })
-                .or_else(|s| number(s))
+                .or_else(number)
         }
 
         fn number(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
@@ -109,7 +109,7 @@ impl Parser<Rule> for CalculatorParser {
     }
 }
 
-fn consume<'i>(pair: Pair<'i, Rule>, climber: &PrecClimber<Rule>) -> i32 {
+fn consume(pair: Pair<Rule>, climber: &PrecClimber<Rule>) -> i32 {
     let primary = |pair| consume(pair, climber);
     let infix = |lhs: i32, op: Pair<Rule>, rhs: i32| match op.as_rule() {
         Rule::plus => lhs + rhs,

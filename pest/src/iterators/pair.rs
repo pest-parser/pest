@@ -23,8 +23,8 @@ use serde::ser::SerializeStruct;
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
-use span::{self, Span};
-use RuleType;
+use crate::span::{self, Span};
+use crate::RuleType;
 
 /// A matching pair of [`Token`]s and everything between them.
 ///
@@ -347,8 +347,8 @@ impl<'i, R: RuleType> ::serde::Serialize for Pair<'i, R> {
 
 #[cfg(test)]
 mod tests {
-    use macros::tests::*;
-    use parser::Parser;
+    use crate::macros::tests::*;
+    use crate::parser::Parser;
 
     #[test]
     #[cfg(feature = "pretty-print")]

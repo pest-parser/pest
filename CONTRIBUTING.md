@@ -22,6 +22,11 @@ It's always a good practice to start with something that drives you, but if you'
 
 [good-first-issue]: https://github.com/pest-parser/pest/issues?q=is%3Aissue+is%3Aopen+label%3Agood-first-issue
 
+## Contributing in the cloud
+
+You can open a ready-to-go development workspace with [Gitpod](https://gitpod.io) by clicking [this link](https://gitpod.io/#https://github.com/pest-parser/pest).
+
+
 ## Mentoring
 
 We're happy to mentor any issues as long as we have the time, but issues with a [mentored] tag should generally be considered when looking for ways to learn, grow, and get some honest feedback on your work.

@@ -14,7 +14,7 @@ use core::ops::Range;
 use core::ptr;
 use core::str;
 
-use span;
+use crate::span;
 
 /// A cursor position in a `&str` which provides useful methods to manually parse that string.
 #[derive(Clone, Copy)]
@@ -49,7 +49,6 @@ impl<'i> Position<'i> {
     /// assert_eq!(Position::new(heart, 1), None);
     /// assert_ne!(Position::new(heart, cheart.len_utf8()), None);
     /// ```
-    #[allow(clippy::new_ret_no_self)]
     pub fn new(input: &str, pos: usize) -> Option<Position> {
         input.get(pos..).map(|_| Position { input, pos })
     }
@@ -318,6 +317,14 @@ impl<'i> Position<'i> {
         false
     }
 
+    /// Matches the char at the `Position` against a specified character and returns `true` if a match
+    /// was made. If no match was made, returns `false`.
+    /// `pos` will not be updated in either case.
+    #[inline]
+    pub(crate) fn match_char(&self, c: char) -> bool {
+        matches!(self.input[self.pos..].chars().next(), Some(cc) if c == cc)
+    }
+
     /// Matches the char at the `Position` against a filter function and returns `true` if a match
     /// was made. If no match was made, returns `false` and `pos` will not be updated.
     #[inline]
@@ -432,16 +439,16 @@ mod tests {
     #[test]
     fn empty() {
         let input = "";
-        assert_eq!(Position::new(input, 0).unwrap().match_string(""), true);
-        assert_eq!(!Position::new(input, 0).unwrap().match_string("a"), true);
+        assert!(Position::new(input, 0).unwrap().match_string(""));
+        assert!(!Position::new(input, 0).unwrap().match_string("a"));
     }
 
     #[test]
     fn parts() {
         let input = "asdasdf";
 
-        assert_eq!(Position::new(input, 0).unwrap().match_string("asd"), true);
-        assert_eq!(Position::new(input, 3).unwrap().match_string("asdf"), true);
+        assert!(Position::new(input, 0).unwrap().match_string("asd"));
+        assert!(Position::new(input, 3).unwrap().match_string("asdf"));
     }
 
     #[test]
@@ -528,23 +535,23 @@ mod tests {
         let input = "ab ac";
         let pos = Position::from_start(input);
 
-        let mut test_pos = pos.clone();
+        let mut test_pos = pos;
         test_pos.skip_until(&["a", "b"]);
         assert_eq!(test_pos.pos(), 0);
 
-        test_pos = pos.clone();
+        test_pos = pos;
         test_pos.skip_until(&["b"]);
         assert_eq!(test_pos.pos(), 1);
 
-        test_pos = pos.clone();
+        test_pos = pos;
         test_pos.skip_until(&["ab"]);
         assert_eq!(test_pos.pos(), 0);
 
-        test_pos = pos.clone();
+        test_pos = pos;
         test_pos.skip_until(&["ac", "z"]);
         assert_eq!(test_pos.pos(), 3);
 
-        test_pos = pos.clone();
+        test_pos = pos;
         assert!(!test_pos.skip_until(&["z"]));
         assert_eq!(test_pos.pos(), 5);
     }
@@ -553,41 +560,26 @@ mod tests {
     fn match_range() {
         let input = "b";
 
-        assert_eq!(Position::new(input, 0).unwrap().match_range('a'..'c'), true);
-        assert_eq!(Position::new(input, 0).unwrap().match_range('b'..'b'), true);
-        assert_eq!(
-            !Position::new(input, 0).unwrap().match_range('a'..'a'),
-            true
-        );
-        assert_eq!(
-            !Position::new(input, 0).unwrap().match_range('c'..'c'),
-            true
-        );
-        assert_eq!(
-            Position::new(input, 0).unwrap().match_range('a'..'嗨'),
-            true
-        );
+        assert!(Position::new(input, 0).unwrap().match_range('a'..'c'));
+        assert!(Position::new(input, 0).unwrap().match_range('b'..'b'));
+        assert!(!Position::new(input, 0).unwrap().match_range('a'..'a'));
+        assert!(!Position::new(input, 0).unwrap().match_range('c'..'c'));
+        assert!(Position::new(input, 0).unwrap().match_range('a'..'嗨'));
     }
 
     #[test]
     fn match_insensitive() {
         let input = "AsdASdF";
 
-        assert_eq!(
-            Position::new(input, 0).unwrap().match_insensitive("asd"),
-            true
-        );
-        assert_eq!(
-            Position::new(input, 3).unwrap().match_insensitive("asdf"),
-            true
-        );
+        assert!(Position::new(input, 0).unwrap().match_insensitive("asd"));
+        assert!(Position::new(input, 3).unwrap().match_insensitive("asdf"));
     }
 
     #[test]
     fn cmp() {
         let input = "a";
         let start = Position::from_start(input);
-        let mut end = start.clone();
+        let mut end = start;
 
         assert!(end.skip(1));
         let result = start.cmp(&end);

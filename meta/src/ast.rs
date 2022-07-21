@@ -280,7 +280,7 @@ mod tests {
             Box::new(Expr::Str(String::from("a"))),
             Box::new(Expr::Str(String::from("b"))),
         );
-        let mut top_down = expr.clone().iter_top_down();
+        let mut top_down = expr.iter_top_down();
         assert_eq!(top_down.next(), Some(expr));
         assert_eq!(top_down.next(), Some(Expr::Str(String::from("a"))));
         assert_eq!(top_down.next(), Some(Expr::Str(String::from("b"))));

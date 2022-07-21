@@ -16,16 +16,17 @@ use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use core::cmp;
-use core::fmt;
 use core::mem;
 
-use position::Position;
-use span::Span;
-use RuleType;
+use crate::position::Position;
+use crate::span::Span;
+use crate::RuleType;
 
 /// Parse-related error type.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Error<R> {
+#[cfg_attr(feature = "std", derive(thiserror::Error))]
+#[cfg_attr(feature = "std", error("{}", self.format()))]
+pub struct Error<R: RuleType> {
     /// Variant of the error
     pub variant: ErrorVariant<R>,
     /// Location within the input string
@@ -39,8 +40,10 @@ pub struct Error<R> {
 
 /// Different kinds of parsing errors.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum ErrorVariant<R> {
+#[cfg_attr(feature = "std", derive(thiserror::Error))]
+pub enum ErrorVariant<R: RuleType> {
     /// Generated parsing error with expected and unexpected `Rule`s
+    #[cfg_attr(feature = "std", error("parsing error: {}", self.message()))]
     ParsingError {
         /// Positive attempts
         positives: Vec<R>,
@@ -48,6 +51,7 @@ pub enum ErrorVariant<R> {
         negatives: Vec<R>,
     },
     /// Custom error with a message
+    #[cfg_attr(feature = "std", error("{}", self.message()))]
     CustomError {
         /// Short explanation
         message: String,
@@ -99,13 +103,19 @@ impl<R: RuleType> Error<R> {
     ///
     /// println!("{}", error);
     /// ```
-    #[allow(clippy::needless_pass_by_value)]
     pub fn new_from_pos(variant: ErrorVariant<R>, pos: Position) -> Error<R> {
+        let visualize_ws = pos.match_char('\n') || pos.match_char('\r');
+        let line_of = pos.line_of();
+        let line = if visualize_ws {
+            visualize_whitespace(line_of)
+        } else {
+            line_of.replace(&['\r', '\n'][..], "")
+        };
         Error {
             variant,
             location: InputLocation::Pos(pos.pos()),
             path: None,
-            line: visualize_whitespace(pos.line_of()),
+            line,
             continued_line: None,
             line_col: LineColLocation::Pos(pos.line_col()),
         }
@@ -139,22 +149,33 @@ impl<R: RuleType> Error<R> {
     ///
     /// println!("{}", error);
     /// ```
-    #[allow(clippy::needless_pass_by_value)]
     pub fn new_from_span(variant: ErrorVariant<R>, span: Span) -> Error<R> {
         let end = span.end_pos();
-
         let mut end_line_col = end.line_col();
         // end position is after a \n, so we want to point to the visual lf symbol
         if end_line_col.1 == 1 {
-            let mut visual_end = end.clone();
+            let mut visual_end = end;
             visual_end.skip_back(1);
             let lc = visual_end.line_col();
             end_line_col = (lc.0, lc.1 + 1);
         };
 
         let mut line_iter = span.lines();
-        let start_line = visualize_whitespace(line_iter.next().unwrap_or(""));
-        let continued_line = line_iter.last().map(visualize_whitespace);
+        let sl = line_iter.next().unwrap_or("");
+        let mut chars = span.as_str().chars();
+        let visualize_ws = matches!(chars.next(), Some('\n') | Some('\r'))
+            || matches!(chars.last(), Some('\n') | Some('\r'));
+        let start_line = if visualize_ws {
+            visualize_whitespace(sl)
+        } else {
+            sl.to_owned().replace(&['\r', '\n'][..], "")
+        };
+        let ll = line_iter.last();
+        let continued_line = if visualize_ws {
+            ll.map(&str::to_owned)
+        } else {
+            ll.map(visualize_whitespace)
+        };
 
         Error {
             variant,
@@ -331,13 +352,11 @@ impl<R: RuleType> Error<R> {
         }
 
         if let Some(end) = end {
+            underline.push('^');
             if end - start > 1 {
-                underline.push('^');
                 for _ in 2..(end - start) {
                     underline.push('-');
                 }
-                underline.push('^');
-            } else {
                 underline.push('^');
             }
         } else {
@@ -375,13 +394,14 @@ impl<R: RuleType> Error<R> {
             1 => f(&rules[0]),
             2 => format!("{} or {}", f(&rules[0]), f(&rules[1])),
             l => {
+                let non_separated = f(&rules[l - 1]);
                 let separated = rules
                     .iter()
                     .take(l - 1)
-                    .map(|r| f(r))
+                    .map(f)
                     .collect::<Vec<_>>()
                     .join(", ");
-                format!("{}, or {}", separated, f(&rules[l - 1]))
+                format!("{}, or {}", separated, non_separated)
             }
         }
     }
@@ -495,22 +515,6 @@ impl<R: RuleType> ErrorVariant<R> {
     }
 }
 
-impl<R: RuleType> fmt::Display for Error<R> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.format())
-    }
-}
-
-#[cfg(feature = "std")]
-impl<'i, R: RuleType> std::error::Error for Error<R> {
-    fn description(&self) -> &str {
-        match self.variant {
-            ErrorVariant::ParsingError { .. } => "parsing error",
-            ErrorVariant::CustomError { ref message } => message,
-        }
-    }
-}
-
 fn visualize_whitespace(input: &str) -> String {
     input.to_owned().replace('\r', "␍").replace('\n', "␊")
 }
@@ -538,7 +542,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
@@ -564,7 +568,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = expected 1 or 2",
@@ -590,7 +594,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6",
@@ -616,7 +620,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = unknown parsing error",
@@ -641,7 +645,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = error: big one",
@@ -667,7 +671,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "3 | efgh",
                 "  |  ^^",
                 "  |",
@@ -694,7 +698,7 @@ mod tests {
             vec![
                 " --> 1:2",
                 "  |",
-                "1 | ab␊",
+                "1 | ab",
                 "  | ...",
                 "3 | efgh",
                 "  |  ^^",
@@ -722,7 +726,7 @@ mod tests {
             vec![
                 " --> 1:6",
                 "  |",
-                "1 | abcdef␊",
+                "1 | abcdef",
                 "2 | gh",
                 "  | ^----^",
                 "  |",
@@ -808,7 +812,7 @@ mod tests {
             vec![
                 " --> 2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 5, 6, or 7; expected 2, 3, or 4",
@@ -835,7 +839,7 @@ mod tests {
             vec![
                 " --> file.rs:2:2",
                 "  |",
-                "2 | cd␊",
+                "2 | cd",
                 "  |  ^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",

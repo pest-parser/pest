@@ -7,7 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 #![no_std]
-#![cfg_attr(feature = "const_prec_climber", feature(const_fn_trait_bound))]
 
 //! # pest. The Elegant Parser
 //!
@@ -75,13 +74,13 @@ extern crate serde;
 #[cfg(feature = "pretty-print")]
 extern crate serde_json;
 
+pub use crate::parser::Parser;
+pub use crate::parser_state::{state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState};
+pub use crate::position::Position;
+pub use crate::span::{Lines, Span};
+pub use crate::token::Token;
 use core::fmt::Debug;
 use core::hash::Hash;
-pub use parser::Parser;
-pub use parser_state::{state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState};
-pub use position::Position;
-pub use span::{Lines, Span};
-pub use token::Token;
 
 pub mod error;
 pub mod iterators;

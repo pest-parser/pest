@@ -15,7 +15,6 @@ use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 use pest_meta::UNICODE_PROPERTY_NAMES;
 
-#[allow(clippy::needless_pass_by_value)]
 pub fn generate(
     name: Ident,
     generics: &Generics,

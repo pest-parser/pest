@@ -15,12 +15,10 @@ use pest::iterators::{Pair, Pairs};
 use pest::prec_climber::{Assoc, Operator, PrecClimber};
 use pest::{Parser, Span};
 
-use ast::{Expr, Rule as AstRule, RuleType};
-use validator;
+use crate::ast::{Expr, Rule as AstRule, RuleType};
+use crate::validator;
 
 mod grammar {
-    #![allow(unknown_lints, clippy::all)]
-
     include!("grammar.rs");
 }
 
@@ -1228,7 +1226,7 @@ mod tests {
 
         let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs).unwrap();
-        let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule)).collect();
+        let ast: Vec<_> = ast.into_iter().map(convert_rule).collect();
 
         assert_eq!(
             ast,
@@ -1266,7 +1264,7 @@ mod tests {
 
         let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs).unwrap();
-        let ast: Vec<_> = ast.into_iter().map(|rule| convert_rule(rule)).collect();
+        let ast: Vec<_> = ast.into_iter().map(convert_rule).collect();
 
         assert_eq!(
             ast,
