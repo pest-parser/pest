@@ -34,7 +34,7 @@ pub struct Error<R: RuleType> {
     /// Line/column within the input string
     pub line_col: LineColLocation,
     path: Option<String>,
-    line: String,
+    pub line: String,
     continued_line: Option<String>,
 }
 
