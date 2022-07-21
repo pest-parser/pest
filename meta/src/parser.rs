@@ -1096,6 +1096,19 @@ mod tests {
     }
 
     #[test]
+    fn incorrect_prefix() {
+        fails_with! {
+            parser: PestParser,
+            input: "a = { ~ b}",
+            rule: Rule::grammar_rules,
+            positives: vec![Rule::expression],
+            negatives: vec![],
+            pos: 6
+        };
+    }
+
+
+    #[test]
     fn wrong_op() {
         fails_with! {
             parser: PestParser,
