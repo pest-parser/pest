@@ -8,7 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use std::char;
-use std::iter::Peekable;
+use std::iter::{IntoIterator, Peekable};
 
 use pest::error::{Error, ErrorVariant};
 use pest::iterators::{Pair, Pairs};
@@ -58,7 +58,6 @@ impl<'i> ParserNode<'i> {
             }
 
             match node.expr {
-                // TODO: Use box syntax when it gets stabilized.
                 ParserExpr::PosPred(node) => {
                     filter_internal(*node, f, result);
                 }
@@ -97,6 +96,11 @@ impl<'i> ParserNode<'i> {
                 ParserExpr::Push(node) => {
                     filter_internal(*node, f, result);
                 }
+                ParserExpr::Module(_, nodes) => {
+                    for node in nodes {
+                        filter_internal(node, f, result);
+                    }
+                }
                 _ => (),
             }
         }
@@ -128,12 +132,23 @@ pub enum ParserExpr<'i> {
     RepMax(Box<ParserNode<'i>>, u32),
     RepMinMax(Box<ParserNode<'i>>, u32, u32),
     Push(Box<ParserNode<'i>>),
+    Module(String, Vec<ParserNode<'i>>),
 }
 
 fn convert_rule(rule: ParserRule) -> AstRule {
     let ParserRule { name, ty, node, .. } = rule;
     let expr = convert_node(node);
     AstRule { name, ty, expr }
+}
+
+fn rename_rule(rule: ParserRule, name: String) -> ParserRule {
+    ParserRule { name, ..rule }
+}
+
+fn prepend_rule(rule: ParserRule, prepend: String) -> ParserRule {
+    let name = rule.name;
+    let name = format!("{prepend}{name}");
+    ParserRule { name, ..rule }
 }
 
 fn convert_node(node: ParserNode) -> Expr {
@@ -163,7 +178,12 @@ fn convert_node(node: ParserNode) -> Expr {
             Expr::RepMinMax(Box::new(convert_node(*node)), min, max)
         }
         ParserExpr::Push(node) => Expr::Push(Box::new(convert_node(*node))),
+        ParserExpr::Module(name, nodes) => Expr::Module(name, convert_nodes(nodes)),
     }
+}
+
+pub fn convert_nodes<'a, I: IntoIterator<Item = ParserNode<'a>>>(nodes: I) -> Vec<Expr> {
+    nodes.into_iter().map(|x| convert_node(x)).collect()
 }
 
 pub fn consume_rules(pairs: Pairs<Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>>> {
@@ -177,12 +197,28 @@ pub fn consume_rules(pairs: Pairs<Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>
 }
 
 fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<Error<Rule>>> {
+    let mut rules: Vec<ParserRule> = vec![];
+
     let climber = PrecClimber::new(vec![
         Operator::new(Rule::choice_operator, Assoc::Left),
         Operator::new(Rule::sequence_operator, Assoc::Left),
     ]);
 
-    pairs
+    let modules = pairs.clone().filter(|pair| pair.as_rule() == Rule::module);
+
+    for module in modules {
+        let mut pairs = module.into_inner();
+        let module_name = pairs.nth(1).unwrap().as_str(); // mod *x*
+        pairs.next().unwrap();
+        let x = consume_rules_with_spans(pairs)?;
+        let mut x = x
+            .iter()
+            .map(|rule| prepend_rule(rule.clone(), module_name.into()))
+            .collect();
+        rules.append(&mut x);
+    }
+
+    let mut pairs = pairs
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
         .map(|pair| {
             let mut pairs = pair.into_inner().peekable();
@@ -206,16 +242,20 @@ fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<E
 
             pairs.next().unwrap(); // opening_brace
 
-            let node = consume_expr(pairs.next().unwrap().into_inner().peekable(), &climber)?;
+            let node =
+                consume_expr(pairs.next().unwrap().into_inner().peekable(), &climber).unwrap();
 
-            Ok(ParserRule {
+            ParserRule {
                 name,
                 span,
                 ty,
                 node,
-            })
+            }
         })
-        .collect()
+        .collect();
+
+    rules.append(&mut pairs);
+    Ok(rules)
 }
 
 fn consume_expr<'i>(
@@ -1014,11 +1054,44 @@ mod tests {
     }
 
     #[test]
+    fn module() {
+        parses_to! {
+            parser: PestParser,
+            input: r#"mod x {
+                y = { "y" }
+            }"#,
+            rule: Rule::grammar_rules,
+            tokens: [
+                module(0, 49, [
+                    identifier(4, 5),
+                    opening_brace(6, 7),
+                    grammar_rule(24, 35, [
+                        identifier(24, 25),
+                        assignment_operator(26, 27),
+                        opening_brace(28, 29),
+                        expression(30, 34, [
+                            term(30, 34, [
+                                string(30, 33, [
+                                    quote(30, 31),
+                                    inner_str(31, 32),
+                                    quote(32, 33),
+                                ])
+                            ])
+                        ]),
+                        closing_brace(34, 35),
+                    ]),
+                    closing_brace(48, 49),
+                ])
+            ]
+        };
+    }
+
+    #[test]
     fn wrong_identifier() {
         fails_with! {
             parser: PestParser,
             input: "0",
-            rule: Rule::grammar_rules,
+            rule: Rule::identifier,
             positives: vec![Rule::identifier],
             negatives: vec![],
             pos: 0

@@ -91,8 +91,10 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         ),
     };
 
-    let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
+    let defaults = validator::validate_pairs(pairs.clone()).unwrap();
+
     let ast = unwrap_or_report(parser::consume_rules(pairs));
+    dbg!(&ast);
     let optimized = optimizer::optimize(ast);
 
     generator::generate(name, &generics, path, optimized, defaults, include_grammar)

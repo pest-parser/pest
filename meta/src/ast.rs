@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use std::vec::IntoIter;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rule {
     pub name: String,
@@ -61,6 +63,8 @@ pub enum Expr {
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<Expr>),
+    /// A named module that contains numerous `Expr`s inside.
+    Module(String, Vec<Expr>),
 }
 
 impl Expr {
@@ -79,7 +83,6 @@ impl Expr {
             let expr = f(expr);
 
             match expr {
-                // TODO: Use box syntax when it gets stabilized.
                 Expr::PosPred(expr) => {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::PosPred(mapped)
@@ -130,6 +133,13 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
+                Expr::Module(name, exprs) => {
+                    let mut mapped = vec![];
+                    for expr in exprs {
+                        mapped.push(map_internal(expr, f))
+                    }
+                    Expr::Module(name, mapped)
+                }
                 expr => expr,
             }
         }
@@ -147,7 +157,6 @@ impl Expr {
         {
             let mapped = match expr {
                 Expr::PosPred(expr) => {
-                    // TODO: Use box syntax when it gets stabilized.
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::PosPred(mapped)
                 }
@@ -197,6 +206,13 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
+                Expr::Module(name, exprs) => {
+                    let mut mapped = vec![];
+                    for expr in exprs {
+                        mapped.push(map_internal(expr, f))
+                    }
+                    Expr::Module(name, mapped)
+                }
                 expr => expr,
             };
 
@@ -211,6 +227,7 @@ pub struct ExprTopDownIterator {
     current: Option<Expr>,
     next: Option<Expr>,
     right_branches: Vec<Expr>,
+    module_context: Option<(String, IntoIter<Expr>)>,
 }
 
 impl ExprTopDownIterator {
@@ -219,6 +236,7 @@ impl ExprTopDownIterator {
             current: None,
             next: None,
             right_branches: vec![],
+            module_context: None,
         };
         iter.iterate_expr(expr.clone());
         iter
@@ -226,6 +244,7 @@ impl ExprTopDownIterator {
 
     fn iterate_expr(&mut self, expr: Expr) {
         self.current = Some(expr.clone());
+        dbg!("Running iter_expr on {:?} {:?}", &self.current, &self.next);
         match expr {
             Expr::Seq(lhs, rhs) => {
                 self.right_branches.push(*rhs);
@@ -234,6 +253,21 @@ impl ExprTopDownIterator {
             Expr::Choice(lhs, rhs) => {
                 self.right_branches.push(*rhs);
                 self.next = Some(*lhs);
+            }
+            Expr::Module(name, exprs) => {
+                if let Some((module_name, _)) = &self.module_context {
+                    if name != *module_name {
+                        // If we are in a different module, move to our module.
+                        self.module_context = Some((name, exprs.into_iter()));
+                    }
+                }
+
+                if let Some((_, exprs)) = &mut self.module_context {
+                    match exprs.next() {
+                        x @ Some(_) => self.next = x,
+                        None => self.module_context = None,
+                    }
+                }
             }
             Expr::PosPred(expr)
             | Expr::NegPred(expr)

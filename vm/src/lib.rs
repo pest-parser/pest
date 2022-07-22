@@ -144,7 +144,7 @@ impl Vm {
     fn parse_expr<'a, 'i>(
         &'a self,
         expr: &'a OptimizedExpr,
-        state: Box<ParserState<'i, &'a str>>,
+        mut state: Box<ParserState<'i, &'a str>>,
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match *expr {
             OptimizedExpr::Str(ref string) => state.match_string(string),
@@ -193,6 +193,13 @@ impl Vm {
                     .map(|state| state.as_str())
                     .collect::<Vec<&str>>(),
             ),
+            OptimizedExpr::Module(_, ref exprs) => {
+                for expr in exprs {
+                    state = self.parse_expr(expr, state)?;
+                }
+
+                Ok(state)
+            }
             OptimizedExpr::RestoreOnErr(ref expr) => {
                 state.restore_on_err(|state| self.parse_expr(expr, state))
             }

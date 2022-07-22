@@ -65,6 +65,10 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
             Expr::Rep(expr) => OptimizedExpr::Rep(Box::new(to_optimized(*expr))),
             Expr::Skip(strings) => OptimizedExpr::Skip(strings),
             Expr::Push(expr) => OptimizedExpr::Push(Box::new(to_optimized(*expr))),
+            Expr::Module(name, exprs) => OptimizedExpr::Module(
+                name,
+                exprs.iter().map(|x| to_optimized(x.to_owned())).collect(),
+            ),
             Expr::RepOnce(_)
             | Expr::RepExact(..)
             | Expr::RepMin(..)
@@ -110,6 +114,7 @@ pub enum OptimizedExpr {
     Skip(Vec<String>),
     Push(Box<OptimizedExpr>),
     RestoreOnErr(Box<OptimizedExpr>),
+    Module(String, Vec<OptimizedExpr>),
 }
 
 impl OptimizedExpr {

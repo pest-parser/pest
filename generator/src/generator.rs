@@ -473,6 +473,9 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
                 state.stack_push(|state| #expr)
             }
         }
+        OptimizedExpr::Module(name, exprs) => {
+            quote! {}
+        }
         OptimizedExpr::RestoreOnErr(expr) => {
             let expr = generate_expr(*expr);
 
@@ -604,6 +607,9 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
             quote! {
                 state.stack_push(|state| #expr)
             }
+        }
+        OptimizedExpr::Module(name, exprs) => {
+            quote! {}
         }
         OptimizedExpr::RestoreOnErr(expr) => {
             let expr = generate_expr_atomic(*expr);

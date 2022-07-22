@@ -84,3 +84,5 @@ COMMENT = _{ "$"+ }
 
 	WHITESPACE = _{ "hi" }
 */
+
+mod x { y = { "y" } }

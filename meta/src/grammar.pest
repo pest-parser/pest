@@ -7,12 +7,14 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-grammar_rules = _{ SOI ~ grammar_rule+ ~ EOI }
+grammar_rules = _{ SOI ~ (grammar_rule | module)+ ~ EOI }
 
 grammar_rule = {
     identifier ~ assignment_operator ~ modifier? ~
     opening_brace ~ expression ~ closing_brace
 }
+
+module = { "mod" ~ identifier ~ opening_brace ~ grammar_rule+ ~ closing_brace }
 
 assignment_operator = { "=" }
 opening_brace       = { "{" }
