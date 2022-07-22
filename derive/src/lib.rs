@@ -55,7 +55,7 @@
 //!
 //! Comments start with `//` and end at the end of the line.
 //!
-//! ```ignore
+//! ```text
 //! // a comment
 //! ```
 //!
