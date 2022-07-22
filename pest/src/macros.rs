@@ -238,7 +238,7 @@ macro_rules! parses_to {
 /// * `input` - input to be tested against
 /// * `rule` - `Rule` which will be run
 /// * `positives` - positive `Rule` attempts that failed
-/// * `negative` - negative `Rule` attempts that failed
+/// * `negatives` - negative `Rule` attempts that failed
 /// * `pos` - byte position of failure
 ///
 /// # Examples
@@ -300,14 +300,14 @@ macro_rules! fails_with {
                     positives,
                     negatives,
                 } => {
-                    assert_eq!(positives, $positives);
-                    assert_eq!(negatives, $negatives);
+                    assert_eq!(positives, $positives, "positives");
+                    assert_eq!(negatives, $negatives, "negatives");
                 }
                 _ => unreachable!(),
             };
 
             match error.location {
-                $crate::error::InputLocation::Pos(pos) => assert_eq!(pos, $pos),
+                $crate::error::InputLocation::Pos(pos) => assert_eq!(pos, $pos, "pos"),
                 _ => unreachable!(),
             }
         }

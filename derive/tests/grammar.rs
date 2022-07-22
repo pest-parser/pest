@@ -249,6 +249,20 @@ fn choice_range() {
 }
 
 #[test]
+fn choice_prefix() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::choice_prefix,
+        tokens: [
+            choice_prefix(0, 3, [
+                string(0, 3)
+            ])
+        ]
+    };
+}
+
+#[test]
 fn optional_string() {
     parses_to! {
         parser: GrammarParser,

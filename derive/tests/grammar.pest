@@ -22,6 +22,7 @@ sequence_atomic_compound = @{ sequence_compound }
 sequence_nested = { string ~ string }
 sequence_compound_nested = ${ sequence_nested }
 choice = { string | range }
+choice_prefix = { | string | range }
 optional = { string? }
 repeat = { string* }
 repeat_atomic = @{ string* }
