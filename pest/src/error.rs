@@ -485,7 +485,7 @@ impl<R: RuleType> ErrorVariant<R> {
     ///
     /// If [`ErrorVariant`] is [`CustomError`], it returns a
     /// [`Cow::Borrowed`] reference to [`message`]. If [`ErrorVariant`] is [`ParsingError`], a
-    /// [`Cow::Owned`] containing "expected [positives] [negatives]" is returned.
+    /// [`Cow::Owned`] containing "expected [ErrorVariant::ParsingError::positives] [ErrorVariant::ParsingError::negatives]" is returned.
     ///
     /// [`ErrorVariant`]: enum.ErrorVariant.html
     /// [`CustomError`]: enum.ErrorVariant.html#variant.CustomError
