@@ -2,6 +2,9 @@ extern crate pest;
 
 use std::io::{self, Write};
 
+#[cfg(feature = "miette")]
+use miette::IntoDiagnostic;
+
 use pest::error::Error;
 use pest::iterators::Pairs;
 use pest::{state, ParseResult, Parser, ParserState};
@@ -57,6 +60,7 @@ fn expr(pairs: Pairs<Rule>) -> Vec<Paren> {
         .collect()
 }
 
+#[cfg(not(feature = "miette"))]
 fn main() {
     loop {
         let mut line = String::new();
@@ -71,5 +75,20 @@ fn main() {
             Ok(pairs) => println!("{:?}", expr(pairs)),
             Err(e) => println!("\n{}", e),
         };
+    }
+}
+
+#[cfg(feature = "miette")]
+fn main() -> miette::Result<()> {
+    loop {
+        let mut line = String::new();
+
+        print!("> ");
+        io::stdout().flush().into_diagnostic()?;
+
+        io::stdin().read_line(&mut line).into_diagnostic()?;
+        line.pop();
+
+        ParenParser::parse(Rule::expr, &line)?;
     }
 }

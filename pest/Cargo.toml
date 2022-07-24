@@ -21,9 +21,15 @@ std = ["ucd-trie/std", "thiserror"]
 pretty-print = ["serde", "serde_json"]
 # Enable const fn constructor for `PrecClimber`
 const_prec_climber = []
+# Enables error compatibility with miette
+miette = ["dep:miette", "std"]
 
 [dependencies]
 ucd-trie = { version = "0.1.1", default-features = false }
 serde = { version = "1.0.89", optional = true }
 serde_json = { version = "1.0.39", optional = true}
 thiserror = { version = "1.0.31", optional = true }
+miette = { version = "5.1.1", optional = true }
+
+[dev-dependencies]
+miette = { version = "5.1.1", features = ["fancy"] }
