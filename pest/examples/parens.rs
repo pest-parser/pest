@@ -2,9 +2,6 @@ extern crate pest;
 
 use std::io::{self, Write};
 
-#[cfg(feature = "miette")]
-use miette::IntoDiagnostic;
-
 use pest::error::Error;
 use pest::iterators::Pairs;
 use pest::{state, ParseResult, Parser, ParserState};
@@ -78,6 +75,11 @@ fn main() {
 
         match parsed {
             Ok(pairs) => println!("{:?}", expr(pairs)),
+            // To print pest errors, use Display formatting.
+            #[cfg(not(feature = "miette"))]
+            Err(e) => eprintln!("\n{}", e),
+            // To print miette errors, use Debug formatting.
+            #[cfg(feature = "miette")]
             Err(e) => eprintln!("\n{:?}", e),
         };
     }
