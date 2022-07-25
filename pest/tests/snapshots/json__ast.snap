@@ -1,0 +1,15 @@
+---
+source: pest/tests/json.rs
+expression: "**vals.get(0).unwrap()"
+---
+Array(
+    [
+        Null,
+        Bool(
+            true,
+        ),
+        Number(
+            3.4,
+        ),
+    ],
+)

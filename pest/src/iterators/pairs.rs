@@ -315,47 +315,7 @@ mod tests {
     fn test_pretty_print() {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
-        let expected = r#"{
-  "pos": [
-    0,
-    5
-  ],
-  "pairs": [
-    {
-      "pos": [
-        0,
-        3
-      ],
-      "rule": "a",
-      "inner": {
-        "pos": [
-          1,
-          2
-        ],
-        "pairs": [
-          {
-            "pos": [
-              1,
-              2
-            ],
-            "rule": "b",
-            "inner": "b"
-          }
-        ]
-      }
-    },
-    {
-      "pos": [
-        4,
-        5
-      ],
-      "rule": "c",
-      "inner": "e"
-    }
-  ]
-}"#;
-
-        assert_eq!(expected, pairs.to_json());
+        insta::assert_display_snapshot!(pairs.to_json());
     }
 
     #[test]
@@ -383,17 +343,7 @@ mod tests {
     fn pairs_debug() {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
-        #[rustfmt::skip]
-        assert_eq!(
-            format!("{:?}", pairs),
-            "[\
-                Pair { rule: a, span: Span { str: \"abc\", start: 0, end: 3 }, inner: [\
-                    Pair { rule: b, span: Span { str: \"b\", start: 1, end: 2 }, inner: [] }\
-                ] }, \
-                Pair { rule: c, span: Span { str: \"e\", start: 4, end: 5 }, inner: [] }\
-            ]"
-            .to_owned()
-        );
+        insta::assert_debug_snapshot!(pairs);
     }
 
     #[test]

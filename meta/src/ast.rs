@@ -281,10 +281,10 @@ mod tests {
             Box::new(Expr::Str(String::from("b"))),
         );
         let mut top_down = expr.iter_top_down();
-        assert_eq!(top_down.next(), Some(expr));
-        assert_eq!(top_down.next(), Some(Expr::Str(String::from("a"))));
-        assert_eq!(top_down.next(), Some(Expr::Str(String::from("b"))));
-        assert_eq!(top_down.next(), None);
+        insta::assert_debug_snapshot!(top_down.next());
+        insta::assert_debug_snapshot!(top_down.next());
+        insta::assert_debug_snapshot!(top_down.next());
+        insta::assert_debug_snapshot!(top_down.next());
     }
 
     #[test]

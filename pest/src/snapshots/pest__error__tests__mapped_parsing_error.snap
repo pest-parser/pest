@@ -1,0 +1,10 @@
+---
+source: pest/src/error.rs
+expression: error
+---
+ --> 2:2
+  |
+2 | cd
+  |  ^---
+  |
+  = unexpected 5, 6, or 7; expected 2, 3, or 4

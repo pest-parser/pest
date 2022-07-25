@@ -454,9 +454,6 @@ fn ast() {
     if let Json::Object(pairs) = ast {
         let vals: Vec<&Json> = pairs.values().collect();
 
-        assert_eq!(
-            **vals.get(0).unwrap(),
-            Json::Array(vec![Json::Null, Json::Bool(true), Json::Number(3.4)])
-        );
+        insta::assert_debug_snapshot!(**vals.get(0).unwrap());
     }
 }

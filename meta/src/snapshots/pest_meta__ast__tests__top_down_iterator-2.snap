@@ -1,0 +1,9 @@
+---
+source: meta/src/ast.rs
+expression: top_down.next()
+---
+Some(
+    Str(
+        "a",
+    ),
+)

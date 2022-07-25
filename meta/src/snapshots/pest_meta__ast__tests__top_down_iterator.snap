@@ -1,0 +1,14 @@
+---
+source: meta/src/ast.rs
+expression: top_down.next()
+---
+Some(
+    Choice(
+        Str(
+            "a",
+        ),
+        Str(
+            "b",
+        ),
+    ),
+)

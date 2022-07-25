@@ -27,3 +27,6 @@ ucd-trie = { version = "0.1.1", default-features = false }
 serde = { version = "1.0.89", optional = true }
 serde_json = { version = "1.0.39", optional = true}
 thiserror = { version = "1.0.31", optional = true }
+
+[dev-dependencies]
+insta = "1.16.0"

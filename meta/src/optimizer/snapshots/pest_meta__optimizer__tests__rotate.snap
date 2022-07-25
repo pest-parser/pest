@@ -1,0 +1,28 @@
+---
+source: meta/src/optimizer/mod.rs
+expression: optimize(rules)
+---
+[
+    OptimizedRule {
+        name: "rule",
+        ty: Normal,
+        expr: Choice(
+            Str(
+                "a",
+            ),
+            Choice(
+                Str(
+                    "b",
+                ),
+                Choice(
+                    Str(
+                        "c",
+                    ),
+                    Str(
+                        "d",
+                    ),
+                ),
+            ),
+        ),
+    },
+]

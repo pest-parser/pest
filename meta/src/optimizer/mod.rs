@@ -294,22 +294,8 @@ mod tests {
                 )),
             }]
         };
-        let rotated = {
-            use crate::optimizer::OptimizedExpr::*;
-            vec![OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Normal,
-                expr: box_tree!(Choice(
-                    Str(String::from("a")),
-                    Choice(
-                        Str(String::from("b")),
-                        Choice(Str(String::from("c")), Str(String::from("d")))
-                    )
-                )),
-            }]
-        };
 
-        assert_eq!(optimize(rules), rotated);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 
     #[test]
@@ -325,13 +311,8 @@ mod tests {
                 ))),
             }]
         };
-        let skipped = vec![OptimizedRule {
-            name: "rule".to_owned(),
-            ty: RuleType::Atomic,
-            expr: OptimizedExpr::Skip(vec![String::from("a"), String::from("b")]),
-        }];
 
-        assert_eq!(optimize(rules), skipped);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 
     #[test]
@@ -347,13 +328,8 @@ mod tests {
                 )),
             }]
         };
-        let concatenated = vec![OptimizedRule {
-            name: "rule".to_owned(),
-            ty: RuleType::Atomic,
-            expr: OptimizedExpr::Str(String::from("abcd")),
-        }];
 
-        assert_eq!(optimize(rules), concatenated);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 
     #[test]
@@ -363,19 +339,8 @@ mod tests {
             ty: RuleType::Atomic,
             expr: Expr::RepExact(Box::new(Expr::Ident(String::from("a"))), 3),
         }];
-        let unrolled = {
-            use crate::optimizer::OptimizedExpr::*;
-            vec![OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: box_tree!(Seq(
-                    Ident(String::from("a")),
-                    Seq(Ident(String::from("a")), Ident(String::from("a")))
-                )),
-            }]
-        };
 
-        assert_eq!(optimize(rules), unrolled);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 
     #[test]
@@ -385,19 +350,8 @@ mod tests {
             ty: RuleType::Atomic,
             expr: Expr::RepMax(Box::new(Expr::Str("a".to_owned())), 3),
         }];
-        let unrolled = {
-            use crate::optimizer::OptimizedExpr::*;
-            vec![OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: box_tree!(Seq(
-                    Opt(Str(String::from("a"))),
-                    Seq(Opt(Str(String::from("a"))), Opt(Str(String::from("a"))))
-                )),
-            }]
-        };
 
-        assert_eq!(optimize(rules), unrolled);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 
     #[test]
@@ -407,19 +361,8 @@ mod tests {
             ty: RuleType::Atomic,
             expr: Expr::RepMin(Box::new(Expr::Str("a".to_owned())), 2),
         }];
-        let unrolled = {
-            use crate::optimizer::OptimizedExpr::*;
-            vec![OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                expr: box_tree!(Seq(
-                    Str(String::from("a")),
-                    Seq(Str(String::from("a")), Rep(Str(String::from("a"))))
-                )),
-            }]
-        };
 
-        assert_eq!(optimize(rules), unrolled);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 
     #[test]
@@ -429,26 +372,8 @@ mod tests {
             ty: RuleType::Atomic,
             expr: Expr::RepMinMax(Box::new(Expr::Str("a".to_owned())), 2, 3),
         }];
-        let unrolled = {
-            use crate::optimizer::OptimizedExpr::*;
-            vec![OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Atomic,
-                /* TODO possible room for improvement here:
-                 * if the sequences were rolled out in the opposite
-                 * order, we could further optimize the strings
-                 * in cases like this.
-                Str(String::from(("aa")),
-                Opt(Str(String::from("a")))
-                */
-                expr: box_tree!(Seq(
-                    Str(String::from("a")),
-                    Seq(Str(String::from("a")), Opt(Str(String::from("a"))))
-                )),
-            }]
-        };
 
-        assert_eq!(optimize(rules), unrolled);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 
     #[test]
@@ -464,13 +389,8 @@ mod tests {
                 )),
             }]
         };
-        let concatenated = vec![OptimizedRule {
-            name: "rule".to_owned(),
-            ty: RuleType::Atomic,
-            expr: OptimizedExpr::Insens(String::from("abcd")),
-        }];
 
-        assert_eq!(optimize(rules), concatenated);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 
     #[test]
@@ -492,22 +412,8 @@ mod tests {
                 )),
             }]
         };
-        let optimized = {
-            use crate::optimizer::OptimizedExpr::*;
-            vec![OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Silent,
-                expr: box_tree!(Seq(
-                    Ident(String::from("a")),
-                    Seq(
-                        Ident(String::from("b")),
-                        Choice(Ident(String::from("c")), Ident(String::from("d")))
-                    )
-                )),
-            }]
-        };
 
-        assert_eq!(optimize(rules), optimized);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 
     #[test]
@@ -523,16 +429,8 @@ mod tests {
                 )),
             }]
         };
-        let optimized = {
-            use crate::optimizer::OptimizedExpr::*;
-            vec![OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Silent,
-                expr: box_tree!(Seq(Ident(String::from("a")), Opt(Ident(String::from("b"))))),
-            }]
-        };
 
-        assert_eq!(optimize(rules), optimized);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 
     #[test]
@@ -548,16 +446,8 @@ mod tests {
                 )),
             }]
         };
-        let optimized = {
-            use crate::optimizer::OptimizedExpr::*;
-            vec![OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Silent,
-                expr: box_tree!(Ident(String::from("a"))),
-            }]
-        };
 
-        assert_eq!(optimize(rules), optimized);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 
     #[test]
@@ -573,18 +463,7 @@ mod tests {
                 )),
             }]
         };
-        let optimized = {
-            use crate::optimizer::OptimizedExpr::*;
-            vec![OptimizedRule {
-                name: "rule".to_owned(),
-                ty: RuleType::Silent,
-                expr: box_tree!(Seq(
-                    Ident(String::from("a")),
-                    Rep(Seq(Ident(String::from("b")), Ident(String::from("a"))))
-                )),
-            }]
-        };
 
-        assert_eq!(optimize(rules), optimized);
+        insta::assert_debug_snapshot!(optimize(rules));
     }
 }

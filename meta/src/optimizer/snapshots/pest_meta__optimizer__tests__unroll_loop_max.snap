@@ -1,0 +1,29 @@
+---
+source: meta/src/optimizer/mod.rs
+expression: optimize(rules)
+---
+[
+    OptimizedRule {
+        name: "rule",
+        ty: Atomic,
+        expr: Seq(
+            Opt(
+                Str(
+                    "a",
+                ),
+            ),
+            Seq(
+                Opt(
+                    Str(
+                        "a",
+                    ),
+                ),
+                Opt(
+                    Str(
+                        "a",
+                    ),
+                ),
+            ),
+        ),
+    },
+]

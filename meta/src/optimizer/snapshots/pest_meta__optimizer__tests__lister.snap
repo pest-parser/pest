@@ -1,0 +1,25 @@
+---
+source: meta/src/optimizer/mod.rs
+expression: optimize(rules)
+---
+[
+    OptimizedRule {
+        name: "rule",
+        ty: Silent,
+        expr: Seq(
+            Ident(
+                "a",
+            ),
+            Rep(
+                Seq(
+                    Ident(
+                        "b",
+                    ),
+                    Ident(
+                        "a",
+                    ),
+                ),
+            ),
+        ),
+    },
+]

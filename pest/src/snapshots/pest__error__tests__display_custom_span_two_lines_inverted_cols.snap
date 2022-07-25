@@ -1,0 +1,11 @@
+---
+source: pest/src/error.rs
+expression: error
+---
+ --> 1:6
+  |
+1 | abcdef
+2 | gh
+  | ^----^
+  |
+  = error: big one

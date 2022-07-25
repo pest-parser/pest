@@ -1,0 +1,10 @@
+---
+source: pest/src/error.rs
+expression: error
+---
+ --> 1:1
+  |
+1 | 
+  | ^
+  |
+  = error: empty

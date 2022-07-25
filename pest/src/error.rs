@@ -542,18 +542,7 @@ mod tests {
             pos,
         );
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> 2:2",
-                "  |",
-                "2 | cd",
-                "  |  ^---",
-                "  |",
-                "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -568,18 +557,7 @@ mod tests {
             pos,
         );
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> 2:2",
-                "  |",
-                "2 | cd",
-                "  |  ^---",
-                "  |",
-                "  = expected 1 or 2",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -594,18 +572,7 @@ mod tests {
             pos,
         );
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> 2:2",
-                "  |",
-                "2 | cd",
-                "  |  ^---",
-                "  |",
-                "  = unexpected 4, 5, or 6",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -620,18 +587,7 @@ mod tests {
             pos,
         );
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> 2:2",
-                "  |",
-                "2 | cd",
-                "  |  ^---",
-                "  |",
-                "  = unknown parsing error",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -645,18 +601,7 @@ mod tests {
             pos,
         );
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> 2:2",
-                "  |",
-                "2 | cd",
-                "  |  ^---",
-                "  |",
-                "  = error: big one",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -671,19 +616,7 @@ mod tests {
             start.span(&end),
         );
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> 2:2",
-                "  |",
-                "2 | cd",
-                "3 | efgh",
-                "  |  ^^",
-                "  |",
-                "  = error: big one",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -698,20 +631,7 @@ mod tests {
             start.span(&end),
         );
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> 1:2",
-                "  |",
-                "1 | ab",
-                "  | ...",
-                "3 | efgh",
-                "  |  ^^",
-                "  |",
-                "  = error: big one",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -726,19 +646,7 @@ mod tests {
             start.span(&end),
         );
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> 1:6",
-                "  |",
-                "1 | abcdef",
-                "2 | gh",
-                "  | ^----^",
-                "  |",
-                "  = error: big one",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -756,18 +664,7 @@ mod tests {
             start.span(&end),
         );
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> 1:1",
-                "  |",
-                "1 | abcdef␊",
-                "  | ^-----^",
-                "  |",
-                "  = error: big one",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -785,18 +682,7 @@ mod tests {
             start.span(&end),
         );
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> 1:1",
-                "  |",
-                "1 | ",
-                "  | ^",
-                "  |",
-                "  = error: empty",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -812,18 +698,7 @@ mod tests {
         )
         .renamed_rules(|n| format!("{}", n + 1));
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> 2:2",
-                "  |",
-                "2 | cd",
-                "  |  ^---",
-                "  |",
-                "  = unexpected 5, 6, or 7; expected 2, 3, or 4",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -839,18 +714,7 @@ mod tests {
         )
         .with_path("file.rs");
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> file.rs:2:2",
-                "  |",
-                "2 | cd",
-                "  |  ^---",
-                "  |",
-                "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 
     #[test]
@@ -866,17 +730,6 @@ mod tests {
         )
         .with_path("file.rs");
 
-        assert_eq!(
-            format!("{}", error),
-            vec![
-                " --> file.rs:1:3",
-                "  |",
-                "1 | a	xbc",
-                "  |  	^---",
-                "  |",
-                "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
-            ]
-            .join("\n")
-        );
+        insta::assert_display_snapshot!(error);
     }
 }

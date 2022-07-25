@@ -1,0 +1,16 @@
+---
+source: meta/src/optimizer/mod.rs
+expression: optimize(rules)
+---
+[
+    OptimizedRule {
+        name: "rule",
+        ty: Atomic,
+        expr: Skip(
+            [
+                "a",
+                "b",
+            ],
+        ),
+    },
+]

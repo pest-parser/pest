@@ -1,0 +1,17 @@
+---
+source: meta/src/optimizer/restorer.rs
+expression: "restore_on_err(rules[0].clone(), &to_hash_map(&rules))"
+---
+OptimizedRule {
+    name: "rule",
+    ty: Normal,
+    expr: Rep(
+        RestoreOnErr(
+            Push(
+                Str(
+                    "a",
+                ),
+            ),
+        ),
+    ),
+}

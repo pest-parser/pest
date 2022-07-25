@@ -197,5 +197,5 @@ fn prec_climb() {
     ]);
 
     let pairs = CalculatorParser::parse(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
-    assert_eq!(-1_525, consume(pairs.unwrap().next().unwrap(), &climber));
+    assert_eq!(consume(pairs.unwrap().next().unwrap(), &climber), -1525);
 }

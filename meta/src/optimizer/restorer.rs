@@ -91,6 +91,8 @@ fn child_modifies_state(
 
 #[cfg(test)]
 mod tests {
+    use insta::assert_debug_snapshot;
+
     use super::*;
     use crate::optimizer::OptimizedExpr::*;
 
@@ -116,16 +118,7 @@ mod tests {
             expr: box_tree!(Rep(Push(Str("a".to_string())))),
         }];
 
-        let restored = OptimizedRule {
-            name: "rule".to_owned(),
-            ty: RuleType::Normal,
-            expr: box_tree!(Rep(RestoreOnErr(Push(Str("a".to_string()))))),
-        };
-
-        assert_eq!(
-            restore_on_err(rules[0].clone(), &to_hash_map(&rules)),
-            restored
-        );
+        insta::assert_debug_snapshot!(restore_on_err(rules[0].clone(), &to_hash_map(&rules)));
     }
 
     #[test]
@@ -136,18 +129,6 @@ mod tests {
             expr: box_tree!(Choice(Push(Str("a".to_string())), Str("a".to_string()))),
         }];
 
-        let restored = OptimizedRule {
-            name: "rule".to_owned(),
-            ty: RuleType::Normal,
-            expr: box_tree!(Choice(
-                RestoreOnErr(Push(Str("a".to_string()))),
-                Str("a".to_string())
-            )),
-        };
-
-        assert_eq!(
-            restore_on_err(rules[0].clone(), &to_hash_map(&rules)),
-            restored
-        );
+        assert_debug_snapshot!(restore_on_err(rules[0].clone(), &to_hash_map(&rules)));
     }
 }
