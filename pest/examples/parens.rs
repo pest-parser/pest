@@ -60,7 +60,6 @@ fn expr(pairs: Pairs<Rule>) -> Vec<Paren> {
         .collect()
 }
 
-#[cfg(not(feature = "miette"))]
 fn main() {
     loop {
         let mut line = String::new();
@@ -71,24 +70,15 @@ fn main() {
         io::stdin().read_line(&mut line).unwrap();
         line.pop();
 
-        match ParenParser::parse(Rule::expr, &line) {
+        let parsed = ParenParser::parse(Rule::expr, &line);
+        #[cfg(feature = "miette")]
+        let parsed = parsed
+            .map_err(Error::into_miette)
+            .map_err(miette::Report::from);
+
+        match parsed {
             Ok(pairs) => println!("{:?}", expr(pairs)),
-            Err(e) => println!("\n{}", e),
+            Err(e) => eprintln!("\n{:?}", e),
         };
-    }
-}
-
-#[cfg(feature = "miette")]
-fn main() -> miette::Result<()> {
-    loop {
-        let mut line = String::new();
-
-        print!("> ");
-        io::stdout().flush().into_diagnostic()?;
-
-        io::stdin().read_line(&mut line).into_diagnostic()?;
-        line.pop();
-
-        ParenParser::parse(Rule::expr, &line)?;
     }
 }

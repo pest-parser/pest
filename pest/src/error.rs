@@ -9,9 +9,6 @@
 
 //! Types for different kinds of parsing failures.
 
-#[cfg(feature = "miette")]
-use std::boxed::Box;
-
 use alloc::borrow::Cow;
 use alloc::borrow::ToOwned;
 use alloc::format;
@@ -29,8 +26,7 @@ use crate::RuleType;
 /// Parse-related error type.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[cfg_attr(feature = "std", derive(thiserror::Error))]
-#[cfg_attr(all(feature = "std", not(feature = "miette")), error("{}", self.format()))]
-#[cfg_attr(all(feature = "std", feature = "miette"), error("Failed to parse at {}", self.line_col))]
+#[cfg_attr(feature = "std", error("{}", self.format()))]
 pub struct Error<R: RuleType> {
     /// Variant of the error
     pub variant: ErrorVariant<R>,
@@ -41,30 +37,6 @@ pub struct Error<R: RuleType> {
     path: Option<String>,
     line: String,
     continued_line: Option<String>,
-}
-
-#[cfg(feature = "miette")]
-impl<R: RuleType> miette::Diagnostic for Error<R> {
-    fn source_code(&self) -> Option<&dyn miette::SourceCode> {
-        Some(&self.line)
-    }
-
-    fn labels(&self) -> Option<Box<dyn Iterator<Item = miette::LabeledSpan>>> {
-        let message = self.variant.message().to_string();
-
-        let (offset, length) = match self.location {
-            InputLocation::Pos(x) => (x, 0),
-            InputLocation::Span((x, y)) => (x, y),
-        };
-
-        let span = miette::LabeledSpan::new(Some(message), offset, length);
-
-        Some(Box::new(std::iter::once(span)))
-    }
-
-    fn help<'a>(&'a self) -> Option<Box<dyn core::fmt::Display + 'a>> {
-        Some(Box::new(self.variant.message()))
-    }
 }
 
 /// Different kinds of parsing errors.
@@ -520,6 +492,12 @@ impl<R: RuleType> Error<R> {
             )
         }
     }
+
+    #[cfg(feature = "miette")]
+    /// Turns an error into a [miette](crates.io/miette) Diagnostic.
+    pub fn into_miette(self) -> impl ::miette::Diagnostic {
+        miette::MietteAdapter(self)
+    }
 }
 
 impl<R: RuleType> ErrorVariant<R> {
@@ -560,6 +538,43 @@ impl<R: RuleType> ErrorVariant<R> {
 
 fn visualize_whitespace(input: &str) -> String {
     input.to_owned().replace('\r', "␍").replace('\n', "␊")
+}
+
+#[cfg(feature = "miette")]
+mod miette {
+    use alloc::string::ToString;
+    use std::boxed::Box;
+
+    use super::{Error, InputLocation, RuleType};
+
+    use miette::{Diagnostic, LabeledSpan, SourceCode};
+
+    #[derive(thiserror::Error, Debug)]
+    #[error("Failure to parse at {}", self.0.line_col)]
+    pub(crate) struct MietteAdapter<R: RuleType>(pub(crate) Error<R>);
+
+    impl<R: RuleType> Diagnostic for MietteAdapter<R> {
+        fn source_code(&self) -> Option<&dyn SourceCode> {
+            Some(&self.0.line)
+        }
+
+        fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan>>> {
+            let message = self.0.variant.message().to_string();
+
+            let (offset, length) = match self.0.location {
+                InputLocation::Pos(x) => (x, 0),
+                InputLocation::Span((x, y)) => (x, y),
+            };
+
+            let span = LabeledSpan::new(Some(message), offset, length);
+
+            Some(Box::new(std::iter::once(span)))
+        }
+
+        fn help<'a>(&'a self) -> Option<Box<dyn core::fmt::Display + 'a>> {
+            Some(Box::new(self.0.variant.message()))
+        }
+    }
 }
 
 #[cfg(test)]
