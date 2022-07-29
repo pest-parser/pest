@@ -39,19 +39,19 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let (name, generics, content) = parse_derive(ast);
 
     let (data, path) = match content {
-        GrammarSource::File(path) => {
+        GrammarSource::File(ref path) => {
             let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
-            let full_path = Path::new(&root).join("src/").join(&path);
-            let file_name = match full_path.file_name() {
+            let path = Path::new(&root).join("src/").join(&path);
+            let file_name = match path.file_name() {
                 Some(file_name) => file_name,
                 None => panic!("grammar attribute should point to a file"),
             };
 
-            let data = match read_file(&full_path) {
+            let data = match read_file(&path) {
                 Ok(data) => data,
                 Err(error) => panic!("error opening {:?}: {}", file_name, error),
             };
-            (data, Some(path))
+            (data, Some(path.clone()))
         }
         GrammarSource::Inline(content) => (content, None),
     };
