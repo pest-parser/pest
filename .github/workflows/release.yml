@@ -21,8 +21,49 @@ jobs:
       - name: Bootstraping Grammars - Executing
         run: cargo run --package pest_bootstrap
       # it should figure out the right order: https://github.com/katyo/publish-crates#features
-      - name: Publish crates
+      - name: Publish pest
         uses: katyo/publish-crates@v1
         with:
+          path: './pest'
+          args: --allow-dirty --all-features
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: update
+        run: cargo update
+      - name: Publish pest_meta
+        uses: katyo/publish-crates@v1
+        with:
+          path: './meta'
+          args: --allow-dirty --all-features
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: update
+        run: cargo update
+      - name: Publish pest_vm
+        uses: katyo/publish-crates@v1
+        with:
+          path: './vm'
+          args: --allow-dirty --all-features
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: update
+        run: cargo update
+      - name: Publish pest_generator
+        uses: katyo/publish-crates@v1
+        with:
+          path: './generator'
+          args: --allow-dirty --all-features
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: update
+        run: cargo update
+      - name: Publish pest_derive
+        uses: katyo/publish-crates@v1
+        with:
+          path: './derive'
+          args: --allow-dirty --all-features
+          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: update
+        run: cargo update
+      - name: Publish pest_grammars
+        uses: katyo/publish-crates@v1
+        with:
+          path: './grammars'
           args: --allow-dirty --all-features
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
