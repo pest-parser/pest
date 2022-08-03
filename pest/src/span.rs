@@ -61,8 +61,7 @@ impl<'i> Span<'i> {
         }
     }
 
-    /// Attempts to create a new span within the bounds of `this` span. Will return `None` if
-    /// `range` does not fit within `this`.
+    /// Attempts to create a new span based on a sub-range.
     ///
     /// ```
     /// use pest::Span;
