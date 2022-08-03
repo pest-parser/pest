@@ -9,6 +9,7 @@
 
 use core::fmt;
 use core::hash::{Hash, Hasher};
+use core::ops::RangeBounds;
 use core::ptr;
 use core::str;
 
@@ -73,7 +74,7 @@ impl<'i> Span<'i> {
     /// ```
     ///
     /// # Examples
-    pub fn get(&self, range: impl std::ops::RangeBounds<usize>) -> Option<Span<'i>> {
+    pub fn get(&self, range: impl RangeBounds<usize>) -> Option<Span<'i>> {
         let start = match range.start_bound() {
             std::ops::Bound::Included(offset) => *offset,
             std::ops::Bound::Excluded(offset) => *offset + 1,
