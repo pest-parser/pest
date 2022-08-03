@@ -9,7 +9,7 @@
 
 use core::fmt;
 use core::hash::{Hash, Hasher};
-use core::ops::RangeBounds;
+use core::ops::{Bound, RangeBounds};
 use core::ptr;
 use core::str;
 
@@ -76,14 +76,14 @@ impl<'i> Span<'i> {
     /// # Examples
     pub fn get(&self, range: impl RangeBounds<usize>) -> Option<Span<'i>> {
         let start = match range.start_bound() {
-            std::ops::Bound::Included(offset) => *offset,
-            std::ops::Bound::Excluded(offset) => *offset + 1,
-            std::ops::Bound::Unbounded => 0,
+            Bound::Included(offset) => *offset,
+            Bound::Excluded(offset) => *offset + 1,
+            Bound::Unbounded => 0,
         };
         let end = match range.end_bound() {
-            std::ops::Bound::Included(offset) => *offset + 1,
-            std::ops::Bound::Excluded(offset) => *offset,
-            std::ops::Bound::Unbounded => self.as_str().len(),
+            Bound::Included(offset) => *offset + 1,
+            Bound::Excluded(offset) => *offset,
+            Bound::Unbounded => self.as_str().len(),
         };
 
         self.as_str().get(start..end).map(|_| Span {

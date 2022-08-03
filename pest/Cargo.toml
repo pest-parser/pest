@@ -14,7 +14,7 @@ readme = "_README.md"
 rust-version = "1.56"
 
 [features]
-default = ["std"]
+# default = ["std"]
 # Implements `std::error::Error` for the `Error` type
 std = ["ucd-trie/std", "thiserror"]
 # Enables the `to_json` function for `Pair` and `Pairs`
