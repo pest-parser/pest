@@ -86,14 +86,11 @@ impl<'i> Span<'i> {
             std::ops::Bound::Unbounded => self.as_str().len(),
         };
 
-        match self.as_str().get(start..end) {
-            Some(_) => Some(Span {
-                input: self.input,
-                start: self.start + start,
-                end: self.start + end,
-            }),
-            None => None,
-        }
+        self.as_str().get(start..end).map(|_| Span {
+            input: self.input,
+            start: self.start + start,
+            end: self.start + end,
+        })
     }
 
     /// Returns the `Span`'s start byte position as a `usize`.
