@@ -9,6 +9,7 @@
 
 use core::fmt;
 use core::hash::{Hash, Hasher};
+use core::ops::{Bound, RangeBounds};
 use core::ptr;
 use core::str;
 
@@ -59,6 +60,37 @@ impl<'i> Span<'i> {
         } else {
             None
         }
+    }
+
+    /// Attempts to create a new span based on a sub-range.
+    ///
+    /// ```
+    /// use pest::Span;
+    /// let input = "Hello World!";
+    /// let world = Span::new(input, 6, input.len()).unwrap();
+    /// let orl = world.get(1..=3);
+    /// assert!(orl.is_some());
+    /// assert_eq!(orl.unwrap().as_str(), "orl");
+    /// ```
+    ///
+    /// # Examples
+    pub fn get(&self, range: impl RangeBounds<usize>) -> Option<Span<'i>> {
+        let start = match range.start_bound() {
+            Bound::Included(offset) => *offset,
+            Bound::Excluded(offset) => *offset + 1,
+            Bound::Unbounded => 0,
+        };
+        let end = match range.end_bound() {
+            Bound::Included(offset) => *offset + 1,
+            Bound::Excluded(offset) => *offset,
+            Bound::Unbounded => self.as_str().len(),
+        };
+
+        self.as_str().get(start..end).map(|_| Span {
+            input: self.input,
+            start: self.start + start,
+            end: self.start + end,
+        })
     }
 
     /// Returns the `Span`'s start byte position as a `usize`.
@@ -263,6 +295,46 @@ mod tests {
     use super::*;
     use alloc::borrow::ToOwned;
     use alloc::vec::Vec;
+
+    #[test]
+    fn get() {
+        let input = "abc123abc";
+        let span = Span::new(input, 3, input.len()).unwrap();
+        assert_eq!(span.as_str(), "123abc");
+        assert_eq!(span.input, input);
+
+        let span1 = span.get(..=2);
+        assert!(span1.is_some());
+        assert_eq!(span1.unwrap().input, input);
+        assert_eq!(span1.unwrap().as_str(), "123");
+
+        let span2 = span.get(..);
+        assert!(span2.is_some());
+        assert_eq!(span2.unwrap().input, input);
+        assert_eq!(span2.unwrap().as_str(), "123abc");
+
+        let span3 = span.get(3..);
+        assert!(span3.is_some());
+        assert_eq!(span3.unwrap().input, input);
+        assert_eq!(span3.unwrap().as_str(), "abc");
+
+        let span4 = span.get(0..0);
+        assert!(span4.is_some());
+        assert_eq!(span4.unwrap().input, input);
+        assert_eq!(span4.unwrap().as_str(), "");
+    }
+
+    #[test]
+    fn get_fails() {
+        let input = "abc";
+        let span = Span::new(input, 0, input.len()).unwrap();
+
+        let span1 = span.get(0..100);
+        assert!(span1.is_none());
+
+        let span2 = span.get(100..200);
+        assert!(span2.is_none());
+    }
 
     #[test]
     fn span_comp() {
