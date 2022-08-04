@@ -180,7 +180,7 @@ impl<'i> Span<'i> {
         &self.input[self.start..self.end]
     }
 
-    /// Iterates over all lines (partially) covered by this span. Yeilding a `&str` for each line.
+    /// Iterates over all lines (partially) covered by this span. Yielding a `&str` for each line.
     ///
     /// # Examples
     ///
@@ -204,7 +204,7 @@ impl<'i> Span<'i> {
         }
     }
 
-    /// Iterates over all lines (partially) covered by this span. Yeilding a `Span` for each line.
+    /// Iterates over all lines (partially) covered by this span. Yielding a `Span` for each line.
     ///
     /// # Examples
     ///
