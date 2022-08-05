@@ -11,7 +11,8 @@
 
 [![pest Continuous Integration](https://github.com/pest-parser/pest/actions/workflows/ci.yml/badge.svg)](https://github.com/pest-parser/pest/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/pest-parser/pest/branch/master/graph/badge.svg)](https://codecov.io/gh/pest-parser/pest)
-[![Fuzzit Status](https://app.fuzzit.dev/badge?org_id=pest-parser)](https://app.fuzzit.dev/orgs/pest-parser/dashboard)
+<a href="https://blog.rust-lang.org/2021/11/01/Rust-1.56.1.html"><img alt="Rustc Version 1.56.1+" src="https://img.shields.io/badge/rustc-1.56.1%2B-lightgrey.svg"/></a>
+
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
 [![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
 
@@ -171,6 +172,11 @@ Digit:   2
 * [qubit](https://github.com/abhimanyu003/qubit)
 * [caith](https://github.com/Geobert/caith) (a dice roller crate)
 * [Melody](https://github.com/yoav-lavi/melody)
+
+## Minimum Supported Rust Version (MSRV)
+
+This library should always compile with default features on **Rust 1.56.1** 
+or **Rust 1.61** with `const_prec_climber`.
 
 ## Special thanks
 
