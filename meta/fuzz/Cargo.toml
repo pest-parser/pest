@@ -8,6 +8,8 @@ rust-version = "1.56"
 [package.metadata]
 cargo-fuzz = true
 
+[dependencies.pest]
+path = "../../pest"
 [dependencies.pest_meta]
 path = ".."
 [dependencies.libfuzzer-sys]

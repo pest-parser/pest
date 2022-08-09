@@ -7,11 +7,13 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::Range;
+use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use crate::error::{Error, ErrorVariant};
 use crate::iterators::{pairs, QueueableToken};
@@ -50,6 +52,63 @@ pub enum MatchDir {
     TopToBottom,
 }
 
+static CALL_DEPTH_LIMIT: AtomicUsize = AtomicUsize::new(0);
+static FINITE_CALL_LIMIT: AtomicBool = AtomicBool::new(false);
+
+/// Sets the maximum call limit for the parser
+/// to prevent stack overflows or excessive execution times
+/// in some grammars.
+///
+/// # Arguments
+///
+/// * `limit` - The maximum call depth or the number of calls.
+///             If 0, the call depth or the number of calls is unlimited.
+/// * `finite_calls` - If `true`, the parser execution is limited to
+///                    a finite number of calls (based on `limit`).
+pub fn set_call_limit(limit: usize, finite_calls: bool) {
+    CALL_DEPTH_LIMIT.store(limit, Ordering::Relaxed);
+    FINITE_CALL_LIMIT.store(finite_calls, Ordering::Relaxed);
+}
+
+#[derive(Debug)]
+struct CallLimitTracker {
+    current_depth_limit: Option<(usize, usize)>,
+    finite_calls: bool,
+}
+
+impl Default for CallLimitTracker {
+    fn default() -> Self {
+        let limit = CALL_DEPTH_LIMIT.load(Ordering::Relaxed);
+        let current_depth_limit = if limit > 0 { Some((0, limit)) } else { None };
+        let finite_calls = FINITE_CALL_LIMIT.load(Ordering::Relaxed);
+        Self {
+            current_depth_limit,
+            finite_calls,
+        }
+    }
+}
+
+impl CallLimitTracker {
+    fn limit_reached(&self) -> bool {
+        self.current_depth_limit
+            .map_or(false, |(current, limit)| current >= limit)
+    }
+
+    fn increment_depth(&mut self) {
+        if let Some((current, limit)) = self.current_depth_limit {
+            self.current_depth_limit = Some((current.wrapping_add(1), limit));
+        }
+    }
+
+    fn decrement_depth(&mut self) {
+        if let Some((current, limit)) = self.current_depth_limit {
+            if !self.finite_calls {
+                self.current_depth_limit = Some((current.wrapping_sub(1), limit));
+            }
+        }
+    }
+}
+
 /// The complete state of a [`Parser`].
 ///
 /// [`Parser`]: trait.Parser.html
@@ -63,6 +122,7 @@ pub struct ParserState<'i, R: RuleType> {
     attempt_pos: usize,
     atomicity: Atomicity,
     stack: Stack<Span<'i>>,
+    call_tracker: CallLimitTracker,
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -86,16 +146,23 @@ where
             Ok(pairs::new(Rc::new(state.queue), input, 0, len))
         }
         Err(mut state) => {
-            state.pos_attempts.sort();
-            state.pos_attempts.dedup();
-            state.neg_attempts.sort();
-            state.neg_attempts.dedup();
-
-            Err(Error::new_from_pos(
+            let variant = if state.reached_call_limit() {
+                ErrorVariant::CustomError {
+                    message: "call limit reached".to_owned(),
+                }
+            } else {
+                state.pos_attempts.sort();
+                state.pos_attempts.dedup();
+                state.neg_attempts.sort();
+                state.neg_attempts.dedup();
                 ErrorVariant::ParsingError {
                     positives: state.pos_attempts.clone(),
                     negatives: state.neg_attempts.clone(),
-                },
+                }
+            };
+
+            Err(Error::new_from_pos(
+                variant,
                 // TODO(performance): Guarantee state.attempt_pos is a valid position
                 position::Position::new(input, state.attempt_pos).unwrap(),
             ))
@@ -124,6 +191,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             attempt_pos: 0,
             atomicity: Atomicity::NonAtomic,
             stack: Stack::new(),
+            call_tracker: Default::default(),
         })
     }
 
@@ -170,6 +238,28 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         self.atomicity
     }
 
+    #[inline]
+    fn inc_call_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+        if self.call_tracker.limit_reached() {
+            self.queue.clear();
+            return Err(self);
+        }
+        self.call_tracker.increment_depth();
+        Ok(self)
+    }
+
+    #[inline]
+    fn dec_call(&mut self) {
+        if !self.reached_call_limit() {
+            self.call_tracker.decrement_depth()
+        }
+    }
+
+    #[inline]
+    fn reached_call_limit(&self) -> bool {
+        self.call_tracker.limit_reached()
+    }
+
     /// Wrapper needed to generate tokens. This will associate the `R` type rule to the closure
     /// meant to match the rule.
     ///
@@ -195,6 +285,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let actual_pos = self.position.pos();
         let index = self.queue.len();
 
@@ -251,7 +342,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                         input_pos: new_pos,
                     });
                 }
-
+                new_state.dec_call();
                 Ok(new_state)
             }
             Err(mut new_state) => {
@@ -270,7 +361,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 {
                     new_state.queue.truncate(index);
                 }
-
+                new_state.dec_call();
                 Err(new_state)
             }
         }
@@ -359,21 +450,26 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn sequence<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    pub fn sequence<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let token_index = self.queue.len();
         let initial_pos = self.position;
 
         let result = f(self);
 
         match result {
-            Ok(new_state) => Ok(new_state),
+            Ok(mut new_state) => {
+                new_state.dec_call();
+                Ok(new_state)
+            }
             Err(mut new_state) => {
                 // Restore the initial position and truncate the token queue.
                 new_state.position = initial_pos;
                 new_state.queue.truncate(token_index);
+                new_state.dec_call();
                 Err(new_state)
             }
         }
@@ -408,16 +504,20 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap().position().pos(), 0);
     /// ```
     #[inline]
-    pub fn repeat<F>(self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
+    pub fn repeat<F>(mut self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
     where
         F: FnMut(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let mut result = f(self);
 
         loop {
             match result {
                 Ok(state) => result = f(state),
-                Err(state) => return Ok(state),
+                Err(mut state) => {
+                    state.dec_call();
+                    return Ok(state);
+                }
             };
         }
     }
@@ -449,12 +549,16 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert!(result.is_ok());
     /// ```
     #[inline]
-    pub fn optional<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    pub fn optional<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         match f(self) {
-            Ok(state) | Err(state) => Ok(state),
+            Ok(mut state) | Err(mut state) => {
+                state.dec_call();
+                Ok(state)
+            }
         }
     }
 
@@ -730,6 +834,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let initial_lookahead = self.lookahead;
 
         self.lookahead = if is_positive {
@@ -752,11 +857,13 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             Ok(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
+                new_state.dec_call();
                 Ok(new_state.restore())
             }
             Err(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
+                new_state.dec_call();
                 Err(new_state.restore())
             }
         };
@@ -797,6 +904,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let initial_atomicity = self.atomicity;
         let should_toggle = self.atomicity != atomicity;
 
@@ -808,12 +916,14 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         match result {
             Ok(mut new_state) => {
+                new_state.dec_call();
                 if should_toggle {
                     new_state.atomicity = initial_atomicity;
                 }
                 Ok(new_state)
             }
             Err(mut new_state) => {
+                new_state.dec_call();
                 if should_toggle {
                     new_state.atomicity = initial_atomicity;
                 }
@@ -841,21 +951,26 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap().position().pos(), 1);
     /// ```
     #[inline]
-    pub fn stack_push<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    pub fn stack_push<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let start = self.position;
 
         let result = f(self);
 
         match result {
             Ok(mut state) => {
+                state.dec_call();
                 let end = state.position;
                 state.stack.push(start.span(&end));
                 Ok(state)
             }
-            Err(state) => Err(state),
+            Err(mut state) => {
+                state.dec_call();
+                Err(state)
+            }
         }
     }
 
