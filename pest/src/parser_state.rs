@@ -61,10 +61,8 @@ static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 ///
 /// # Arguments
 ///
-/// * `limit` - The maximum call depth or the number of calls.
-///             If 0, the call depth or the number of calls is unlimited.
-/// * `finite_calls` - If `true`, the parser execution is limited to
-///                    a finite number of calls (based on `limit`).
+/// * `limit` - The maximum number of calls. If None,
+///             the number of calls is unlimited.
 pub fn set_call_limit(limit: Option<NonZeroUsize>) {
     CALL_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
 }
