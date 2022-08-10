@@ -90,8 +90,8 @@ impl CallLimitTracker {
     }
 
     fn increment_depth(&mut self) {
-        if let Some((current, limit)) = self.current_call_limit {
-            self.current_call_limit = Some((current + 1, limit));
+        if let Some((current, _)) = &mut self.current_call_limit {
+            *current += 1;
         }
     }
 }
