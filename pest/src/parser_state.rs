@@ -91,7 +91,7 @@ impl CallLimitTracker {
 
     fn increment_depth(&mut self) {
         if let Some((current, limit)) = self.current_call_limit {
-            self.current_call_limit = Some((current.wrapping_add(1), limit));
+            self.current_call_limit = Some((current + 1, limit));
         }
     }
 }
@@ -322,6 +322,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                         input_pos: new_pos,
                     });
                 }
+
                 Ok(new_state)
             }
             Err(mut new_state) => {
@@ -340,6 +341,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 {
                     new_state.queue.truncate(index);
                 }
+
                 Err(new_state)
             }
         }
@@ -488,9 +490,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         loop {
             match result {
                 Ok(state) => result = f(state),
-                Err(state) => {
-                    return Ok(state);
-                }
+                Err(state) => return Ok(state),
             };
         }
     }
