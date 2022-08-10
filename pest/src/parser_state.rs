@@ -55,9 +55,12 @@ pub enum MatchDir {
 
 static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 
-/// Sets the maximum call limit for the parser
+/// Sets the maximum call limit for the parser state
 /// to prevent stack overflows or excessive execution times
 /// in some grammars.
+/// If set, the calls are tracked as a running total
+/// over all non-terminal rules that can nest closures
+/// (which are passed to transform the parser state).
 ///
 /// # Arguments
 ///
