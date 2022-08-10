@@ -75,7 +75,9 @@ extern crate serde;
 extern crate serde_json;
 
 pub use crate::parser::Parser;
-pub use crate::parser_state::{state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState};
+pub use crate::parser_state::{
+    set_call_limit, state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState,
+};
 pub use crate::position::Position;
 pub use crate::span::{Lines, LinesSpan, Span};
 pub use crate::token::Token;

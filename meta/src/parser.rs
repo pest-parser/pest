@@ -621,6 +621,8 @@ fn unescape(string: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryInto;
+
     use super::super::unwrap_or_report;
     use super::*;
 
@@ -1500,5 +1502,32 @@ mod tests {
         let string = r"\u{1111111}";
 
         assert_eq!(unescape(string), None);
+    }
+
+    #[test]
+    fn handles_deep_nesting() {
+        let sample1 = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/resources/test/fuzzsample1.grammar"
+        ));
+        let sample2 = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/resources/test/fuzzsample2.grammar"
+        ));
+        let sample3 = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/resources/test/fuzzsample3.grammar"
+        ));
+        const ERROR: &str = "call limit reached";
+        pest::set_call_limit(Some(25_000usize.try_into().unwrap()));
+        let s1 = crate::parser::parse(crate::parser::Rule::grammar_rules, sample1);
+        assert!(s1.is_err());
+        assert_eq!(s1.unwrap_err().variant.message(), ERROR);
+        let s2 = crate::parser::parse(crate::parser::Rule::grammar_rules, sample2);
+        assert!(s2.is_err());
+        assert_eq!(s2.unwrap_err().variant.message(), ERROR);
+        let s3 = crate::parser::parse(crate::parser::Rule::grammar_rules, sample3);
+        assert!(s3.is_err());
+        assert_eq!(s3.unwrap_err().variant.message(), ERROR);
     }
 }

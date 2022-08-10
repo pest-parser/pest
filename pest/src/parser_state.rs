@@ -7,11 +7,14 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::num::NonZeroUsize;
 use core::ops::Range;
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::error::{Error, ErrorVariant};
 use crate::iterators::{pairs, QueueableToken};
@@ -50,6 +53,49 @@ pub enum MatchDir {
     TopToBottom,
 }
 
+static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
+
+/// Sets the maximum call limit for the parser state
+/// to prevent stack overflows or excessive execution times
+/// in some grammars.
+/// If set, the calls are tracked as a running total
+/// over all non-terminal rules that can nest closures
+/// (which are passed to transform the parser state).
+///
+/// # Arguments
+///
+/// * `limit` - The maximum number of calls. If None,
+///             the number of calls is unlimited.
+pub fn set_call_limit(limit: Option<NonZeroUsize>) {
+    CALL_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
+}
+
+#[derive(Debug)]
+struct CallLimitTracker {
+    current_call_limit: Option<(usize, usize)>,
+}
+
+impl Default for CallLimitTracker {
+    fn default() -> Self {
+        let limit = CALL_LIMIT.load(Ordering::Relaxed);
+        let current_call_limit = if limit > 0 { Some((0, limit)) } else { None };
+        Self { current_call_limit }
+    }
+}
+
+impl CallLimitTracker {
+    fn limit_reached(&self) -> bool {
+        self.current_call_limit
+            .map_or(false, |(current, limit)| current >= limit)
+    }
+
+    fn increment_depth(&mut self) {
+        if let Some((current, _)) = &mut self.current_call_limit {
+            *current += 1;
+        }
+    }
+}
+
 /// The complete state of a [`Parser`].
 ///
 /// [`Parser`]: trait.Parser.html
@@ -63,6 +109,7 @@ pub struct ParserState<'i, R: RuleType> {
     attempt_pos: usize,
     atomicity: Atomicity,
     stack: Stack<Span<'i>>,
+    call_tracker: CallLimitTracker,
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -86,16 +133,23 @@ where
             Ok(pairs::new(Rc::new(state.queue), input, 0, len))
         }
         Err(mut state) => {
-            state.pos_attempts.sort();
-            state.pos_attempts.dedup();
-            state.neg_attempts.sort();
-            state.neg_attempts.dedup();
-
-            Err(Error::new_from_pos(
+            let variant = if state.reached_call_limit() {
+                ErrorVariant::CustomError {
+                    message: "call limit reached".to_owned(),
+                }
+            } else {
+                state.pos_attempts.sort();
+                state.pos_attempts.dedup();
+                state.neg_attempts.sort();
+                state.neg_attempts.dedup();
                 ErrorVariant::ParsingError {
                     positives: state.pos_attempts.clone(),
                     negatives: state.neg_attempts.clone(),
-                },
+                }
+            };
+
+            Err(Error::new_from_pos(
+                variant,
                 // TODO(performance): Guarantee state.attempt_pos is a valid position
                 position::Position::new(input, state.attempt_pos).unwrap(),
             ))
@@ -124,6 +178,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             attempt_pos: 0,
             atomicity: Atomicity::NonAtomic,
             stack: Stack::new(),
+            call_tracker: Default::default(),
         })
     }
 
@@ -170,6 +225,21 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         self.atomicity
     }
 
+    #[inline]
+    fn inc_call_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+        if self.call_tracker.limit_reached() {
+            self.queue.clear();
+            return Err(self);
+        }
+        self.call_tracker.increment_depth();
+        Ok(self)
+    }
+
+    #[inline]
+    fn reached_call_limit(&self) -> bool {
+        self.call_tracker.limit_reached()
+    }
+
     /// Wrapper needed to generate tokens. This will associate the `R` type rule to the closure
     /// meant to match the rule.
     ///
@@ -195,6 +265,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let actual_pos = self.position.pos();
         let index = self.queue.len();
 
@@ -359,10 +430,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(pairs.len(), 0);
     /// ```
     #[inline]
-    pub fn sequence<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    pub fn sequence<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let token_index = self.queue.len();
         let initial_pos = self.position;
 
@@ -408,10 +480,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap().position().pos(), 0);
     /// ```
     #[inline]
-    pub fn repeat<F>(self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
+    pub fn repeat<F>(mut self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
     where
         F: FnMut(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let mut result = f(self);
 
         loop {
@@ -449,10 +522,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert!(result.is_ok());
     /// ```
     #[inline]
-    pub fn optional<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    pub fn optional<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         match f(self) {
             Ok(state) | Err(state) => Ok(state),
         }
@@ -730,6 +804,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let initial_lookahead = self.lookahead;
 
         self.lookahead = if is_positive {
@@ -797,6 +872,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let initial_atomicity = self.atomicity;
         let should_toggle = self.atomicity != atomicity;
 
@@ -841,10 +917,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap().position().pos(), 1);
     /// ```
     #[inline]
-    pub fn stack_push<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    pub fn stack_push<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         let start = self.position;
 
         let result = f(self);
