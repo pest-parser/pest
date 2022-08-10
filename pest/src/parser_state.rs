@@ -12,8 +12,9 @@ use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::num::NonZeroUsize;
 use core::ops::Range;
-use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::error::{Error, ErrorVariant};
 use crate::iterators::{pairs, QueueableToken};
@@ -52,8 +53,7 @@ pub enum MatchDir {
     TopToBottom,
 }
 
-static CALL_DEPTH_LIMIT: AtomicUsize = AtomicUsize::new(0);
-static FINITE_CALL_LIMIT: AtomicBool = AtomicBool::new(false);
+static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 
 /// Sets the maximum call limit for the parser
 /// to prevent stack overflows or excessive execution times
@@ -65,46 +65,32 @@ static FINITE_CALL_LIMIT: AtomicBool = AtomicBool::new(false);
 ///             If 0, the call depth or the number of calls is unlimited.
 /// * `finite_calls` - If `true`, the parser execution is limited to
 ///                    a finite number of calls (based on `limit`).
-pub fn set_call_limit(limit: usize, finite_calls: bool) {
-    CALL_DEPTH_LIMIT.store(limit, Ordering::Relaxed);
-    FINITE_CALL_LIMIT.store(finite_calls, Ordering::Relaxed);
+pub fn set_call_limit(limit: Option<NonZeroUsize>) {
+    CALL_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
 }
 
 #[derive(Debug)]
 struct CallLimitTracker {
-    current_depth_limit: Option<(usize, usize)>,
-    finite_calls: bool,
+    current_call_limit: Option<(usize, usize)>,
 }
 
 impl Default for CallLimitTracker {
     fn default() -> Self {
-        let limit = CALL_DEPTH_LIMIT.load(Ordering::Relaxed);
-        let current_depth_limit = if limit > 0 { Some((0, limit)) } else { None };
-        let finite_calls = FINITE_CALL_LIMIT.load(Ordering::Relaxed);
-        Self {
-            current_depth_limit,
-            finite_calls,
-        }
+        let limit = CALL_LIMIT.load(Ordering::Relaxed);
+        let current_call_limit = if limit > 0 { Some((0, limit)) } else { None };
+        Self { current_call_limit }
     }
 }
 
 impl CallLimitTracker {
     fn limit_reached(&self) -> bool {
-        self.current_depth_limit
+        self.current_call_limit
             .map_or(false, |(current, limit)| current >= limit)
     }
 
     fn increment_depth(&mut self) {
-        if let Some((current, limit)) = self.current_depth_limit {
-            self.current_depth_limit = Some((current.wrapping_add(1), limit));
-        }
-    }
-
-    fn decrement_depth(&mut self) {
-        if let Some((current, limit)) = self.current_depth_limit {
-            if !self.finite_calls {
-                self.current_depth_limit = Some((current.wrapping_sub(1), limit));
-            }
+        if let Some((current, limit)) = self.current_call_limit {
+            self.current_call_limit = Some((current.wrapping_add(1), limit));
         }
     }
 }
@@ -249,13 +235,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
-    fn dec_call(&mut self) {
-        if !self.reached_call_limit() {
-            self.call_tracker.decrement_depth()
-        }
-    }
-
-    #[inline]
     fn reached_call_limit(&self) -> bool {
         self.call_tracker.limit_reached()
     }
@@ -342,7 +321,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                         input_pos: new_pos,
                     });
                 }
-                new_state.dec_call();
                 Ok(new_state)
             }
             Err(mut new_state) => {
@@ -361,7 +339,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 {
                     new_state.queue.truncate(index);
                 }
-                new_state.dec_call();
                 Err(new_state)
             }
         }
@@ -461,15 +438,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         let result = f(self);
 
         match result {
-            Ok(mut new_state) => {
-                new_state.dec_call();
-                Ok(new_state)
-            }
+            Ok(new_state) => Ok(new_state),
             Err(mut new_state) => {
                 // Restore the initial position and truncate the token queue.
                 new_state.position = initial_pos;
                 new_state.queue.truncate(token_index);
-                new_state.dec_call();
                 Err(new_state)
             }
         }
@@ -514,8 +487,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         loop {
             match result {
                 Ok(state) => result = f(state),
-                Err(mut state) => {
-                    state.dec_call();
+                Err(state) => {
                     return Ok(state);
                 }
             };
@@ -555,10 +527,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     {
         self = self.inc_call_check_limit()?;
         match f(self) {
-            Ok(mut state) | Err(mut state) => {
-                state.dec_call();
-                Ok(state)
-            }
+            Ok(state) | Err(state) => Ok(state),
         }
     }
 
@@ -857,13 +826,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             Ok(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
-                new_state.dec_call();
                 Ok(new_state.restore())
             }
             Err(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
-                new_state.dec_call();
                 Err(new_state.restore())
             }
         };
@@ -916,14 +883,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         match result {
             Ok(mut new_state) => {
-                new_state.dec_call();
                 if should_toggle {
                     new_state.atomicity = initial_atomicity;
                 }
                 Ok(new_state)
             }
             Err(mut new_state) => {
-                new_state.dec_call();
                 if should_toggle {
                     new_state.atomicity = initial_atomicity;
                 }
@@ -962,15 +927,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         match result {
             Ok(mut state) => {
-                state.dec_call();
                 let end = state.position;
                 state.stack.push(start.span(&end));
                 Ok(state)
             }
-            Err(mut state) => {
-                state.dec_call();
-                Err(state)
-            }
+            Err(state) => Err(state),
         }
     }
 
