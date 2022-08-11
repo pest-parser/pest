@@ -152,7 +152,7 @@
 //!
 //! Strings and characters follow
 //! [Rust's escape mechanisms](https://doc.rust-lang.org/reference/tokens.html#byte-escapes), while
-//! identifiers can contain alpha-numeric characters and underscores (`_`), as long as they do not
+//! identifiers can contain alphanumeric characters and underscores (`_`), as long as they do not
 //! start with a digit.
 //!
 //! 2. Non-terminals
@@ -266,7 +266,7 @@
 //! ```
 //!
 //! For historical reasons, `PEEK_ALL` matches from top to bottom, while `PEEK[start..end]` matches
-//! from bottom to top. There is currectly no syntax to match a slice of the stack top to bottom.
+//! from bottom to top. There is currently no syntax to match a slice of the stack top to bottom.
 //!
 //! ## `Rule`
 //!

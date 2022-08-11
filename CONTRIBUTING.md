@@ -2,7 +2,7 @@
 
 ## Getting to know the project
 
-Before diving into the whys and hows, it's best one got started with the whats. The best place to learn about what pest does and what its limits are is the [book]. Feel free to try any of the examples in the [fiddle editor] as well.
+Before diving into the whys and hows, it's best one got started with the what's. The best place to learn about what pest does and what its limits are is the [book]. Feel free to try any of the examples in the [fiddle editor] as well.
 
 [book]: https://pest-parser.github.io/book
 [fiddle editor]: https://pest-parser.github.io/#editor
