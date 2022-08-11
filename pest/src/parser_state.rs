@@ -228,7 +228,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     #[inline]
     fn inc_call_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
         if self.call_tracker.limit_reached() {
-            self.queue.clear();
             return Err(self);
         }
         self.call_tracker.increment_depth();
