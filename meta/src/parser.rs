@@ -1518,6 +1518,10 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/resources/test/fuzzsample3.grammar"
         ));
+        let sample4 = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/resources/test/fuzzsample4.grammar"
+        ));
         const ERROR: &str = "call limit reached";
         pest::set_call_limit(Some(25_000usize.try_into().unwrap()));
         let s1 = crate::parser::parse(crate::parser::Rule::grammar_rules, sample1);
@@ -1529,5 +1533,8 @@ mod tests {
         let s3 = crate::parser::parse(crate::parser::Rule::grammar_rules, sample3);
         assert!(s3.is_err());
         assert_eq!(s3.unwrap_err().variant.message(), ERROR);
+        let s4 = crate::parser::parse(crate::parser::Rule::grammar_rules, sample4);
+        assert!(s4.is_err());
+        assert_eq!(s4.unwrap_err().variant.message(), ERROR);
     }
 }
