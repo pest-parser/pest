@@ -32,3 +32,25 @@ pub mod toml {
     #[grammar = "grammars/toml.pest"]
     pub struct TomlParser;
 }
+
+#[cfg(test)]
+mod tests {
+    use std::convert::TryInto;
+
+    use pest::Parser;
+
+    use crate::toml;
+
+    #[test]
+    fn toml_handles_deep_nesting() {
+        let sample1 = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/resources/test/tomlfuzzsample1.grammar"
+        ));
+        const ERROR: &str = "call limit reached";
+        pest::set_call_limit(Some(100_000usize.try_into().unwrap()));
+        let s1 = toml::TomlParser::parse(toml::Rule::toml, sample1);
+        assert!(s1.is_err());
+        assert_eq!(s1.unwrap_err().variant.message(), ERROR);
+    }
+}

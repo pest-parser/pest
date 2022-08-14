@@ -10,6 +10,8 @@ cargo-fuzz = true
 
 [dependencies.pest_grammars]
 path = ".."
+[dependencies.pest]
+path = "../../pest"
 [dependencies.libfuzzer-sys]
 git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
 
