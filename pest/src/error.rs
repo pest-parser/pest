@@ -526,7 +526,10 @@ impl<R: RuleType> fmt::Display for Error<R> {
 
 impl<R: RuleType> fmt::Display for ErrorVariant<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.message())
+        match self {
+            ErrorVariant::ParsingError { .. } => write!(f, "parsing error: {}", self.message()),
+            ErrorVariant::CustomError { .. } => write!(f, "{}", self.message()),
+        }
     }
 }
 
