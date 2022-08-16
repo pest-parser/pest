@@ -16,6 +16,7 @@ use alloc::string::String;
 use alloc::string::ToString;
 use alloc::vec::Vec;
 use core::cmp;
+use core::fmt;
 use core::mem;
 
 use crate::position::Position;
@@ -25,7 +26,6 @@ use crate::RuleType;
 /// Parse-related error type.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[cfg_attr(feature = "std", derive(thiserror::Error))]
-#[cfg_attr(feature = "std", error("{}", self.format()))]
 pub struct Error<R> {
     /// Variant of the error
     pub variant: ErrorVariant<R>,
@@ -43,7 +43,6 @@ pub struct Error<R> {
 #[cfg_attr(feature = "std", derive(thiserror::Error))]
 pub enum ErrorVariant<R> {
     /// Generated parsing error with expected and unexpected `Rule`s
-    #[cfg_attr(feature = "std", error("parsing error: {}", self.message()))]
     ParsingError {
         /// Positive attempts
         positives: Vec<R>,
@@ -51,7 +50,6 @@ pub enum ErrorVariant<R> {
         negatives: Vec<R>,
     },
     /// Custom error with a message
-    #[cfg_attr(feature = "std", error("{}", self.message()))]
     CustomError {
         /// Short explanation
         message: String,
@@ -517,6 +515,18 @@ impl<R: RuleType> ErrorVariant<R> {
             })),
             ErrorVariant::CustomError { ref message } => Cow::Borrowed(message),
         }
+    }
+}
+
+impl<R: RuleType> fmt::Display for Error<R> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.format())
+    }
+}
+
+impl<R: RuleType> fmt::Display for ErrorVariant<R> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.message())
     }
 }
 
