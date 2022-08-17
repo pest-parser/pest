@@ -41,17 +41,31 @@ mod tests {
 
     use crate::{json, toml};
 
+    fn test_toml_deep_nesting(input: &str) {
+        const ERROR: &str = "call limit reached";
+        pest::set_call_limit(Some(5_000usize.try_into().unwrap()));
+        let s = toml::TomlParser::parse(toml::Rule::toml, input);
+        assert!(s.is_err());
+        assert_eq!(s.unwrap_err().variant.message(), ERROR);
+    }
+
     #[test]
     fn toml_handles_deep_nesting() {
         let sample1 = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/resources/test/tomlfuzzsample1.toml"
         ));
-        const ERROR: &str = "call limit reached";
-        pest::set_call_limit(Some(100_000usize.try_into().unwrap()));
-        let s1 = toml::TomlParser::parse(toml::Rule::toml, sample1);
-        assert!(s1.is_err());
-        assert_eq!(s1.unwrap_err().variant.message(), ERROR);
+        test_toml_deep_nesting(sample1);
+    }
+
+    #[test]
+    #[ignore = "this sometimes crashes in the debug mode"]
+    fn toml_handles_deep_nesting_unstable() {
+        let sample2 = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/resources/test/tomlfuzzsample2.toml"
+        ));
+        test_toml_deep_nesting(sample2);
     }
 
     #[test]

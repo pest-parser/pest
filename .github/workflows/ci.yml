@@ -93,7 +93,12 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: test
-        args: --all --verbose
+        args: --all --verbose --release
+    - name: Cargo test (run ignored)
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: -p pest_grammars --lib --verbose --release -- --ignored tests::toml_handles_deep_nesting_unstable
 
   coverage:
     name: Test Coverage
