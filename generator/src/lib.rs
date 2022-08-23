@@ -41,7 +41,21 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let (data, path) = match content {
         GrammarSource::File(ref path) => {
             let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
-            let path = Path::new(&root).join("src/").join(&path);
+
+            // Check whether we can find a file at the path relative to the CARGO_MANIFEST_DIR
+            // first.
+            //
+            // If we cannot find the expected file over there, fallback to the
+            // `CARGO_MANIFEST_DIR/src`, which is the old default and kept for convenience
+            // reasons.
+            // TODO: This could be refactored once `std::path::absolute()` get's stabilized.
+            // https://doc.rust-lang.org/std/path/fn.absolute.html
+            let path = if Path::new(&root).join(&path).exists() {
+                Path::new(&root).join(&path)
+            } else {
+                Path::new(&root).join("src/").join(&path)
+            };
+
             let file_name = match path.file_name() {
                 Some(file_name) => file_name,
                 None => panic!("grammar attribute should point to a file"),
