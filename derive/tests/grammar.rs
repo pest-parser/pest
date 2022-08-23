@@ -16,7 +16,7 @@ extern crate pest;
 extern crate pest_derive;
 
 #[derive(Parser)]
-#[grammar = "../tests/grammar.pest"]
+#[grammar = "tests/grammar.pest"]
 struct GrammarParser;
 
 #[test]
