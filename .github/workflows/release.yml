@@ -23,3 +23,5 @@ jobs:
         run: cargo run --package pest_bootstrap
       - name: Publish pest crates
         run: ./release.sh
+        env:
+          CARGO_REGISTRY_TOKEN: ${{secrets.CARGO_REGISTRY_TOKEN}}
