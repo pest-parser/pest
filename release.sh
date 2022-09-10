@@ -39,8 +39,8 @@ wait_until_available() {
       fi
     fi
   done
-  echo "Waiting an additional 10 seconds for crate to propagate through CDN..."
-  sleep 10
+  echo "Waiting an additional 20 seconds for crate to propagate through CDN..."
+  sleep 20
 }
 
 for crate in ${CRATES}; do

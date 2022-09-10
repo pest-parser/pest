@@ -169,7 +169,6 @@ fn get_attribute(attr: &Attribute) -> GrammarSource {
 mod tests {
     use super::parse_derive;
     use super::GrammarSource;
-    use syn;
 
     #[test]
     fn derive_inline_file() {
