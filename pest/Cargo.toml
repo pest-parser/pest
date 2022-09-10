@@ -1,7 +1,7 @@
 [package]
 name = "pest"
 description = "The Elegant Parser"
-version = "2.3.0"
+version = "2.3.1"
 edition = "2018"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest-parser.github.io/"
@@ -21,9 +21,14 @@ std = ["ucd-trie/std", "thiserror"]
 pretty-print = ["serde", "serde_json"]
 # Enable const fn constructor for `PrecClimber`
 const_prec_climber = []
+# Enable faster `Position::line_col` calculation using SIMD
+# (note that this may have extra overhead for small inputs)
+fast-line-col = ["memchr", "bytecount"]
 
 [dependencies]
 ucd-trie = { version = "0.1.1", default-features = false }
 serde = { version = "1.0.89", optional = true }
 serde_json = { version = "1.0.39", optional = true}
 thiserror = { version = "1.0.31", optional = true }
+memchr = { version = "2", optional = true }
+bytecount = { version = "0.6", optional = true }
