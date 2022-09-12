@@ -30,5 +30,45 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, criterion_benchmark);
+mod autocorrect {
+    use pest_derive::Parser;
+
+    #[derive(Parser)]
+    #[grammar_inline = r#"
+newline = ${ "\n" | "\r" }
+space = ${ " "+ }
+
+other = ${ !(pair) ~ ANY }
+comment = ${ single_line_comment | multiline_comment }
+single_line_comment = _{ "//" ~ (!(newline) ~ ANY)* }
+multiline_comment = _{ "/*" ~ (!("*/") ~ ANY)* ~ "*/"}
+
+string_type = _{ 
+  ("\"" ~ (!(newline | "\"") ~ ANY)* ~ "\"") 
+}
+key = ${ string_type ~ (" ")* ~ ":" ~ (" ")* }
+string = ${ string_type  }
+pair = _{ key ~ string }
+
+line = _{ pair | comment | space | other | newline }
+item = _{ SOI ~ line* ~ EOI } 
+"#]
+    pub struct JsonParser;
+}
+
+fn line_col_benchmark(c: &mut Criterion) {
+    let mut file = File::open("benches/main.i18n.json").unwrap();
+    let mut data = String::new();
+
+    file.read_to_string(&mut data).unwrap();
+    let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
+    let last_pair = pairs.last().unwrap();
+    c.bench_function("line col", |b| {
+        b.iter(|| {
+            let _ = last_pair.as_span().start_pos().line_col();
+        });
+    });
+}
+
+criterion_group!(benches, criterion_benchmark, line_col_benchmark,);
 criterion_main!(benches);
