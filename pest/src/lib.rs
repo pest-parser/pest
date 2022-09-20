@@ -90,6 +90,8 @@ mod macros;
 mod parser;
 mod parser_state;
 mod position;
+pub mod pratt_parser;
+#[deprecated(since = "2.4.0", note = "use `pest::pratt_parser` instead")]
 pub mod prec_climber;
 mod span;
 mod stack;
