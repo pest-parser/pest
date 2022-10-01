@@ -423,7 +423,7 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
                     return Some(Error::new_from_span(
                         ErrorVariant::CustomError {
                             message: format!(
-                                "rule {} is left-recursive ({}); pest::prec_climber might be useful \
+                                "rule {} is left-recursive ({}); pest::pratt_parser might be useful \
                                  in this case",
                                 node.span.as_str(),
                                 chain
@@ -677,7 +677,7 @@ mod tests {
 1 | a = { a }
   |       ^
   |
-  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> a); pest::pratt_parser might be useful in this case")]
     fn simple_left_recursion() {
         let input = "a = { a }";
         unwrap_or_report(consume_rules(
@@ -693,14 +693,14 @@ mod tests {
 1 | a = { b } b = { a }
   |       ^
   |
-  = rule b is left-recursive (b -> a -> b); pest::prec_climber might be useful in this case
+  = rule b is left-recursive (b -> a -> b); pest::pratt_parser might be useful in this case
 
  --> 1:17
   |
 1 | a = { b } b = { a }
   |                 ^
   |
-  = rule a is left-recursive (a -> b -> a); pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> b -> a); pest::pratt_parser might be useful in this case")]
     fn indirect_left_recursion() {
         let input = "a = { b } b = { a }";
         unwrap_or_report(consume_rules(
@@ -716,7 +716,7 @@ mod tests {
 1 | a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }
   |                                       ^
   |
-  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> a); pest::pratt_parser might be useful in this case")]
     fn non_failing_left_recursion() {
         let input = "a = { \"\" ~ \"a\"? ~ \"a\"* ~ (\"a\" | \"\") ~ a }";
         unwrap_or_report(consume_rules(
@@ -732,7 +732,7 @@ mod tests {
 1 | a = { \"a\" | a }
   |             ^
   |
-  = rule a is left-recursive (a -> a); pest::prec_climber might be useful in this case")]
+  = rule a is left-recursive (a -> a); pest::pratt_parser might be useful in this case")]
     fn non_primary_choice_left_recursion() {
         let input = "a = { \"a\" | a }";
         unwrap_or_report(consume_rules(

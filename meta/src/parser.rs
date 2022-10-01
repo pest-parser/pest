@@ -12,7 +12,7 @@ use std::iter::Peekable;
 
 use pest::error::{Error, ErrorVariant};
 use pest::iterators::{Pair, Pairs};
-use pest::prec_climber::{Assoc, Operator, PrecClimber};
+use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::{Parser, Span};
 
 use crate::ast::{Expr, Rule as AstRule, RuleType};
@@ -175,10 +175,9 @@ pub fn consume_rules(pairs: Pairs<Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>
 }
 
 fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<Error<Rule>>> {
-    let climber = PrecClimber::new(vec![
-        Operator::new(Rule::choice_operator, Assoc::Left),
-        Operator::new(Rule::sequence_operator, Assoc::Left),
-    ]);
+    let pratt = PrattParser::new()
+        .op(Op::infix(Rule::choice_operator, Assoc::Left))
+        .op(Op::infix(Rule::sequence_operator, Assoc::Left));
 
     pairs
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
@@ -210,7 +209,7 @@ fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<E
                 inner_nodes.next().unwrap();
             }
 
-            let node = consume_expr(inner_nodes, &climber)?;
+            let node = consume_expr(inner_nodes, &pratt)?;
 
             Ok(ParserRule {
                 name,
@@ -224,17 +223,17 @@ fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<E
 
 fn consume_expr<'i>(
     pairs: Peekable<Pairs<'i, Rule>>,
-    climber: &PrecClimber<Rule>,
+    pratt: &PrattParser<Rule>,
 ) -> Result<ParserNode<'i>, Vec<Error<Rule>>> {
     fn unaries<'i>(
         mut pairs: Peekable<Pairs<'i, Rule>>,
-        climber: &PrecClimber<Rule>,
+        pratt: &PrattParser<Rule>,
     ) -> Result<ParserNode<'i>, Vec<Error<Rule>>> {
         let pair = pairs.next().unwrap();
 
         let node = match pair.as_rule() {
             Rule::opening_paren => {
-                let node = unaries(pairs, climber)?;
+                let node = unaries(pairs, pratt)?;
                 let end = node.span.end_pos();
 
                 ParserNode {
@@ -243,7 +242,7 @@ fn consume_expr<'i>(
                 }
             }
             Rule::positive_predicate_operator => {
-                let node = unaries(pairs, climber)?;
+                let node = unaries(pairs, pratt)?;
                 let end = node.span.end_pos();
 
                 ParserNode {
@@ -252,7 +251,7 @@ fn consume_expr<'i>(
                 }
             }
             Rule::negative_predicate_operator => {
-                let node = unaries(pairs, climber)?;
+                let node = unaries(pairs, pratt)?;
                 let end = node.span.end_pos();
 
                 ParserNode {
@@ -262,14 +261,14 @@ fn consume_expr<'i>(
             }
             other_rule => {
                 let node = match other_rule {
-                    Rule::expression => consume_expr(pair.into_inner().peekable(), climber)?,
+                    Rule::expression => consume_expr(pair.into_inner().peekable(), pratt)?,
                     Rule::_push => {
                         let start = pair.clone().as_span().start_pos();
                         let mut pairs = pair.into_inner();
                         pairs.next().unwrap(); // opening_paren
                         let pair = pairs.next().unwrap();
 
-                        let node = consume_expr(pair.into_inner().peekable(), climber)?;
+                        let node = consume_expr(pair.into_inner().peekable(), pratt)?;
                         let end = node.span.end_pos();
 
                         ParserNode {
@@ -529,7 +528,7 @@ fn consume_expr<'i>(
         Ok(node)
     }
 
-    let term = |pair: Pair<'i, Rule>| unaries(pair.into_inner().peekable(), climber);
+    let term = |pair: Pair<'i, Rule>| unaries(pair.into_inner().peekable(), pratt);
     let infix = |lhs: Result<ParserNode<'i>, Vec<Error<Rule>>>,
                  op: Pair<'i, Rule>,
                  rhs: Result<ParserNode<'i>, Vec<Error<Rule>>>| match op.as_rule() {
@@ -560,7 +559,7 @@ fn consume_expr<'i>(
         _ => unreachable!(),
     };
 
-    climber.climb(pairs, term, infix)
+    pratt.map_primary(term).map_infix(infix).parse(pairs)
 }
 
 fn unescape(string: &str) -> Option<String> {
