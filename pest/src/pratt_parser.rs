@@ -320,6 +320,10 @@ where
         lhs
     }
 
+    /// Null-Denotation
+    ///
+    /// "the action that should happen when the symbol is encountered
+    ///  as start of an expression (most notably, prefix operators)
     fn nud<P: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: &mut Peekable<P>) -> T {
         let pair = pairs.next().expect("Pratt parsing expects non-empty Pairs");
         match self.pratt.ops.get(&pair.as_rule()) {
@@ -335,6 +339,10 @@ where
         }
     }
 
+    /// Left-Denotation
+    ///
+    /// "the action that should happen when the symbol is encountered
+    /// after the start of an expression (most notably, infix and postfix operators)"
     fn led<P: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: &mut Peekable<P>, lhs: T) -> T {
         let pair = pairs.next().unwrap();
         match self.pratt.ops.get(&pair.as_rule()) {
@@ -356,6 +364,9 @@ where
         }
     }
 
+    /// Left-Binding-Power
+    ///
+    /// "describes the symbol's precedence in infix form (most notably, operator precedence)"
     fn lbp<P: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: &mut Peekable<P>) -> Prec {
         match pairs.peek() {
             Some(pair) => match self.pratt.ops.get(&pair.as_rule()) {
