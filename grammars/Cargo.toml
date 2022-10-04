@@ -2,7 +2,7 @@
 name = "pest_grammars"
 description = "pest popular grammar implementations"
 version = "2.4.0"
-edition = "2018"
+edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest-parser.github.io/"
 repository = "https://github.com/pest-parser/pest"
