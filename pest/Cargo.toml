@@ -2,7 +2,7 @@
 name = "pest"
 description = "The Elegant Parser"
 version = "2.4.0"
-edition = "2018"
+edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest-parser.github.io/"
 repository = "https://github.com/pest-parser/pest"
@@ -26,9 +26,9 @@ const_prec_climber = []
 fast-line-col = ["memchr", "bytecount"]
 
 [dependencies]
-ucd-trie = { version = "0.1.1", default-features = false }
-serde = { version = "1.0.89", optional = true }
-serde_json = { version = "1.0.39", optional = true}
-thiserror = { version = "1.0.31", optional = true }
+ucd-trie = { version = "0.1.5", default-features = false }
+serde = { version = "1.0.145", optional = true }
+serde_json = { version = "1.0.85", optional = true}
+thiserror = { version = "1.0.37", optional = true }
 memchr = { version = "2", optional = true }
 bytecount = { version = "0.6", optional = true }

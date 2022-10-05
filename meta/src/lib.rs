@@ -28,7 +28,8 @@ where
 {
     result.unwrap_or_else(|e| {
         panic!(
-            "grammar error\n\n{}",
+            "{}{}",
+            "grammar error\n\n".to_owned(),
             &e.into_iter()
                 .map(|error| format!("{}", error))
                 .collect::<Vec<_>>()
