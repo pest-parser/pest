@@ -20,6 +20,10 @@ git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
 members = ["."]
 
 [[bin]]
+name = "http"
+path = "fuzz_targets/http.rs"
+
+[[bin]]
 name = "json"
 path = "fuzz_targets/json.rs"
 

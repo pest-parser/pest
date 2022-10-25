@@ -23,3 +23,7 @@ criterion = "0.3"
 [[bench]]
 name = "json"
 harness = false
+
+[[bench]]
+name = "http"
+harness = false
