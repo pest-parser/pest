@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Types and helpers for the pest's own grammar parser.
+
 use std::char;
 use std::iter::Peekable;
 
@@ -18,31 +20,48 @@ use pest::{Parser, Span};
 use crate::ast::{Expr, Rule as AstRule, RuleType};
 use crate::validator;
 
+/// TODO: fix the generator to at least add explicit lifetimes
+#[allow(
+    missing_docs,
+    unused_attributes,
+    elided_lifetimes_in_paths,
+    unused_qualifications
+)]
 mod grammar {
     include!("grammar.rs");
 }
 
 pub use self::grammar::*;
 
-pub fn parse(rule: Rule, data: &str) -> Result<Pairs<Rule>, Error<Rule>> {
+/// A helper that will parse using the pest grammar
+pub fn parse(rule: Rule, data: &str) -> Result<Pairs<'_, Rule>, Error<Rule>> {
     PestParser::parse(rule, data)
 }
 
+/// The pest grammar rule
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParserRule<'i> {
+    /// The rule's name
     pub name: String,
+    /// The rule's span
     pub span: Span<'i>,
+    /// The rule's type
     pub ty: RuleType,
+    /// The rule's parser node
     pub node: ParserNode<'i>,
 }
 
+/// The pest grammar node
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParserNode<'i> {
+    /// The node's expression
     pub expr: ParserExpr<'i>,
+    /// The node's span
     pub span: Span<'i>,
 }
 
 impl<'i> ParserNode<'i> {
+    /// will remove nodes that do not match `f`
     pub fn filter_map_top_down<F, T>(self, mut f: F) -> Vec<T>
     where
         F: FnMut(ParserNode<'i>) -> Option<T>,
@@ -107,34 +126,52 @@ impl<'i> ParserNode<'i> {
     }
 }
 
+/// All possible parser expressions
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ParserExpr<'i> {
+    /// Matches an exact string, e.g. `"a"`
     Str(String),
+    /// Matches an exact string, case insensitively (ASCII only), e.g. `^"a"`
     Insens(String),
+    /// Matches one character in the range, e.g. `'a'..'z'`
     Range(String, String),
+    /// Matches the rule with the given name, e.g. `a`
     Ident(String),
+    /// Matches a custom part of the stack, e.g. `PEEK[..]`
     PeekSlice(i32, Option<i32>),
+    /// Positive lookahead; matches expression without making progress, e.g. `&e`
     PosPred(Box<ParserNode<'i>>),
+    /// Negative lookahead; matches if expression doesn't match, without making progress, e.g. `!e`
     NegPred(Box<ParserNode<'i>>),
+    /// Matches a sequence of two expressions, e.g. `e1 ~ e2`
     Seq(Box<ParserNode<'i>>, Box<ParserNode<'i>>),
+    /// Matches either of two expressions, e.g. `e1 | e2`
     Choice(Box<ParserNode<'i>>, Box<ParserNode<'i>>),
+    /// Optionally matches an expression, e.g. `e?`
     Opt(Box<ParserNode<'i>>),
+    /// Matches an expression zero or more times, e.g. `e*`
     Rep(Box<ParserNode<'i>>),
+    /// Matches an expression one or more times, e.g. `e+`
     RepOnce(Box<ParserNode<'i>>),
+    /// Matches an expression an exact number of times, e.g. `e{n}`
     RepExact(Box<ParserNode<'i>>, u32),
+    /// Matches an expression at least a number of times, e.g. `e{n,}`
     RepMin(Box<ParserNode<'i>>, u32),
+    /// Matches an expression at most a number of times, e.g. `e{,n}`
     RepMax(Box<ParserNode<'i>>, u32),
+    /// Matches an expression a number of times within a range, e.g. `e{m, n}`
     RepMinMax(Box<ParserNode<'i>>, u32, u32),
+    /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<ParserNode<'i>>),
 }
 
-fn convert_rule(rule: ParserRule) -> AstRule {
+fn convert_rule(rule: ParserRule<'_>) -> AstRule {
     let ParserRule { name, ty, node, .. } = rule;
     let expr = convert_node(node);
     AstRule { name, ty, expr }
 }
 
-fn convert_node(node: ParserNode) -> Expr {
+fn convert_node(node: ParserNode<'_>) -> Expr {
     match node.expr {
         ParserExpr::Str(string) => Expr::Str(string),
         ParserExpr::Insens(string) => Expr::Insens(string),
@@ -164,7 +201,8 @@ fn convert_node(node: ParserNode) -> Expr {
     }
 }
 
-pub fn consume_rules(pairs: Pairs<Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>>> {
+/// Converts a parser's result (`Pairs`) to an AST
+pub fn consume_rules(pairs: Pairs<'_, Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>>> {
     let rules = consume_rules_with_spans(pairs)?;
     let errors = validator::validate_ast(&rules);
     if errors.is_empty() {
@@ -174,7 +212,9 @@ pub fn consume_rules(pairs: Pairs<Rule>) -> Result<Vec<AstRule>, Vec<Error<Rule>
     }
 }
 
-fn consume_rules_with_spans(pairs: Pairs<Rule>) -> Result<Vec<ParserRule>, Vec<Error<Rule>>> {
+fn consume_rules_with_spans(
+    pairs: Pairs<'_, Rule>,
+) -> Result<Vec<ParserRule<'_>>, Vec<Error<Rule>>> {
     let pratt = PrattParser::new()
         .op(Op::infix(Rule::choice_operator, Assoc::Left))
         .op(Op::infix(Rule::sequence_operator, Assoc::Left));
@@ -1527,19 +1567,19 @@ mod tests {
         ));
         const ERROR: &str = "call limit reached";
         pest::set_call_limit(Some(5_000usize.try_into().unwrap()));
-        let s1 = crate::parser::parse(crate::parser::Rule::grammar_rules, sample1);
+        let s1 = parse(Rule::grammar_rules, sample1);
         assert!(s1.is_err());
         assert_eq!(s1.unwrap_err().variant.message(), ERROR);
-        let s2 = crate::parser::parse(crate::parser::Rule::grammar_rules, sample2);
+        let s2 = parse(Rule::grammar_rules, sample2);
         assert!(s2.is_err());
         assert_eq!(s2.unwrap_err().variant.message(), ERROR);
-        let s3 = crate::parser::parse(crate::parser::Rule::grammar_rules, sample3);
+        let s3 = parse(Rule::grammar_rules, sample3);
         assert!(s3.is_err());
         assert_eq!(s3.unwrap_err().variant.message(), ERROR);
-        let s4 = crate::parser::parse(crate::parser::Rule::grammar_rules, sample4);
+        let s4 = parse(Rule::grammar_rules, sample4);
         assert!(s4.is_err());
         assert_eq!(s4.unwrap_err().variant.message(), ERROR);
-        let s5 = crate::parser::parse(crate::parser::Rule::grammar_rules, sample5);
+        let s5 = parse(Rule::grammar_rules, sample5);
         assert!(s5.is_err());
         assert_eq!(s5.unwrap_err().variant.message(), ERROR);
     }

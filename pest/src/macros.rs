@@ -334,7 +334,7 @@ pub mod tests {
     pub struct AbcParser;
 
     impl Parser<Rule> for AbcParser {
-        fn parse(_: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
+        fn parse(_: Rule, input: &str) -> Result<Pairs<'_, Rule>, Error<Rule>> {
             state(input, |state| {
                 state
                     .rule(Rule::a, |s| {

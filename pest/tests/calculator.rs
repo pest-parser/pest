@@ -33,7 +33,9 @@ struct CalculatorParser;
 
 impl Parser<Rule> for CalculatorParser {
     fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
-        fn expression(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn expression(
+            state: Box<ParserState<'_, Rule>>,
+        ) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::expression, |s| {
                 s.sequence(|s| {
                     primary(s).and_then(|s| {
@@ -53,7 +55,7 @@ impl Parser<Rule> for CalculatorParser {
             })
         }
 
-        fn primary(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn primary(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state
                 .sequence(|s| {
                     s.match_string("(")
@@ -63,7 +65,7 @@ impl Parser<Rule> for CalculatorParser {
                 .or_else(number)
         }
 
-        fn number(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn number(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::number, |s| {
                 s.sequence(|s| {
                     s.optional(|s| s.match_string("-")).and_then(|s| {
@@ -78,27 +80,27 @@ impl Parser<Rule> for CalculatorParser {
             })
         }
 
-        fn plus(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn plus(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::plus, |s| s.match_string("+"))
         }
 
-        fn minus(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn minus(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::minus, |s| s.match_string("-"))
         }
 
-        fn times(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn times(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::times, |s| s.match_string("*"))
         }
 
-        fn divide(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn divide(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::divide, |s| s.match_string("/"))
         }
 
-        fn modulus(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn modulus(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::modulus, |s| s.match_string("%"))
         }
 
-        fn power(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn power(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::power, |s| s.match_string("^"))
         }
 

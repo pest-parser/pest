@@ -4,8 +4,8 @@
 
 Before diving into the whys and hows, it's best one got started with the what's. The best place to learn about what pest does and what its limits are is the [book]. Feel free to try any of the examples in the [fiddle editor] as well.
 
-[book]: https://pest-parser.github.io/book
-[fiddle editor]: https://pest-parser.github.io/#editor
+[book]: https://pest.rs/book
+[fiddle editor]: https://pest.rs/#editor
 
 With that out of the way, let's go through *pest's* crate structure:
 
@@ -46,9 +46,14 @@ Our [website] and [book] are in constant need of attention. While not as well or
 [website]:https://github.com/pest-parser/site
 [book]: https://github.com/pest-parser/book
 
-## Gitter
+## Gitter, Discord and GitHub Discussions
 
-Sometimes it's best to just say what you want. For that, there's our [Gitter] room. Leave feedback, help out, learn what people are up to, go off-topic for hours, or complain that compile times are terrible—seriously, please don't.
+Sometimes it's best to just say what you want. For that, there's our [Gitter] room or [Discord] server. Leave feedback, help out, learn what people are up to, go off-topic for hours, or complain that compile times are terrible—seriously, please don't.
+
+For more long-living threads and common questions, you can use [GitHub Discussions].
 
 [Gitter]: https://gitter.im/pest-parser/pest
 
+[Discord]: https://discord.gg/XEGACtWpT2
+
+[GitHub Discussions]: https://github.com/pest-parser/pest/discussions

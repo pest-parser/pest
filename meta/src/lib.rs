@@ -6,12 +6,18 @@
 // license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
+//! # pest meta
+//!
+//! This crate parses, validates, optimizes, and converts pest's own grammars to ASTs.
 
-extern crate once_cell;
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg",
+    html_favicon_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg"
+)]
+#![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
+
 #[cfg(test)]
 #[macro_use]
-extern crate pest;
-#[cfg(not(test))]
 extern crate pest;
 
 use std::fmt::Display;
@@ -21,6 +27,8 @@ pub mod optimizer;
 pub mod parser;
 pub mod validator;
 
+/// A helper that will unwrap the result or panic
+/// with the nicely formatted error message.
 pub fn unwrap_or_report<T, E>(result: Result<T, E>) -> T
 where
     E: IntoIterator,

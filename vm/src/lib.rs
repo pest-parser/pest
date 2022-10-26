@@ -6,9 +6,15 @@
 // license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
+//! # pest vm
+//!
+//! This crate run ASTs on-the-fly and is used by the fiddle and debugger.
 
-extern crate pest;
-extern crate pest_meta;
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg",
+    html_favicon_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg"
+)]
+#![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 
 use pest::error::Error;
 use pest::iterators::Pairs;
@@ -21,16 +27,19 @@ use std::collections::HashMap;
 
 mod macros;
 
+/// A virtual machine-like construct that runs an AST on-the-fly
 pub struct Vm {
     rules: HashMap<String, OptimizedRule>,
 }
 
 impl Vm {
+    /// Creates a new `Vm` from optimized rules
     pub fn new(rules: Vec<OptimizedRule>) -> Vm {
         let rules = rules.into_iter().map(|r| (r.name.clone(), r)).collect();
         Vm { rules }
     }
 
+    /// Runs a parser rule on an input
     pub fn parse<'a, 'i>(
         &'a self,
         rule: &'a str,

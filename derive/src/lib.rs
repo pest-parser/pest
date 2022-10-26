@@ -6,7 +6,12 @@
 // license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
-
+#![doc(
+    html_root_url = "https://docs.rs/pest_derive",
+    html_logo_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg",
+    html_favicon_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg"
+)]
+#![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 //! # pest. The Elegant Parser
 //!
 //! pest is a general purpose parser written in Rust with a focus on accessibility, correctness,
@@ -24,12 +29,16 @@
 //!
 //! * API reference on [docs.rs]
 //! * play with grammars and share them on our [fiddle]
-//! * leave feedback, ask questions, or greet us on [Gitter]
+//! * find previous common questions answered or ask questions on [GitHub Discussions]
+//! * leave feedback, ask questions, or greet us on [Gitter] or [Discord]
 //!
-//! [book]: https://pest-parser.github.io/book
+//! [book]: https://pest.rs/book
 //! [docs.rs]: https://docs.rs/pest
-//! [fiddle]: https://pest-parser.github.io/#editor
-//! [Gitter]: https://gitter.im/dragostis/pest
+//! [fiddle]: https://pest.rs/#editor
+//! [Gitter]: https://gitter.im/pest-parser/pest
+//! [Discord]: https://discord.gg/XEGACtWpT2
+//! [GitHub Discussions]: https://github.com/pest-parser/pest/discussions
+//!
 //!
 //! ## `.pest` files
 //!
@@ -181,6 +190,10 @@
 //! `e1` did. Repetitions and optionals (`e*`, `e+`, `e{, n}`, `e{n,}`,
 //! `e{m,n}`, `e?`) can modify the stack each time `e` matches. The `!e` and `&e`
 //! expressions are a special case; they never modify the stack.
+//! Many languages have "keyword" tokens (e.g. if, for, while) as well as general
+//! tokens (e.g. identifier) that matches any word. In order to match a keyword,
+//! generally, you may need to restrict that is not immediately followed by another
+//! letter or digit (otherwise it would be matched as an identifier).
 //!
 //! ## Special rules
 //!
@@ -289,12 +302,10 @@
 //! * `ASCII` - matches a character from \x00..\x7f
 //! * `NEWLINE` - matches either "\n" or "\r\n" or "\r"
 
-#![doc(html_root_url = "https://docs.rs/pest_derive")]
-extern crate pest_generator;
-extern crate proc_macro;
-
 use proc_macro::TokenStream;
 
+/// The main method that's called by the proc macro
+/// (a wrapper around `pest_generator::derive_parser`)
 #[proc_macro_derive(Parser, attributes(grammar, grammar_inline))]
 pub fn derive_parser(input: TokenStream) -> TokenStream {
     pest_generator::derive_parser(input.into(), true).into()

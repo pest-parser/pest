@@ -1,10 +1,10 @@
 [package]
 name = "pest_derive"
 description = "pest's derive macro"
-version = "2.4.0"
+version = "2.4.1"
 edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
-homepage = "https://pest-parser.github.io/"
+homepage = "https://pest.rs/"
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
 keywords = ["pest", "parser", "peg", "grammar"]
@@ -23,5 +23,5 @@ std = ["pest/std", "pest_generator/std"]
 
 [dependencies]
 # for tests, included transitively anyway
-pest = { path = "../pest", version = "2.4.0", default-features = false }
-pest_generator = { path = "../generator", version = "2.4.0", default-features = false }
+pest = { path = "../pest", version = "2.4.1", default-features = false }
+pest_generator = { path = "../generator", version = "2.4.1", default-features = false }

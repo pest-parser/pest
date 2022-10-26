@@ -13,7 +13,17 @@ use crate::position::Position;
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Token<'i, R> {
     /// The starting `Position` of a matched `Rule`
-    Start { rule: R, pos: Position<'i> },
+    Start {
+        /// matched rule
+        rule: R,
+        /// starting position
+        pos: Position<'i>,
+    },
     /// The ending `Position` of a matched `Rule`
-    End { rule: R, pos: Position<'i> },
+    End {
+        /// matched rule
+        rule: R,
+        /// ending position
+        pos: Position<'i>,
+    },
 }

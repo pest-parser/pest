@@ -7,22 +7,48 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Types for the pest's abstract syntax tree.
+
+/// A grammar rule
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rule {
+    /// The name of the rule
     pub name: String,
+    /// The rule's type (silent, atomic, ...)
     pub ty: RuleType,
+    /// The rule's expression
     pub expr: Expr,
 }
 
+/// All possible rule types
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RuleType {
+    /// The normal rule type
     Normal,
+    /// Silent rules are just like normal rules
+    /// — when run, they function the same way —
+    /// except they do not produce pairs or tokens.
+    /// If a rule is silent, it will never appear in a parse result.
+    /// (their syntax is `_{ ... }`)
     Silent,
+    /// atomic rule prevent implicit whitespace: inside an atomic rule,
+    /// the tilde ~ means "immediately followed by",
+    /// and repetition operators (asterisk * and plus sign +)
+    /// have no implicit separation. In addition, all other rules
+    /// called from an atomic rule are also treated as atomic.
+    /// In an atomic rule, interior matching rules are silent.
+    /// (their syntax is `@{ ... }`)
     Atomic,
+    /// Compound atomic rules are similar to atomic rules,
+    /// but they produce inner tokens as normal.
+    /// (their syntax is `${ ... }`)
     CompoundAtomic,
+    /// Non-atomic rules cancel the effect of atomic rules.
+    /// (their syntax is `!{ ... }`)
     NonAtomic,
 }
 
+/// All possible rule expressions
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expr {
     /// Matches an exact string, e.g. `"a"`
@@ -64,10 +90,12 @@ pub enum Expr {
 }
 
 impl Expr {
+    /// Returns the iterator that steps the expression from top to bottom.
     pub fn iter_top_down(&self) -> ExprTopDownIterator {
         ExprTopDownIterator::new(self)
     }
 
+    /// Applies `f` to the expression and all its children (top to bottom).
     pub fn map_top_down<F>(self, mut f: F) -> Expr
     where
         F: FnMut(Expr) -> Expr,
@@ -137,6 +165,7 @@ impl Expr {
         map_internal(self, &mut f)
     }
 
+    /// Applies `f` to the expression and all its children (bottom up).
     pub fn map_bottom_up<F>(self, mut f: F) -> Expr
     where
         F: FnMut(Expr) -> Expr,
@@ -207,6 +236,7 @@ impl Expr {
     }
 }
 
+/// The top down iterator for an expression.
 pub struct ExprTopDownIterator {
     current: Option<Expr>,
     next: Option<Expr>,
@@ -214,6 +244,7 @@ pub struct ExprTopDownIterator {
 }
 
 impl ExprTopDownIterator {
+    /// Constructs a top-down iterator from the expression.
     pub fn new(expr: &Expr) -> Self {
         let mut iter = ExprTopDownIterator {
             current: None,

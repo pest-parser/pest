@@ -101,7 +101,7 @@ impl<R: RuleType> Error<R> {
     ///
     /// println!("{}", error);
     /// ```
-    pub fn new_from_pos(variant: ErrorVariant<R>, pos: Position) -> Error<R> {
+    pub fn new_from_pos(variant: ErrorVariant<R>, pos: Position<'_>) -> Error<R> {
         let visualize_ws = pos.match_char('\n') || pos.match_char('\r');
         let line_of = pos.line_of();
         let line = if visualize_ws {
@@ -147,7 +147,7 @@ impl<R: RuleType> Error<R> {
     ///
     /// println!("{}", error);
     /// ```
-    pub fn new_from_span(variant: ErrorVariant<R>, span: Span) -> Error<R> {
+    pub fn new_from_span(variant: ErrorVariant<R>, span: Span<'_>) -> Error<R> {
         let end = span.end_pos();
         let mut end_line_col = end.line_col();
         // end position is after a \n, so we want to point to the visual lf symbol
@@ -505,7 +505,7 @@ impl<R: RuleType> ErrorVariant<R> {
     /// };
     ///
     /// println!("{}", variant.message());
-    pub fn message(&self) -> Cow<str> {
+    pub fn message(&self) -> Cow<'_, str> {
         match self {
             ErrorVariant::ParsingError {
                 ref positives,
@@ -519,13 +519,13 @@ impl<R: RuleType> ErrorVariant<R> {
 }
 
 impl<R: RuleType> fmt::Display for Error<R> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.format())
     }
 }
 
 impl<R: RuleType> fmt::Display for ErrorVariant<R> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ErrorVariant::ParsingError { .. } => write!(f, "parsing error: {}", self.message()),
             ErrorVariant::CustomError { .. } => write!(f, "{}", self.message()),

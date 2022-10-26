@@ -32,7 +32,7 @@ impl<'i> Position<'i> {
     /// # Safety:
     ///
     /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
-    pub(crate) unsafe fn new_unchecked(input: &str, pos: usize) -> Position {
+    pub(crate) unsafe fn new_unchecked(input: &str, pos: usize) -> Position<'_> {
         debug_assert!(input.get(pos..).is_some());
         Position { input, pos }
     }
@@ -49,7 +49,7 @@ impl<'i> Position<'i> {
     /// assert_eq!(Position::new(heart, 1), None);
     /// assert_ne!(Position::new(heart, cheart.len_utf8()), None);
     /// ```
-    pub fn new(input: &str, pos: usize) -> Option<Position> {
+    pub fn new(input: &str, pos: usize) -> Option<Position<'_>> {
         input.get(pos..).map(|_| Position { input, pos })
     }
 
@@ -125,7 +125,7 @@ impl<'i> Position<'i> {
     /// enum Rule {}
     ///
     /// let input = "\na";
-    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut state: Box<pest::ParserState<'_, Rule>> = pest::ParserState::new(input);
     /// let mut result = state.match_string("\na");
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().line_col(), (2, 2));
@@ -156,7 +156,7 @@ impl<'i> Position<'i> {
     /// enum Rule {}
     ///
     /// let input = "\na";
-    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut state: Box<pest::ParserState<'_, Rule>> = pest::ParserState::new(input);
     /// let mut result = state.match_string("\na");
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().line_of(), "a");
@@ -364,7 +364,7 @@ impl<'i> Position<'i> {
 }
 
 impl<'i> fmt::Debug for Position<'i> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Position").field("pos", &self.pos).finish()
     }
 }
