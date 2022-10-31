@@ -47,9 +47,9 @@ where the first identifier does not start with a digit:
 alpha = { 'a'..'z' | 'A'..'Z' }
 digit = { '0'..'9' }
 
-ident = { (alpha | digit)+ }
+ident = { !digit ~ (alpha | digit)+ }
 
-ident_list = _{ !digit ~ ident ~ (" " ~ ident)+ }
+ident_list = _{ ident ~ (" " ~ ident)* }
           // ^
           // ident_list rule is silent which means it produces no tokens
 ```
