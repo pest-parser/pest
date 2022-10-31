@@ -41,7 +41,7 @@ Other helpful resources:
 ## Example
 
 The following is an example of a grammar for a list of alphanumeric identifiers
-where the first identifier does not start with a digit:
+where all identifiers don't start with a digit:
 
 ```rust
 alpha = { 'a'..'z' | 'A'..'Z' }
