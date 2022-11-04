@@ -38,7 +38,7 @@ impl<'i> Span<'i> {
     /// # Safety
     ///
     /// `input[start..end]` must be a valid subslice; that is, said indexing should not panic.
-    pub(crate) unsafe fn new_unchecked(input: &str, start: usize, end: usize) -> Span {
+    pub(crate) unsafe fn new_unchecked(input: &str, start: usize, end: usize) -> Span<'_> {
         debug_assert!(input.get(start..end).is_some());
         Span { input, start, end }
     }
@@ -54,7 +54,7 @@ impl<'i> Span<'i> {
     /// assert_eq!(None, Span::new(input, 100, 0));
     /// assert!(Span::new(input, 0, input.len()).is_some());
     /// ```
-    pub fn new(input: &str, start: usize, end: usize) -> Option<Span> {
+    pub fn new(input: &str, start: usize, end: usize) -> Option<Span<'_>> {
         if input.get(start..end).is_some() {
             Some(Span { input, start, end })
         } else {
@@ -200,7 +200,7 @@ impl<'i> Span<'i> {
     /// enum Rule {}
     ///
     /// let input = "abc";
-    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input).skip(1).unwrap();
+    /// let mut state: Box<pest::ParserState<'_, Rule>> = pest::ParserState::new(input).skip(1).unwrap();
     /// let start_pos = state.position().clone();
     /// state = state.match_string("b").unwrap();
     /// let span = start_pos.span(&state.position().clone());
@@ -223,14 +223,14 @@ impl<'i> Span<'i> {
     /// enum Rule {}
     ///
     /// let input = "a\nb\nc";
-    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input).skip(2).unwrap();
+    /// let mut state: Box<pest::ParserState<'_, Rule>> = pest::ParserState::new(input).skip(2).unwrap();
     /// let start_pos = state.position().clone();
     /// state = state.match_string("b\nc").unwrap();
     /// let span = start_pos.span(&state.position().clone());
     /// assert_eq!(span.lines().collect::<Vec<_>>(), vec!["b\n", "c"]);
     /// ```
     #[inline]
-    pub fn lines(&self) -> Lines {
+    pub fn lines(&self) -> Lines<'_> {
         Lines {
             inner: self.lines_span(),
         }
@@ -248,13 +248,13 @@ impl<'i> Span<'i> {
     /// enum Rule {}
     ///
     /// let input = "a\nb\nc";
-    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input).skip(2).unwrap();
+    /// let mut state: Box<pest::ParserState<'_, Rule>> = pest::ParserState::new(input).skip(2).unwrap();
     /// let start_pos = state.position().clone();
     /// state = state.match_string("b\nc").unwrap();
     /// let span = start_pos.span(&state.position().clone());
     /// assert_eq!(span.lines_span().collect::<Vec<_>>(), vec![Span::new(input, 2, 4).unwrap(), Span::new(input, 4, 5).unwrap()]);
     /// ```
-    pub fn lines_span(&self) -> LinesSpan {
+    pub fn lines_span(&self) -> LinesSpan<'_> {
         LinesSpan {
             span: self,
             pos: self.start,
@@ -263,7 +263,7 @@ impl<'i> Span<'i> {
 }
 
 impl<'i> fmt::Debug for Span<'i> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Span")
             .field("str", &self.as_str())
             .field("start", &self.start)

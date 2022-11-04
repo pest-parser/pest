@@ -159,7 +159,7 @@ fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
         builtins.push((property, quote! {
             #[inline]
             #[allow(dead_code, non_snake_case, unused_variables)]
-            fn #property_ident(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
+            fn #property_ident(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                 state.match_char_by(::pest::unicode::#property_ident)
             }
         }));
@@ -249,7 +249,7 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
         RuleType::Normal => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                 state.rule(Rule::#name, |state| {
                     #expr
                 })
@@ -258,14 +258,14 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
         RuleType::Silent => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                 #expr
             }
         },
         RuleType::Atomic => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                 state.rule(Rule::#name, |state| {
                     state.atomic(::pest::Atomicity::Atomic, |state| {
                         #expr
@@ -276,7 +276,7 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
         RuleType::CompoundAtomic => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                 state.atomic(::pest::Atomicity::CompoundAtomic, |state| {
                     state.rule(Rule::#name, |state| {
                         #expr
@@ -287,7 +287,7 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
         RuleType::NonAtomic => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                 state.atomic(::pest::Atomicity::NonAtomic, |state| {
                     state.rule(Rule::#name, |state| {
                         #expr
@@ -999,7 +999,7 @@ mod tests {
 
                                 #[inline]
                                 #[allow(dead_code, non_snake_case, unused_variables)]
-                                pub fn skip(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
+                                pub fn skip(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                                     Ok(state)
                                 }
                             }
@@ -1009,13 +1009,13 @@ mod tests {
 
                                 #[inline]
                                 #[allow(non_snake_case, unused_variables)]
-                                pub fn a(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
+                                pub fn a(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                                     state.match_string("b")
                                 }
 
                                 #[inline]
                                 #[allow(dead_code, non_snake_case, unused_variables)]
-                                pub fn ANY(state: #box_ty<::pest::ParserState<Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<Rule>>> {
+                                pub fn ANY(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                                     state.skip(1)
                                 }
                             }

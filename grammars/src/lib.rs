@@ -11,14 +11,20 @@
 //!
 //! Contains a series of default grammars.
 
-#![doc(html_root_url = "https://docs.rs/pest_grammars")]
+#![doc(
+    html_root_url = "https://docs.rs/pest_grammars",
+    html_logo_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg",
+    html_favicon_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg"
+)]
+#![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 
-extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
 pub use pest::Parser;
 
+/// Grammar rules of a simplified HTTP request parser
+#[allow(missing_docs)]
 pub mod http {
     /// HTTP parser.
     #[derive(Parser)]
@@ -26,6 +32,8 @@ pub mod http {
     pub struct HttpParser;
 }
 
+/// Grammar rules of a sample JSON parser
+#[allow(missing_docs)]
 pub mod json {
     /// JSON parser.
     #[derive(Parser)]
@@ -33,6 +41,8 @@ pub mod json {
     pub struct JsonParser;
 }
 
+/// Grammar rules of a sample TOML parser
+#[allow(missing_docs)]
 pub mod toml {
     /// TOML parser.
     #[derive(Parser)]

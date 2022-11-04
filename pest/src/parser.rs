@@ -14,5 +14,5 @@ use crate::RuleType;
 /// A trait with a single method that parses strings.
 pub trait Parser<R: RuleType> {
     /// Parses a `&str` starting from `rule`.
-    fn parse(rule: R, input: &str) -> Result<Pairs<R>, Error<R>>;
+    fn parse(rule: R, input: &str) -> Result<Pairs<'_, R>, Error<R>>;
 }

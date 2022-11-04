@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Different optimizations for pest's ASTs.
+
 use crate::ast::*;
 use std::collections::HashMap;
 
@@ -26,6 +28,7 @@ mod rotater;
 mod skipper;
 mod unroller;
 
+/// Takes pest's ASTs and optimizes them
 pub fn optimize(rules: Vec<Rule>) -> Vec<OptimizedRule> {
     let optimized: Vec<OptimizedRule> = rules
         .into_iter()
@@ -87,36 +90,57 @@ fn to_hash_map(rules: &[OptimizedRule]) -> HashMap<String, OptimizedExpr> {
         .collect()
 }
 
+/// The optimized version of the pest AST's `Rule`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OptimizedRule {
+    /// The name of the rule.
     pub name: String,
+    /// The type of the rule.
     pub ty: RuleType,
+    /// The optimized expression of the rule.
     pub expr: OptimizedExpr,
 }
 
+/// The optimized version of the pest AST's `Expr`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OptimizedExpr {
+    /// Matches an exact string, e.g. `"a"`
     Str(String),
+    /// Matches an exact string, case insensitively (ASCII only), e.g. `^"a"`
     Insens(String),
+    /// Matches one character in the range, e.g. `'a'..'z'`
     Range(String, String),
+    /// Matches the rule with the given name, e.g. `a`
     Ident(String),
+    /// Matches a custom part of the stack, e.g. `PEEK[..]`
     PeekSlice(i32, Option<i32>),
+    /// Positive lookahead; matches expression without making progress, e.g. `&e`
     PosPred(Box<OptimizedExpr>),
+    /// Negative lookahead; matches if expression doesn't match, without making progress, e.g. `!e`
     NegPred(Box<OptimizedExpr>),
+    /// Matches a sequence of two expressions, e.g. `e1 ~ e2`
     Seq(Box<OptimizedExpr>, Box<OptimizedExpr>),
+    /// Matches either of two expressions, e.g. `e1 | e2`
     Choice(Box<OptimizedExpr>, Box<OptimizedExpr>),
+    /// Optionally matches an expression, e.g. `e?`
     Opt(Box<OptimizedExpr>),
+    /// Matches an expression zero or more times, e.g. `e*`
     Rep(Box<OptimizedExpr>),
+    /// Continues to match expressions until one of the strings in the `Vec` is found
     Skip(Vec<String>),
+    /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<OptimizedExpr>),
+    /// Restores an expression's checkpoint
     RestoreOnErr(Box<OptimizedExpr>),
 }
 
 impl OptimizedExpr {
+    /// Returns a top-down iterator over the `OptimizedExpr`.
     pub fn iter_top_down(&self) -> OptimizedExprTopDownIterator {
         OptimizedExprTopDownIterator::new(self)
     }
 
+    /// Applies `f` to the `OptimizedExpr` top-down.
     pub fn map_top_down<F>(self, mut f: F) -> OptimizedExpr
     where
         F: FnMut(OptimizedExpr) -> OptimizedExpr,
@@ -166,6 +190,7 @@ impl OptimizedExpr {
         map_internal(self, &mut f)
     }
 
+    /// Applies `f` to the `OptimizedExpr` bottom-up.
     pub fn map_bottom_up<F>(self, mut f: F) -> OptimizedExpr
     where
         F: FnMut(OptimizedExpr) -> OptimizedExpr,
@@ -216,6 +241,7 @@ impl OptimizedExpr {
     }
 }
 
+/// A top-down iterator over an `OptimizedExpr`.
 pub struct OptimizedExprTopDownIterator {
     current: Option<OptimizedExpr>,
     next: Option<OptimizedExpr>,
@@ -223,6 +249,7 @@ pub struct OptimizedExprTopDownIterator {
 }
 
 impl OptimizedExprTopDownIterator {
+    /// Creates a new top down iterator from an `OptimizedExpr`.
     pub fn new(expr: &OptimizedExpr) -> Self {
         let mut iter = OptimizedExprTopDownIterator {
             current: None,

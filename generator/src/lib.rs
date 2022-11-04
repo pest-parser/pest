@@ -7,17 +7,19 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-#![doc(html_root_url = "https://docs.rs/pest_derive")]
+#![doc(
+    html_root_url = "https://docs.rs/pest_derive",
+    html_logo_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg",
+    html_favicon_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg"
+)]
+#![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 #![recursion_limit = "256"]
+//! # pest generator
+//!
+//! This crate generates code from ASTs (which is used in the `pest_derive` crate).
 
-extern crate pest;
-extern crate pest_meta;
-
-extern crate proc_macro;
-extern crate proc_macro2;
 #[macro_use]
 extern crate quote;
-extern crate syn;
 
 use std::env;
 use std::fs::File;
@@ -34,6 +36,9 @@ mod generator;
 use pest_meta::parser::{self, Rule};
 use pest_meta::{optimizer, unwrap_or_report, validator};
 
+/// Processes the derive/proc macro input and generates the corresponding parser based
+/// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
+/// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
 pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
     let (name, generics, content) = parse_derive(ast);

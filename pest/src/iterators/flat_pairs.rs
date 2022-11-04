@@ -38,7 +38,7 @@ pub unsafe fn new<R: RuleType>(
     input: &str,
     start: usize,
     end: usize,
-) -> FlatPairs<R> {
+) -> FlatPairs<'_, R> {
     FlatPairs {
         queue,
         input,
@@ -130,7 +130,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for FlatPairs<'i, R> {
 }
 
 impl<'i, R: RuleType> fmt::Debug for FlatPairs<'i, R> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FlatPairs")
             .field("pairs", &self.clone().collect::<Vec<_>>())
             .finish()

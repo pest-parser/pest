@@ -265,7 +265,7 @@ type InfixFn<'i, R, T> = Box<dyn FnMut(T, Pair<'i, R>, T) -> T + 'i>;
 /// [`PrattParser`]: struct.PrattParser.html
 pub struct PrattParserMap<'pratt, 'i, R, F, T>
 where
-    R: RuleType + 'pratt,
+    R: RuleType,
     F: FnMut(Pair<'i, R>) -> T,
 {
     pratt: &'pratt PrattParser<R>,
@@ -308,6 +308,14 @@ where
         self
     }
 
+    /// The last method to call on the provided pairs to execute the Pratt
+    /// parser (previously defined using [`map_primary`], [`map_prefix`], [`map_postfix`],
+    /// and [`map_infix`] methods).
+    ///
+    /// [`map_primary`]: struct.PrattParser.html#method.map_primary
+    /// [`map_prefix`]: struct.PrattParserMap.html#method.map_prefix
+    /// [`map_postfix`]: struct.PrattParserMap.html#method.map_postfix
+    /// [`map_infix`]: struct.PrattParserMap.html#method.map_infix
     pub fn parse<P: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: P) -> T {
         self.expr(&mut pairs.peekable(), 0)
     }

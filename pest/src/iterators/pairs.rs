@@ -43,7 +43,7 @@ pub fn new<R: RuleType>(
     input: &str,
     start: usize,
     end: usize,
-) -> Pairs<R> {
+) -> Pairs<'_, R> {
     Pairs {
         queue,
         input,
@@ -246,13 +246,13 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
 }
 
 impl<'i, R: RuleType> fmt::Debug for Pairs<'i, R> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.clone()).finish()
     }
 }
 
 impl<'i, R: RuleType> fmt::Display for Pairs<'i, R> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "[{}]",

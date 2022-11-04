@@ -7,6 +7,9 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Helpers for validating pest grammars that could help with debugging
+//! and provide a more user-friendly error message.
+
 use once_cell::sync::Lazy;
 use std::collections::{HashMap, HashSet};
 
@@ -67,7 +70,12 @@ static BUILTINS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     .collect::<HashSet<&str>>()
 });
 
-pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>> {
+/// The parsed grammar for common mistakes:
+/// - using Rust keywords
+/// - using Pest keywords
+/// - duplicate rules
+/// - undefined rules
+pub fn validate_pairs(pairs: Pairs<'_, Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>> {
     let definitions: Vec<_> = pairs
         .clone()
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
@@ -104,8 +112,9 @@ pub fn validate_pairs(pairs: Pairs<Rule>) -> Result<Vec<&str>, Vec<Error<Rule>>>
     Ok(defaults.cloned().collect())
 }
 
+/// Validates that the given `definitions` do not contain any Rust keywords.
 #[allow(clippy::ptr_arg)]
-pub fn validate_rust_keywords(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
+pub fn validate_rust_keywords(definitions: &Vec<Span<'_>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
     for definition in definitions {
@@ -124,8 +133,9 @@ pub fn validate_rust_keywords(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
     errors
 }
 
+/// Validates that the given `definitions` do not contain any Pest keywords.
 #[allow(clippy::ptr_arg)]
-pub fn validate_pest_keywords(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
+pub fn validate_pest_keywords(definitions: &Vec<Span<'_>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
     for definition in definitions {
@@ -144,8 +154,9 @@ pub fn validate_pest_keywords(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
     errors
 }
 
+/// Validates that the given `definitions` do not contain any duplicate rules.
 #[allow(clippy::ptr_arg)]
-pub fn validate_already_defined(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
+pub fn validate_already_defined(definitions: &Vec<Span<'_>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
     let mut defined = HashSet::new();
 
@@ -167,6 +178,7 @@ pub fn validate_already_defined(definitions: &Vec<Span>) -> Vec<Error<Rule>> {
     errors
 }
 
+/// Validates that the given `definitions` do not contain any undefined rules.
 #[allow(clippy::ptr_arg)]
 pub fn validate_undefined<'i>(
     definitions: &Vec<Span<'i>>,
@@ -191,6 +203,10 @@ pub fn validate_undefined<'i>(
     errors
 }
 
+/// Validates the abstract syntax tree for common mistakes:
+/// - infinite repetitions
+/// - choices that cannot be reached
+/// - left recursion
 #[allow(clippy::ptr_arg)]
 pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];

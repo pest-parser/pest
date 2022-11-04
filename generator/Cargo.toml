@@ -1,10 +1,10 @@
 [package]
 name = "pest_generator"
 description = "pest code generator"
-version = "2.4.0"
+version = "2.4.1"
 edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
-homepage = "https://pest-parser.github.io/"
+homepage = "https://pest.rs/"
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
 keywords = ["pest", "generator"]
@@ -18,8 +18,8 @@ default = ["std"]
 std = ["pest/std"]
 
 [dependencies]
-pest = { path = "../pest", version = "2.4.0", default-features = false }
-pest_meta = { path = "../meta", version = "2.4.0" }
+pest = { path = "../pest", version = "2.4.1", default-features = false }
+pest_meta = { path = "../meta", version = "2.4.1" }
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = "1.0"
