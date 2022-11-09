@@ -147,6 +147,7 @@ pub struct ParserState<'i, R: RuleType> {
 /// let input = "";
 /// pest::state::<(), _>(input, |s| Ok(s)).unwrap();
 /// ```
+#[allow(clippy::perf)]
 pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<R>>
 where
     F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>,
@@ -657,6 +658,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     /// Attempts to match a single character from the given range. Returns `Ok` with the updated
     /// `Box<ParserState>` if successful, or `Err` with the updated `Box<ParserState>` otherwise.
+    ///
+    /// # Caution
+    /// The provided `range` is intepreted as inclusive.
     ///
     /// # Examples
     ///

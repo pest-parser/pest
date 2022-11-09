@@ -170,7 +170,7 @@ impl<R: RuleType> Error<R> {
         };
         let ll = line_iter.last();
         let continued_line = if visualize_ws {
-            ll.map(&str::to_owned)
+            ll.map(str::to_owned)
         } else {
             ll.map(visualize_whitespace)
         };

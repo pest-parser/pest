@@ -55,10 +55,10 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
             // reasons.
             // TODO: This could be refactored once `std::path::absolute()` get's stabilized.
             // https://doc.rust-lang.org/std/path/fn.absolute.html
-            let path = if Path::new(&root).join(&path).exists() {
-                Path::new(&root).join(&path)
+            let path = if Path::new(&root).join(path).exists() {
+                Path::new(&root).join(path)
             } else {
-                Path::new(&root).join("src/").join(&path)
+                Path::new(&root).join("src/").join(path)
             };
 
             let file_name = match path.file_name() {
