@@ -40,6 +40,7 @@ impl Vm {
     }
 
     /// Runs a parser rule on an input
+    #[allow(clippy::perf)]
     pub fn parse<'a, 'i>(
         &'a self,
         rule: &'a str,
@@ -48,6 +49,7 @@ impl Vm {
         pest::state(input, |state| self.parse_rule(rule, state))
     }
 
+    #[allow(clippy::suspicious)]
     fn parse_rule<'a, 'i>(
         &'a self,
         rule: &'a str,

@@ -34,6 +34,7 @@ mod grammar {
 pub use self::grammar::*;
 
 /// A helper that will parse using the pest grammar
+#[allow(clippy::perf)]
 pub fn parse(rule: Rule, data: &str) -> Result<Pairs<'_, Rule>, Error<Rule>> {
     PestParser::parse(rule, data)
 }

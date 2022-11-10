@@ -225,7 +225,7 @@ impl<'i> Position<'i> {
         let skipped = {
             let mut len = 0;
             // Position's pos is always a UTF-8 border.
-            let mut chars = (&self.input[self.pos..]).chars();
+            let mut chars = self.input[self.pos..].chars();
             for _ in 0..n {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
@@ -247,7 +247,7 @@ impl<'i> Position<'i> {
         let skipped = {
             let mut len = 0;
             // Position's pos is always a UTF-8 border.
-            let mut chars = (&self.input[..self.pos]).chars().rev();
+            let mut chars = self.input[..self.pos].chars().rev();
             for _ in 0..n {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
@@ -301,7 +301,7 @@ impl<'i> Position<'i> {
     where
         F: FnOnce(char) -> bool,
     {
-        if let Some(c) = (&self.input[self.pos..]).chars().next() {
+        if let Some(c) = self.input[self.pos..].chars().next() {
             if f(c) {
                 self.pos += c.len_utf8();
                 true
@@ -352,7 +352,7 @@ impl<'i> Position<'i> {
     /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
     pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
-        if let Some(c) = (&self.input[self.pos..]).chars().next() {
+        if let Some(c) = self.input[self.pos..].chars().next() {
             if range.start <= c && c <= range.end {
                 self.pos += c.len_utf8();
                 return true;
