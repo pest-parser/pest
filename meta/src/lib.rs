@@ -22,6 +22,8 @@ extern crate pest;
 
 use std::fmt::Display;
 
+use pest::error::Error;
+
 pub mod ast;
 pub mod optimizer;
 pub mod parser;
@@ -44,6 +46,26 @@ where
                 .join("\n\n")
         )
     })
+}
+
+/// A tuple returned by the validation and processing of the parsed grammar.
+/// The first element is the vector of used builtin rule names,
+/// the second element is the vector of optimized rules.
+type UsedBuiltinAndOptimized<'i> = (Vec<&'i str>, Vec<optimizer::OptimizedRule>);
+
+/// Parses, validates, processes and optimizes the provided grammar.
+pub fn parse_and_optimize(
+    grammar: &str,
+) -> Result<UsedBuiltinAndOptimized<'_>, Vec<Error<parser::Rule>>> {
+    let pairs = match parser::parse(parser::Rule::grammar_rules, grammar) {
+        Ok(pairs) => Ok(pairs),
+        Err(error) => Err(vec![error]),
+    }?;
+
+    let defaults = validator::validate_pairs(pairs.clone())?;
+    let ast = parser::consume_rules(pairs)?;
+
+    Ok((defaults, optimizer::optimize(ast)))
 }
 
 #[doc(hidden)]

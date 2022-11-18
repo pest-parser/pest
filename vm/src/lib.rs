@@ -18,25 +18,48 @@
 
 use pest::error::Error;
 use pest::iterators::Pairs;
-use pest::unicode;
+use pest::{unicode, Position};
 use pest::{Atomicity, MatchDir, ParseResult, ParserState};
 use pest_meta::ast::RuleType;
 use pest_meta::optimizer::{OptimizedExpr, OptimizedRule};
 
 use std::collections::HashMap;
+use std::panic::{RefUnwindSafe, UnwindSafe};
 
 mod macros;
+
+/// A callback function that is called when a rule is matched.
+/// The first argument is the name of the rule and the second is the span of the rule.
+/// The function should return `true` if parsing should be terminated
+/// (if the new parsing session was started) or `false` otherwise.
+type ListenerFn =
+    Box<dyn Fn(String, &Position<'_>) -> bool + Sync + Send + RefUnwindSafe + UnwindSafe>;
 
 /// A virtual machine-like construct that runs an AST on-the-fly
 pub struct Vm {
     rules: HashMap<String, OptimizedRule>,
+    listener: Option<ListenerFn>,
 }
 
 impl Vm {
     /// Creates a new `Vm` from optimized rules
     pub fn new(rules: Vec<OptimizedRule>) -> Vm {
         let rules = rules.into_iter().map(|r| (r.name.clone(), r)).collect();
-        Vm { rules }
+        Vm {
+            rules,
+            listener: None,
+        }
+    }
+
+    /// Creates a new `Vm` from optimized rules
+    /// and a listener function that is called when a rule is matched.
+    /// (used by the `pest_debugger` crate)
+    pub fn new_with_listener(rules: Vec<OptimizedRule>, listener: ListenerFn) -> Vm {
+        let rules = rules.into_iter().map(|r| (r.name.clone(), r)).collect();
+        Vm {
+            rules,
+            listener: Some(listener),
+        }
     }
 
     /// Runs a parser rule on an input
@@ -55,6 +78,11 @@ impl Vm {
         rule: &'a str,
         state: Box<ParserState<'i, &'a str>>,
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
+        if let Some(ref listener) = self.listener {
+            if listener(rule.to_owned(), state.position()) {
+                return Err(ParserState::new(state.position().line_of()));
+            }
+        }
         match rule {
             "ANY" => return state.skip(1),
             "EOI" => return state.rule("EOI", |state| state.end_of_input()),
