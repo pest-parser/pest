@@ -265,6 +265,62 @@ impl<'i> Position<'i> {
     /// Skips until one of the given `strings` is found. If none of the `strings` can be found,
     /// this function will return `false` but its `pos` will *still* be updated.
     #[inline]
+    #[cfg(any(target_feature = "sse2", target_feature = "simd128"))]
+    pub(crate) fn skip_until(&mut self, strings: &[&str]) -> bool {
+        match strings {
+            [s1] => {
+                if let Some(from) =
+                    memchr::memmem::find(&self.input.as_bytes()[self.pos..], s1.as_bytes())
+                {
+                    self.pos += from;
+                    return true;
+                }
+            }
+            [s1, s2] if !s1.is_empty() && !s2.is_empty() => {
+                let b1 = s1.as_bytes()[0];
+                let b2 = s2.as_bytes()[0];
+                let mut miter = memchr::memchr2_iter(b1, b2, &self.input.as_bytes()[self.pos..]);
+                for from in miter {
+                    let start = &self.input[self.pos + from..];
+                    if start.starts_with(s1) || start.starts_with(s2) {
+                        self.pos += from;
+                        return true;
+                    }
+                }
+            }
+            [s1, s2, s3] if !s1.is_empty() && !s2.is_empty() && s3.is_empty() => {
+                let b1 = s1.as_bytes()[0];
+                let b2 = s2.as_bytes()[0];
+                let b3 = s2.as_bytes()[0];
+                let mut miter =
+                    memchr::memchr3_iter(b1, b2, b3, &self.input.as_bytes()[self.pos..]);
+                for from in miter {
+                    let start = &self.input[self.pos + from..];
+                    if start.starts_with(s1) || start.starts_with(s2) || start.starts_with(s3) {
+                        self.pos += from;
+                        return true;
+                    }
+                }
+            }
+            s => {
+                let ac = aho_corasick::AhoCorasick::new(s);
+                if let Some(from) = ac.find(&self.input[self.pos..]) {
+                    self.pos += from.start();
+                    return true;
+                }
+            }
+        };
+
+        self.pos = self.input.len();
+        false
+    }
+
+    /// Skips until one of the given `strings` is found. If none of the `strings` can be found,
+    /// this function will return `false` but its `pos` will *still* be updated.
+    /// TODO: use memchr / aho_corasick once it supports Arm64
+    /// https://github.com/BurntSushi/memchr/pull/114
+    #[inline]
+    #[cfg(not(any(target_feature = "sse2", target_feature = "simd128")))]
     pub(crate) fn skip_until(&mut self, strings: &[&str]) -> bool {
         for from in self.pos..self.input.len() {
             let bytes = if let Some(string) = self.input.get(from..) {
