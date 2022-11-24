@@ -1,6 +1,7 @@
 comment: off
 
 ignore:
+ - debugger/src/main.rs
  - derive/src/lib.rs
  - pest/examples/parens.rs
  - pest/src/unicode/*

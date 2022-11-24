@@ -71,7 +71,11 @@ use std::{
 };
 
 use pest::{error::Error, Position};
-use pest_meta::{optimizer::OptimizedRule, parse_and_optimize, parser::Rule};
+use pest_meta::{
+    optimizer::OptimizedRule,
+    parse_and_optimize,
+    parser::{rename_meta_rule, Rule},
+};
 use pest_vm::Vm;
 
 /// Possible errors that can occur in the debugger context.
@@ -281,35 +285,7 @@ impl DebuggerContext {
                     errors
                         .iter()
                         .cloned()
-                        .map(|error| format!(
-                            "{}",
-                            error.renamed_rules(|rule| match *rule {
-                                Rule::grammar_rule => "rule".to_owned(),
-                                Rule::_push => "PUSH".to_owned(),
-                                Rule::assignment_operator => "`=`".to_owned(),
-                                Rule::silent_modifier => "`_`".to_owned(),
-                                Rule::atomic_modifier => "`@`".to_owned(),
-                                Rule::compound_atomic_modifier => "`$`".to_owned(),
-                                Rule::non_atomic_modifier => "`!`".to_owned(),
-                                Rule::opening_brace => "`{`".to_owned(),
-                                Rule::closing_brace => "`}`".to_owned(),
-                                Rule::opening_paren => "`(`".to_owned(),
-                                Rule::positive_predicate_operator => "`&`".to_owned(),
-                                Rule::negative_predicate_operator => "`!`".to_owned(),
-                                Rule::sequence_operator => "`&`".to_owned(),
-                                Rule::choice_operator => "`|`".to_owned(),
-                                Rule::optional_operator => "`?`".to_owned(),
-                                Rule::repeat_operator => "`*`".to_owned(),
-                                Rule::repeat_once_operator => "`+`".to_owned(),
-                                Rule::comma => "`,`".to_owned(),
-                                Rule::closing_paren => "`)`".to_owned(),
-                                Rule::quote => "`\"`".to_owned(),
-                                Rule::insensitive_string => "`^`".to_owned(),
-                                Rule::range_operator => "`..`".to_owned(),
-                                Rule::single_quote => "`'`".to_owned(),
-                                other_rule => format!("{:?}", other_rule),
-                            })
-                        ))
+                        .map(|error| format!("{}", error.renamed_rules(rename_meta_rule)))
                         .collect::<Vec<_>>()
                         .join("\n")
                 );
@@ -392,8 +368,7 @@ mod test {
     use super::*;
     use std::sync::mpsc::sync_channel;
 
-    #[test]
-    fn test_full_flow() {
+    fn get_test_context() -> DebuggerContext {
         let mut context = DebuggerContext::default();
 
         context
@@ -408,6 +383,12 @@ mod test {
             )
             .expect("Error: failed to load grammar");
         context.load_input_direct("test test2".to_owned());
+        context
+    }
+
+    #[test]
+    fn test_full_flow() {
+        let mut context = get_test_context();
 
         let (sender, receiver) = sync_channel(1);
 
@@ -440,6 +421,30 @@ mod test {
     }
 
     #[test]
+    fn test_restart() {
+        let mut context = get_test_context();
+
+        let (sender, receiver) = sync_channel(1);
+
+        assert_eq!(context.list_breakpoints().len(), 0);
+        context.add_breakpoint("ident".to_owned());
+        assert_eq!(context.list_breakpoints().len(), 1);
+        context
+            .run("ident_list", sender)
+            .expect("Error: failed to run rule");
+
+        let event = receiver.recv().expect("Error: failed to receive event");
+        assert_eq!(event, DebuggerEvent::Breakpoint("ident".to_owned(), 0));
+        let (sender2, receiver2) = sync_channel(1);
+
+        context
+            .run("ident_list", sender2)
+            .expect("Error: failed to run rule");
+        let event = receiver2.recv().expect("Error: failed to receive event");
+        assert_eq!(event, DebuggerEvent::Breakpoint("ident".to_owned(), 0));
+    }
+
+    #[test]
     pub fn test_errors() {
         let mut context = DebuggerContext::default();
 
@@ -460,6 +465,7 @@ mod test {
         context.load_input_direct("".to_owned());
         assert!(context.get_position(0).is_ok());
         assert!(context.get_position(1).is_err());
+        assert!(context.load_input(&pest_grammar).is_ok());
         let (sender, _receiver) = sync_channel(1);
         assert!(context.run("ANY", sender).is_ok());
         while context.cont().is_ok() {}
