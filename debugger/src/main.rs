@@ -198,6 +198,7 @@ impl Default for CliArgs {
         };
         let args = std::env::args();
         let mut iter = args.skip(1);
+        let mut unexpected_arg = false;
         while let Some(arg) = iter.next() {
             match arg.as_str() {
                 "-g" | "--grammar" => {
@@ -256,8 +257,14 @@ impl Default for CliArgs {
                     );
                     std::process::exit(0);
                 }
-                _ => unreachable!(),
+                arg => {
+                    eprintln!("Error: unexpected argument `{}`", arg);
+                    unexpected_arg = true;
+                },
             }
+        }
+        if unexpected_arg {
+            std::process::exit(1);
         }
         result
     }
