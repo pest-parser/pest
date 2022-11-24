@@ -1,0 +1,26 @@
+[package]
+name = "pest_debugger"
+description = "pest grammar debugger"
+version = "2.5.0"
+edition = "2021"
+authors = ["Dragoș Tiselice <dragostiselice@gmail.com>", "Tomas Tauber <me@tomtau.be>"]
+homepage = "https://pest.rs/"
+repository = "https://github.com/pest-parser/pest"
+documentation = "https://docs.rs/pest"
+keywords = ["pest", "grammar", "debugger"]
+categories = ["parsing"]
+license = "MIT/Apache-2.0"
+readme = "_README.md"
+rust-version = "1.56"
+
+[dependencies]
+pest = { path = "../pest", version = "2.5.0" }
+pest_meta = { path = "../meta", version = "2.5.0" }
+pest_vm = { path = "../vm", version = "2.5.0" }
+rustyline = "10"
+thiserror = "1"
+
+[badges]
+codecov = { repository = "pest-parser/pest" }
+maintenance = { status = "actively-developed" }
+github = { repository = "pest-parser/pest" }

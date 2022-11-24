@@ -2,7 +2,7 @@
 
 set -e
 
-CRATES="pest pest_meta pest_vm pest_generator pest_derive pest_grammars"
+CRATES="pest pest_meta pest_vm pest_generator pest_derive pest_grammars pest_debugger"
 
 get_local_version() {
   cargo metadata --format-version 1 | jq -r '.packages[]|select(.name == "'"${1}"'" and ((.manifest_path|contains("registry"))|not))|.version'
