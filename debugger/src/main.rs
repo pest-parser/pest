@@ -260,7 +260,7 @@ impl Default for CliArgs {
                 arg => {
                     eprintln!("Error: unexpected argument `{}`", arg);
                     unexpected_arg = true;
-                },
+                }
             }
         }
         if unexpected_arg {
