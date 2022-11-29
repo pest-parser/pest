@@ -197,6 +197,19 @@
 //!
 //!     where `e`, `e1`, and `e2` are expressions.
 //!
+//! Matching is greedy, without backtracking.  Note the difference in behavior for
+//! these two rules in matching identifiers that don't end in an underscore:
+//!
+//! ```ignore
+//! // input: ab_bb_b
+//!
+//! identifier = @{ "a" ~ ("b"|"_")* ~ "b" }
+//! // matches:      a     b_bb_b       nothing -> error!      
+//!
+//! identifier = @{ "a" ~ ("_"* ~ "b")* }
+//! // matches:      a     b, _bb, _b   in three repetitions
+//! ```
+//!
 //! Expressions can modify the stack only if they match the input. For example,
 //! if `e1` in the compound expression `e1 | e2` does not match the input, then
 //! it does not modify the stack, so `e2` sees the stack in the same state as
