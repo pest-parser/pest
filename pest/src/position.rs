@@ -266,6 +266,60 @@ impl<'i> Position<'i> {
     /// this function will return `false` but its `pos` will *still* be updated.
     #[inline]
     pub(crate) fn skip_until(&mut self, strings: &[&str]) -> bool {
+        #[cfg(not(feature = "memchr"))]
+        {
+            self.skip_until_basic(strings)
+        }
+        #[cfg(feature = "memchr")]
+        {
+            match strings {
+                [] => (),
+                [s1] => {
+                    if let Some(from) =
+                        memchr::memmem::find(&self.input.as_bytes()[self.pos..], s1.as_bytes())
+                    {
+                        self.pos += from;
+                        return true;
+                    }
+                }
+                [s1, s2] if !s1.is_empty() && !s2.is_empty() => {
+                    let b1 = s1.as_bytes()[0];
+                    let b2 = s2.as_bytes()[0];
+                    let miter = memchr::memchr2_iter(b1, b2, &self.input.as_bytes()[self.pos..]);
+                    for from in miter {
+                        let start = &self.input[self.pos + from..];
+                        if start.starts_with(s1) || start.starts_with(s2) {
+                            self.pos += from;
+                            return true;
+                        }
+                    }
+                }
+                [s1, s2, s3] if !s1.is_empty() && !s2.is_empty() && s3.is_empty() => {
+                    let b1 = s1.as_bytes()[0];
+                    let b2 = s2.as_bytes()[0];
+                    let b3 = s2.as_bytes()[0];
+                    let miter =
+                        memchr::memchr3_iter(b1, b2, b3, &self.input.as_bytes()[self.pos..]);
+                    for from in miter {
+                        let start = &self.input[self.pos + from..];
+                        if start.starts_with(s1) || start.starts_with(s2) || start.starts_with(s3) {
+                            self.pos += from;
+                            return true;
+                        }
+                    }
+                }
+                _ => {
+                    return self.skip_until_basic(strings);
+                }
+            }
+            self.pos = self.input.len();
+            false
+        }
+    }
+
+    #[inline]
+    fn skip_until_basic(&mut self, strings: &[&str]) -> bool {
+        // TODO: optimize with Aho-Corasick, e.g. https://crates.io/crates/daachorse?
         for from in self.pos..self.input.len() {
             let bytes = if let Some(string) = self.input.get(from..) {
                 string.as_bytes()
