@@ -9,7 +9,7 @@
 
 use std::path::PathBuf;
 
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::{ToTokens, TokenStreamExt};
 use syn::{self, Generics, Ident};
 
