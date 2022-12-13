@@ -182,9 +182,7 @@ fn generate_include(name: &Ident, path: &str) -> TokenStream {
 }
 
 fn generate_enum(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
-    let rules = rules
-        .iter()
-        .map(|rule| format_ident!("r#{}", rule.name));
+    let rules = rules.iter().map(|rule| format_ident!("r#{}", rule.name));
     if uses_eoi {
         quote! {
             #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
@@ -962,15 +960,18 @@ mod tests {
         let name = Ident::new("MyParser", Span::call_site());
         let generics = Generics::default();
 
-        let rules = vec![OptimizedRule {
-            name: "a".to_owned(),
-            ty: RuleType::Silent,
-            expr: OptimizedExpr::Str("b".to_owned()),
-        }, OptimizedRule {
-            name: "if".to_owned(),
-            ty: RuleType::Silent,
-            expr: OptimizedExpr::Ident("a".to_owned())
-        }];
+        let rules = vec![
+            OptimizedRule {
+                name: "a".to_owned(),
+                ty: RuleType::Silent,
+                expr: OptimizedExpr::Str("b".to_owned()),
+            },
+            OptimizedRule {
+                name: "if".to_owned(),
+                ty: RuleType::Silent,
+                expr: OptimizedExpr::Ident("a".to_owned()),
+            },
+        ];
 
         let defaults = vec!["ANY"];
         let result = result_type();
