@@ -184,7 +184,7 @@ fn generate_include(name: &Ident, path: &str) -> TokenStream {
 fn generate_enum(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
     let rules = rules
         .iter()
-        .map(|rule| format_ident!("r#{}", rule.name.as_str()));
+        .map(|rule| format_ident!("r#{}", rule.name));
     if uses_eoi {
         quote! {
             #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
@@ -209,7 +209,7 @@ fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
     let mut rules: Vec<TokenStream> = rules
         .iter()
         .map(|rule| {
-            let rule = format_ident!("r#{}", Ident::new(rule.name.as_str(), Span::call_site()));
+            let rule = format_ident!("r#{}", rule.name);
             quote! {
                 Rule::#rule => rules::#rule(state)
             }
@@ -228,7 +228,7 @@ fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
 }
 
 fn generate_rule(rule: OptimizedRule) -> TokenStream {
-    let name = format_ident!("r#{}", Ident::new(&rule.name, Span::call_site()));
+    let name = format_ident!("r#{}", rule.name);
 
     let expr = if rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic {
         generate_expr_atomic(rule.expr)
@@ -676,7 +676,7 @@ mod tests {
                 #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
-                    f
+                    r#f
                 }
             }
             .to_string()
@@ -864,7 +864,7 @@ mod tests {
         assert_eq!(
             generate_expr(expr).to_string(),
             quote! {
-                self::a(state).or_else(|state| {
+                self::r#a(state).or_else(|state| {
                     state.sequence(|state| {
                         state.match_range('a'..'b').and_then(|state| {
                             super::hidden::skip(state)
@@ -930,7 +930,7 @@ mod tests {
         assert_eq!(
             generate_expr_atomic(expr).to_string(),
             quote! {
-                self::a(state).or_else(|state| {
+                self::r#a(state).or_else(|state| {
                     state.sequence(|state| {
                         state.match_range('a'..'b').and_then(|state| {
                             state.lookahead(false, |state| {
@@ -969,7 +969,7 @@ mod tests {
         }, OptimizedRule {
             name: "if".to_owned(),
             ty: RuleType::Silent,
-            expr: OptimizedExpr::Str("c".to_owned())
+            expr: OptimizedExpr::Ident("a".to_owned())
         }];
 
         let defaults = vec!["ANY"];
@@ -1024,7 +1024,7 @@ mod tests {
                                 #[inline]
                                 #[allow(non_snake_case, unused_variables)]
                                 pub fn r#if(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
-                                    state.match_string("c")
+                                    self::r#a(state)
                                 }
 
                                 #[inline]
