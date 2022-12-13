@@ -169,7 +169,7 @@ fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
 
 // Needed because Cargo doesn't watch for changes in grammars.
 fn generate_include(name: &Ident, path: &str) -> TokenStream {
-    let const_name = Ident::new(&format!("_PEST_GRAMMAR_{}", name), Span::call_site());
+    let const_name = format_ident!("_PEST_GRAMMAR_{}", name);
     // Need to make this relative to the current directory since the path to the file
     // is derived from the CARGO_MANIFEST_DIR environment variable
     let mut current_dir = std::env::current_dir().expect("Unable to get current directory");
@@ -184,7 +184,7 @@ fn generate_include(name: &Ident, path: &str) -> TokenStream {
 fn generate_enum(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
     let rules = rules
         .iter()
-        .map(|rule| Ident::new(rule.name.as_str(), Span::call_site()));
+        .map(|rule| format_ident!("r#{}", rule.name.as_str()));
     if uses_eoi {
         quote! {
             #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
@@ -209,7 +209,7 @@ fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
     let mut rules: Vec<TokenStream> = rules
         .iter()
         .map(|rule| {
-            let rule = Ident::new(rule.name.as_str(), Span::call_site());
+            let rule = format_ident!("r#{}", Ident::new(rule.name.as_str(), Span::call_site()));
             quote! {
                 Rule::#rule => rules::#rule(state)
             }
@@ -228,7 +228,8 @@ fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
 }
 
 fn generate_rule(rule: OptimizedRule) -> TokenStream {
-    let name = Ident::new(&rule.name, Span::call_site());
+    let name = format_ident!("r#{}", Ident::new(&rule.name, Span::call_site()));
+
     let expr = if rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic {
         generate_expr_atomic(rule.expr)
     } else if name == "WHITESPACE" || name == "COMMENT" {
@@ -364,7 +365,7 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
             }
         }
         OptimizedExpr::Ident(ident) => {
-            let ident = Ident::new(&ident, Span::call_site());
+            let ident = format_ident!("r#{}", ident);
             quote! { self::#ident(state) }
         }
         OptimizedExpr::PeekSlice(start, end_) => {
@@ -510,7 +511,7 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
             }
         }
         OptimizedExpr::Ident(ident) => {
-            let ident = Ident::new(&ident, Span::call_site());
+            let ident = format_ident!("r#{}", ident);
             quote! { self::#ident(state) }
         }
         OptimizedExpr::PeekSlice(start, end_) => {
@@ -960,11 +961,17 @@ mod tests {
     fn generate_complete() {
         let name = Ident::new("MyParser", Span::call_site());
         let generics = Generics::default();
+
         let rules = vec![OptimizedRule {
             name: "a".to_owned(),
             ty: RuleType::Silent,
             expr: OptimizedExpr::Str("b".to_owned()),
+        }, OptimizedRule {
+            name: "if".to_owned(),
+            ty: RuleType::Silent,
+            expr: OptimizedExpr::Str("c".to_owned())
         }];
+
         let defaults = vec!["ANY"];
         let result = result_type();
         let box_ty = box_type();
@@ -980,7 +987,8 @@ mod tests {
                 #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
-                    a
+                    r#a,
+                    r#if
                 }
 
                 #[allow(clippy::all)]
@@ -1009,8 +1017,14 @@ mod tests {
 
                                 #[inline]
                                 #[allow(non_snake_case, unused_variables)]
-                                pub fn a(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
+                                pub fn r#a(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                                     state.match_string("b")
+                                }
+
+                                #[inline]
+                                #[allow(non_snake_case, unused_variables)]
+                                pub fn r#if(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
+                                    state.match_string("c")
                                 }
 
                                 #[inline]
@@ -1025,7 +1039,8 @@ mod tests {
 
                         ::pest::state(input, |state| {
                             match rule {
-                                Rule::a => rules::a(state)
+                                Rule::r#a => rules::r#a(state),
+                                Rule::r#if => rules::r#if(state)
                             }
                         })
                     }

@@ -71,7 +71,6 @@ static BUILTINS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
 });
 
 /// It checks the parsed grammar for common mistakes:
-/// - using Rust keywords
 /// - using Pest keywords
 /// - duplicate rules
 /// - undefined rules
@@ -84,6 +83,7 @@ pub fn validate_pairs(pairs: Pairs<'_, Rule>) -> Result<Vec<&str>, Vec<Error<Rul
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
         .map(|pair| pair.into_inner().next().unwrap().as_span())
         .collect();
+
     let called_rules: Vec<_> = pairs
         .clone()
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
@@ -98,7 +98,6 @@ pub fn validate_pairs(pairs: Pairs<'_, Rule>) -> Result<Vec<&str>, Vec<Error<Rul
 
     let mut errors = vec![];
 
-    errors.extend(validate_rust_keywords(&definitions));
     errors.extend(validate_pest_keywords(&definitions));
     errors.extend(validate_already_defined(&definitions));
     errors.extend(validate_undefined(&definitions, &called_rules));
@@ -113,27 +112,6 @@ pub fn validate_pairs(pairs: Pairs<'_, Rule>) -> Result<Vec<&str>, Vec<Error<Rul
     let defaults = called_rules.difference(&definitions);
 
     Ok(defaults.cloned().collect())
-}
-
-/// Validates that the given `definitions` do not contain any Rust keywords.
-#[allow(clippy::ptr_arg)]
-pub fn validate_rust_keywords(definitions: &Vec<Span<'_>>) -> Vec<Error<Rule>> {
-    let mut errors = vec![];
-
-    for definition in definitions {
-        let name = definition.as_str();
-
-        if RUST_KEYWORDS.contains(name) {
-            errors.push(Error::new_from_span(
-                ErrorVariant::CustomError {
-                    message: format!("{} is a rust keyword", name),
-                },
-                *definition,
-            ))
-        }
-    }
-
-    errors
 }
 
 /// Validates that the given `definitions` do not contain any Pest keywords.
@@ -503,22 +481,6 @@ mod tests {
     use super::super::unwrap_or_report;
     use super::*;
     use pest::Parser;
-
-    #[test]
-    #[should_panic(expected = "grammar error
-
- --> 1:1
-  |
-1 | let = { \"a\" }
-  | ^-^
-  |
-  = let is a rust keyword")]
-    fn rust_keyword() {
-        let input = "let = { \"a\" }";
-        unwrap_or_report(validate_pairs(
-            PestParser::parse(Rule::grammar_rules, input).unwrap(),
-        ));
-    }
 
     #[test]
     #[should_panic(expected = "grammar error
