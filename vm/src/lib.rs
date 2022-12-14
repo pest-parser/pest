@@ -126,7 +126,7 @@ impl Vm {
         };
 
         if let Some(rule) = self.rules.get(rule) {
-            if &rule.name == "WHITESPACE" || &rule.name == "COMMENT" {
+            if rule.name == "WHITESPACE" || rule.name == "COMMENT" {
                 match rule.ty {
                     RuleType::Normal => state.rule(&rule.name, |state| {
                         state.atomic(Atomicity::Atomic, |state| {
