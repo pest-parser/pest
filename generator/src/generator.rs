@@ -227,10 +227,9 @@ fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
 
 fn generate_rule(rule: OptimizedRule) -> TokenStream {
     let name = format_ident!("r#{}", rule.name);
-
     let expr = if rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic {
         generate_expr_atomic(rule.expr)
-    } else if name == "WHITESPACE" || name == "COMMENT" {
+    } else if rule.name == "WHITESPACE" || rule.name == "COMMENT" {
         let atomic = generate_expr_atomic(rule.expr);
 
         quote! {
@@ -658,6 +657,8 @@ fn option_type() -> TokenStream {
 
 #[cfg(test)]
 mod tests {
+    use proc_macro2::Span;
+
     use super::*;
 
     #[test]
