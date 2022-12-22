@@ -4,7 +4,7 @@
 //
 // Unicode version: 15.0.0.
 //
-// ucd-generate 0.2.13 is available on crates.io.
+// ucd-generate 0.2.15 is available on crates.io.
 
 pub const BY_NAME: &'static [(&'static str, &'static ::ucd_trie::TrieSet)] = &[
   ("ASCII_Hex_Digit", ASCII_HEX_DIGIT), ("Alphabetic", ALPHABETIC),

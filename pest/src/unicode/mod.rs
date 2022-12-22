@@ -49,6 +49,11 @@ char_property_functions! {
         PRIVATE_USE, PUNCTUATION, SEPARATOR, SPACE_SEPARATOR, SPACING_MARK, SURROGATE, SYMBOL,
         TITLECASE_LETTER, UNASSIGNED, UPPERCASE_LETTER,
     ];
+
+    mod script;
+    [
+        HAN, KATAKANA, HIRAGANA, HANGUL,
+    ];
 }
 
 pub fn by_name(name: &str) -> Option<Box<dyn Fn(char) -> bool>> {
@@ -62,6 +67,21 @@ pub fn by_name(name: &str) -> Option<Box<dyn Fn(char) -> bool>> {
         if name == property.0.to_uppercase() {
             return Some(Box::new(move |c| property.1.contains_char(c)));
         }
+    }
+
+    for property in script::BY_NAME {
+        if name == property.0.to_uppercase() {
+            return Some(Box::new(move |c| property.1.contains_char(c)));
+        }
+    }
+
+    if name == "CJK" {
+        return Some(Box::new(|c| {
+            script::HAN.contains_char(c)
+                || script::HANGUL.contains_char(c)
+                || script::KATAKANA.contains_char(c)
+                || script::HIRAGANA.contains_char(c)
+        }));
     }
 
     None

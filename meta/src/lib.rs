@@ -162,4 +162,10 @@ pub static UNICODE_PROPERTY_NAMES: &[&str] = &[
     "TITLECASE_LETTER",
     "UNASSIGNED",
     "UPPERCASE_LETTER",
+    /* Script */
+    "CJK",
+    "HAN",
+    "HANGUL",
+    "HIRAGANA",
+    "KATAKANA",
 ];
