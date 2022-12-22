@@ -63,6 +63,11 @@ newline = { NEWLINE+ }
 unicode = { XID_START ~ XID_CONTINUE* }
 SYMBOL = { "shadows builtin" }
 
+han = { HAN+ }
+hangul = { HANGUL+ }
+hiragana = { HIRAGANA+ }
+arabic = { ARABIC+ }
+
 WHITESPACE = _{ " " }
 COMMENT = _{ "$"+ }
 
