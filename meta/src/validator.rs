@@ -15,10 +15,10 @@ use std::collections::{HashMap, HashSet};
 
 use pest::error::{Error, ErrorVariant, InputLocation};
 use pest::iterators::Pairs;
+use pest::unicode::unicode_property_names;
 use pest::Span;
 
 use crate::parser::{ParserExpr, ParserNode, ParserRule, Rule};
-use crate::UNICODE_PROPERTY_NAMES;
 
 static RUST_KEYWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     [
@@ -66,7 +66,7 @@ static BUILTINS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     ]
     .iter()
     .cloned()
-    .chain(UNICODE_PROPERTY_NAMES.iter().cloned())
+    .chain(unicode_property_names())
     .collect::<HashSet<&str>>()
 });
 

@@ -13,9 +13,9 @@ use proc_macro2::TokenStream;
 use quote::{ToTokens, TokenStreamExt};
 use syn::{self, Generics, Ident};
 
+use pest::unicode::unicode_property_names;
 use pest_meta::ast::*;
 use pest_meta::optimizer::*;
-use pest_meta::UNICODE_PROPERTY_NAMES;
 
 pub fn generate(
     name: Ident,
@@ -153,7 +153,7 @@ fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
 
     let box_ty = box_type();
 
-    for property in UNICODE_PROPERTY_NAMES {
+    for property in unicode_property_names() {
         let property_ident: Ident = syn::parse_str(property).unwrap();
         // insert manually for #property substitution
         builtins.push((property, quote! {

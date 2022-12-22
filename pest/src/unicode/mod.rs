@@ -10,21 +10,26 @@ use alloc::boxed::Box;
 macro_rules! char_property_functions {
     {$(
         mod $module:ident;
-        [$(
+        static $property_names:ident = [$(
             $prop:ident,
         )*];
     )*} => {$(
         #[allow(unused)]
         mod $module;
+        // ALPHABETIC('a')
         $(pub fn $prop(c: char) -> bool {
             self::$module::$prop.contains_char(c)
         })*
+
+        pub static $property_names: &[&str] = &[
+            $(stringify!($prop),)*
+        ];
     )*};
 }
 
 char_property_functions! {
     mod binary;
-    [
+    static BINARY_PROPERTY_NAMES = [
         // ASCII_HEX_DIGIT, // let this one be stripped out -- the full trie is wasteful for ASCII
         ALPHABETIC, BIDI_CONTROL, CASE_IGNORABLE, CASED, CHANGES_WHEN_CASEFOLDED,
         CHANGES_WHEN_CASEMAPPED, CHANGES_WHEN_LOWERCASED, CHANGES_WHEN_TITLECASED,
@@ -40,7 +45,7 @@ char_property_functions! {
     ];
 
     mod category;
-    [
+    static CATEGORY_PROPERTY_NAMES = [
         CASED_LETTER, CLOSE_PUNCTUATION, CONNECTOR_PUNCTUATION, CONTROL, CURRENCY_SYMBOL,
         DASH_PUNCTUATION, DECIMAL_NUMBER, ENCLOSING_MARK, FINAL_PUNCTUATION, FORMAT,
         INITIAL_PUNCTUATION, LETTER, LETTER_NUMBER, LINE_SEPARATOR, LOWERCASE_LETTER, MARK,
@@ -51,9 +56,24 @@ char_property_functions! {
     ];
 
     mod script;
-    [
-        HAN, KATAKANA, HIRAGANA, HANGUL,
+    static SCRIPT_PROPERTY_NAMES = [
+        // Chinese
+        HAN,
+        // Japanese
+        KATAKANA, HIRAGANA,
+        // Korean
+        HANGUL,
     ];
+}
+
+pub fn unicode_property_names() -> Box<dyn Iterator<Item = &'static str>> {
+    Box::new(
+        BINARY_PROPERTY_NAMES
+            .iter()
+            .map(|name| *name)
+            .chain(CATEGORY_PROPERTY_NAMES.iter().map(|name| *name))
+            .chain(SCRIPT_PROPERTY_NAMES.iter().map(|name| *name)),
+    )
 }
 
 pub fn by_name(name: &str) -> Option<Box<dyn Fn(char) -> bool>> {
@@ -73,15 +93,6 @@ pub fn by_name(name: &str) -> Option<Box<dyn Fn(char) -> bool>> {
         if name == property.0.to_uppercase() {
             return Some(Box::new(move |c| property.1.contains_char(c)));
         }
-    }
-
-    if name == "CJK" {
-        return Some(Box::new(|c| {
-            script::HAN.contains_char(c)
-                || script::HANGUL.contains_char(c)
-                || script::KATAKANA.contains_char(c)
-                || script::HIRAGANA.contains_char(c)
-        }));
     }
 
     None
