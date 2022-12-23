@@ -957,3 +957,51 @@ fn shadowing() {
         ]
     }
 }
+
+#[test]
+fn test_han() {
+    parses_to! {
+        parser: vm(),
+        input: "你好",
+        rule: "han",
+        tokens: [
+            han(0, 6)
+        ]
+    };
+}
+
+#[test]
+fn test_hangul() {
+    parses_to! {
+        parser: vm(),
+        input: "여보세요",
+        rule: "hangul",
+        tokens: [
+            hangul(0, 12)
+        ]
+    };
+}
+
+#[test]
+fn test_hiragana() {
+    parses_to! {
+        parser: vm(),
+        input: "こんにちは",
+        rule: "hiragana",
+        tokens: [
+            hiragana(0, 15)
+        ]
+    };
+}
+
+#[test]
+fn arabic() {
+    parses_to! {
+        parser: vm(),
+        input: "نامهای",
+        rule: "arabic",
+        tokens: [
+            arabic(0, 12)
+        ]
+    }
+}

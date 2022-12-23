@@ -11,3 +11,4 @@ cd ../../
 
 ucd-generate property-bool    --trie-set ./target/ucd/ > ./pest/src/unicode/binary.rs
 ucd-generate general-category --trie-set ./target/ucd/ > ./pest/src/unicode/category.rs
+ucd-generate script           --trie-set ./target/ucd/ > ./pest/src/unicode/script.rs
