@@ -20,9 +20,11 @@
 #[macro_use]
 extern crate pest;
 
+use once_cell::sync::Lazy;
 use std::fmt::Display;
 
 use pest::error::Error;
+use pest::unicode::unicode_property_names;
 
 pub mod ast;
 pub mod optimizer;
@@ -67,3 +69,8 @@ pub fn parse_and_optimize(
 
     Ok((defaults, optimizer::optimize(ast)))
 }
+
+#[doc(hidden)]
+#[deprecated(note = "use `pest::unicode::unicode_property_names` instead")]
+pub static UNICODE_PROPERTY_NAMES: Lazy<Vec<&str>> =
+    Lazy::new(|| unicode_property_names().collect::<Vec<_>>());
