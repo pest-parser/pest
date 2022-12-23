@@ -9,6 +9,13 @@
 
 use crate::ast::*;
 
+fn convert_expr(expr: Box<Expr>) -> Option<String> {
+    match *expr {
+        Expr::Str(string) => Some(string),
+        _ => None,
+    }
+}
+
 pub fn concatenate(rule: Rule) -> Rule {
     let Rule { name, ty, expr } = rule;
     Rule {
@@ -20,7 +27,19 @@ pub fn concatenate(rule: Rule) -> Rule {
                 match expr {
                     Expr::Seq(lhs, rhs) => match (*lhs, *rhs) {
                         (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),
-                        (Expr::Insens(lhs), Expr::Insens(rhs)) => Expr::Insens(lhs + &rhs),
+                        (Expr::Insens(lhs), Expr::Insens(rhs)) => {
+                            let lhs_str = convert_expr(lhs.clone());
+                            let rhs_str = convert_expr(rhs.clone());
+
+                            if lhs_str.is_none() || rhs_str.is_none() {
+                                return Expr::Seq(
+                                    Box::new(Expr::Insens(lhs)),
+                                    Box::new(Expr::Insens(rhs)),
+                                );
+                            }
+
+                            Expr::Insens(Box::new(Expr::Str(lhs_str.unwrap() + &rhs_str.unwrap())))
+                        }
                         (lhs, rhs) => Expr::Seq(Box::new(lhs), Box::new(rhs)),
                     },
                     expr => expr,

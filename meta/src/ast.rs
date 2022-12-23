@@ -53,8 +53,8 @@ pub enum RuleType {
 pub enum Expr {
     /// Matches an exact string, e.g. `"a"`
     Str(String),
-    /// Matches an exact string, case insensitively (ASCII only), e.g. `^"a"`
-    Insens(String),
+    /// Matches an exact string or rule with the given name, case insensitively (ASCII only), e.g. `^"a"` or `^ASCII_ALPHA`
+    Insens(Box<Expr>),
     /// Matches one character in the range, e.g. `'a'..'z'`
     Range(String, String),
     /// Matches the rule with the given name, e.g. `a`
@@ -327,7 +327,7 @@ mod tests {
             )),
             Box::new(Expr::PosPred(Box::new(Expr::NegPred(Box::new(Expr::Rep(
                 Box::new(Expr::RepOnce(Box::new(Expr::Opt(Box::new(Expr::Choice(
-                    Box::new(Expr::Insens("c".to_owned())),
+                    Box::new(Expr::Insens(Box::new(Expr::Str("c".to_owned())))),
                     Box::new(Expr::Push(Box::new(Expr::Range(
                         "'d'".to_owned(),
                         "'e'".to_owned(),

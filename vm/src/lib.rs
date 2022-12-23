@@ -186,7 +186,17 @@ impl Vm {
     ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
         match *expr {
             OptimizedExpr::Str(ref string) => state.match_string(string),
-            OptimizedExpr::Insens(ref string) => state.match_insensitive(string),
+            OptimizedExpr::Insens(ref insens) => match insens.as_ref() {
+                OptimizedExpr::Str(ref string) => {
+                    std::println!("------------- match_insensitive: {}", string);
+                    return state.match_insensitive(string);
+                }
+                OptimizedExpr::Ident(ref name) => {
+                    std::println!("------------- match_insensitive Ident: {}", name);
+                    return self.parse_rule(name, state);
+                }
+                _ => panic!("invalid insensitive expr only support string | ident"),
+            },
             OptimizedExpr::Range(ref start, ref end) => {
                 let start = start.chars().next().expect("empty char literal");
                 let end = end.chars().next().expect("empty char literal");

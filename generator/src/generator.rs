@@ -348,11 +348,14 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
                 state.match_string(#string)
             }
         }
-        OptimizedExpr::Insens(string) => {
-            quote! {
-                state.match_insensitive(#string)
+        OptimizedExpr::Insens(insens) => match insens.as_ref() {
+            OptimizedExpr::Str(string) => {
+                quote! {
+                    state.match_insensitive(#string)
+                }
             }
-        }
+            _ => generate_expr(*insens),
+        },
         OptimizedExpr::Range(start, end) => {
             let start = start.chars().next().unwrap();
             let end = end.chars().next().unwrap();
@@ -494,11 +497,14 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
                 state.match_string(#string)
             }
         }
-        OptimizedExpr::Insens(string) => {
-            quote! {
-                state.match_insensitive(#string)
+        OptimizedExpr::Insens(insens) => match insens.as_ref() {
+            OptimizedExpr::Str(string) => {
+                quote! {
+                    state.match_insensitive(#string)
+                }
             }
-        }
+            _ => generate_expr_atomic(*insens),
+        },
         OptimizedExpr::Range(start, end) => {
             let start = start.chars().next().unwrap();
             let end = end.chars().next().unwrap();
@@ -827,7 +833,9 @@ mod tests {
                 Box::new(OptimizedExpr::Range("a".to_owned(), "b".to_owned())),
                 Box::new(OptimizedExpr::Seq(
                     Box::new(OptimizedExpr::NegPred(Box::new(OptimizedExpr::Rep(
-                        Box::new(OptimizedExpr::Insens("b".to_owned())),
+                        Box::new(OptimizedExpr::Insens(Box::new(OptimizedExpr::Str(
+                            "b".to_owned(),
+                        )))),
                     )))),
                     Box::new(OptimizedExpr::PosPred(Box::new(OptimizedExpr::Opt(
                         Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Choice(
@@ -914,7 +922,9 @@ mod tests {
                 Box::new(OptimizedExpr::Range("a".to_owned(), "b".to_owned())),
                 Box::new(OptimizedExpr::Seq(
                     Box::new(OptimizedExpr::NegPred(Box::new(OptimizedExpr::Rep(
-                        Box::new(OptimizedExpr::Insens("b".to_owned())),
+                        Box::new(OptimizedExpr::Insens(Box::new(OptimizedExpr::Str(
+                            "b".to_owned(),
+                        )))),
                     )))),
                     Box::new(OptimizedExpr::PosPred(Box::new(OptimizedExpr::Opt(
                         Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Choice(

@@ -41,6 +41,33 @@ fn insensitive() {
             insensitive(0, 3)
         ]
     };
+
+    parses_to! {
+        parser: GrammarParser,
+        input: "html",
+        rule: Rule::insensitive_ident,
+        tokens: [
+            insensitive_ident(0, 4)
+        ]
+    };
+
+    parses_to! {
+        parser: GrammarParser,
+        input: "HTML",
+        rule: Rule::insensitive_ident,
+        tokens: [
+            insensitive_ident(0, 4)
+        ]
+    };
+
+    parses_to! {
+        parser: GrammarParser,
+        input: "Body",
+        rule: Rule::insensitive_ident,
+        tokens: [
+            insensitive_ident(0, 4)
+        ]
+    };
 }
 
 #[test]

@@ -9,6 +9,8 @@
 
 string = { "abc" }
 insensitive = { ^"abc" }
+tag_name = _{ ('a'..'z')+ }
+insensitive_ident = { ^tag_name }
 range = { '0'..'9' }
 ident = { string }
 pos_pred = { &string }

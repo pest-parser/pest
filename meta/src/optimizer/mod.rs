@@ -20,6 +20,17 @@ macro_rules! box_tree {
     ($expr:expr) => ($expr);
 }
 
+// box_tree!(Seq(
+//     Seq(
+//         Insens(Box::new(Ident(String::from("a")))),
+//         Insens(Box::new(Ident(String::from("b"))))
+//     ),
+//     Seq(
+//         Insens(Box::new(Ident(String::from("c")))),
+//         Insens(Box::new(Ident(String::from("d"))))
+//     )
+// )),
+
 mod concatenator;
 mod factorizer;
 mod lister;
@@ -52,7 +63,7 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
     fn to_optimized(expr: Expr) -> OptimizedExpr {
         match expr {
             Expr::Str(string) => OptimizedExpr::Str(string),
-            Expr::Insens(string) => OptimizedExpr::Insens(string),
+            Expr::Insens(expr) => OptimizedExpr::Insens(Box::new(to_optimized(*expr))),
             Expr::Range(start, end) => OptimizedExpr::Range(start, end),
             Expr::Ident(ident) => OptimizedExpr::Ident(ident),
             Expr::PeekSlice(start, end) => OptimizedExpr::PeekSlice(start, end),
@@ -107,7 +118,7 @@ pub enum OptimizedExpr {
     /// Matches an exact string, e.g. `"a"`
     Str(String),
     /// Matches an exact string, case insensitively (ASCII only), e.g. `^"a"`
-    Insens(String),
+    Insens(Box<OptimizedExpr>),
     /// Matches one character in the range, e.g. `'a'..'z'`
     Range(String, String),
     /// Matches the rule with the given name, e.g. `a`
@@ -486,15 +497,21 @@ mod tests {
                 name: "rule".to_owned(),
                 ty: RuleType::Atomic,
                 expr: box_tree!(Seq(
-                    Seq(Insens(String::from("a")), Insens(String::from("b"))),
-                    Seq(Insens(String::from("c")), Insens(String::from("d")))
+                    Seq(
+                        Insens(Box::new(Str(String::from("a")))),
+                        Insens(Box::new(Str(String::from("b"))))
+                    ),
+                    Seq(
+                        Insens(Box::new(Str(String::from("c")))),
+                        Insens(Box::new(Str(String::from("d"))))
+                    )
                 )),
             }]
         };
         let concatenated = vec![OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Atomic,
-            expr: OptimizedExpr::Insens(String::from("abcd")),
+            expr: OptimizedExpr::Insens(Box::new(OptimizedExpr::Str("abcd".to_owned()))),
         }];
 
         assert_eq!(optimize(rules), concatenated);

@@ -77,7 +77,7 @@ alpha      = _{ 'a'..'z' | 'A'..'Z' }
 alpha_num  = _{ alpha | '0'..'9' }
 
 string             = ${ quote ~ inner_str ~ quote }
-insensitive_string =  { "^" ~ string }
+insensitive_string   =  { "^" ~ (string | identifier) }
 range              =  { character ~ range_operator ~ character }
 character          = ${ single_quote ~ inner_chr ~ single_quote }
 

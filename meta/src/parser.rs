@@ -133,7 +133,7 @@ pub enum ParserExpr<'i> {
     /// Matches an exact string, e.g. `"a"`
     Str(String),
     /// Matches an exact string, case insensitively (ASCII only), e.g. `^"a"`
-    Insens(String),
+    Insens(Box<ParserNode<'i>>),
     /// Matches one character in the range, e.g. `'a'..'z'`
     Range(String, String),
     /// Matches the rule with the given name, e.g. `a`
@@ -175,7 +175,7 @@ fn convert_rule(rule: ParserRule<'_>) -> AstRule {
 fn convert_node(node: ParserNode<'_>) -> Expr {
     match node.expr {
         ParserExpr::Str(string) => Expr::Str(string),
-        ParserExpr::Insens(string) => Expr::Insens(string),
+        ParserExpr::Insens(node) => Expr::Insens(Box::new(convert_node(*node))),
         ParserExpr::Range(start, end) => Expr::Range(start, end),
         ParserExpr::Ident(ident) => Expr::Ident(ident),
         ParserExpr::PeekSlice(start, end) => Expr::PeekSlice(start, end),
@@ -296,6 +296,46 @@ fn consume_rules_with_spans(
         .collect()
 }
 
+fn consume_insensitive_string(
+    pairs: Peekable<Pairs<'_, Rule>>,
+) -> Result<ParserNode<'_>, Vec<Error<Rule>>> {
+    let mut pairs = pairs.peekable();
+    let pair = pairs.next().unwrap();
+
+    let node = match pair.as_rule() {
+        Rule::string => {
+            let span = pair.as_span();
+            let string = unescape(span.as_str()).expect("incorrect string literal");
+            // Remove quote
+            let string_val = string[1..string.len() - 1].to_owned();
+
+            ParserNode {
+                expr: ParserExpr::Str(string_val),
+                span,
+            }
+        }
+        Rule::identifier => {
+            let span = pair.as_span();
+            let string = span.as_str().to_owned();
+
+            ParserNode {
+                expr: ParserExpr::Ident(string),
+                span,
+            }
+        }
+        _ => {
+            return Err(vec![Error::new_from_span(
+                ErrorVariant::CustomError {
+                    message: "Expected string or identifier".to_owned(),
+                },
+                pair.as_span(),
+            )])
+        }
+    };
+
+    Ok(node)
+}
+
 fn consume_expr<'i>(
     pairs: Peekable<Pairs<'i, Rule>>,
     pratt: &PrattParser<Rule>,
@@ -389,10 +429,12 @@ fn consume_expr<'i>(
                         }
                     }
                     Rule::insensitive_string => {
-                        let string = unescape(pair.as_str()).expect("incorrect string literal");
+                        let node =
+                            consume_insensitive_string(pair.clone().into_inner().peekable())?;
+
                         ParserNode {
-                            expr: ParserExpr::Insens(string[2..string.len() - 1].to_owned()),
-                            span: pair.clone().as_span(),
+                            expr: ParserExpr::Insens(Box::new(node)),
+                            span: pair.as_span(),
                         }
                     }
                     Rule::range => {
@@ -1019,6 +1061,17 @@ mod tests {
                 ])
             ]
         };
+
+        parses_to! {
+            parser: PestParser,
+            input: "^ASCII_ALPHA",
+            rule: Rule::insensitive_string,
+            tokens: [
+                insensitive_string(0, 12, [
+                    identifier(1, 12)
+                ])
+            ]
+        };
     }
 
     #[test]
@@ -1263,7 +1316,7 @@ mod tests {
             parser: PestParser,
             input: "a = { ^ }",
             rule: Rule::grammar_rules,
-            positives: vec![Rule::quote],
+            positives: vec![Rule::identifier, Rule::quote],
             negatives: vec![],
             pos: 8
         };
@@ -1340,7 +1393,7 @@ mod tests {
                     )),
                     Box::new(Expr::NegPred(Box::new(Expr::Rep(Box::new(Expr::Opt(
                         Box::new(Expr::Choice(
-                            Box::new(Expr::Insens("c".to_owned())),
+                            Box::new(Expr::Insens(Box::new(Expr::Str("c".to_owned())))),
                             Box::new(Expr::Push(Box::new(Expr::Range(
                                 "d".to_owned(),
                                 "e".to_owned()
