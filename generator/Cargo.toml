@@ -1,7 +1,7 @@
 [package]
 name = "pest_generator"
 description = "pest code generator"
-version = "2.5.1"
+version = "2.5.2"
 edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest.rs/"
@@ -18,8 +18,8 @@ default = ["std"]
 std = ["pest/std"]
 
 [dependencies]
-pest = { path = "../pest", version = "2.5.1", default-features = false }
-pest_meta = { path = "../meta", version = "2.5.1" }
+pest = { path = "../pest", version = "2.5.2", default-features = false }
+pest_meta = { path = "../meta", version = "2.5.2" }
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = "1.0"
