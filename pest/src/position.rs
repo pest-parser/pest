@@ -116,6 +116,10 @@ impl<'i> Position<'i> {
 
     /// Returns the line and column number of this `Position`.
     ///
+    /// This is an O(n) operation, where n is the number of lines in the input.
+    /// You better use `pair.line_col()` instead.
+    ///
+    ///
     /// # Examples
     ///
     /// ```
