@@ -38,7 +38,7 @@ impl Default for Cursor {
 }
 
 impl Cursor {
-    fn get(&self) -> (usize, usize) {
+    pub(crate) fn get(&self) -> (usize, usize) {
         (self.line, self.col)
     }
 }
@@ -264,7 +264,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
                     Rc::clone(&self.queue),
                     self.input,
                     self.start,
-                    self.cursor.clone(),
+                    Some(self.cursor.clone()),
                 )
             })
         } else {
@@ -335,14 +335,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
 
         self.end = self.pair_from_end();
 
-        let pair = unsafe {
-            pair::new(
-                Rc::clone(&self.queue),
-                self.input,
-                self.end,
-                self.cursor.clone(),
-            )
-        };
+        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.end, None) };
 
         Some(pair)
     }

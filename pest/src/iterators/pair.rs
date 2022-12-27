@@ -43,9 +43,7 @@ pub struct Pair<'i, R> {
     input: &'i str,
     /// Token index into `queue`.
     start: usize,
-
-    line: usize,
-    col: usize,
+    cursor: Option<Cursor>,
 }
 
 /// # Safety
@@ -55,14 +53,13 @@ pub unsafe fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &str,
     start: usize,
-    cursor: Cursor,
+    cursor: Option<Cursor>,
 ) -> Pair<'_, R> {
     Pair {
         queue,
         input,
         start,
-        line: cursor.line,
-        col: cursor.col,
+        cursor,
     }
 }
 
@@ -249,7 +246,10 @@ impl<'i, R: RuleType> Pair<'i, R> {
 
     /// Returns the `line`, `col` of this pair start.
     pub fn line_col(&self) -> (usize, usize) {
-        (self.line, self.col)
+        match &self.cursor {
+            Some(cursor) => (cursor.line, cursor.col),
+            None => self.as_span().start_pos().line_col(),
+        }
     }
 
     fn pair(&self) -> usize {
