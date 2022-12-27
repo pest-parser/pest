@@ -12,6 +12,7 @@ use alloc::vec::Vec;
 use core::fmt;
 
 use super::pair::{self, Pair};
+use super::pairs::{Cursor, CursorPairs};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
 use crate::RuleType;
@@ -28,6 +29,7 @@ pub struct FlatPairs<'i, R> {
     input: &'i str,
     start: usize,
     end: usize,
+    cursor: Cursor,
 }
 
 /// # Safety
@@ -44,6 +46,7 @@ pub unsafe fn new<R: RuleType>(
         input,
         start,
         end,
+        cursor: Cursor::default(),
     }
 }
 
@@ -107,7 +110,15 @@ impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
             return None;
         }
 
-        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.start) };
+        let pair = unsafe {
+            pair::new(
+                Rc::clone(&self.queue),
+                self.input,
+                self.start,
+                self.cursor.clone(),
+            )
+        };
+        self.move_cursor(pair.as_str());
 
         self.next_start();
 
@@ -123,7 +134,14 @@ impl<'i, R: RuleType> DoubleEndedIterator for FlatPairs<'i, R> {
 
         self.next_start_from_end();
 
-        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.end) };
+        let pair = unsafe {
+            pair::new(
+                Rc::clone(&self.queue),
+                self.input,
+                self.end,
+                self.cursor.clone(),
+            )
+        };
 
         Some(pair)
     }
@@ -144,7 +162,18 @@ impl<'i, R: Clone> Clone for FlatPairs<'i, R> {
             input: self.input,
             start: self.start,
             end: self.end,
+            cursor: self.cursor.clone(),
         }
+    }
+}
+
+impl<'i, R: RuleType> CursorPairs for FlatPairs<'i, R> {
+    fn cursor(&self) -> Cursor {
+        self.cursor.clone()
+    }
+
+    fn cursor_mut(&mut self) -> &mut Cursor {
+        &mut self.cursor
     }
 }
 

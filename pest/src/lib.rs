@@ -360,6 +360,7 @@ pub mod prec_climber;
 mod span;
 mod stack;
 mod token;
+
 #[doc(hidden)]
 pub mod unicode;
 

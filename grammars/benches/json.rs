@@ -65,7 +65,7 @@ fn line_col_benchmark(c: &mut Criterion) {
     let last_pair = pairs.last().unwrap();
     c.bench_function("line col", |b| {
         b.iter(|| {
-            let _ = last_pair.as_span().start_pos().line_col();
+            last_pair.line_col();
         });
     });
 }

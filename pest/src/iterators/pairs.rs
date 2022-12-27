@@ -25,6 +25,82 @@ use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
 use crate::RuleType;
 
+#[derive(Clone)]
+pub struct Cursor {
+    pub line: usize,
+    pub col: usize,
+}
+
+impl Default for Cursor {
+    fn default() -> Cursor {
+        Cursor { line: 1, col: 1 }
+    }
+}
+
+impl Cursor {
+    fn get(&self) -> (usize, usize) {
+        (self.line, self.col)
+    }
+}
+
+pub trait CursorPairs {
+    fn cursor(&self) -> Cursor;
+    fn cursor_mut(&mut self) -> &mut Cursor;
+
+    /// Move the (line, col) with string part
+    fn move_cursor(&mut self, part: &str) -> (usize, usize) {
+        let (l, c, has_new_line) = self.line_col(part);
+
+        let (prev_line, prev_col) = self.cursor().get();
+
+        self.cursor_mut().line += l;
+        if has_new_line {
+            self.cursor_mut().col = c;
+        } else {
+            self.cursor_mut().col += c;
+        }
+        (prev_line, prev_col)
+    }
+
+    /// Calculate line and col number of a string part
+    /// Fork from Pest for just count the part.
+    ///
+    /// https://github.com/pest-parser/pest/blob/85b18aae23cc7b266c0b5252f9f74b7ab0000795/pest/src/position.rs#L135
+    fn line_col(&self, part: &str) -> (usize, usize, bool) {
+        let mut chars = part.chars().peekable();
+
+        let mut line_col = (0, 0);
+        let mut has_new_line = false;
+
+        loop {
+            match chars.next() {
+                Some('\r') => {
+                    if let Some(&'\n') = chars.peek() {
+                        chars.next();
+
+                        line_col = (line_col.0 + 1, 1);
+                        has_new_line = true;
+                    } else {
+                        line_col = (line_col.0, line_col.1 + 1);
+                    }
+                }
+                Some('\n') => {
+                    line_col = (line_col.0 + 1, 1);
+                    has_new_line = true;
+                }
+                Some(_c) => {
+                    line_col = (line_col.0, line_col.1 + 1);
+                }
+                None => {
+                    break;
+                }
+            }
+        }
+
+        (line_col.0, line_col.1, has_new_line)
+    }
+}
+
 /// An iterator over [`Pair`]s. It is created by [`pest::state`] and [`Pair::into_inner`].
 ///
 /// [`Pair`]: struct.Pair.html
@@ -36,6 +112,7 @@ pub struct Pairs<'i, R> {
     input: &'i str,
     start: usize,
     end: usize,
+    cursor: Cursor,
 }
 
 pub fn new<R: RuleType>(
@@ -49,6 +126,7 @@ pub fn new<R: RuleType>(
         input,
         start,
         end,
+        cursor: Cursor::default(),
     }
 }
 
@@ -181,7 +259,14 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     #[inline]
     pub fn peek(&self) -> Option<Pair<'i, R>> {
         if self.start < self.end {
-            Some(unsafe { pair::new(Rc::clone(&self.queue), self.input, self.start) })
+            Some(unsafe {
+                pair::new(
+                    Rc::clone(&self.queue),
+                    self.input,
+                    self.start,
+                    self.cursor.clone(),
+                )
+            })
         } else {
             None
         }
@@ -221,11 +306,22 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     }
 }
 
+impl<'i, R: RuleType> CursorPairs for Pairs<'i, R> {
+    fn cursor(&self) -> Cursor {
+        self.cursor.clone()
+    }
+
+    fn cursor_mut(&mut self) -> &mut Cursor {
+        &mut self.cursor
+    }
+}
+
 impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
     type Item = Pair<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let pair = self.peek()?;
+        self.move_cursor(pair.as_str());
         self.start = self.pair() + 1;
         Some(pair)
     }
@@ -239,7 +335,14 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
 
         self.end = self.pair_from_end();
 
-        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.end) };
+        let pair = unsafe {
+            pair::new(
+                Rc::clone(&self.queue),
+                self.input,
+                self.end,
+                self.cursor.clone(),
+            )
+        };
 
         Some(pair)
     }
@@ -422,5 +525,19 @@ mod tests {
             pairs.rev().map(|p| p.as_rule()).collect::<Vec<Rule>>(),
             vec![Rule::c, Rule::a]
         );
+    }
+
+    #[test]
+    fn test_line_col() {
+        let mut pairs = AbcParser::parse(Rule::a, "abcde\nabcde").unwrap();
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "abc");
+        assert_eq!(pair.line_col(), (1, 1));
+        assert_eq!(pairs.cursor.get(), (1, 4));
+
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "e");
+        assert_eq!(pair.line_col(), (1, 4));
+        assert_eq!(pairs.cursor.get(), (1, 5));
     }
 }
