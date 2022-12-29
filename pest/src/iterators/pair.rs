@@ -43,6 +43,7 @@ pub struct Pair<'i, R> {
     input: &'i str,
     /// Token index into `queue`.
     start: usize,
+    pub(crate) line_col: Option<(usize, usize)>,
 }
 
 /// # Safety
@@ -57,6 +58,7 @@ pub unsafe fn new<R: RuleType>(
         queue,
         input,
         start,
+        line_col: None,
     }
 }
 
@@ -239,6 +241,14 @@ impl<'i, R: RuleType> Pair<'i, R> {
     #[cfg(feature = "pretty-print")]
     pub fn to_json(&self) -> String {
         ::serde_json::to_string_pretty(self).expect("Failed to pretty-print Pair to json.")
+    }
+
+    /// Returns the `line`, `col` of this pair start.
+    pub fn line_col(&self) -> (usize, usize) {
+        match &self.line_col {
+            Some(line_col) => (line_col.0, line_col.1),
+            None => self.as_span().start_pos().line_col(),
+        }
     }
 
     fn pair(&self) -> usize {

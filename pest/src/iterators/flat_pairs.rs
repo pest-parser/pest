@@ -108,7 +108,6 @@ impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
         }
 
         let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.start) };
-
         self.next_start();
 
         Some(pair)
@@ -176,5 +175,25 @@ mod tests {
                 .collect::<Vec<Rule>>(),
             vec![Rule::c, Rule::b, Rule::a]
         );
+    }
+
+    #[test]
+    fn test_line_col() {
+        let mut pairs = AbcParser::parse(Rule::a, "abcNe\nabcde").unwrap().flatten();
+
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "abc");
+        assert_eq!(pair.line_col(), (1, 1));
+        assert_eq!(pair.line_col(), pair.as_span().start_pos().line_col());
+
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "b");
+        assert_eq!(pair.line_col(), (1, 2));
+        assert_eq!(pair.line_col(), pair.as_span().start_pos().line_col());
+
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "e");
+        assert_eq!(pair.line_col(), (1, 5));
+        assert_eq!(pair.line_col(), pair.as_span().start_pos().line_col());
     }
 }

@@ -23,8 +23,24 @@ use super::flat_pairs::{self, FlatPairs};
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
-use crate::RuleType;
+use crate::{position, RuleType};
 
+#[derive(Clone)]
+pub struct Cursor {
+    pub line: usize,
+    pub col: usize,
+    pub end: usize,
+}
+
+impl Default for Cursor {
+    fn default() -> Cursor {
+        Cursor {
+            line: 1,
+            col: 1,
+            end: 0,
+        }
+    }
+}
 /// An iterator over [`Pair`]s. It is created by [`pest::state`] and [`Pair::into_inner`].
 ///
 /// [`Pair`]: struct.Pair.html
@@ -36,6 +52,7 @@ pub struct Pairs<'i, R> {
     input: &'i str,
     start: usize,
     end: usize,
+    cursor: Cursor,
 }
 
 pub fn new<R: RuleType>(
@@ -49,6 +66,7 @@ pub fn new<R: RuleType>(
         input,
         start,
         end,
+        cursor: Cursor::default(),
     }
 }
 
@@ -219,13 +237,50 @@ impl<'i, R: RuleType> Pairs<'i, R> {
             }
         }
     }
+
+    /// Move the cursor (line, col) by a part of the input.
+    fn move_cursor(&mut self, input: &str, start: usize, end: usize) -> (usize, usize) {
+        // Move cursor for some skiped characters (by skip(n))
+        let prev_end = self.cursor.end;
+        if prev_end != start {
+            self.move_cursor(input, prev_end, start);
+        }
+
+        let (prev_line, prev_col) = (self.cursor.line, self.cursor.col);
+
+        let part = &input[self.cursor.end..end];
+        let (l, c) = position::line_col(part, part.len());
+
+        // Because the `original_line_col` returns (line, col) is start from 1
+        let l = l - 1;
+        let mut c = c - 1;
+        if c < 1 {
+            c = 1
+        }
+
+        self.cursor.line += l;
+        // Has new line
+        if l > 0 {
+            self.cursor.col = c;
+        } else {
+            self.cursor.col += c;
+        }
+        self.cursor.end = end;
+
+        (prev_line, prev_col)
+    }
 }
 
 impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
     type Item = Pair<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let pair = self.peek()?;
+        let mut pair = self.peek()?;
+        let span = pair.as_span();
+
+        let (l, c) = self.move_cursor(self.input, span.start(), span.end());
+        pair.line_col = Some((l, c));
+
         self.start = self.pair() + 1;
         Some(pair)
     }
@@ -422,5 +477,49 @@ mod tests {
             pairs.rev().map(|p| p.as_rule()).collect::<Vec<Rule>>(),
             vec![Rule::c, Rule::a]
         );
+    }
+
+    #[test]
+    fn test_line_col() {
+        let mut pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap();
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "abc");
+        assert_eq!(pair.line_col(), (1, 1));
+        assert_eq!(
+            (pairs.cursor.line, pairs.cursor.col, pairs.cursor.end),
+            (1, 4, 3)
+        );
+
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "e");
+        assert_eq!(pair.line_col(), (2, 1));
+        assert_eq!(
+            (pairs.cursor.line, pairs.cursor.col, pairs.cursor.end),
+            (2, 2, 5)
+        );
+
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "fgh");
+        assert_eq!(pair.line_col(), (2, 2));
+        assert_eq!(
+            (pairs.cursor.line, pairs.cursor.col, pairs.cursor.end),
+            (2, 5, 8)
+        );
+    }
+
+    #[test]
+    fn test_rev_iter_line_col() {
+        let mut pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().rev();
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "fgh");
+        assert_eq!(pair.line_col(), (2, 2));
+
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "e");
+        assert_eq!(pair.line_col(), (2, 1));
+
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "abc");
+        assert_eq!(pair.line_col(), (1, 1));
     }
 }

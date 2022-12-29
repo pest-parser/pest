@@ -116,6 +116,9 @@ impl<'i> Position<'i> {
 
     /// Returns the line and column number of this `Position`.
     ///
+    /// This is an O(n) operation, where n is the number of chars in the input.
+    /// You better use [`pair.line_col()`](struct.Pair.html#method.line_col) instead.
+    ///
     /// # Examples
     ///
     /// ```
@@ -135,14 +138,8 @@ impl<'i> Position<'i> {
         if self.pos > self.input.len() {
             panic!("position out of bounds");
         }
-        #[cfg(feature = "fast-line-col")]
-        {
-            fast_line_col(self.input, self.pos)
-        }
-        #[cfg(not(feature = "fast-line-col"))]
-        {
-            original_line_col(self.input, self.pos)
-        }
+
+        line_col(self.input, self.pos)
     }
 
     /// Returns the entire line of the input that contains this `Position`.
@@ -452,6 +449,17 @@ impl<'i> Hash for Position<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (self.input as *const str).hash(state);
         self.pos.hash(state);
+    }
+}
+
+pub(crate) fn line_col(input: &str, pos: usize) -> (usize, usize) {
+    #[cfg(feature = "fast-line-col")]
+    {
+        fast_line_col(input, pos)
+    }
+    #[cfg(not(feature = "fast-line-col"))]
+    {
+        original_line_col(input, pos)
     }
 }
 
