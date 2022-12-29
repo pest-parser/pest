@@ -107,7 +107,7 @@ impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
             return None;
         }
 
-        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.start, None) };
+        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.start) };
         self.next_start();
 
         Some(pair)
@@ -122,7 +122,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for FlatPairs<'i, R> {
 
         self.next_start_from_end();
 
-        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.end, None) };
+        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.end) };
 
         Some(pair)
     }

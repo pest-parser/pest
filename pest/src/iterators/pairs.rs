@@ -29,45 +29,18 @@ use crate::{position, RuleType};
 pub struct Cursor {
     pub line: usize,
     pub col: usize,
+    pub end: usize,
 }
 
 impl Default for Cursor {
     fn default() -> Cursor {
-        Cursor { line: 1, col: 1 }
-    }
-}
-
-impl Cursor {
-    pub(crate) fn get(&self) -> (usize, usize) {
-        (self.line, self.col)
-    }
-}
-
-pub trait CursorPairs {
-    fn cursor(&self) -> Cursor;
-    fn cursor_mut(&mut self) -> &mut Cursor;
-
-    /// Move the (line, col) with string part
-    fn move_cursor(&mut self, part: &str) -> (usize, usize) {
-        let (l, c) = position::line_col(part, part.len());
-
-        // because original_line_col line, col start from 1
-        let l = l - 1;
-        let c = c - 1;
-
-        let (prev_line, prev_col) = self.cursor().get();
-
-        self.cursor_mut().line += l;
-        // Has new line
-        if l > 0 {
-            self.cursor_mut().col = c;
-        } else {
-            self.cursor_mut().col += c;
+        Cursor {
+            line: 1,
+            col: 1,
+            end: 0,
         }
-        (prev_line, prev_col)
     }
 }
-
 /// An iterator over [`Pair`]s. It is created by [`pest::state`] and [`Pair::into_inner`].
 ///
 /// [`Pair`]: struct.Pair.html
@@ -226,14 +199,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     #[inline]
     pub fn peek(&self) -> Option<Pair<'i, R>> {
         if self.start < self.end {
-            Some(unsafe {
-                pair::new(
-                    Rc::clone(&self.queue),
-                    self.input,
-                    self.start,
-                    Some(self.cursor.clone()),
-                )
-            })
+            Some(unsafe { pair::new(Rc::clone(&self.queue), self.input, self.start) })
         } else {
             None
         }
@@ -271,15 +237,37 @@ impl<'i, R: RuleType> Pairs<'i, R> {
             }
         }
     }
-}
 
-impl<'i, R: RuleType> CursorPairs for Pairs<'i, R> {
-    fn cursor(&self) -> Cursor {
-        self.cursor.clone()
-    }
+    /// Move the cursor (line, col) by a part of the input.
+    fn move_cursor(&mut self, input: &str, start: usize, end: usize) -> (usize, usize) {
+        // Move cursor for some skiped characters (by skip(n))
+        let prev_end = self.cursor.end;
+        if prev_end != start {
+            self.move_cursor(input, prev_end, start);
+        }
 
-    fn cursor_mut(&mut self) -> &mut Cursor {
-        &mut self.cursor
+        let (prev_line, prev_col) = (self.cursor.line, self.cursor.col);
+
+        let part = &input[self.cursor.end..end];
+        let (l, c) = position::line_col(part, part.len());
+
+        // Because the `original_line_col` returns (line, col) is start from 1
+        let l = l - 1;
+        let mut c = c - 1;
+        if c < 1 {
+            c = 1
+        }
+
+        self.cursor.line += l;
+        // Has new line
+        if l > 0 {
+            self.cursor.col = c;
+        } else {
+            self.cursor.col += c;
+        }
+        self.cursor.end = end;
+
+        (prev_line, prev_col)
     }
 }
 
@@ -287,8 +275,12 @@ impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
     type Item = Pair<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let pair = self.peek()?;
-        self.move_cursor(pair.as_str());
+        let mut pair = self.peek()?;
+        let span = pair.as_span();
+
+        let (l, c) = self.move_cursor(self.input, span.start(), span.end());
+        pair.line_col = Some((l, c));
+
         self.start = self.pair() + 1;
         Some(pair)
     }
@@ -302,7 +294,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
 
         self.end = self.pair_from_end();
 
-        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.end, None) };
+        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.end) };
 
         Some(pair)
     }
@@ -489,15 +481,45 @@ mod tests {
 
     #[test]
     fn test_line_col() {
-        let mut pairs = AbcParser::parse(Rule::a, "abcde\nabcde").unwrap();
+        let mut pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap();
         let pair = pairs.next().unwrap();
         assert_eq!(pair.as_str(), "abc");
         assert_eq!(pair.line_col(), (1, 1));
-        assert_eq!(pairs.cursor.get(), (1, 4));
+        assert_eq!(
+            (pairs.cursor.line, pairs.cursor.col, pairs.cursor.end),
+            (1, 4, 3)
+        );
 
         let pair = pairs.next().unwrap();
         assert_eq!(pair.as_str(), "e");
-        assert_eq!(pair.line_col(), (1, 4));
-        assert_eq!(pairs.cursor.get(), (1, 5));
+        assert_eq!(pair.line_col(), (2, 1));
+        assert_eq!(
+            (pairs.cursor.line, pairs.cursor.col, pairs.cursor.end),
+            (2, 2, 5)
+        );
+
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "fgh");
+        assert_eq!(pair.line_col(), (2, 2));
+        assert_eq!(
+            (pairs.cursor.line, pairs.cursor.col, pairs.cursor.end),
+            (2, 5, 8)
+        );
+    }
+
+    #[test]
+    fn test_rev_iter_line_col() {
+        let mut pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().rev();
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "fgh");
+        assert_eq!(pair.line_col(), (2, 2));
+
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "e");
+        assert_eq!(pair.line_col(), (2, 1));
+
+        let pair = pairs.next().unwrap();
+        assert_eq!(pair.as_str(), "abc");
+        assert_eq!(pair.line_col(), (1, 1));
     }
 }

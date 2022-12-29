@@ -329,6 +329,7 @@ pub mod tests {
         a,
         b,
         c,
+        d,
     }
 
     pub struct AbcParser;
@@ -345,6 +346,7 @@ pub mod tests {
                             .skip(1)
                     })
                     .and_then(|s| s.skip(1).unwrap().rule(Rule::c, |s| s.match_string("e")))
+                    .and_then(|s| s.optional(|s| s.rule(Rule::d, |s| s.match_string("fgh"))))
             })
         }
     }

@@ -20,7 +20,7 @@ use core::str;
 #[cfg(feature = "pretty-print")]
 use serde::ser::SerializeStruct;
 
-use super::pairs::{self, Cursor, Pairs};
+use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
 use crate::span::{self, Span};
@@ -43,7 +43,7 @@ pub struct Pair<'i, R> {
     input: &'i str,
     /// Token index into `queue`.
     start: usize,
-    cursor: Option<Cursor>,
+    pub(crate) line_col: Option<(usize, usize)>,
 }
 
 /// # Safety
@@ -53,13 +53,12 @@ pub unsafe fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &str,
     start: usize,
-    cursor: Option<Cursor>,
 ) -> Pair<'_, R> {
     Pair {
         queue,
         input,
         start,
-        cursor,
+        line_col: None,
     }
 }
 
@@ -246,8 +245,8 @@ impl<'i, R: RuleType> Pair<'i, R> {
 
     /// Returns the `line`, `col` of this pair start.
     pub fn line_col(&self) -> (usize, usize) {
-        match &self.cursor {
-            Some(cursor) => (cursor.line, cursor.col),
+        match &self.line_col {
+            Some(line_col) => (line_col.0, line_col.1),
             None => self.as_span().start_pos().line_col(),
         }
     }
