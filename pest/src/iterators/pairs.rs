@@ -23,7 +23,7 @@ use super::flat_pairs::{self, FlatPairs};
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
-use crate::RuleType;
+use crate::{position, RuleType};
 
 #[derive(Clone)]
 pub struct Cursor {
@@ -49,55 +49,22 @@ pub trait CursorPairs {
 
     /// Move the (line, col) with string part
     fn move_cursor(&mut self, part: &str) -> (usize, usize) {
-        let (l, c, has_new_line) = self.line_col(part);
+        let (l, c) = position::line_col(part, part.len());
+
+        // because original_line_col line, col start from 1
+        let l = l - 1;
+        let c = c - 1;
 
         let (prev_line, prev_col) = self.cursor().get();
 
         self.cursor_mut().line += l;
-        if has_new_line {
+        // Has new line
+        if l > 0 {
             self.cursor_mut().col = c;
         } else {
             self.cursor_mut().col += c;
         }
         (prev_line, prev_col)
-    }
-
-    /// Calculate line and col number of a string part
-    /// Fork from Pest for just count the part.
-    ///
-    /// https://github.com/pest-parser/pest/blob/85b18aae23cc7b266c0b5252f9f74b7ab0000795/pest/src/position.rs#L135
-    fn line_col(&self, part: &str) -> (usize, usize, bool) {
-        let mut chars = part.chars().peekable();
-
-        let mut line_col = (0, 0);
-        let mut has_new_line = false;
-
-        loop {
-            match chars.next() {
-                Some('\r') => {
-                    if let Some(&'\n') = chars.peek() {
-                        chars.next();
-
-                        line_col = (line_col.0 + 1, 1);
-                        has_new_line = true;
-                    } else {
-                        line_col = (line_col.0, line_col.1 + 1);
-                    }
-                }
-                Some('\n') => {
-                    line_col = (line_col.0 + 1, 1);
-                    has_new_line = true;
-                }
-                Some(_c) => {
-                    line_col = (line_col.0, line_col.1 + 1);
-                }
-                None => {
-                    break;
-                }
-            }
-        }
-
-        (line_col.0, line_col.1, has_new_line)
     }
 }
 
