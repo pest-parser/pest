@@ -24,7 +24,7 @@ extern crate quote;
 use std::env;
 use std::fs::File;
 use std::io::{self, Read};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use proc_macro2::TokenStream;
 use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
@@ -36,6 +36,42 @@ mod generator;
 use pest_meta::parser::{self, rename_meta_rule, Rule};
 use pest_meta::{optimizer, unwrap_or_report, validator};
 
+fn join_path(path: &str) -> PathBuf {
+    let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
+
+    // Check whether we can find a file at the path relative to the CARGO_MANIFEST_DIR
+    // first.
+    //
+    // If we cannot find the expected file over there, fallback to the
+    // `CARGO_MANIFEST_DIR/src`, which is the old default and kept for convenience
+    // reasons.
+    // TODO: This could be refactored once `std::path::absolute()` get's stabilized.
+    // https://doc.rust-lang.org/std/path/fn.absolute.html
+    let path = if Path::new(&root).join(path).exists() {
+        Path::new(&root).join(path)
+    } else {
+        Path::new(&root).join("src/").join(path)
+    };
+
+    path
+}
+
+/// Get path relative to `path` dir, or relative to root path
+fn partial_path(path: Option<&PathBuf>, filename: &str) -> PathBuf {
+    let root = match path {
+        Some(path) => path.parent().unwrap().to_path_buf(),
+        None => join_path("./"),
+    };
+
+    // Add .pest suffix if not exist
+    let mut filename = filename.to_string();
+    if !filename.to_lowercase().ends_with(".pest") {
+        filename.push_str(".pest");
+    }
+
+    root.join(filename)
+}
+
 /// Processes the derive/proc macro input and generates the corresponding parser based
 /// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
 /// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
@@ -45,34 +81,16 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
 
     let mut data = String::new();
     let mut path = None;
+    let mut has_use = false;
 
     for content in contents {
         let (_data, _path) = match content {
             GrammarSource::File(ref path) => {
-                let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
-
-                // Check whether we can find a file at the path relative to the CARGO_MANIFEST_DIR
-                // first.
-                //
-                // If we cannot find the expected file over there, fallback to the
-                // `CARGO_MANIFEST_DIR/src`, which is the old default and kept for convenience
-                // reasons.
-                // TODO: This could be refactored once `std::path::absolute()` get's stabilized.
-                // https://doc.rust-lang.org/std/path/fn.absolute.html
-                let path = if Path::new(&root).join(path).exists() {
-                    Path::new(&root).join(path)
-                } else {
-                    Path::new(&root).join("src/").join(path)
-                };
-
-                let file_name = match path.file_name() {
-                    Some(file_name) => file_name,
-                    None => panic!("grammar attribute should point to a file"),
-                };
+                let path = join_path(path);
 
                 let data = match read_file(&path) {
                     Ok(data) => data,
-                    Err(error) => panic!("error opening {:?}: {}", file_name, error),
+                    Err(error) => panic!("error opening {:?}: {}", path, error),
                 };
                 (data, Some(path.clone()))
             }
@@ -85,13 +103,43 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         }
     }
 
-    let pairs = match parser::parse(Rule::grammar_rules, &data) {
+    let raw_data = data.clone();
+    let mut pairs = match parser::parse(Rule::grammar_rules, &raw_data) {
         Ok(pairs) => pairs,
         Err(error) => panic!("error parsing \n{}", error.renamed_rules(rename_meta_rule)),
     };
 
+    // parse `include!("file.pest")` to load partial and replace data
+    // TODO: Try to avoid parse twice as much as possible
+    let mut partial_pairs = pairs.clone().flatten().peekable();
+    while let Some(pair) = partial_pairs.next() {
+        if pair.as_rule() == Rule::_use {
+            if let Some(filename) = partial_pairs.peek() {
+                let filepath = partial_path(path.as_ref(), filename.as_str());
+                let partial_data = match read_file(&filepath) {
+                    Ok(data) => data,
+                    Err(error) => panic!("error opening {:?}: {}", filepath, error),
+                };
+
+                let (start, end) = (pair.as_span().start(), pair.as_span().end());
+
+                data.replace_range(start..end, &partial_data);
+                has_use = true;
+            }
+        }
+    }
+
+    if has_use {
+        // Re-parse the data again, after replacing the `use` statement
+        pairs = match parser::parse(Rule::grammar_rules, &data) {
+            Ok(pairs) => pairs,
+            Err(error) => panic!("error parsing \n{}", error.renamed_rules(rename_meta_rule)),
+        };
+    }
+
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
     let ast = unwrap_or_report(parser::consume_rules(pairs));
+
     let optimized = optimizer::optimize(ast);
 
     generator::generate(name, &generics, path, optimized, defaults, include_grammar)
@@ -157,6 +205,9 @@ fn get_attribute(attr: &Attribute) -> GrammarSource {
 mod tests {
     use super::parse_derive;
     use super::GrammarSource;
+    use std::path::PathBuf;
+
+    use crate::partial_path;
 
     #[test]
     fn derive_inline_file() {
@@ -224,5 +275,24 @@ mod tests {
         ";
         let ast = syn::parse_str(definition).unwrap();
         parse_derive(ast);
+    }
+
+    #[test]
+    fn test_partial_path() {
+        assert_eq!(
+            PathBuf::from("tests/grammars/base.pest".to_owned()),
+            partial_path(Some(&PathBuf::from("tests/grammars/foo.pest")), "base")
+        );
+
+        assert_eq!(
+            PathBuf::from("tests/grammars/base.pest".to_owned()),
+            partial_path(Some(&PathBuf::from("tests/grammars/foo.pest")), "base.pest")
+        );
+
+        let root = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
+        assert_eq!(
+            std::path::Path::new(&root).join("base.pest"),
+            partial_path(None, "base.pest")
+        );
     }
 }

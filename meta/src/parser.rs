@@ -243,6 +243,7 @@ pub fn rename_meta_rule(rule: &Rule) -> String {
         Rule::insensitive_string => "`^`".to_owned(),
         Rule::range_operator => "`..`".to_owned(),
         Rule::single_quote => "`'`".to_owned(),
+        Rule::_use => "use".to_owned(),
         other_rule => format!("{:?}", other_rule),
     }
 }
@@ -1094,12 +1095,37 @@ mod tests {
     }
 
     #[test]
+    fn test_use() {
+        parses_to! {
+            parser: PestParser,
+            input: "use \"foo\"",
+            rule: Rule::_use,
+            tokens: [
+                _use(0, 9, [
+                    path(5, 8),
+                ])
+            ]
+        };
+
+        parses_to! {
+            parser: PestParser,
+            input: "use  \"foo.bar.pest\"",
+            rule: Rule::_use,
+            tokens: [
+                _use(0, 19, [
+                    path(6, 18),
+                ])
+            ]
+        };
+    }
+
+    #[test]
     fn wrong_identifier() {
         fails_with! {
             parser: PestParser,
             input: "0",
             rule: Rule::grammar_rules,
-            positives: vec![Rule::identifier],
+            positives: vec![Rule::grammar_rule],
             negatives: vec![],
             pos: 0
         };

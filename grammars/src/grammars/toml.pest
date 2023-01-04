@@ -6,6 +6,7 @@
 // license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
+use "./base"
 
 toml = { SOI ~ (table | array_table | pair)* ~ EOI }
 
@@ -70,5 +71,4 @@ exp     = @{ ("E" | "e") ~ ("+" | "-")? ~ int }
 
 boolean = { "true" | "false" }
 
-WHITESPACE = _{ " " | "\t" | NEWLINE }
 COMMENT    = _{ "#" ~ (!NEWLINE ~ ANY)* }

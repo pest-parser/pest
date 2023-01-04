@@ -11,7 +11,8 @@ grammar_rules = _{ SOI ~ grammar_rule+ ~ EOI }
 
 grammar_rule = {
     identifier ~ assignment_operator ~ modifier? ~
-    opening_brace ~ expression ~ closing_brace
+    opening_brace ~ expression ~ closing_brace |
+    _use
 }
 
 assignment_operator = { "=" }
@@ -96,3 +97,6 @@ newline    = _{ "\n" | "\r\n" }
 WHITESPACE = _{ " " | "\t" | newline }
 block_comment = _{ "/*" ~ (block_comment | !"*/" ~ ANY)* ~ "*/" }
 COMMENT    = _{ block_comment | ("//" ~ (!newline ~ ANY)*) }
+
+_use = ${ "use" ~ " "+ ~ "\"" ~ path ~ "\"" }
+path = @{ (!(newline | "\"") ~ ANY)* ~ ".pest"? }

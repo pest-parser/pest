@@ -6,6 +6,7 @@
 // license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
+use "base.pest"
 
 json = { SOI ~ (object | array) ~ EOI }
 
@@ -28,5 +29,3 @@ exp    = @{ ("E" | "e") ~ ("+" | "-")? ~ ASCII_DIGIT+ }
 bool = { "true" | "false" }
 
 null = { "null" }
-
-WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
