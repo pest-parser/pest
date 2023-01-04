@@ -243,7 +243,7 @@ pub fn rename_meta_rule(rule: &Rule) -> String {
         Rule::insensitive_string => "`^`".to_owned(),
         Rule::range_operator => "`..`".to_owned(),
         Rule::single_quote => "`'`".to_owned(),
-        Rule::_use => "use".to_owned(),
+        Rule::include => "include!".to_owned(),
         other_rule => format!("{:?}", other_rule),
     }
 }
@@ -1095,25 +1095,36 @@ mod tests {
     }
 
     #[test]
-    fn test_use() {
+    fn test_include() {
         parses_to! {
             parser: PestParser,
-            input: "use \"foo\"",
-            rule: Rule::_use,
+            input: "include!(\"foo\")",
+            rule: Rule::include,
             tokens: [
-                _use(0, 9, [
-                    path(5, 8),
+                include(0, 15, [
+                    path(10, 13),
                 ])
             ]
         };
 
         parses_to! {
             parser: PestParser,
-            input: "use  \"foo.bar.pest\"",
-            rule: Rule::_use,
+            input: "include! (  \"foo.bar.pest\" )",
+            rule: Rule::include,
             tokens: [
-                _use(0, 19, [
-                    path(6, 18),
+                include(0, 28, [
+                    path(13, 25),
+                ])
+            ]
+        };
+
+        parses_to! {
+            parser: PestParser,
+            input: "include!(\n\"./foo/bar.pest\"\n)",
+            rule: Rule::include,
+            tokens: [
+                include(0, 28, [
+                    path(11, 25),
                 ])
             ]
         };

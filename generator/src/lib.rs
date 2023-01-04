@@ -113,7 +113,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     // TODO: Try to avoid parse twice as much as possible
     let mut partial_pairs = pairs.clone().flatten().peekable();
     while let Some(pair) = partial_pairs.next() {
-        if pair.as_rule() == Rule::_use {
+        if pair.as_rule() == Rule::include {
             if let Some(filename) = partial_pairs.peek() {
                 let filepath = partial_path(path.as_ref(), filename.as_str());
                 let partial_data = match read_file(&filepath) {
