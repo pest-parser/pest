@@ -1,5 +1,3 @@
-WHITESPACE   =  _{ " " | "\t" | NEWLINE }
-
  program      =   { SOI ~ expr ~ EOI }
    expr       =   { prefix* ~ primary ~ postfix* ~ (infix ~ prefix* ~ primary ~ postfix* )* }
      infix    =  _{ add | sub | mul | div | pow }
@@ -13,4 +11,3 @@ WHITESPACE   =  _{ " " | "\t" | NEWLINE }
      postfix  =  _{ fac }
        fac    =   { "!" } // Factorial
      primary  =  _{ int | "(" ~ expr ~ ")" }
-       int    =  @{ (ASCII_NONZERO_DIGIT ~ ASCII_DIGIT+ | ASCII_DIGIT) }
