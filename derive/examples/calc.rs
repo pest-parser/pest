@@ -2,6 +2,7 @@ mod parser {
     use pest_derive::Parser;
 
     #[derive(Parser)]
+    #[grammar = "../examples/base.pest"]
     #[grammar = "../examples/calc.pest"]
     pub struct Parser;
 }

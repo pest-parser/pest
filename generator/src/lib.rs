@@ -41,39 +41,49 @@ use pest_meta::{optimizer, unwrap_or_report, validator};
 /// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
 pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
-    let (name, generics, content) = parse_derive(ast);
+    let (name, generics, contents) = parse_derive(ast);
 
-    let (data, path) = match content {
-        GrammarSource::File(ref path) => {
-            let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
+    let mut data = String::new();
+    let mut path = None;
 
-            // Check whether we can find a file at the path relative to the CARGO_MANIFEST_DIR
-            // first.
-            //
-            // If we cannot find the expected file over there, fallback to the
-            // `CARGO_MANIFEST_DIR/src`, which is the old default and kept for convenience
-            // reasons.
-            // TODO: This could be refactored once `std::path::absolute()` get's stabilized.
-            // https://doc.rust-lang.org/std/path/fn.absolute.html
-            let path = if Path::new(&root).join(path).exists() {
-                Path::new(&root).join(path)
-            } else {
-                Path::new(&root).join("src/").join(path)
-            };
+    for content in contents {
+        let (_data, _path) = match content {
+            GrammarSource::File(ref path) => {
+                let root = env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| ".".into());
 
-            let file_name = match path.file_name() {
-                Some(file_name) => file_name,
-                None => panic!("grammar attribute should point to a file"),
-            };
+                // Check whether we can find a file at the path relative to the CARGO_MANIFEST_DIR
+                // first.
+                //
+                // If we cannot find the expected file over there, fallback to the
+                // `CARGO_MANIFEST_DIR/src`, which is the old default and kept for convenience
+                // reasons.
+                // TODO: This could be refactored once `std::path::absolute()` get's stabilized.
+                // https://doc.rust-lang.org/std/path/fn.absolute.html
+                let path = if Path::new(&root).join(path).exists() {
+                    Path::new(&root).join(path)
+                } else {
+                    Path::new(&root).join("src/").join(path)
+                };
 
-            let data = match read_file(&path) {
-                Ok(data) => data,
-                Err(error) => panic!("error opening {:?}: {}", file_name, error),
-            };
-            (data, Some(path.clone()))
+                let file_name = match path.file_name() {
+                    Some(file_name) => file_name,
+                    None => panic!("grammar attribute should point to a file"),
+                };
+
+                let data = match read_file(&path) {
+                    Ok(data) => data,
+                    Err(error) => panic!("error opening {:?}: {}", file_name, error),
+                };
+                (data, Some(path.clone()))
+            }
+            GrammarSource::Inline(content) => (content, None),
+        };
+
+        data.push_str(&_data);
+        if _path.is_some() {
+            path = _path;
         }
-        GrammarSource::Inline(content) => (content, None),
-    };
+    }
 
     let pairs = match parser::parse(Rule::grammar_rules, &data) {
         Ok(pairs) => pairs,
@@ -100,7 +110,7 @@ enum GrammarSource {
     Inline(String),
 }
 
-fn parse_derive(ast: DeriveInput) -> (Ident, Generics, GrammarSource) {
+fn parse_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>) {
     let name = ast.ident;
     let generics = ast.generics;
 
@@ -115,13 +125,16 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, GrammarSource) {
         })
         .collect();
 
-    let argument = match grammar.len() {
-        0 => panic!("a grammar file needs to be provided with the #[grammar = \"PATH\"] or #[grammar_inline = \"GRAMMAR CONTENTS\"] attribute"),
-        1 => get_attribute(grammar[0]),
-        _ => panic!("only 1 grammar file can be provided"),
-    };
+    if grammar.is_empty() {
+        panic!("a grammar file needs to be provided with the #[grammar = \"PATH\"] or #[grammar_inline = \"GRAMMAR CONTENTS\"] attribute");
+    }
 
-    (name, generics, argument)
+    let mut grammar_sources = Vec::with_capacity(grammar.len());
+    for attr in grammar {
+        grammar_sources.push(get_attribute(attr))
+    }
+
+    (name, generics, grammar_sources)
 }
 
 fn get_attribute(attr: &Attribute) -> GrammarSource {
@@ -153,8 +166,8 @@ mod tests {
             pub struct MyParser<'a, T>;
         ";
         let ast = syn::parse_str(definition).unwrap();
-        let (_, _, filename) = parse_derive(ast);
-        assert_eq!(filename, GrammarSource::Inline("GRAMMAR".to_string()));
+        let (_, _, filenames) = parse_derive(ast);
+        assert_eq!(filenames, [GrammarSource::Inline("GRAMMAR".to_string())]);
     }
 
     #[test]
@@ -165,12 +178,11 @@ mod tests {
             pub struct MyParser<'a, T>;
         ";
         let ast = syn::parse_str(definition).unwrap();
-        let (_, _, filename) = parse_derive(ast);
-        assert_eq!(filename, GrammarSource::File("myfile.pest".to_string()));
+        let (_, _, filenames) = parse_derive(ast);
+        assert_eq!(filenames, [GrammarSource::File("myfile.pest".to_string())]);
     }
 
     #[test]
-    #[should_panic(expected = "only 1 grammar file can be provided")]
     fn derive_multiple_grammars() {
         let definition = "
             #[other_attr]
@@ -179,7 +191,14 @@ mod tests {
             pub struct MyParser<'a, T>;
         ";
         let ast = syn::parse_str(definition).unwrap();
-        parse_derive(ast);
+        let (_, _, filenames) = parse_derive(ast);
+        assert_eq!(
+            filenames,
+            [
+                GrammarSource::File("myfile1.pest".to_string()),
+                GrammarSource::File("myfile2.pest".to_string())
+            ]
+        );
     }
 
     #[test]
@@ -188,6 +207,19 @@ mod tests {
         let definition = "
             #[other_attr]
             #[grammar = 1]
+            pub struct MyParser<'a, T>;
+        ";
+        let ast = syn::parse_str(definition).unwrap();
+        parse_derive(ast);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "a grammar file needs to be provided with the #[grammar = \"PATH\"] or #[grammar_inline = \"GRAMMAR CONTENTS\"] attribute"
+    )]
+    fn derive_no_grammar() {
+        let definition = "
+            #[other_attr]
             pub struct MyParser<'a, T>;
         ";
         let ast = syn::parse_str(definition).unwrap();
