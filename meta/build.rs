@@ -1,6 +1,4 @@
-extern crate sha1;
-
-use sha1::{Digest, Sha1};
+use sha2::{Digest, Sha256};
 use std::env;
 use std::fs::{self, File};
 use std::io::prelude::*;
@@ -25,7 +23,7 @@ fn main() {
 
     // If `grammar.pest` exists (we're building from git sources)
     if grammar_pest_path.exists() {
-        let mut sha = Sha1::default();
+        let mut sha = Sha256::default();
 
         let old_hash = File::open(&hash_path).ok().map(|mut file| {
             let mut s = String::new();
