@@ -11,6 +11,7 @@
 
 use std::char;
 use std::iter::Peekable;
+use std::sync::Mutex;
 
 use pest::error::{Error, ErrorVariant};
 use pest::iterators::{Pair, Pairs};
@@ -50,6 +51,8 @@ pub struct ParserRule<'i> {
     pub ty: RuleType,
     /// The rule's parser node
     pub node: ParserNode<'i>,
+    /// Doc comments of the rule
+    pub(crate) comments: Vec<String>,
 }
 
 /// The pest grammar node
@@ -167,9 +170,20 @@ pub enum ParserExpr<'i> {
 }
 
 fn convert_rule(rule: ParserRule<'_>) -> AstRule {
-    let ParserRule { name, ty, node, .. } = rule;
+    let ParserRule {
+        name,
+        ty,
+        node,
+        comments,
+        ..
+    } = rule;
     let expr = convert_node(node);
-    AstRule { name, ty, expr }
+    AstRule {
+        name,
+        ty,
+        expr,
+        comments,
+    }
 }
 
 fn convert_node(node: ParserNode<'_>) -> Expr {
@@ -243,7 +257,20 @@ pub fn rename_meta_rule(rule: &Rule) -> String {
         Rule::insensitive_string => "`^`".to_owned(),
         Rule::range_operator => "`..`".to_owned(),
         Rule::single_quote => "`'`".to_owned(),
+        Rule::grammar_doc => "//!".to_owned(),
+        Rule::line_doc => "///".to_owned(),
         other_rule => format!("{:?}", other_rule),
+    }
+}
+
+fn filter_line_docs(pair: &Pair<'_, Rule>, line_docs: &mut Vec<String>) -> bool {
+    let mut pairs = pair.clone().into_inner();
+    let pair = pairs.next().unwrap();
+    if pair.as_rule() == Rule::line_doc {
+        line_docs.push(pair.as_str()[3..pair.as_str().len()].trim().to_string());
+        false
+    } else {
+        true
     }
 }
 
@@ -254,8 +281,11 @@ fn consume_rules_with_spans(
         .op(Op::infix(Rule::choice_operator, Assoc::Left))
         .op(Op::infix(Rule::sequence_operator, Assoc::Left));
 
+    let line_docs: Mutex<Vec<String>> = Mutex::new(vec![]);
+
     pairs
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
+        .filter(|pair| filter_line_docs(pair, &mut line_docs.lock().unwrap()))
         .map(|pair| {
             let mut pairs = pair.into_inner().peekable();
 
@@ -286,11 +316,17 @@ fn consume_rules_with_spans(
 
             let node = consume_expr(inner_nodes, &pratt)?;
 
+            // consume doc comments
+            let mut line_docs = line_docs.lock().unwrap();
+            let comments = line_docs.clone();
+            line_docs.clear();
+
             Ok(ParserRule {
                 name,
                 span,
                 ty,
                 node,
+                comments,
             })
         })
         .collect()
@@ -1094,12 +1130,43 @@ mod tests {
     }
 
     #[test]
+    fn grammar_doc_and_line_doc() {
+        let input = "//! hello\n/// world\na = { \"a\" }";
+        parses_to! {
+            parser: PestParser,
+            input: input,
+            rule: Rule::grammar_rules,
+            tokens: [
+                grammar_doc(0, 9),
+                grammar_rule(10, 19, [
+                    line_doc(10, 19),
+                ]),
+                grammar_rule(20, 31, [
+                    identifier(20, 21),
+                    assignment_operator(22, 23),
+                    opening_brace(24, 25),
+                    expression(26, 30, [
+                        term(26, 30, [
+                            string(26, 29, [
+                                quote(26, 27),
+                                inner_str(27, 28),
+                                quote(28, 29)
+                            ])
+                        ])
+                    ]),
+                    closing_brace(30, 31),
+                ])
+            ]
+        };
+    }
+
+    #[test]
     fn wrong_identifier() {
         fails_with! {
             parser: PestParser,
             input: "0",
             rule: Rule::grammar_rules,
-            positives: vec![Rule::identifier],
+            positives: vec![Rule::grammar_rule, Rule::grammar_doc],
             negatives: vec![],
             pos: 0
         };
@@ -1315,8 +1382,11 @@ mod tests {
 
     #[test]
     fn ast() {
-        let input =
-            "rule = _{ a{1} ~ \"a\"{3,} ~ b{, 2} ~ \"b\"{1, 2} | !(^\"c\" | PUSH('d'..'e'))?* }";
+        let input = r##"
+        /// This is line comment
+        /// This is rule
+        rule = _{ a{1} ~ "a"{3,} ~ b{, 2} ~ "b"{1, 2} | !(^"c" | PUSH('d'..'e'))?* }
+        "##;
 
         let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs).unwrap();
@@ -1347,7 +1417,11 @@ mod tests {
                             ))))
                         ))
                     ))))))
-                )
+                ),
+                comments: vec![
+                    "This is line comment".to_string(),
+                    "This is rule".to_string(),
+                ],
             },]
         );
     }
@@ -1368,7 +1442,8 @@ mod tests {
                 expr: Expr::Seq(
                     Box::new(Expr::PeekSlice(-4, None)),
                     Box::new(Expr::PeekSlice(0, Some(3))),
-                )
+                ),
+                comments: vec![],
             }],
         );
     }

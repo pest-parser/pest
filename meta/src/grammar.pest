@@ -7,11 +7,12 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-grammar_rules = _{ SOI ~ grammar_rule+ ~ EOI }
+grammar_rules = _{ SOI ~ grammar_doc* ~ (grammar_rule)+ ~ EOI }
 
 grammar_rule = {
     identifier ~ assignment_operator ~ modifier? ~
-    opening_brace ~ expression ~ closing_brace
+    opening_brace ~ expression ~ closing_brace |
+    line_doc
 }
 
 assignment_operator = { "=" }
@@ -92,7 +93,12 @@ quote          = { "\"" }
 single_quote   = { "'" }
 range_operator = { ".." }
 
-newline    = _{ "\n" | "\r\n" }
-WHITESPACE = _{ " " | "\t" | newline }
-block_comment = _{ "/*" ~ (block_comment | !"*/" ~ ANY)* ~ "*/" }
-COMMENT    = _{ block_comment | ("//" ~ (!newline ~ ANY)*) }
+newline        = _{ "\n" | "\r\n" }
+WHITESPACE     = _{ " " | "\t" | newline }
+line_comment   = _{ ("//" ~ !("/" | "!") ~ (!newline ~ ANY)*) }
+block_comment  = _{ "/*" ~ (block_comment | !"*/" ~ ANY)* ~ "*/" }
+COMMENT        = _{ block_comment | line_comment }
+
+// ref: https://doc.rust-lang.org/reference/comments.html
+grammar_doc = ${ "//!" ~ (!newline ~ ANY)* }
+line_doc    = ${ "///" ~ !"/" ~ (!newline ~ ANY)* }

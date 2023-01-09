@@ -10,7 +10,12 @@
 use crate::ast::*;
 
 pub fn list(rule: Rule) -> Rule {
-    let Rule { name, ty, expr } = rule;
+    let Rule {
+        name,
+        ty,
+        expr,
+        comments,
+    } = rule;
     Rule {
         name,
         ty,
@@ -38,5 +43,6 @@ pub fn list(rule: Rule) -> Rule {
                 expr => expr,
             }
         }),
+        comments,
     }
 }

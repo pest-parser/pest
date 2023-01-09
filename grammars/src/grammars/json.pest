@@ -7,8 +7,11 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! A parser for JSON file.
+//! And this is a example for JSON parser.
 json = { SOI ~ (object | array) ~ EOI }
 
+/// Matches object, e.g.: `{ "foo": "bar" }`
 object = { "{" ~ pair ~ ("," ~ pair)* ~ "}" | "{" ~ "}" }
 pair   = { string ~ ":" ~ value }
 

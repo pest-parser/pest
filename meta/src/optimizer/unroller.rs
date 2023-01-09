@@ -10,7 +10,12 @@
 use crate::ast::*;
 
 pub fn unroll(rule: Rule) -> Rule {
-    let Rule { name, ty, expr } = rule;
+    let Rule {
+        name,
+        ty,
+        expr,
+        comments,
+    } = rule;
     Rule {
         name,
         ty,
@@ -62,5 +67,6 @@ pub fn unroll(rule: Rule) -> Rule {
                 .unwrap(),
             expr => expr,
         }),
+        comments,
     }
 }

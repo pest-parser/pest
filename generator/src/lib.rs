@@ -26,6 +26,7 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
 
+use pest::iterators::Pairs;
 use proc_macro2::TokenStream;
 use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 
@@ -90,11 +91,32 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         Err(error) => panic!("error parsing \n{}", error.renamed_rules(rename_meta_rule)),
     };
 
+    let grammar_docs = consume_grammar_doc(pairs.clone());
+
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
     let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
 
-    generator::generate(name, &generics, path, optimized, defaults, include_grammar)
+    generator::generate(
+        name,
+        &generics,
+        path,
+        optimized,
+        defaults,
+        grammar_docs,
+        include_grammar,
+    )
+}
+
+fn consume_grammar_doc(pairs: Pairs<'_, Rule>) -> Vec<&'_ str> {
+    let mut docs = vec![];
+    for pair in pairs {
+        if pair.as_rule() == Rule::grammar_doc {
+            docs.push(pair.as_str()[3..pair.as_str().len()].trim());
+        }
+    }
+
+    docs
 }
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
