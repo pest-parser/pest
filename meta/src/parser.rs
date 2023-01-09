@@ -11,7 +11,6 @@
 
 use std::char;
 use std::iter::Peekable;
-use std::sync::Mutex;
 
 use pest::error::{Error, ErrorVariant};
 use pest::iterators::{Pair, Pairs};
@@ -51,8 +50,6 @@ pub struct ParserRule<'i> {
     pub ty: RuleType,
     /// The rule's parser node
     pub node: ParserNode<'i>,
-    /// Doc comments of the rule
-    pub(crate) comments: Vec<String>,
 }
 
 /// The pest grammar node
@@ -170,20 +167,9 @@ pub enum ParserExpr<'i> {
 }
 
 fn convert_rule(rule: ParserRule<'_>) -> AstRule {
-    let ParserRule {
-        name,
-        ty,
-        node,
-        comments,
-        ..
-    } = rule;
+    let ParserRule { name, ty, node, .. } = rule;
     let expr = convert_node(node);
-    AstRule {
-        name,
-        ty,
-        expr,
-        comments,
-    }
+    AstRule { name, ty, expr }
 }
 
 fn convert_node(node: ParserNode<'_>) -> Expr {
@@ -263,17 +249,6 @@ pub fn rename_meta_rule(rule: &Rule) -> String {
     }
 }
 
-fn filter_line_docs(pair: &Pair<'_, Rule>, line_docs: &mut Vec<String>) -> bool {
-    let mut pairs = pair.clone().into_inner();
-    let pair = pairs.next().unwrap();
-    if pair.as_rule() == Rule::line_doc {
-        line_docs.push(pair.as_str()[3..pair.as_str().len()].trim().to_string());
-        false
-    } else {
-        true
-    }
-}
-
 fn consume_rules_with_spans(
     pairs: Pairs<'_, Rule>,
 ) -> Result<Vec<ParserRule<'_>>, Vec<Error<Rule>>> {
@@ -281,11 +256,15 @@ fn consume_rules_with_spans(
         .op(Op::infix(Rule::choice_operator, Assoc::Left))
         .op(Op::infix(Rule::sequence_operator, Assoc::Left));
 
-    let line_docs: Mutex<Vec<String>> = Mutex::new(vec![]);
-
     pairs
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
-        .filter(|pair| filter_line_docs(pair, &mut line_docs.lock().unwrap()))
+        .filter(|pair| {
+            // To ignore `grammar_rule > line_doc` pairs
+            let mut pairs = pair.clone().into_inner();
+            let pair = pairs.next().unwrap();
+
+            pair.as_rule() != Rule::line_doc
+        })
         .map(|pair| {
             let mut pairs = pair.into_inner().peekable();
 
@@ -316,17 +295,11 @@ fn consume_rules_with_spans(
 
             let node = consume_expr(inner_nodes, &pratt)?;
 
-            // consume doc comments
-            let mut line_docs = line_docs.lock().unwrap();
-            let comments = line_docs.clone();
-            line_docs.clear();
-
             Ok(ParserRule {
                 name,
                 span,
                 ty,
                 node,
-                comments,
             })
         })
         .collect()
@@ -1417,11 +1390,7 @@ mod tests {
                             ))))
                         ))
                     ))))))
-                ),
-                comments: vec![
-                    "This is line comment".to_string(),
-                    "This is rule".to_string(),
-                ],
+                )
             },]
         );
     }
@@ -1443,7 +1412,6 @@ mod tests {
                     Box::new(Expr::PeekSlice(-4, None)),
                     Box::new(Expr::PeekSlice(0, Some(3))),
                 ),
-                comments: vec![],
             }],
         );
     }

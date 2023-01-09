@@ -17,13 +17,28 @@ use pest::unicode::unicode_property_names;
 use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
-pub fn generate(
+#[derive(Debug)]
+pub(crate) struct DocComment<'a> {
+    pub(crate) grammar_docs: Vec<&'a str>,
+    pub(crate) line_docs: Vec<Vec<&'a str>>,
+    pub(crate) rules: Vec<Rule>,
+}
+
+impl DocComment<'_> {
+    fn line_docs_for_rule(&self, rule_name: &str) -> Option<String> {
+        let idx = self.rules.iter().position(|r| r.name == rule_name)?;
+
+        self.line_docs.get(idx).map(|comments| comments.join("\n"))
+    }
+}
+
+pub(crate) fn generate(
     name: Ident,
     generics: &Generics,
     path: Option<PathBuf>,
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>,
-    grammar_docs: Vec<&str>,
+    doc_comment: &DocComment<'_>,
     include_grammar: bool,
 ) -> TokenStream {
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
@@ -37,7 +52,7 @@ pub fn generate(
     } else {
         quote!()
     };
-    let rule_enum = generate_enum(&rules, grammar_docs, uses_eoi);
+    let rule_enum = generate_enum(&rules, doc_comment, uses_eoi);
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
 
@@ -182,15 +197,21 @@ fn generate_include(name: &Ident, path: &str) -> TokenStream {
     }
 }
 
-fn generate_enum(rules: &[OptimizedRule], grammar_docs: Vec<&str>, uses_eoi: bool) -> TokenStream {
+fn generate_enum(
+    rules: &[OptimizedRule],
+    doc_comment: &DocComment<'_>,
+    uses_eoi: bool,
+) -> TokenStream {
     let rules = rules.iter().map(|rule| {
         let rule_name = format_ident!("r#{}", rule.name);
-        if rule.comments.is_empty() {
+
+        let comments = doc_comment.line_docs_for_rule(&rule.name);
+        let comments = comments.unwrap_or_else(|| "".to_owned());
+        if comments.is_empty() {
             quote! {
                 #rule_name
             }
         } else {
-            let comments = rule.comments.join("\n");
             quote! {
                 #[doc = #comments]
                 #rule_name
@@ -198,7 +219,7 @@ fn generate_enum(rules: &[OptimizedRule], grammar_docs: Vec<&str>, uses_eoi: boo
         }
     });
 
-    let grammar_docs = grammar_docs.join("\n");
+    let grammar_docs = doc_comment.grammar_docs.join("\n");
     if uses_eoi {
         quote! {
             #[doc = #grammar_docs]
@@ -686,11 +707,20 @@ mod tests {
             name: "f".to_owned(),
             ty: RuleType::Normal,
             expr: OptimizedExpr::Ident("g".to_owned()),
-            comments: vec!["This is rule comment".to_owned()],
         }];
 
+        let doc_comment = &DocComment {
+            grammar_docs: vec!["Rule doc", "hello"],
+            line_docs: vec![vec!["This is rule comment"]],
+            rules: vec![Rule {
+                name: "f".to_owned(),
+                ty: RuleType::Normal,
+                expr: Expr::Ident("g".to_owned()),
+            }],
+        };
+
         assert_eq!(
-            generate_enum(&rules, vec!["Rule doc", "hello"], false).to_string(),
+            generate_enum(&rules, doc_comment, false).to_string(),
             quote! {
                 #[doc = "Rule doc\nhello"]
                 #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
@@ -988,15 +1018,30 @@ mod tests {
                 name: "a".to_owned(),
                 ty: RuleType::Silent,
                 expr: OptimizedExpr::Str("b".to_owned()),
-                comments: vec![],
             },
             OptimizedRule {
                 name: "if".to_owned(),
                 ty: RuleType::Silent,
                 expr: OptimizedExpr::Ident("a".to_owned()),
-                comments: vec!["If statement".to_owned()],
             },
         ];
+
+        let doc_comment = &DocComment {
+            line_docs: vec![vec![], vec!["If statement"]],
+            grammar_docs: vec!["This is Rule doc", "This is second line"],
+            rules: vec![
+                Rule {
+                    name: "a".to_owned(),
+                    ty: RuleType::Silent,
+                    expr: Expr::Str("b".to_owned()),
+                },
+                Rule {
+                    name: "if".to_owned(),
+                    ty: RuleType::Silent,
+                    expr: Expr::Str("b".to_owned()),
+                },
+            ],
+        };
 
         let defaults = vec!["ANY"];
         let result = result_type();
@@ -1005,7 +1050,7 @@ mod tests {
         current_dir.push("test.pest");
         let test_path = current_dir.to_str().expect("path contains invalid unicode");
         assert_eq!(
-            generate(name, &generics, Some(PathBuf::from("test.pest")), rules, defaults, vec!["This is Rule doc", "This is second line"], true).to_string(),
+            generate(name, &generics, Some(PathBuf::from("test.pest")), rules, defaults, doc_comment, true).to_string(),
             quote! {
                 #[allow(non_upper_case_globals)]
                 const _PEST_GRAMMAR_MyParser: &'static str = include_str!(#test_path);

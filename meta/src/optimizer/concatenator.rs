@@ -10,12 +10,7 @@
 use crate::ast::*;
 
 pub fn concatenate(rule: Rule) -> Rule {
-    let Rule {
-        name,
-        ty,
-        expr,
-        comments,
-    } = rule;
+    let Rule { name, ty, expr } = rule;
     Rule {
         name,
         ty,
@@ -34,6 +29,5 @@ pub fn concatenate(rule: Rule) -> Rule {
                 expr
             }
         }),
-        comments,
     }
 }

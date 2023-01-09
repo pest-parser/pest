@@ -10,7 +10,6 @@
 //! Types for the pest's abstract syntax tree.
 
 /// A grammar rule
-#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rule {
     /// The name of the rule
@@ -19,8 +18,6 @@ pub struct Rule {
     pub ty: RuleType,
     /// The rule's expression
     pub expr: Expr,
-    /// Doc comments of the rule
-    pub(crate) comments: Vec<String>,
 }
 
 /// All possible rule types

@@ -37,6 +37,8 @@ mod generator;
 use pest_meta::parser::{self, rename_meta_rule, Rule};
 use pest_meta::{optimizer, unwrap_or_report, validator};
 
+use generator::DocComment;
+
 /// Processes the derive/proc macro input and generates the corresponding parser based
 /// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
 /// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
@@ -92,10 +94,17 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     };
 
     let grammar_docs = consume_grammar_doc(pairs.clone());
+    let line_docs = consume_line_docs(pairs.clone());
 
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
     let ast = unwrap_or_report(parser::consume_rules(pairs));
-    let optimized = optimizer::optimize(ast);
+    let optimized = optimizer::optimize(ast.clone());
+
+    let doc_comment = DocComment {
+        grammar_docs,
+        line_docs,
+        rules: ast,
+    };
 
     generator::generate(
         name,
@@ -103,7 +112,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         path,
         optimized,
         defaults,
-        grammar_docs,
+        &doc_comment,
         include_grammar,
     )
 }
@@ -113,6 +122,32 @@ fn consume_grammar_doc(pairs: Pairs<'_, Rule>) -> Vec<&'_ str> {
     for pair in pairs {
         if pair.as_rule() == Rule::grammar_doc {
             docs.push(pair.as_str()[3..pair.as_str().len()].trim());
+        }
+    }
+
+    docs
+}
+
+fn consume_line_docs(pairs: Pairs<'_, Rule>) -> Vec<Vec<&'_ str>> {
+    let mut docs = vec![];
+    let mut comments = vec![];
+
+    for pair in pairs {
+        if pair.as_rule() == Rule::grammar_rule {
+            if let Some(inner) = pair.into_inner().next() {
+                if inner.as_rule() == Rule::line_doc {
+                    comments.push(inner.as_str()[3..inner.as_str().len()].trim());
+                    continue;
+                } else {
+                    docs.push(comments);
+                    comments = vec![];
+                }
+            }
+        }
+
+        if !comments.is_empty() {
+            docs.push(comments);
+            comments = vec![];
         }
     }
 
@@ -177,8 +212,11 @@ fn get_attribute(attr: &Attribute) -> GrammarSource {
 
 #[cfg(test)]
 mod tests {
+    use super::consume_line_docs;
     use super::parse_derive;
     use super::GrammarSource;
+
+    use pest_meta::parser::{self, Rule};
 
     #[test]
     fn derive_inline_file() {
@@ -246,5 +284,58 @@ mod tests {
         ";
         let ast = syn::parse_str(definition).unwrap();
         parse_derive(ast);
+    }
+
+    #[test]
+    fn test_consume_line_docs() {
+        let pairs = match parser::parse(Rule::grammar_rules, include_str!("../tests/test.pest")) {
+            Ok(pairs) => pairs,
+            Err(_) => panic!("error parsing tests/test.pest"),
+        };
+
+        let line_docs = consume_line_docs(pairs);
+        assert_eq!(
+            vec![
+                vec!["Matches foo str, e.g.: `foo`"],
+                vec!["Matches bar str,", "e.g: `bar` or `foobar`"],
+                vec![],
+                vec!["Matches dar", "Match dar description"]
+            ],
+            line_docs
+        );
+    }
+
+    #[test]
+    fn test_generate_doc() {
+        let input = quote! {
+            #[derive(Parser)]
+            #[grammar = "../tests/test.pest"]
+            pub struct TestParser;
+        };
+
+        let token = super::derive_parser(input, true);
+
+        let expected = quote! {
+            #[doc = "A parser for JSON file.\nAnd this is a example for JSON parser."]
+            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
+            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+
+            pub enum Rule {
+                #[doc = "Matches foo str, e.g.: `foo`"]
+                r#foo,
+                #[doc = "Matches bar str,\ne.g: `bar` or `foobar`"]
+                r#bar,
+                r#bar1,
+                #[doc = "Matches dar\nMatch dar description"]
+                r#dar
+            }
+        };
+
+        assert!(
+            token.to_string().contains(expected.to_string().as_str()),
+            "{}\n\nExpected to contains:\n{}",
+            token,
+            expected
+        );
     }
 }

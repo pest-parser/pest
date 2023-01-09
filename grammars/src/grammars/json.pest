@@ -12,6 +12,7 @@
 json = { SOI ~ (object | array) ~ EOI }
 
 /// Matches object, e.g.: `{ "foo": "bar" }`
+/// Foobar
 object = { "{" ~ pair ~ ("," ~ pair)* ~ "}" | "{" ~ "}" }
 pair   = { string ~ ":" ~ value }
 

@@ -28,12 +28,7 @@ pub fn skip(rule: Rule) -> Rule {
         }
     }
 
-    let Rule {
-        name,
-        ty,
-        expr,
-        comments,
-    } = rule;
+    let Rule { name, ty, expr } = rule;
     Rule {
         name,
         ty,
@@ -57,6 +52,5 @@ pub fn skip(rule: Rule) -> Rule {
         } else {
             expr
         },
-        comments,
     }
 }

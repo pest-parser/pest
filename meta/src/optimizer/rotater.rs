@@ -35,16 +35,10 @@ pub fn rotate(rule: Rule) -> Rule {
         }
     }
 
-    let Rule {
-        name,
-        ty,
-        expr,
-        comments,
-    } = rule;
+    let Rule { name, ty, expr } = rule;
     Rule {
         name,
         ty,
         expr: expr.map_top_down(rotate_internal),
-        comments,
     }
 }

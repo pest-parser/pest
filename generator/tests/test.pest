@@ -1,0 +1,18 @@
+//! A parser for JSON file.
+//! And this is a example for JSON parser.
+
+/// Matches foo str, e.g.: `foo`
+foo = { "foo" }
+
+/// Matches bar str,
+/// e.g: `bar` or `foobar`
+
+bar = { "bar" | "foobar" }
+
+bar1 = { "bar1" }
+
+/// Matches dar
+
+/// Match dar description
+
+dar = { "da" }

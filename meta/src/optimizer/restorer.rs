@@ -14,19 +14,9 @@ pub fn restore_on_err(
     rule: OptimizedRule,
     rules: &HashMap<String, OptimizedExpr>,
 ) -> OptimizedRule {
-    let OptimizedRule {
-        name,
-        ty,
-        expr,
-        comments,
-    } = rule;
+    let OptimizedRule { name, ty, expr } = rule;
     let expr = expr.map_bottom_up(|expr| wrap_branching_exprs(expr, rules));
-    OptimizedRule {
-        name,
-        ty,
-        expr,
-        comments,
-    }
+    OptimizedRule { name, ty, expr }
 }
 
 fn wrap_branching_exprs(
@@ -110,7 +100,6 @@ mod tests {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
             expr: box_tree!(Opt(Str("a".to_string()))),
-            comments: vec![],
         }];
 
         assert_eq!(
@@ -125,14 +114,12 @@ mod tests {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
             expr: box_tree!(Rep(Push(Str("a".to_string())))),
-            comments: vec![],
         }];
 
         let restored = OptimizedRule {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
             expr: box_tree!(Rep(RestoreOnErr(Push(Str("a".to_string()))))),
-            comments: vec![],
         };
 
         assert_eq!(
@@ -147,7 +134,6 @@ mod tests {
             name: "rule".to_owned(),
             ty: RuleType::Normal,
             expr: box_tree!(Choice(Push(Str("a".to_string())), Str("a".to_string()))),
-            comments: vec![],
         }];
 
         let restored = OptimizedRule {
@@ -157,7 +143,6 @@ mod tests {
                 RestoreOnErr(Push(Str("a".to_string()))),
                 Str("a".to_string())
             )),
-            comments: vec![],
         };
 
         assert_eq!(
