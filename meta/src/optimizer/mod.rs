@@ -543,7 +543,7 @@ mod tests {
             use crate::ast::Expr::*;
             vec![Rule {
                 name: "rule".to_owned(),
-                ty: RuleType::Silent,
+                ty: RuleType::Atomic,
                 expr: box_tree!(Choice(
                     Seq(Ident(String::from("a")), Ident(String::from("b"))),
                     Ident(String::from("a"))
@@ -554,7 +554,7 @@ mod tests {
             use crate::optimizer::OptimizedExpr::*;
             vec![OptimizedRule {
                 name: "rule".to_owned(),
-                ty: RuleType::Silent,
+                ty: RuleType::Atomic,
                 expr: box_tree!(Seq(Ident(String::from("a")), Opt(Ident(String::from("b"))))),
             }]
         };

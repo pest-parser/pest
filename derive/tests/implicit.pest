@@ -1,0 +1,14 @@
+program = _{ SOI ~ implicit ~ EOI  }
+implicit= ${ or ~ (WHITESPACE+ ~ or )* }
+
+or  = !{ and ~ (or_op ~ and)+ | and }
+and = { comp ~ (and_op ~ comp)+ | comp }
+comp = { array ~ eq_op ~ array | array }
+
+array = ${ term }
+
+term = _{ ASCII_ALPHANUMERIC+ }
+or_op = { "||" }
+and_op = { "&&" }
+eq_op = { "=" }
+WHITESPACE = _{ " " | "\t" | NEWLINE }
