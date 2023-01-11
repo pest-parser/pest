@@ -26,7 +26,11 @@ pub fn factor(rule: Rule) -> Rule {
                         }
                     }
                     // Converts `(rule ~ rest) | rule` to `rule ~ rest?`, avoiding trying to match `rule` twice.
-                    (Expr::Seq(l1, l2), r) => {
+                    // This is only done for atomic rules, because other rule types have implicit whitespaces.
+                    // FIXME: "desugar" implicit whitespace rules before applying any optimizations
+                    (Expr::Seq(l1, l2), r)
+                        if matches!(ty, RuleType::Atomic | RuleType::CompoundAtomic) =>
+                    {
                         if *l1 == r {
                             Expr::Seq(l1, Box::new(Expr::Opt(l2)))
                         } else {
