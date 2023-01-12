@@ -11,12 +11,9 @@
 extern crate pest;
 extern crate pest_grammars;
 
-use std::fs::File;
-use std::io::Read;
-
 use pest::Parser;
-
 use pest_grammars::json::*;
+use pretty_assertions::assert_eq;
 
 #[test]
 fn null() {
@@ -164,10 +161,50 @@ fn object() {
 
 #[test]
 fn examples() {
-    let mut file = File::open("tests/examples.json").unwrap();
-    let mut data = String::new();
+    let raw = include_str!("examples.json");
+    let pairs = JsonParser::parse(Rule::json, raw).unwrap();
 
-    file.read_to_string(&mut data).unwrap();
+    let expected = include_str!("examples.line-col.txt");
 
-    JsonParser::parse(Rule::json, &data).unwrap();
+    // Test for flatten iter, and use span.start_pos().line_col()
+    let mut out = String::new();
+    for pair in pairs.clone().flatten() {
+        let sub_pairs = pair.clone().into_inner();
+        if sub_pairs.count() == 0 {
+            let span = pair.as_span();
+            out.push_str(&build_line_col(span.start_pos().line_col(), span.as_str()));
+        }
+    }
+    assert_eq!(expected.trim(), out.trim());
+
+    // Test for nested iter, use pair.line_col()
+    let mut out = String::new();
+    for pair in pairs {
+        out.push_str(&build_result_for_pair(pair.clone()));
+    }
+
+    assert_eq!(expected.trim(), out.trim());
+}
+
+fn build_line_col(line_col: (usize, usize), str: &str) -> String {
+    format!(
+        "({}:{}) {}\n",
+        line_col.0,
+        line_col.1,
+        str.replace('\n', "\\n")
+    )
+}
+
+fn build_result_for_pair(pair: pest::iterators::Pair<Rule>) -> String {
+    let mut out = String::new();
+
+    let sub_pairs = pair.clone().into_inner();
+    if sub_pairs.clone().count() == 0 {
+        out.push_str(&build_line_col(pair.line_col(), pair.as_str()));
+    } else {
+        for sub_pair in sub_pairs {
+            out.push_str(&build_result_for_pair(sub_pair));
+        }
+    }
+    out
 }
