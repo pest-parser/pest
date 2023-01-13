@@ -249,14 +249,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
         let (prev_line, prev_col) = (self.cursor.line, self.cursor.col);
 
         let part = &input[self.cursor.end..end];
-        let (l, c) = position::line_col(part, part.len());
-
-        // Because the `original_line_col` returns (line, col) is start from 1
-        let l = l - 1;
-        let mut c = c - 1;
-        if c < 1 {
-            c = 1
-        }
+        let (l, c) = position::line_col(part, part.len(), (0, 0));
 
         self.cursor.line += l;
         // Has new line
