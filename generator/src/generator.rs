@@ -7,6 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use proc_macro2::TokenStream;
@@ -18,17 +19,31 @@ use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
 #[derive(Debug)]
-pub(crate) struct DocComment<'a> {
-    pub(crate) grammar_docs: Vec<&'a str>,
-    pub(crate) line_docs: Vec<Vec<&'a str>>,
-    pub(crate) rules: Vec<Rule>,
+pub(crate) struct DocComment {
+    /// Multi-line grammar doc, (joined with `\n`)
+    ///
+    /// e.g.
+    ///
+    /// ```ignore
+    /// "grammar doc 1\ngrammar doc 2"
+    /// ```
+    grammar_doc: String,
+    /// HashMap rule name and doc comments (joined with `\n`)
+    ///
+    /// e.g.
+    ///
+    /// ```ignore
+    /// { "foo": "line doc 1\nline doc 2", "bar": "line doc 3" }
+    /// ```
+    line_docs: HashMap<String, String>,
 }
 
-impl DocComment<'_> {
-    fn line_docs_for_rule(&self, rule_name: &str) -> Option<String> {
-        let idx = self.rules.iter().position(|r| r.name == rule_name)?;
-
-        self.line_docs.get(idx).map(|comments| comments.join("\n"))
+impl DocComment {
+    pub fn new(grammar_doc: String, line_docs: HashMap<String, String>) -> Self {
+        Self {
+            grammar_doc,
+            line_docs,
+        }
     }
 }
 
@@ -38,7 +53,7 @@ pub(crate) fn generate(
     path: Option<PathBuf>,
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>,
-    doc_comment: &DocComment<'_>,
+    doc_comment: &DocComment,
     include_grammar: bool,
 ) -> TokenStream {
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
@@ -197,32 +212,25 @@ fn generate_include(name: &Ident, path: &str) -> TokenStream {
     }
 }
 
-fn generate_enum(
-    rules: &[OptimizedRule],
-    doc_comment: &DocComment<'_>,
-    uses_eoi: bool,
-) -> TokenStream {
+fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bool) -> TokenStream {
     let rules = rules.iter().map(|rule| {
         let rule_name = format_ident!("r#{}", rule.name);
 
-        let comments = doc_comment.line_docs_for_rule(&rule.name);
-        let comments = comments.unwrap_or_else(|| "".to_owned());
-        if comments.is_empty() {
-            quote! {
+        match doc_comment.line_docs.get(&rule.name) {
+            Some(doc) => quote! {
+                #[doc = #doc]
                 #rule_name
-            }
-        } else {
-            quote! {
-                #[doc = #comments]
+            },
+            None => quote! {
                 #rule_name
-            }
+            },
         }
     });
 
-    let grammar_docs = doc_comment.grammar_docs.join("\n");
+    let grammar_doc = &doc_comment.grammar_doc;
     if uses_eoi {
         quote! {
-            #[doc = #grammar_docs]
+            #[doc = #grammar_doc]
             #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
             pub enum Rule {
@@ -232,7 +240,7 @@ fn generate_enum(
         }
     } else {
         quote! {
-            #[doc = #grammar_docs]
+            #[doc = #grammar_doc]
             #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
             pub enum Rule {
@@ -709,14 +717,12 @@ mod tests {
             expr: OptimizedExpr::Ident("g".to_owned()),
         }];
 
+        let mut line_docs = HashMap::new();
+        line_docs.insert("f".to_owned(), "This is rule comment".to_owned());
+
         let doc_comment = &DocComment {
-            grammar_docs: vec!["Rule doc", "hello"],
-            line_docs: vec![vec!["This is rule comment"]],
-            rules: vec![Rule {
-                name: "f".to_owned(),
-                ty: RuleType::Normal,
-                expr: Expr::Ident("g".to_owned()),
-            }],
+            grammar_doc: "Rule doc\nhello".to_owned(),
+            line_docs,
         };
 
         assert_eq!(
@@ -1009,7 +1015,7 @@ mod tests {
     }
 
     #[test]
-    fn generate_complete() {
+    fn test_generate_complete() {
         let name = Ident::new("MyParser", Span::call_site());
         let generics = Generics::default();
 
@@ -1026,21 +1032,12 @@ mod tests {
             },
         ];
 
+        let mut line_docs = HashMap::new();
+        line_docs.insert("if".to_owned(), "If statement".to_owned());
+
         let doc_comment = &DocComment {
-            line_docs: vec![vec![], vec!["If statement"]],
-            grammar_docs: vec!["This is Rule doc", "This is second line"],
-            rules: vec![
-                Rule {
-                    name: "a".to_owned(),
-                    ty: RuleType::Silent,
-                    expr: Expr::Str("b".to_owned()),
-                },
-                Rule {
-                    name: "if".to_owned(),
-                    ty: RuleType::Silent,
-                    expr: Expr::Str("b".to_owned()),
-                },
-            ],
+            line_docs,
+            grammar_doc: "This is Rule doc\nThis is second line".to_owned(),
         };
 
         let defaults = vec!["ANY"];

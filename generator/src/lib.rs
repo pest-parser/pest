@@ -21,6 +21,7 @@
 #[macro_use]
 extern crate quote;
 
+use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::{self, Read};
@@ -93,18 +94,14 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         Err(error) => panic!("error parsing \n{}", error.renamed_rules(rename_meta_rule)),
     };
 
-    let grammar_docs = consume_grammar_doc(pairs.clone());
+    let grammar_doc = consume_grammar_doc(pairs.clone());
     let line_docs = consume_line_docs(pairs.clone());
 
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
     let ast = unwrap_or_report(parser::consume_rules(pairs));
-    let optimized = optimizer::optimize(ast.clone());
+    let optimized = optimizer::optimize(ast);
 
-    let doc_comment = DocComment {
-        grammar_docs,
-        line_docs,
-        rules: ast,
-    };
+    let doc_comment = &DocComment::new(grammar_doc, line_docs);
 
     generator::generate(
         name,
@@ -112,12 +109,13 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         path,
         optimized,
         defaults,
-        &doc_comment,
+        doc_comment,
         include_grammar,
     )
 }
 
-fn consume_grammar_doc(pairs: Pairs<'_, Rule>) -> Vec<&'_ str> {
+/// Consume grammar doc into String, multi-line joined with `\n`
+fn consume_grammar_doc(pairs: Pairs<'_, Rule>) -> String {
     let mut docs = vec![];
     for pair in pairs {
         if pair.as_rule() == Rule::grammar_doc {
@@ -126,30 +124,49 @@ fn consume_grammar_doc(pairs: Pairs<'_, Rule>) -> Vec<&'_ str> {
         }
     }
 
-    docs
+    docs.join("\n")
 }
 
-fn consume_line_docs(pairs: Pairs<'_, Rule>) -> Vec<Vec<&'_ str>> {
-    let mut docs = vec![];
+/// Consume line docs into HashMap<rule_name, doc>
+///
+/// Example a `test.pest`:
+///
+/// ```ignore
+/// /// Line doc 1
+/// foo = {}
+///
+/// /// Line doc 2
+/// /// Line doc 3
+/// bar = {}
+/// ```
+///
+/// Will returns `{ "foo":  "This is line comment", "bar": "Line doc 2\n/// Line doc 3" }`
+fn consume_line_docs(pairs: Pairs<'_, Rule>) -> HashMap<String, String> {
+    let mut docs: HashMap<String, String> = HashMap::new();
     let mut comments = vec![];
 
     for pair in pairs {
-        if pair.as_rule() == Rule::grammar_rule {
+        let rule = pair.as_rule();
+
+        if rule == Rule::grammar_rule {
             if let Some(inner) = pair.into_inner().next() {
-                if inner.as_rule() == Rule::line_doc {
-                    let inner_doc = inner.into_inner().next().unwrap();
-                    comments.push(inner_doc.as_str());
-                    continue;
-                } else {
-                    docs.push(comments);
-                    comments = vec![];
+                // grammar_rule > line_doc | identifier
+                match inner.as_rule() {
+                    Rule::line_doc => {
+                        if let Some(inner_doc) = inner.into_inner().next() {
+                            comments.push(inner_doc.as_str())
+                        }
+                    }
+                    Rule::identifier => {
+                        if !comments.is_empty() {
+                            let rule_name = inner.as_str().to_owned();
+                            docs.insert(rule_name, comments.join("\n"));
+                            comments = vec![];
+                        }
+                    }
+                    _ => (),
                 }
             }
-        }
-
-        if !comments.is_empty() {
-            docs.push(comments);
-            comments = vec![];
         }
     }
 
@@ -214,6 +231,8 @@ fn get_attribute(attr: &Attribute) -> GrammarSource {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::consume_line_docs;
     use super::parse_derive;
     use super::GrammarSource;
@@ -296,15 +315,18 @@ mod tests {
         };
 
         let line_docs = consume_line_docs(pairs);
-        assert_eq!(
-            vec![
-                vec!["Matches foo str, e.g.: `foo`"],
-                vec!["Matches bar str,", "  Indent 2, e.g: `bar` or `foobar`"],
-                vec![],
-                vec!["Matches dar", "Match dar description"]
-            ],
-            line_docs
+
+        let mut expected = HashMap::new();
+        expected.insert("foo".to_owned(), "Matches foo str, e.g.: `foo`".to_owned());
+        expected.insert(
+            "bar".to_owned(),
+            "Matches bar str,\n  Indent 2, e.g: `bar` or `foobar`".to_owned(),
         );
+        expected.insert(
+            "dar".to_owned(),
+            "Matches dar\nMatch dar description".to_owned(),
+        );
+        assert_eq!(expected, line_docs);
     }
 
     #[test]
