@@ -21,24 +21,21 @@
 #[macro_use]
 extern crate quote;
 
-use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
 
-use pest::iterators::Pairs;
 use proc_macro2::TokenStream;
 use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 
 #[macro_use]
 mod macros;
+mod docs;
 mod generator;
 
 use pest_meta::parser::{self, rename_meta_rule, Rule};
 use pest_meta::{optimizer, unwrap_or_report, validator};
-
-use generator::DocComment;
 
 /// Processes the derive/proc macro input and generates the corresponding parser based
 /// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
@@ -94,14 +91,10 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         Err(error) => panic!("error parsing \n{}", error.renamed_rules(rename_meta_rule)),
     };
 
-    let grammar_doc = consume_grammar_doc(pairs.clone());
-    let line_docs = consume_line_docs(pairs.clone());
-
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
+    let doc_comment = docs::consume(pairs.clone());
     let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
-
-    let doc_comment = &DocComment::new(grammar_doc, line_docs);
 
     generator::generate(
         name,
@@ -109,68 +102,9 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         path,
         optimized,
         defaults,
-        doc_comment,
+        &doc_comment,
         include_grammar,
     )
-}
-
-/// Consume grammar doc into String, multi-line joined with `\n`
-fn consume_grammar_doc(pairs: Pairs<'_, Rule>) -> String {
-    let mut docs = vec![];
-    for pair in pairs {
-        if pair.as_rule() == Rule::grammar_doc {
-            let inner_doc = pair.into_inner().next().unwrap();
-            docs.push(inner_doc.as_str());
-        }
-    }
-
-    docs.join("\n")
-}
-
-/// Consume line docs into HashMap<rule_name, doc>
-///
-/// Example a `test.pest`:
-///
-/// ```ignore
-/// /// Line doc 1
-/// foo = {}
-///
-/// /// Line doc 2
-/// /// Line doc 3
-/// bar = {}
-/// ```
-///
-/// Will returns `{ "foo":  "This is line comment", "bar": "Line doc 2\n/// Line doc 3" }`
-fn consume_line_docs(pairs: Pairs<'_, Rule>) -> HashMap<String, String> {
-    let mut docs: HashMap<String, String> = HashMap::new();
-    let mut comments = vec![];
-
-    for pair in pairs {
-        let rule = pair.as_rule();
-
-        if rule == Rule::grammar_rule {
-            if let Some(inner) = pair.into_inner().next() {
-                // grammar_rule > line_doc | identifier
-                match inner.as_rule() {
-                    Rule::line_doc => {
-                        if let Some(inner_doc) = inner.into_inner().next() {
-                            comments.push(inner_doc.as_str())
-                        }
-                    }
-                    Rule::identifier => {
-                        if !comments.is_empty() {
-                            let rule_name = inner.as_str().to_owned();
-                            docs.insert(rule_name, comments.join("\n"));
-                            comments = vec![];
-                        }
-                    }
-                    _ => (),
-                }
-            }
-        }
-    }
-
-    docs
 }
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
@@ -231,13 +165,8 @@ fn get_attribute(attr: &Attribute) -> GrammarSource {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use super::consume_line_docs;
     use super::parse_derive;
     use super::GrammarSource;
-
-    use pest_meta::parser::{self, Rule};
 
     #[test]
     fn derive_inline_file() {
@@ -305,28 +234,6 @@ mod tests {
         ";
         let ast = syn::parse_str(definition).unwrap();
         parse_derive(ast);
-    }
-
-    #[test]
-    fn test_consume_line_docs() {
-        let pairs = match parser::parse(Rule::grammar_rules, include_str!("../tests/test.pest")) {
-            Ok(pairs) => pairs,
-            Err(_) => panic!("error parsing tests/test.pest"),
-        };
-
-        let line_docs = consume_line_docs(pairs);
-
-        let mut expected = HashMap::new();
-        expected.insert("foo".to_owned(), "Matches foo str, e.g.: `foo`".to_owned());
-        expected.insert(
-            "bar".to_owned(),
-            "Matches bar str,\n  Indent 2, e.g: `bar` or `foobar`".to_owned(),
-        );
-        expected.insert(
-            "dar".to_owned(),
-            "Matches dar\nMatch dar description".to_owned(),
-        );
-        assert_eq!(expected, line_docs);
     }
 
     #[test]

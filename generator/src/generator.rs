@@ -7,7 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 use proc_macro2::TokenStream;
@@ -18,34 +17,7 @@ use pest::unicode::unicode_property_names;
 use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
-#[derive(Debug)]
-pub(crate) struct DocComment {
-    /// Multi-line grammar doc, (joined with `\n`)
-    ///
-    /// e.g.
-    ///
-    /// ```ignore
-    /// "grammar doc 1\ngrammar doc 2"
-    /// ```
-    grammar_doc: String,
-    /// HashMap rule name and doc comments (joined with `\n`)
-    ///
-    /// e.g.
-    ///
-    /// ```ignore
-    /// { "foo": "line doc 1\nline doc 2", "bar": "line doc 3" }
-    /// ```
-    line_docs: HashMap<String, String>,
-}
-
-impl DocComment {
-    pub fn new(grammar_doc: String, line_docs: HashMap<String, String>) -> Self {
-        Self {
-            grammar_doc,
-            line_docs,
-        }
-    }
-}
+use crate::docs::DocComment;
 
 pub(crate) fn generate(
     name: Ident,
@@ -705,9 +677,10 @@ fn option_type() -> TokenStream {
 
 #[cfg(test)]
 mod tests {
-    use proc_macro2::Span;
-
     use super::*;
+
+    use proc_macro2::Span;
+    use std::collections::HashMap;
 
     #[test]
     fn rule_enum_simple() {
