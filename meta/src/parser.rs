@@ -1110,9 +1110,13 @@ mod tests {
             input: input,
             rule: Rule::grammar_rules,
             tokens: [
-                grammar_doc(0, 9),
+                grammar_doc(0, 9, [
+                    inner_doc(4, 9),
+                ]),
                 grammar_rule(10, 19, [
-                    line_doc(10, 19),
+                    line_doc(10, 19, [
+                        inner_doc(14, 19),
+                    ]),
                 ]),
                 grammar_rule(20, 31, [
                     identifier(20, 21),

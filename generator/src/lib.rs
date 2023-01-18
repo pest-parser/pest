@@ -121,7 +121,8 @@ fn consume_grammar_doc(pairs: Pairs<'_, Rule>) -> Vec<&'_ str> {
     let mut docs = vec![];
     for pair in pairs {
         if pair.as_rule() == Rule::grammar_doc {
-            docs.push(pair.as_str()[3..pair.as_str().len()].trim());
+            let inner_doc = pair.into_inner().next().unwrap();
+            docs.push(inner_doc.as_str());
         }
     }
 
@@ -136,7 +137,8 @@ fn consume_line_docs(pairs: Pairs<'_, Rule>) -> Vec<Vec<&'_ str>> {
         if pair.as_rule() == Rule::grammar_rule {
             if let Some(inner) = pair.into_inner().next() {
                 if inner.as_rule() == Rule::line_doc {
-                    comments.push(inner.as_str()[3..inner.as_str().len()].trim());
+                    let inner_doc = inner.into_inner().next().unwrap();
+                    comments.push(inner_doc.as_str());
                     continue;
                 } else {
                     docs.push(comments);
@@ -297,7 +299,7 @@ mod tests {
         assert_eq!(
             vec![
                 vec!["Matches foo str, e.g.: `foo`"],
-                vec!["Matches bar str,", "e.g: `bar` or `foobar`"],
+                vec!["Matches bar str,", "  Indent 2, e.g: `bar` or `foobar`"],
                 vec![],
                 vec!["Matches dar", "Match dar description"]
             ],
@@ -316,14 +318,14 @@ mod tests {
         let token = super::derive_parser(input, true);
 
         let expected = quote! {
-            #[doc = "A parser for JSON file.\nAnd this is a example for JSON parser."]
+            #[doc = "A parser for JSON file.\nAnd this is a example for JSON parser.\n\n    indent-4-space"]
             #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 
             pub enum Rule {
                 #[doc = "Matches foo str, e.g.: `foo`"]
                 r#foo,
-                #[doc = "Matches bar str,\ne.g: `bar` or `foobar`"]
+                #[doc = "Matches bar str,\n  Indent 2, e.g: `bar` or `foobar`"]
                 r#bar,
                 r#bar1,
                 #[doc = "Matches dar\nMatch dar description"]
