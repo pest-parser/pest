@@ -23,7 +23,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           kind: check
-          toolchain: 1.61.0
+          toolchain: 1.62.0
       - name: cargo check
         run: cargo check --all --all-features --all-targets
 
@@ -40,7 +40,7 @@ jobs:
         with:
           kind: check
           components: clippy, rustfmt
-          toolchain: 1.61.0
+          toolchain: 1.62.0
       - name: cargo fmt
         run: cargo fmt --all -- --check
       - name: cargo clippy
@@ -62,7 +62,7 @@ jobs:
         id: setup
         with:
           kind: check
-          toolchain: 1.61.0
+          toolchain: 1.62.0
       - name: cargo doc
         run: cargo doc --all --all-features
 
@@ -122,7 +122,7 @@ jobs:
         id: setup
         with:
           kind: check
-          toolchain: 1.61.0
+          toolchain: 1.62.0
       - name: Check feature powerset
         run: cargo hack check --feature-powerset --optional-deps --exclude-all-features --keep-going --lib --tests --ignore-private
 
