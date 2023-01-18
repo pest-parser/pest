@@ -243,6 +243,8 @@ pub fn rename_meta_rule(rule: &Rule) -> String {
         Rule::insensitive_string => "`^`".to_owned(),
         Rule::range_operator => "`..`".to_owned(),
         Rule::single_quote => "`'`".to_owned(),
+        Rule::grammar_doc => "//!".to_owned(),
+        Rule::line_doc => "///".to_owned(),
         other_rule => format!("{:?}", other_rule),
     }
 }
@@ -256,6 +258,13 @@ fn consume_rules_with_spans(
 
     pairs
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
+        .filter(|pair| {
+            // To ignore `grammar_rule > line_doc` pairs
+            let mut pairs = pair.clone().into_inner();
+            let pair = pairs.next().unwrap();
+
+            pair.as_rule() != Rule::line_doc
+        })
         .map(|pair| {
             let mut pairs = pair.into_inner().peekable();
 
@@ -1094,12 +1103,47 @@ mod tests {
     }
 
     #[test]
+    fn grammar_doc_and_line_doc() {
+        let input = "//! hello\n/// world\na = { \"a\" }";
+        parses_to! {
+            parser: PestParser,
+            input: input,
+            rule: Rule::grammar_rules,
+            tokens: [
+                grammar_doc(0, 9, [
+                    inner_doc(4, 9),
+                ]),
+                grammar_rule(10, 19, [
+                    line_doc(10, 19, [
+                        inner_doc(14, 19),
+                    ]),
+                ]),
+                grammar_rule(20, 31, [
+                    identifier(20, 21),
+                    assignment_operator(22, 23),
+                    opening_brace(24, 25),
+                    expression(26, 30, [
+                        term(26, 30, [
+                            string(26, 29, [
+                                quote(26, 27),
+                                inner_str(27, 28),
+                                quote(28, 29)
+                            ])
+                        ])
+                    ]),
+                    closing_brace(30, 31),
+                ])
+            ]
+        };
+    }
+
+    #[test]
     fn wrong_identifier() {
         fails_with! {
             parser: PestParser,
             input: "0",
             rule: Rule::grammar_rules,
-            positives: vec![Rule::identifier],
+            positives: vec![Rule::grammar_rule, Rule::grammar_doc],
             negatives: vec![],
             pos: 0
         };
@@ -1315,8 +1359,11 @@ mod tests {
 
     #[test]
     fn ast() {
-        let input =
-            "rule = _{ a{1} ~ \"a\"{3,} ~ b{, 2} ~ \"b\"{1, 2} | !(^\"c\" | PUSH('d'..'e'))?* }";
+        let input = r##"
+        /// This is line comment
+        /// This is rule
+        rule = _{ a{1} ~ "a"{3,} ~ b{, 2} ~ "b"{1, 2} | !(^"c" | PUSH('d'..'e'))?* }
+        "##;
 
         let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
         let ast = consume_rules_with_spans(pairs).unwrap();
@@ -1368,7 +1415,7 @@ mod tests {
                 expr: Expr::Seq(
                     Box::new(Expr::PeekSlice(-4, None)),
                     Box::new(Expr::PeekSlice(0, Some(3))),
-                )
+                ),
             }],
         );
     }

@@ -31,6 +31,7 @@ use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 
 #[macro_use]
 mod macros;
+mod docs;
 mod generator;
 
 use pest_meta::parser::{self, rename_meta_rule, Rule};
@@ -91,10 +92,19 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     };
 
     let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
+    let doc_comment = docs::consume(pairs.clone());
     let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
 
-    generator::generate(name, &generics, path, optimized, defaults, include_grammar)
+    generator::generate(
+        name,
+        &generics,
+        path,
+        optimized,
+        defaults,
+        &doc_comment,
+        include_grammar,
+    )
 }
 
 fn read_file<P: AsRef<Path>>(path: P) -> io::Result<String> {
@@ -224,5 +234,39 @@ mod tests {
         ";
         let ast = syn::parse_str(definition).unwrap();
         parse_derive(ast);
+    }
+
+    #[test]
+    fn test_generate_doc() {
+        let input = quote! {
+            #[derive(Parser)]
+            #[grammar = "../tests/test.pest"]
+            pub struct TestParser;
+        };
+
+        let token = super::derive_parser(input, true);
+
+        let expected = quote! {
+            #[doc = "A parser for JSON file.\nAnd this is a example for JSON parser.\n\n    indent-4-space"]
+            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
+            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+
+            pub enum Rule {
+                #[doc = "Matches foo str, e.g.: `foo`"]
+                r#foo,
+                #[doc = "Matches bar str,\n  Indent 2, e.g: `bar` or `foobar`"]
+                r#bar,
+                r#bar1,
+                #[doc = "Matches dar\nMatch dar description"]
+                r#dar
+            }
+        };
+
+        assert!(
+            token.to_string().contains(expected.to_string().as_str()),
+            "{}\n\nExpected to contains:\n{}",
+            token,
+            expected
+        );
     }
 }

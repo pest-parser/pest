@@ -17,12 +17,15 @@ use pest::unicode::unicode_property_names;
 use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
-pub fn generate(
+use crate::docs::DocComment;
+
+pub(crate) fn generate(
     name: Ident,
     generics: &Generics,
     path: Option<PathBuf>,
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>,
+    doc_comment: &DocComment,
     include_grammar: bool,
 ) -> TokenStream {
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
@@ -36,7 +39,7 @@ pub fn generate(
     } else {
         quote!()
     };
-    let rule_enum = generate_enum(&rules, uses_eoi);
+    let rule_enum = generate_enum(&rules, doc_comment, uses_eoi);
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
 
@@ -181,10 +184,25 @@ fn generate_include(name: &Ident, path: &str) -> TokenStream {
     }
 }
 
-fn generate_enum(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
-    let rules = rules.iter().map(|rule| format_ident!("r#{}", rule.name));
+fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bool) -> TokenStream {
+    let rules = rules.iter().map(|rule| {
+        let rule_name = format_ident!("r#{}", rule.name);
+
+        match doc_comment.line_docs.get(&rule.name) {
+            Some(doc) => quote! {
+                #[doc = #doc]
+                #rule_name
+            },
+            None => quote! {
+                #rule_name
+            },
+        }
+    });
+
+    let grammar_doc = &doc_comment.grammar_doc;
     if uses_eoi {
         quote! {
+            #[doc = #grammar_doc]
             #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
             pub enum Rule {
@@ -194,6 +212,7 @@ fn generate_enum(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
         }
     } else {
         quote! {
+            #[doc = #grammar_doc]
             #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
             pub enum Rule {
@@ -208,6 +227,7 @@ fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
         .iter()
         .map(|rule| {
             let rule = format_ident!("r#{}", rule.name);
+
             quote! {
                 Rule::#rule => rules::#rule(state)
             }
@@ -657,9 +677,10 @@ fn option_type() -> TokenStream {
 
 #[cfg(test)]
 mod tests {
-    use proc_macro2::Span;
-
     use super::*;
+
+    use proc_macro2::Span;
+    use std::collections::HashMap;
 
     #[test]
     fn rule_enum_simple() {
@@ -669,12 +690,22 @@ mod tests {
             expr: OptimizedExpr::Ident("g".to_owned()),
         }];
 
+        let mut line_docs = HashMap::new();
+        line_docs.insert("f".to_owned(), "This is rule comment".to_owned());
+
+        let doc_comment = &DocComment {
+            grammar_doc: "Rule doc\nhello".to_owned(),
+            line_docs,
+        };
+
         assert_eq!(
-            generate_enum(&rules, false).to_string(),
+            generate_enum(&rules, doc_comment, false).to_string(),
             quote! {
+                #[doc = "Rule doc\nhello"]
                 #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
+                    #[doc = "This is rule comment"]
                     r#f
                 }
             }
@@ -957,7 +988,7 @@ mod tests {
     }
 
     #[test]
-    fn generate_complete() {
+    fn test_generate_complete() {
         let name = Ident::new("MyParser", Span::call_site());
         let generics = Generics::default();
 
@@ -974,6 +1005,14 @@ mod tests {
             },
         ];
 
+        let mut line_docs = HashMap::new();
+        line_docs.insert("if".to_owned(), "If statement".to_owned());
+
+        let doc_comment = &DocComment {
+            line_docs,
+            grammar_doc: "This is Rule doc\nThis is second line".to_owned(),
+        };
+
         let defaults = vec!["ANY"];
         let result = result_type();
         let box_ty = box_type();
@@ -981,15 +1020,17 @@ mod tests {
         current_dir.push("test.pest");
         let test_path = current_dir.to_str().expect("path contains invalid unicode");
         assert_eq!(
-            generate(name, &generics, Some(PathBuf::from("test.pest")), rules, defaults, true).to_string(),
+            generate(name, &generics, Some(PathBuf::from("test.pest")), rules, defaults, doc_comment, true).to_string(),
             quote! {
                 #[allow(non_upper_case_globals)]
                 const _PEST_GRAMMAR_MyParser: &'static str = include_str!(#test_path);
 
+                #[doc = "This is Rule doc\nThis is second line"]
                 #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
                     r#a,
+                    #[doc = "If statement"]
                     r#if
                 }
 
