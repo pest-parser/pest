@@ -22,6 +22,7 @@ use std::time::Duration;
 use pest::error::{Error, ErrorVariant};
 
 use pest_debugger::{DebuggerContext, DebuggerError, DebuggerEvent};
+use reqwest::blocking::{Client, ClientBuilder};
 use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
@@ -185,6 +186,7 @@ struct CliArgs {
     rule: Option<String>,
     breakpoint: Option<String>,
     session_file: Option<PathBuf>,
+    no_update: bool,
 }
 
 impl Default for CliArgs {
@@ -195,6 +197,7 @@ impl Default for CliArgs {
             rule: None,
             breakpoint: None,
             session_file: None,
+            no_update: false,
         };
         let args = std::env::args();
         let mut iter = args.skip(1);
@@ -240,6 +243,9 @@ impl Default for CliArgs {
                         eprintln!("Error: missing session file");
                         std::process::exit(1);
                     }
+                }
+                "--no-update" => {
+                    result.no_update = true;
                 }
                 "-h" | "--help" => {
                     println!(
@@ -298,6 +304,29 @@ fn main() -> rustyline::Result<()> {
     let mut context = Cli::default();
     let cli_args = CliArgs::default();
 
+    if !cli_args.no_update {
+        let client = ClientBuilder::new()
+            .user_agent(concat!(
+                env!("CARGO_PKG_NAME"),
+                "/",
+                env!("CARGO_PKG_VERSION")
+            ))
+            .build()
+            .ok();
+
+        if let Some(client) = client {
+            let opt = check_for_updates(client);
+            if let Some(new_version) = opt {
+                println!(
+                    "A new version of pest_debugger is available: v{}",
+                    new_version
+                );
+            } else {
+                println!("pest_debugger is up to date.");
+            }
+        }
+    }
+
     let h = CliHelper {
         completer: FilenameCompleter::new(),
         hinter: HistoryHinter {},
@@ -336,4 +365,28 @@ fn main() -> rustyline::Result<()> {
         }
     }
     Ok(())
+}
+
+fn check_for_updates(client: Client) -> Option<String> {
+    let response = client
+        .get("https://crates.io/api/v1/crates/pest_debugger")
+        .send()
+        .ok();
+
+    if let Some(response) = response {
+        response
+            .json::<serde_json::Value>()
+            .ok()
+            .and_then(|json| {
+                let version = json["crate"]["max_version"].as_str()?;
+
+                if version != VERSION {
+                    Some(version.to_string())
+                } else {
+                    None
+                }
+            })
+    } else {
+        None
+    }
 }
