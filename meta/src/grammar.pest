@@ -8,10 +8,10 @@
 // modified, or distributed except according to those terms.
 //! Pest meta-grammar
 
-/// The top-level rule of the meta-grammar.
+/// The top-level rule of a grammar.
 grammar_rules = _{ SOI ~ grammar_doc* ~ (grammar_rule)+ ~ EOI }
 
-/// A rule of the meta-grammar.
+/// A rule of a grammar.
 grammar_rule = {
     identifier ~ assignment_operator ~ modifier? ~
     opening_brace ~ expression ~ closing_brace |
