@@ -311,6 +311,7 @@ fn main() -> rustyline::Result<()> {
                 "/",
                 env!("CARGO_PKG_VERSION")
             ))
+            .timeout(Some(Duration::from_secs(5)))
             .build()
             .ok();
 
