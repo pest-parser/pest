@@ -373,18 +373,15 @@ fn check_for_updates(client: Client) -> Option<String> {
         .send();
 
     if let Ok(response) = response {
-        response
-            .json::<serde_json::Value>()
-            .ok()
-            .and_then(|json| {
-                let version = json["crate"]["max_version"].as_str()?;
+        response.json::<serde_json::Value>().ok().and_then(|json| {
+            let version = json["crate"]["max_version"].as_str()?;
 
-                if version != VERSION {
-                    Some(version.to_string())
-                } else {
-                    None
-                }
-            })
+            if version != VERSION {
+                Some(version.to_string())
+            } else {
+                None
+            }
+        })
     } else {
         None
     }
