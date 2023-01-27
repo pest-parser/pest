@@ -315,8 +315,7 @@ fn main() -> rustyline::Result<()> {
             .ok();
 
         if let Some(client) = client {
-            let opt = check_for_updates(client);
-            if let Some(new_version) = opt {
+            if let Some(new_version) = check_for_updates(client) {
                 println!(
                     "A new version of pest_debugger is available: v{}",
                     new_version
@@ -370,10 +369,9 @@ fn main() -> rustyline::Result<()> {
 fn check_for_updates(client: Client) -> Option<String> {
     let response = client
         .get("https://crates.io/api/v1/crates/pest_debugger")
-        .send()
-        .ok();
+        .send();
 
-    if let Some(response) = response {
+    if let Ok(response) = response {
         response
             .json::<serde_json::Value>()
             .ok()
