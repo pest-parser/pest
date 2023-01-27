@@ -130,8 +130,8 @@ impl Cli {
             "h" => Cli::help(),
             "l" => self.list(),
             "c" => self.cont()?,
-            "da" => self.context.add_all_rules_breakpoints()?,
-            "ba" => self.context.delete_all_breakpoints(),
+            "ba" => self.context.add_all_rules_breakpoints()?,
+            "da" => self.context.delete_all_breakpoints(),
             x if x.starts_with("g ") => self.grammar(PathBuf::from(&x[2..]))?,
             x if x.starts_with("i ") => self.input(PathBuf::from(&x[2..]))?,
             x if x.starts_with("id ") => {
