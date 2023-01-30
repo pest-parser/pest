@@ -81,7 +81,9 @@ pub fn validate_pairs(pairs: Pairs<'_, Rule>) -> Result<Vec<&str>, Vec<Error<Rul
     let definitions: Vec<_> = pairs
         .clone()
         .filter(|pair| pair.as_rule() == Rule::grammar_rule)
-        .map(|pair| pair.into_inner().next().unwrap().as_span())
+        .map(|pair| pair.into_inner().next().unwrap())
+        .filter(|pair| pair.as_rule() != Rule::line_doc)
+        .map(|pair| pair.as_span())
         .collect();
 
     let called_rules: Vec<_> = pairs

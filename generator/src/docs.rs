@@ -110,7 +110,7 @@ mod tests {
         );
         expected.insert(
             "dar".to_owned(),
-            "Matches dar\nMatch dar description".to_owned(),
+            "Matches dar\n\nMatch dar description\n".to_owned(),
         );
         assert_eq!(expected, doc_comment.line_docs);
 

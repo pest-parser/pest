@@ -236,6 +236,7 @@ mod tests {
         parse_derive(ast);
     }
 
+    #[doc = "Matches dar\n\nMatch dar description\n"]
     #[test]
     fn test_generate_doc() {
         let input = quote! {
@@ -257,7 +258,7 @@ mod tests {
                 #[doc = "Matches bar str,\n  Indent 2, e.g: `bar` or `foobar`"]
                 r#bar,
                 r#bar1,
-                #[doc = "Matches dar\nMatch dar description"]
+                #[doc = "Matches dar\n\nMatch dar description\n"]
                 r#dar
             }
         };
