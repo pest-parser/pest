@@ -248,14 +248,14 @@ mod tests {
         let token = super::derive_parser(input, true);
 
         let expected = quote! {
-            #[doc = "A parser for JSON file.\nAnd this is a example for JSON parser.\n\n    indent-4-space"]
+            #[doc = "A parser for JSON file.\nAnd this is a example for JSON parser.\n\n    indent-4-space\n"]
             #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 
             pub enum Rule {
                 #[doc = "Matches foo str, e.g.: `foo`"]
                 r#foo,
-                #[doc = "Matches bar str,\n  Indent 2, e.g: `bar` or `foobar`"]
+                #[doc = "Matches bar str\n\n  Indent 2, e.g: `bar` or `foobar`"]
                 r#bar,
                 r#bar1,
                 #[doc = "Matches dar\n\nMatch dar description\n"]
