@@ -12,18 +12,13 @@ extern crate pest;
 extern crate pest_grammars;
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use std::fs::File;
-use std::io::Read;
-
 use pest::Parser;
 
 use pest_grammars::json::*;
 
-fn criterion_benchmark(c: &mut Criterion) {
-    let mut file = File::open("benches/data.json").unwrap();
-    let mut data = String::new();
-
-    file.read_to_string(&mut data).unwrap();
+// json parser             time:   [12.085 µs 12.339 µs 12.680 µs]
+fn bench_json_parse(c: &mut Criterion) {
+    let data = include_str!("data.json");
 
     c.bench_function("json parser", |b| {
         b.iter(|| JsonParser::parse(Rule::json, &data).unwrap())
@@ -35,23 +30,18 @@ mod autocorrect {
 
     #[derive(Parser)]
     #[grammar_inline = r#"
-newline = ${ "\n" | "\r" }
-space = ${ " "+ }
+item = _{ SOI ~ line* ~ EOI }
+line = _{ pair | other }
+
+WHITESPACE = { " " | "\t" | NEWLINE }
 
 other = ${ !(pair) ~ ANY }
-comment = ${ single_line_comment | multiline_comment }
-single_line_comment = _{ "//" ~ (!(newline) ~ ANY)* }
-multiline_comment = _{ "/*" ~ (!("*/") ~ ANY)* ~ "*/"}
 
-string_type = _{ 
-  ("\"" ~ (!(newline | "\"") ~ ANY)* ~ "\"") 
-}
-key = ${ string_type ~ (" ")* ~ ":" ~ (" ")* }
-string = ${ string_type  }
-pair = _{ key ~ string }
+key    = ${ inner_string ~ (" ")* ~ ":" ~ (" ")* }
+string = ${ inner_string }
+pair   = { key ~ string }
 
-line = _{ pair | comment | space | other | newline }
-item = _{ SOI ~ line* ~ EOI } 
+inner_string = @{ ("\"" ~ (!(NEWLINE | "\"") ~ ANY)* ~ "\"") }
 "#]
     pub struct JsonParser;
 }
@@ -65,11 +55,8 @@ item = _{ SOI ~ line* ~ EOI }
 // pair.line_col                                time:   [10.814 µs 10.846 µs 10.893 µs]
 // position.line_col                            time:   [90.135 µs 93.901 µs 98.655 µs]
 // position.line_col (with fast-line-col)       time:   [1.7199 ms 1.7246 ms 1.7315 ms]
-fn line_col_benchmark(c: &mut Criterion) {
-    let mut file = File::open("benches/main.i18n.json").unwrap();
-    let mut data = String::new();
-
-    file.read_to_string(&mut data).unwrap();
+fn bench_line_col(c: &mut Criterion) {
+    let data = include_str!("main.i18n.json");
     let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
 
     c.bench_function("pair.line_col", |b| {
@@ -91,5 +78,34 @@ fn line_col_benchmark(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, criterion_benchmark, line_col_benchmark,);
+// nested iter                             time:   [258.27 µs 260.05 µs 262.64 µs]
+// nested iter (fast-line-col)             time:   [14.943 µs 14.963 µs 14.993 µs]
+// flatten iter                            time:   [2.0367 µs 2.1104 µs 2.2144 µs]
+fn bench_pairs_iter(c: &mut Criterion) {
+    let data = include_str!("data.json");
+
+    fn iter_all_pairs(pairs: pest::iterators::Pairs<autocorrect::Rule>) {
+        for pair in pairs {
+            iter_all_pairs(pair.into_inner());
+        }
+    }
+
+    c.bench_function("nested iter", |b| {
+        let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
+
+        b.iter(move || iter_all_pairs(pairs.clone()));
+    });
+
+    c.bench_function("flatten iter", |b| {
+        let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
+
+        b.iter(move || {
+            for _pair in pairs.clone().flatten().into_iter() {
+                // do nothing
+            }
+        });
+    });
+}
+
+criterion_group!(benches, bench_json_parse, bench_line_col, bench_pairs_iter);
 criterion_main!(benches);
