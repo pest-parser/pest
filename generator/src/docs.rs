@@ -106,16 +106,16 @@ mod tests {
         expected.insert("foo".to_owned(), "Matches foo str, e.g.: `foo`".to_owned());
         expected.insert(
             "bar".to_owned(),
-            "Matches bar str,\n  Indent 2, e.g: `bar` or `foobar`".to_owned(),
+            "Matches bar str\n\n  Indent 2, e.g: `bar` or `foobar`".to_owned(),
         );
         expected.insert(
             "dar".to_owned(),
-            "Matches dar\nMatch dar description".to_owned(),
+            "Matches dar\n\nMatch dar description\n".to_owned(),
         );
         assert_eq!(expected, doc_comment.line_docs);
 
         assert_eq!(
-            "A parser for JSON file.\nAnd this is a example for JSON parser.\n\n    indent-4-space",
+            "A parser for JSON file.\nAnd this is a example for JSON parser.\n\n    indent-4-space\n",
             doc_comment.grammar_doc
         );
     }
