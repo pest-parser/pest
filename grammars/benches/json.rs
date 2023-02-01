@@ -78,9 +78,8 @@ fn bench_line_col(c: &mut Criterion) {
     });
 }
 
-// nested iter                             time:   [258.27 µs 260.05 µs 262.64 µs]
-// nested iter (fast-line-col)             time:   [14.943 µs 14.963 µs 14.993 µs]
-// flatten iter                            time:   [2.0367 µs 2.1104 µs 2.2144 µs]
+// pairs nested iter             time:   [2.0168 ms 2.0381 ms 2.0725 ms]
+// pairs flatten iter            time:   [4.5973 µs 4.6132 µs 4.6307 µs]
 fn bench_pairs_iter(c: &mut Criterion) {
     let data = include_str!("data.json");
 
@@ -90,13 +89,13 @@ fn bench_pairs_iter(c: &mut Criterion) {
         }
     }
 
-    c.bench_function("nested iter", |b| {
+    c.bench_function("pairs nested iter", |b| {
         let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
 
         b.iter(move || iter_all_pairs(pairs.clone()));
     });
 
-    c.bench_function("flatten iter", |b| {
+    c.bench_function("pairs flatten iter", |b| {
         let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
 
         b.iter(move || {
