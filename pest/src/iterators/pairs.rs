@@ -43,15 +43,21 @@ pub struct Pairs<'i, R> {
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &str,
+    line_index: Option<Rc<LineIndex>>,
     start: usize,
     end: usize,
 ) -> Pairs<'_, R> {
+    let line_index = match line_index {
+        Some(line_index) => line_index,
+        None => Rc::new(LineIndex::new(input)),
+    };
+
     Pairs {
         queue,
         input,
         start,
         end,
-        line_index: Rc::new(LineIndex::new(input)),
+        line_index,
     }
 }
 

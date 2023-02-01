@@ -206,7 +206,13 @@ impl<'i, R: RuleType> Pair<'i, R> {
     pub fn into_inner(self) -> Pairs<'i, R> {
         let pair = self.pair();
 
-        pairs::new(self.queue, self.input, self.start + 1, pair)
+        pairs::new(
+            self.queue,
+            self.input,
+            Some(self.line_index),
+            self.start + 1,
+            pair,
+        )
     }
 
     /// Returns the `Tokens` for the `Pair`.
@@ -273,7 +279,13 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// Create a new `Pairs` iterator containing just the single `Pair`.
     pub fn single(pair: Pair<'i, R>) -> Self {
         let end = pair.pair();
-        pairs::new(pair.queue, pair.input, pair.start, end)
+        pairs::new(
+            pair.queue,
+            pair.input,
+            Some(pair.line_index),
+            pair.start,
+            end,
+        )
     }
 }
 

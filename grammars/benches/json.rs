@@ -85,6 +85,7 @@ fn bench_pairs_iter(c: &mut Criterion) {
 
     fn iter_all_pairs(pairs: pest::iterators::Pairs<autocorrect::Rule>) {
         for pair in pairs {
+            pair.line_col();
             iter_all_pairs(pair.into_inner());
         }
     }
@@ -99,8 +100,9 @@ fn bench_pairs_iter(c: &mut Criterion) {
         let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
 
         b.iter(move || {
-            for _pair in pairs.clone().flatten().into_iter() {
+            for pair in pairs.clone().flatten().into_iter() {
                 // do nothing
+                pair.line_col();
             }
         });
     });
