@@ -1,11 +1,11 @@
 //! `LineIndex` to make a line_offsets, each item is an byte offset (start from 0) of the beginning of the line.
 //!
-//! For example, the text: `"hello你好\nworld"`, the line_offsets will store `[0, 12]`.
+//! For example, the text: `"hello 你好\nworld"`, the line_offsets will store `[0, 13]`.
 //!
 //! Then `line_col` with a offset just need to find the line index by binary search.
 //!
 //! Inspired by rust-analyzer's `LineIndex`:
-//! https://github.com/rust-lang/rust/blob/1.67.0/src/tools/rust-analyzer/crates/ide-db/src/line_index.rs
+//! <https://github.com/rust-lang/rust/blob/1.67.0/src/tools/rust-analyzer/crates/ide-db/src/line_index.rs>
 use alloc::vec::Vec;
 
 #[derive(Clone)]
@@ -16,8 +16,7 @@ pub struct LineIndex {
 
 impl LineIndex {
     pub fn new(text: &str) -> LineIndex {
-        let mut line_offsets: Vec<usize> = Vec::new();
-        line_offsets.push(0);
+        let mut line_offsets: Vec<usize> = alloc::vec![0];
 
         let mut offset = 0;
 
@@ -50,31 +49,34 @@ impl LineIndex {
 mod tests {
     use super::*;
 
+    #[allow(clippy::zero_prefixed_literal)]
     #[test]
     fn test_line_index() {
-        let text = "hello你好A🎈C\nworld";
+        let text = "hello 你好 A🎈C\nworld";
         let table = [
             (00, 1, 1, 'h'),
             (01, 1, 2, 'e'),
             (02, 1, 3, 'l'),
             (03, 1, 4, 'l'),
             (04, 1, 5, 'o'),
-            (05, 1, 6, '你'),
-            (08, 1, 7, '好'),
-            (11, 1, 8, 'A'),
-            (12, 1, 9, '🎈'),
-            (16, 1, 10, 'C'),
-            (17, 1, 11, '\n'),
-            (18, 2, 1, 'w'),
-            (19, 2, 2, 'o'),
-            (20, 2, 3, 'r'),
-            (21, 2, 4, 'l'),
-            (22, 2, 5, 'd'),
+            (05, 1, 6, ' '),
+            (06, 1, 7, '你'),
+            (09, 1, 8, '好'),
+            (12, 1, 9, ' '),
+            (13, 1, 10, 'A'),
+            (14, 1, 11, '🎈'),
+            (18, 1, 12, 'C'),
+            (19, 1, 13, '\n'),
+            (20, 2, 1, 'w'),
+            (21, 2, 2, 'o'),
+            (22, 2, 3, 'r'),
+            (23, 2, 4, 'l'),
+            (24, 2, 5, 'd'),
         ];
 
         let index = LineIndex::new(text);
         for &(offset, line, col, c) in table.iter() {
-            let res = index.line_col(&text, offset);
+            let res = index.line_col(text, offset);
             assert_eq!(
                 (res.0, res.1),
                 (line, col),
