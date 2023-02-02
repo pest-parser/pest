@@ -253,8 +253,8 @@ impl<'i, R: RuleType> Pair<'i, R> {
 
     /// Returns the `line`, `col` of this pair start.
     pub fn line_col(&self) -> (usize, usize) {
-        let start = self.pos(self.start);
-        self.line_index.line_col(start)
+        let pos = self.pos(self.start);
+        self.line_index.line_col(self.input, pos)
     }
 
     fn pair(&self) -> usize {

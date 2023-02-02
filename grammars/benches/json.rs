@@ -47,17 +47,19 @@ inner_string = @{ ("\"" ~ (!(NEWLINE | "\"") ~ ANY)* ~ "\"") }
 }
 
 // With 500 times iter
-// pair.line_col                                time:   [2.9937 µs 2.9975 µs 3.0018 µs]
+// pair.line_col (with LineIndex)               time:   [22.426 µs 22.489 µs 22.556 µs]
 // position.line_col                            time:   [212.59 µs 213.38 µs 214.29 µs]
 // position.line_col (with fast-line-col)       time:   [18.241 µs 18.382 µs 18.655 µs]
 //
 // With 1000 times iter
-// pair.line_col                                time:   [10.814 µs 10.846 µs 10.893 µs]
-// position.line_col                            time:   [90.135 µs 93.901 µs 98.655 µs]
-// position.line_col (with fast-line-col)       time:   [1.7199 ms 1.7246 ms 1.7315 ms]
+// pair.line_col (with LineIndex)               time:   [41.160 µs 41.969 µs 43.478 µs]
+// position.line_col                            time:   [1.7199 ms 1.7246 ms 1.7315 ms]
+// position.line_col (with fast-line-col)       time:   [48.498 µs 49.450 µs 50.877 µs]
 fn bench_line_col(c: &mut Criterion) {
     let data = include_str!("main.i18n.json");
-    let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
+    let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data)
+        .unwrap()
+        .flatten();
 
     c.bench_function("pair.line_col", |b| {
         b.iter(|| {
@@ -78,21 +80,21 @@ fn bench_line_col(c: &mut Criterion) {
     });
 }
 
-// pairs nested iter             time:   [2.0168 ms 2.0381 ms 2.0725 ms]
-// pairs flatten iter            time:   [4.5973 µs 4.6132 µs 4.6307 µs]
+// pairs nested iter                    time:   [2.0168 ms 2.0381 ms 2.0725 ms]
+// pairs nested iter (with LineIndex)   time:   [14.716 µs 14.822 µs 14.964 µs]
+// pairs flatten iter                   time:   [4.5973 µs 4.6132 µs 4.6307 µs]
+// pairs flatten iter (with LineIndex)  time:   [5.4637 µs 5.6061 µs 5.7886 µs]
 fn bench_pairs_iter(c: &mut Criterion) {
     let data = include_str!("data.json");
 
     fn iter_all_pairs(pairs: pest::iterators::Pairs<autocorrect::Rule>) {
         for pair in pairs {
-            pair.line_col();
             iter_all_pairs(pair.into_inner());
         }
     }
 
     c.bench_function("pairs nested iter", |b| {
         let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
-
         b.iter(move || iter_all_pairs(pairs.clone()));
     });
 
@@ -100,9 +102,8 @@ fn bench_pairs_iter(c: &mut Criterion) {
         let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, &data).unwrap();
 
         b.iter(move || {
-            for pair in pairs.clone().flatten().into_iter() {
+            for _pair in pairs.clone().flatten().into_iter() {
                 // do nothing
-                pair.line_col();
             }
         });
     });

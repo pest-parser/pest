@@ -1,3 +1,4 @@
+
 (2:3) "JSON Test Pattern pass1"
 (3:4) "object with 1 member"
 (3:28) "array with 1 element"
@@ -43,8 +44,10 @@
 (27:16) "`1~!@#$%^&*()_+-={':[,]}|;.</>?"
 (28:5) "hex"
 (28:12) "\u0123\u4567\u89AB\uCDEF\uabcd\uef4A"
-(29:5) "true"
-(29:13) true
+(29:5) "han"
+(29:12) "你好"
+(29:18) "true"
+(29:26) true
 (30:5) "false"
 (30:14) false
 (31:5) "null"

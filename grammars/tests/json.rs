@@ -183,6 +183,20 @@ fn test_line_col() {
     }
     assert_eq!(expected.trim(), out.trim());
 
+    // Test for nested iter, use pair.line_col()
+    let mut out = String::new();
+    for pair in pairs.clone() {
+        out.push_str(&build_result_for_pair(pair.clone()));
+    }
+    assert_eq!(expected.trim(), out.trim());
+
+    // Test for nested iter, use pair.line_col()
+    let mut out = String::new();
+    for pair in pairs.clone().rev() {
+        out.insert_str(0, &build_result_for_pair(pair.clone()));
+    }
+    assert_eq!(expected.trim(), out.trim());
+
     // Test for flatten iter, and use pair.line_col()
     let mut out = String::new();
     for pair in pairs.clone().flatten() {
@@ -202,20 +216,6 @@ fn test_line_col() {
             let span = pair.as_span();
             out.insert_str(0, &build_line_col(pair.line_col(), span.as_str()));
         }
-    }
-    assert_eq!(expected.trim(), out.trim());
-
-    // Test for nested iter, use pair.line_col()
-    let mut out = String::new();
-    for pair in pairs.clone() {
-        out.push_str(&build_result_for_pair(pair.clone()));
-    }
-    assert_eq!(expected.trim(), out.trim());
-
-    // Test for nested iter, use pair.line_col()
-    let mut out = String::new();
-    for pair in pairs.clone().rev() {
-        out.insert_str(0, &build_result_for_pair(pair.clone()));
     }
     assert_eq!(expected.trim(), out.trim());
 }
