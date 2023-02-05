@@ -20,6 +20,7 @@ use core::str;
 #[cfg(feature = "pretty-print")]
 use serde::ser::SerializeStruct;
 
+use super::line_index::LineIndex;
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
@@ -43,7 +44,7 @@ pub struct Pair<'i, R> {
     input: &'i str,
     /// Token index into `queue`.
     start: usize,
-    pub(crate) line_col: Option<(usize, usize)>,
+    line_index: Rc<LineIndex>,
 }
 
 /// # Safety
@@ -52,13 +53,14 @@ pub struct Pair<'i, R> {
 pub unsafe fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &str,
+    line_index: Rc<LineIndex>,
     start: usize,
 ) -> Pair<'_, R> {
     Pair {
         queue,
         input,
         start,
-        line_col: None,
+        line_index,
     }
 }
 
@@ -204,7 +206,13 @@ impl<'i, R: RuleType> Pair<'i, R> {
     pub fn into_inner(self) -> Pairs<'i, R> {
         let pair = self.pair();
 
-        pairs::new(self.queue, self.input, self.start + 1, pair)
+        pairs::new(
+            self.queue,
+            self.input,
+            Some(self.line_index),
+            self.start + 1,
+            pair,
+        )
     }
 
     /// Returns the `Tokens` for the `Pair`.
@@ -245,10 +253,8 @@ impl<'i, R: RuleType> Pair<'i, R> {
 
     /// Returns the `line`, `col` of this pair start.
     pub fn line_col(&self) -> (usize, usize) {
-        match &self.line_col {
-            Some(line_col) => (line_col.0, line_col.1),
-            None => self.as_span().start_pos().line_col(),
-        }
+        let pos = self.pos(self.start);
+        self.line_index.line_col(self.input, pos)
     }
 
     fn pair(&self) -> usize {
@@ -273,7 +279,13 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// Create a new `Pairs` iterator containing just the single `Pair`.
     pub fn single(pair: Pair<'i, R>) -> Self {
         let end = pair.pair();
-        pairs::new(pair.queue, pair.input, pair.start, end)
+        pairs::new(
+            pair.queue,
+            pair.input,
+            Some(pair.line_index),
+            pair.start,
+            end,
+        )
     }
 }
 

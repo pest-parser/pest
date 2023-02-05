@@ -20,27 +20,12 @@ use core::str;
 use serde::ser::SerializeStruct;
 
 use super::flat_pairs::{self, FlatPairs};
+use super::line_index::LineIndex;
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
-use crate::{position, RuleType};
+use crate::RuleType;
 
-#[derive(Clone)]
-pub struct Cursor {
-    pub line: usize,
-    pub col: usize,
-    pub end: usize,
-}
-
-impl Default for Cursor {
-    fn default() -> Cursor {
-        Cursor {
-            line: 1,
-            col: 1,
-            end: 0,
-        }
-    }
-}
 /// An iterator over [`Pair`]s. It is created by [`pest::state`] and [`Pair::into_inner`].
 ///
 /// [`Pair`]: struct.Pair.html
@@ -52,21 +37,27 @@ pub struct Pairs<'i, R> {
     input: &'i str,
     start: usize,
     end: usize,
-    cursor: Cursor,
+    line_index: Rc<LineIndex>,
 }
 
 pub fn new<R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
     input: &str,
+    line_index: Option<Rc<LineIndex>>,
     start: usize,
     end: usize,
 ) -> Pairs<'_, R> {
+    let line_index = match line_index {
+        Some(line_index) => line_index,
+        None => Rc::new(LineIndex::new(input)),
+    };
+
     Pairs {
         queue,
         input,
         start,
         end,
-        cursor: Cursor::default(),
+        line_index,
     }
 }
 
@@ -199,7 +190,14 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     #[inline]
     pub fn peek(&self) -> Option<Pair<'i, R>> {
         if self.start < self.end {
-            Some(unsafe { pair::new(Rc::clone(&self.queue), self.input, self.start) })
+            Some(unsafe {
+                pair::new(
+                    Rc::clone(&self.queue),
+                    self.input,
+                    Rc::clone(&self.line_index),
+                    self.start,
+                )
+            })
         } else {
             None
         }
@@ -237,42 +235,13 @@ impl<'i, R: RuleType> Pairs<'i, R> {
             }
         }
     }
-
-    /// Move the cursor (line, col) by a part of the input.
-    fn move_cursor(&mut self, input: &str, start: usize, end: usize) -> (usize, usize) {
-        // Move cursor for some skiped characters (by skip(n))
-        let prev_end = self.cursor.end;
-        if prev_end != start {
-            self.move_cursor(input, prev_end, start);
-        }
-
-        let (prev_line, prev_col) = (self.cursor.line, self.cursor.col);
-
-        let part = &input[self.cursor.end..end];
-        let (l, c) = position::line_col(part, part.len(), (0, 0));
-
-        self.cursor.line += l;
-        // Has new line
-        if l > 0 {
-            self.cursor.col = c;
-        } else {
-            self.cursor.col += c;
-        }
-        self.cursor.end = end;
-
-        (prev_line, prev_col)
-    }
 }
 
 impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
     type Item = Pair<'i, R>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut pair = self.peek()?;
-        let span = pair.as_span();
-
-        let (l, c) = self.move_cursor(self.input, span.start(), span.end());
-        pair.line_col = Some((l, c));
+        let pair = self.peek()?;
 
         self.start = self.pair() + 1;
         Some(pair)
@@ -287,7 +256,14 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
 
         self.end = self.pair_from_end();
 
-        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.end) };
+        let pair = unsafe {
+            pair::new(
+                Rc::clone(&self.queue),
+                self.input,
+                Rc::clone(&self.line_index),
+                self.end,
+            )
+        };
 
         Some(pair)
     }
@@ -478,26 +454,14 @@ mod tests {
         let pair = pairs.next().unwrap();
         assert_eq!(pair.as_str(), "abc");
         assert_eq!(pair.line_col(), (1, 1));
-        assert_eq!(
-            (pairs.cursor.line, pairs.cursor.col, pairs.cursor.end),
-            (1, 4, 3)
-        );
 
         let pair = pairs.next().unwrap();
         assert_eq!(pair.as_str(), "e");
         assert_eq!(pair.line_col(), (2, 1));
-        assert_eq!(
-            (pairs.cursor.line, pairs.cursor.col, pairs.cursor.end),
-            (2, 2, 5)
-        );
 
         let pair = pairs.next().unwrap();
         assert_eq!(pair.as_str(), "fgh");
         assert_eq!(pair.line_col(), (2, 2));
-        assert_eq!(
-            (pairs.cursor.line, pairs.cursor.col, pairs.cursor.end),
-            (2, 5, 8)
-        );
     }
 
     #[test]

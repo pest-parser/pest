@@ -157,7 +157,7 @@ where
     match f(state) {
         Ok(state) => {
             let len = state.queue.len();
-            Ok(pairs::new(Rc::new(state.queue), input, 0, len))
+            Ok(pairs::new(Rc::new(state.queue), input, None, 0, len))
         }
         Err(mut state) => {
             let variant = if state.reached_call_limit() {
