@@ -102,6 +102,13 @@ pub struct OptimizedRule {
 }
 
 /// The optimized version of the pest AST's `Expr`.
+///
+/// # Warning: Semantic Versioning
+/// There may be non-breaking changes to the meta-grammar
+/// between minor versions. Those non-breaking changes, however,
+/// may translate into semver-breaking changes due to the additional variants
+/// propaged from the `Rule` enum. This is a known issue and will be fixed in the
+/// future (e.g. by increasing MSRV and non_exhaustive annotations).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OptimizedExpr {
     /// Matches an exact string, e.g. `"a"`

@@ -7,6 +7,13 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 //! Pest meta-grammar
+//!
+//! # Warning: Semantic Versioning
+//! There may be non-breaking changes to the meta-grammar
+//! between minor versions. Those non-breaking changes, however,
+//! may translate into semver-breaking changes due to the additional variants
+//! added to the `Rule` enum. This is a known issue and will be fixed in the
+//! future (e.g. by increasing MSRV and non_exhaustive annotations).
 
 /// The top-level rule of a grammar.
 grammar_rules = _{ SOI ~ grammar_doc* ~ (grammar_rule)+ ~ EOI }
