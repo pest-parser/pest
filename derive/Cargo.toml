@@ -1,7 +1,7 @@
 [package]
 name = "pest_derive"
 description = "pest's derive macro"
-version = "2.5.4"
+version = "2.5.5"
 edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest.rs/"
@@ -23,5 +23,5 @@ std = ["pest/std", "pest_generator/std"]
 
 [dependencies]
 # for tests, included transitively anyway
-pest = { path = "../pest", version = "2.5.4", default-features = false }
-pest_generator = { path = "../generator", version = "2.5.4", default-features = false }
+pest = { path = "../pest", version = "2.5.5", default-features = false }
+pest_generator = { path = "../generator", version = "2.5.5", default-features = false }

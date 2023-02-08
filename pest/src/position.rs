@@ -138,8 +138,43 @@ impl<'i> Position<'i> {
         if self.pos > self.input.len() {
             panic!("position out of bounds");
         }
+        let mut pos = self.pos;
+        let slice = &self.input[..pos];
+        let mut chars = slice.chars().peekable();
 
-        line_col(self.input, self.pos, (1, 1))
+        let mut line_col = (1, 1);
+
+        while pos != 0 {
+            match chars.next() {
+                Some('\r') => {
+                    if let Some(&'\n') = chars.peek() {
+                        chars.next();
+
+                        if pos == 1 {
+                            pos -= 1;
+                        } else {
+                            pos -= 2;
+                        }
+
+                        line_col = (line_col.0 + 1, 1);
+                    } else {
+                        pos -= 1;
+                        line_col = (line_col.0, line_col.1 + 1);
+                    }
+                }
+                Some('\n') => {
+                    pos -= 1;
+                    line_col = (line_col.0 + 1, 1);
+                }
+                Some(c) => {
+                    pos -= c.len_utf8();
+                    line_col = (line_col.0, line_col.1 + 1);
+                }
+                None => unreachable!(),
+            }
+        }
+
+        line_col
     }
 
     /// Returns the entire line of the input that contains this `Position`.
@@ -449,79 +484,6 @@ impl<'i> Hash for Position<'i> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (self.input as *const str).hash(state);
         self.pos.hash(state);
-    }
-}
-
-/// Returns the line and column of the given `pos` in `input`.
-pub(crate) fn line_col(input: &str, pos: usize, start: (usize, usize)) -> (usize, usize) {
-    #[cfg(feature = "fast-line-col")]
-    {
-        fast_line_col(input, pos, start)
-    }
-    #[cfg(not(feature = "fast-line-col"))]
-    {
-        original_line_col(input, pos, start)
-    }
-}
-
-#[inline]
-#[cfg(not(feature = "fast-line-col"))]
-pub(crate) fn original_line_col(
-    input: &str,
-    mut pos: usize,
-    start: (usize, usize),
-) -> (usize, usize) {
-    // Position's pos is always a UTF-8 border.
-    let slice = &input[..pos];
-    let mut chars = slice.chars().peekable();
-
-    let mut line_col = start;
-
-    while pos != 0 {
-        match chars.next() {
-            Some('\r') => {
-                if let Some(&'\n') = chars.peek() {
-                    chars.next();
-
-                    if pos == 1 {
-                        pos -= 1;
-                    } else {
-                        pos -= 2;
-                    }
-
-                    line_col = (line_col.0 + 1, 1);
-                } else {
-                    pos -= 1;
-                    line_col = (line_col.0, line_col.1 + 1);
-                }
-            }
-            Some('\n') => {
-                pos -= 1;
-                line_col = (line_col.0 + 1, 1);
-            }
-            Some(c) => {
-                pos -= c.len_utf8();
-                line_col = (line_col.0, line_col.1 + 1);
-            }
-            None => unreachable!(),
-        }
-    }
-
-    line_col
-}
-
-#[inline]
-#[cfg(feature = "fast-line-col")]
-fn fast_line_col(input: &str, pos: usize, start: (usize, usize)) -> (usize, usize) {
-    // Position's pos is always a UTF-8 border.
-    let slice = &input[..pos];
-
-    let prec_ln = memchr::memrchr(b'\n', slice.as_bytes());
-    if let Some(prec_nl_pos) = prec_ln {
-        let lines = bytecount::count(slice[..=prec_nl_pos].as_bytes(), b'\n') + start.0;
-        (lines, slice[prec_nl_pos..].chars().count())
-    } else {
-        (start.0, slice.chars().count() + start.1)
     }
 }
 
