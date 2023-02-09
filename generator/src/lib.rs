@@ -45,7 +45,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let (name, generics, contents) = parse_derive(ast);
 
     let mut data = String::new();
-    let mut path = None;
+    let mut paths = vec![];
 
     for content in contents {
         let (_data, _path) = match content {
@@ -81,8 +81,9 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         };
 
         data.push_str(&_data);
-        if _path.is_some() {
-            path = _path;
+        match _path {
+            Some(path) => paths.push(path),
+            None => (),
         }
     }
 
@@ -99,7 +100,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     generator::generate(
         name,
         &generics,
-        path,
+        paths,
         optimized,
         defaults,
         &doc_comment,

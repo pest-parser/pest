@@ -22,7 +22,7 @@ use crate::docs::DocComment;
 pub(crate) fn generate(
     name: Ident,
     generics: &Generics,
-    path: Option<PathBuf>,
+    paths: Vec<PathBuf>,
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>,
     doc_comment: &DocComment,
@@ -32,10 +32,7 @@ pub(crate) fn generate(
 
     let builtins = generate_builtin_rules();
     let include_fix = if include_grammar {
-        match path {
-            Some(ref path) => generate_include(&name, path.to_str().expect("non-Unicode path")),
-            None => quote!(),
-        }
+        generate_include(&name, paths)
     } else {
         quote!()
     };
@@ -170,17 +167,33 @@ fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
     builtins
 }
 
-// Needed because Cargo doesn't watch for changes in grammars.
-fn generate_include(name: &Ident, path: &str) -> TokenStream {
+/// Generate Rust `include_str!` for grammar files, then Cargo will watch changes in grammars.
+fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream {
     let const_name = format_ident!("_PEST_GRAMMAR_{}", name);
     // Need to make this relative to the current directory since the path to the file
     // is derived from the CARGO_MANIFEST_DIR environment variable
-    let mut current_dir = std::env::current_dir().expect("Unable to get current directory");
-    current_dir.push(path);
-    let relative_path = current_dir.to_str().expect("path contains invalid unicode");
+    let current_dir = std::env::current_dir().expect("Unable to get current directory");
+
+    let include_tokens = paths.iter().map(|path| {
+        let path = path.to_str().expect("non-Unicode path");
+
+        let relative_path = current_dir
+            .join(path)
+            .to_str()
+            .expect("path contains invalid unicode")
+            .to_string();
+
+        quote! {
+            include_str!(#relative_path)
+        }
+    });
+
+    let len = include_tokens.len();
     quote! {
         #[allow(non_upper_case_globals)]
-        const #const_name: &'static str = include_str!(#relative_path);
+        const #const_name: [&'static str; #len] = [
+            #(#include_tokens),*
+        ];
     }
 }
 
@@ -1016,14 +1029,16 @@ mod tests {
         let defaults = vec!["ANY"];
         let result = result_type();
         let box_ty = box_type();
-        let mut current_dir = std::env::current_dir().expect("Unable to get current directory");
-        current_dir.push("test.pest");
-        let test_path = current_dir.to_str().expect("path contains invalid unicode");
+        let current_dir = std::env::current_dir().expect("Unable to get current directory");
+
+        let base_path = current_dir.join("base.pest").to_str().unwrap().to_string();
+        let test_path = current_dir.join("test.pest").to_str().unwrap().to_string();
+
         assert_eq!(
-            generate(name, &generics, Some(PathBuf::from("test.pest")), rules, defaults, doc_comment, true).to_string(),
+            generate(name, &generics, vec![PathBuf::from("base.pest"), PathBuf::from("test.pest")], rules, defaults, doc_comment, true).to_string(),
             quote! {
                 #[allow(non_upper_case_globals)]
-                const _PEST_GRAMMAR_MyParser: &'static str = include_str!(#test_path);
+                const _PEST_GRAMMAR_MyParser: [&'static str; 2usize] = [include_str!(#base_path), include_str!(#test_path)];
 
                 #[doc = "This is Rule doc\nThis is second line"]
                 #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
