@@ -84,10 +84,10 @@ fn bench_line_col(c: &mut Criterion) {
     });
 }
 
-// pairs nested iter                    time:   [2.0168 ms 2.0381 ms 2.0725 ms]
+// pairs nested iter (v2.5.2)           time:   [2.9007 µs 3.0432 µs 3.2138 µs]
 // pairs nested iter (with LineIndex)   time:   [14.716 µs 14.822 µs 14.964 µs]
-// pairs flatten iter                   time:   [4.5973 µs 4.6132 µs 4.6307 µs]
-// pairs flatten iter (with LineIndex)  time:   [5.4637 µs 5.6061 µs 5.7886 µs]
+// pairs flatten iter (v2.5.2)          time:   [1.1230 µs 1.1309 µs 1.1428 µs]
+// pairs flatten iter (with LineIndex)  time:   [2.9035 µs 2.9408 µs 3.0000 µs]
 fn bench_pairs_iter(c: &mut Criterion) {
     let data = include_str!("data.json");
 

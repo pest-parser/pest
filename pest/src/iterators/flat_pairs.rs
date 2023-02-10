@@ -29,7 +29,7 @@ pub struct FlatPairs<'i, R> {
     input: &'i str,
     start: usize,
     end: usize,
-    line_index: Rc<LineIndex>,
+    line_index: Rc<LineIndex<'i>>,
 }
 
 /// # Safety

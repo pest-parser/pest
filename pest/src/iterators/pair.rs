@@ -44,18 +44,18 @@ pub struct Pair<'i, R> {
     input: &'i str,
     /// Token index into `queue`.
     start: usize,
-    line_index: Rc<LineIndex>,
+    line_index: Rc<LineIndex<'i>>,
 }
 
 /// # Safety
 ///
 /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
-pub unsafe fn new<R: RuleType>(
+pub unsafe fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<R>>>,
-    input: &str,
-    line_index: Rc<LineIndex>,
+    input: &'i str,
+    line_index: Rc<LineIndex<'i>>,
     start: usize,
-) -> Pair<'_, R> {
+) -> Pair<'i, R> {
     Pair {
         queue,
         input,
@@ -254,7 +254,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// Returns the `line`, `col` of this pair start.
     pub fn line_col(&self) -> (usize, usize) {
         let pos = self.pos(self.start);
-        self.line_index.line_col(self.input, pos)
+        self.line_index.line_col(pos)
     }
 
     fn pair(&self) -> usize {
