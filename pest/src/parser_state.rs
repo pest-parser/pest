@@ -126,7 +126,7 @@ impl CallLimitTracker {
 ///
 /// [`Parser`]: trait.Parser.html
 #[derive(Debug)]
-pub struct ParserState<'i, R: RuleType> {
+pub struct ParserState<'i, R: RuleType, S = ()> {
     position: Position<'i>,
     queue: Vec<QueueableToken<R>>,
     lookahead: Lookahead,
@@ -136,6 +136,7 @@ pub struct ParserState<'i, R: RuleType> {
     atomicity: Atomicity,
     stack: Stack<Span<'i>>,
     call_tracker: CallLimitTracker,
+    custom_state: Box<S>,
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -148,9 +149,10 @@ pub struct ParserState<'i, R: RuleType> {
 /// pest::state::<(), _>(input, |s| Ok(s)).unwrap();
 /// ```
 #[allow(clippy::perf)]
-pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<R>>
+pub fn state<'i, R: RuleType, F, S>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<R>>
 where
-    F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>,
+    F: FnOnce(Box<ParserState<'i, R, S>>) -> ParseResult<Box<ParserState<'i, R, S>>>,
+    S: Default
 {
     let state = ParserState::new(input);
 
@@ -184,7 +186,10 @@ where
     }
 }
 
-impl<'i, R: RuleType> ParserState<'i, R> {
+impl<'i, R: RuleType, S> ParserState<'i, R, S>
+where
+    S: Default,
+{
     /// Allocates a fresh `ParserState` object to the heap and returns the owned `Box`. This `Box`
     /// will be passed from closure to closure based on the needs of the specified `Parser`.
     ///
@@ -206,7 +211,45 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             atomicity: Atomicity::NonAtomic,
             stack: Stack::new(),
             call_tracker: Default::default(),
+            custom_state: Default::default(),
         })
+    }
+}
+
+impl<'i, R: RuleType, S> ParserState<'i, R, S> {
+    /// Allocates a fresh `ParserState` object to the heap and returns the owned `Box`. This `Box`
+    /// will be passed from closure to closure based on the needs of the specified `Parser`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest;
+    /// let input = "";
+    /// let state: Box<pest::ParserState<&str>> = pest::ParserState::new(input);
+    /// ```
+    pub fn new_with_state(input: &'i str, custom_state: S) -> Box<Self> {
+        Box::new(ParserState {
+            position: Position::from_start(input),
+            queue: vec![],
+            lookahead: Lookahead::None,
+            pos_attempts: vec![],
+            neg_attempts: vec![],
+            attempt_pos: 0,
+            atomicity: Atomicity::NonAtomic,
+            stack: Stack::new(),
+            call_tracker: Default::default(),
+            custom_state: Box::new(custom_state),
+        })
+    }
+
+    /// Get the current custom state.
+    pub fn state_mut(&mut self) -> &mut S {
+        &mut *self.custom_state
+    }
+
+    /// Get the current custom state.
+    pub fn state(&self) -> &S {
+        &*self.custom_state
     }
 
     /// Returns a reference to the current `Position` of the `ParserState`.

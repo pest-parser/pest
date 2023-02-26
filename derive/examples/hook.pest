@@ -1,0 +1,4 @@
+WHITESPACE   =  _{ " " | "\t" | NEWLINE }
+int          =  @{ (ASCII_NONZERO_DIGIT ~ ASCII_DIGIT+ | ASCII_DIGIT) }
+__HOOK_INT   =  _{ int }
+ints         =  { __HOOK_INT* }

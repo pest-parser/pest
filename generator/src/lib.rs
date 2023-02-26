@@ -27,6 +27,8 @@ use std::io::{self, Read};
 use std::path::Path;
 
 use proc_macro2::TokenStream;
+use quote::ToTokens;
+use quote::__private::ext::RepToTokensExt;
 use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 
 #[macro_use]
@@ -42,7 +44,7 @@ use pest_meta::{optimizer, unwrap_or_report, validator};
 /// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
 pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
-    let (name, generics, contents) = parse_derive(ast);
+    let (name, generics, contents, custom_state) = parse_derive(ast);
 
     let mut data = String::new();
     let mut paths = vec![];
@@ -105,6 +107,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         defaults,
         &doc_comment,
         include_grammar,
+        custom_state,
     )
 }
 
@@ -121,7 +124,9 @@ enum GrammarSource {
     Inline(String),
 }
 
-fn parse_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>) {
+fn parse_derive(
+    mut ast: DeriveInput,
+) -> (Ident, Generics, Vec<GrammarSource>, Option<TokenStream>) {
     let name = ast.ident;
     let generics = ast.generics;
 
@@ -145,7 +150,27 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>) {
         grammar_sources.push(get_attribute(attr))
     }
 
-    (name, generics, grammar_sources)
+    let custom_state = {
+        let attrs: Vec<(usize, &Attribute)> = ast
+            .attrs
+            .iter()
+            .enumerate()
+            .filter(|(_, attr)| match attr.parse_meta() {
+                Ok(Meta::List(list)) => list.path.is_ident("custom_state"),
+                _ => false,
+            })
+            .collect();
+        if attrs.len() == 1 {
+            let (id, attr) = attrs[0];
+            let attr = get_attribute_custom_state(attr);
+            ast.attrs.remove(id);
+            Some(attr)
+        } else {
+            None
+        }
+    };
+
+    (name, generics, grammar_sources, custom_state)
 }
 
 fn get_attribute(attr: &Attribute) -> GrammarSource {
@@ -164,6 +189,18 @@ fn get_attribute(attr: &Attribute) -> GrammarSource {
     }
 }
 
+fn get_attribute_custom_state(attr: &Attribute) -> TokenStream {
+    match attr.parse_meta() {
+        Ok(Meta::List(list)) => match list.nested.first() {
+            Some(x) => {
+                return x.to_token_stream();
+            }
+            _ => panic!(),
+        },
+        _ => panic!(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::parse_derive;
@@ -177,7 +214,7 @@ mod tests {
             pub struct MyParser<'a, T>;
         ";
         let ast = syn::parse_str(definition).unwrap();
-        let (_, _, filenames) = parse_derive(ast);
+        let (_, _, filenames, _) = parse_derive(ast);
         assert_eq!(filenames, [GrammarSource::Inline("GRAMMAR".to_string())]);
     }
 
@@ -189,7 +226,7 @@ mod tests {
             pub struct MyParser<'a, T>;
         ";
         let ast = syn::parse_str(definition).unwrap();
-        let (_, _, filenames) = parse_derive(ast);
+        let (_, _, filenames, _) = parse_derive(ast);
         assert_eq!(filenames, [GrammarSource::File("myfile.pest".to_string())]);
     }
 
@@ -202,7 +239,7 @@ mod tests {
             pub struct MyParser<'a, T>;
         ";
         let ast = syn::parse_str(definition).unwrap();
-        let (_, _, filenames) = parse_derive(ast);
+        let (_, _, filenames, _) = parse_derive(ast);
         assert_eq!(
             filenames,
             [
