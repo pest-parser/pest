@@ -9,7 +9,10 @@
 
 macro_rules! insert_builtin {
     ($builtin: expr, $name: ident, $pattern: expr, $custom_state: ident) => {
-        $builtin.push((stringify!($name), generate_rule!($name, $pattern, $custom_state)));
+        $builtin.push((
+            stringify!($name),
+            generate_rule!($name, $pattern, $custom_state),
+        ));
     };
 }
 

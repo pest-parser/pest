@@ -28,7 +28,6 @@ use std::path::Path;
 
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use quote::__private::ext::RepToTokensExt;
 use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
 
 #[macro_use]

@@ -126,7 +126,10 @@ impl CallLimitTracker {
 ///
 /// [`Parser`]: trait.Parser.html
 #[derive(Debug)]
-pub struct ParserState<'i, R: RuleType, S = ()> {
+pub struct ParserState<'i, R: RuleType, S = ()>
+where
+    S: StateCheckpoint,
+{
     position: Position<'i>,
     queue: Vec<QueueableToken<R>>,
     lookahead: Lookahead,
@@ -139,6 +142,18 @@ pub struct ParserState<'i, R: RuleType, S = ()> {
     custom_state: Box<S>,
 }
 
+pub trait StateCheckpoint {
+    fn snapshot(&mut self);
+    fn clear_snapshot(&mut self);
+    fn restore(&mut self);
+}
+
+impl StateCheckpoint for () {
+    fn snapshot(&mut self) {}
+    fn clear_snapshot(&mut self) {}
+    fn restore(&mut self) {}
+}
+
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
 ///
 /// # Examples
@@ -149,10 +164,30 @@ pub struct ParserState<'i, R: RuleType, S = ()> {
 /// pest::state::<(), _>(input, |s| Ok(s)).unwrap();
 /// ```
 #[allow(clippy::perf)]
-pub fn state<'i, R: RuleType, F, S>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<R>>
+pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i, R>, Error<R>>
+where
+    F: FnOnce(Box<ParserState<'i, R, ()>>) -> ParseResult<Box<ParserState<'i, R, ()>>>,
+{
+    state_custom(input, f)
+}
+
+/// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
+///
+/// # Examples
+///
+/// ```
+/// # use pest;
+/// let input = "";
+/// pest::state_custom::<(), _, ()>(input, |s| Ok(s)).unwrap();
+/// ```
+#[allow(clippy::perf)]
+pub fn state_custom<'i, R: RuleType, F, S>(
+    input: &'i str,
+    f: F,
+) -> Result<pairs::Pairs<'i, R>, Error<R>>
 where
     F: FnOnce(Box<ParserState<'i, R, S>>) -> ParseResult<Box<ParserState<'i, R, S>>>,
-    S: Default
+    S: Default + StateCheckpoint,
 {
     let state = ParserState::new(input);
 
@@ -188,7 +223,7 @@ where
 
 impl<'i, R: RuleType, S> ParserState<'i, R, S>
 where
-    S: Default,
+    S: Default + StateCheckpoint,
 {
     /// Allocates a fresh `ParserState` object to the heap and returns the owned `Box`. This `Box`
     /// will be passed from closure to closure based on the needs of the specified `Parser`.
@@ -201,22 +236,11 @@ where
     /// let state: Box<pest::ParserState<&str>> = pest::ParserState::new(input);
     /// ```
     pub fn new(input: &'i str) -> Box<Self> {
-        Box::new(ParserState {
-            position: Position::from_start(input),
-            queue: vec![],
-            lookahead: Lookahead::None,
-            pos_attempts: vec![],
-            neg_attempts: vec![],
-            attempt_pos: 0,
-            atomicity: Atomicity::NonAtomic,
-            stack: Stack::new(),
-            call_tracker: Default::default(),
-            custom_state: Default::default(),
-        })
+        Self::new_with_state(input, S::default())
     }
 }
 
-impl<'i, R: RuleType, S> ParserState<'i, R, S> {
+impl<'i, R: RuleType, S: StateCheckpoint> ParserState<'i, R, S> {
     /// Allocates a fresh `ParserState` object to the heap and returns the owned `Box`. This `Box`
     /// will be passed from closure to closure based on the needs of the specified `Parser`.
     ///
@@ -1249,6 +1273,7 @@ impl<'i, R: RuleType, S> ParserState<'i, R, S> {
     #[inline]
     pub(crate) fn checkpoint(mut self: Box<Self>) -> Box<Self> {
         self.stack.snapshot();
+        self.custom_state.snapshot();
         self
     }
 
@@ -1257,6 +1282,7 @@ impl<'i, R: RuleType, S> ParserState<'i, R, S> {
     #[inline]
     pub(crate) fn checkpoint_ok(mut self: Box<Self>) -> Box<Self> {
         self.stack.clear_snapshot();
+        self.custom_state.clear_snapshot();
         self
     }
 
@@ -1264,6 +1290,7 @@ impl<'i, R: RuleType, S> ParserState<'i, R, S> {
     #[inline]
     pub(crate) fn restore(mut self: Box<Self>) -> Box<Self> {
         self.stack.restore();
+        self.custom_state.restore();
         self
     }
 }

@@ -88,7 +88,7 @@ pub(crate) fn generate(
                     pub use self::visible::*;
                 }
 
-                ::pest::state(input, |state| {
+                ::pest::state_custom(input, |state| {
                     match rule {
                         #patterns
                     }
