@@ -62,6 +62,7 @@ fn child_modifies_state(
 ) -> bool {
     expr.iter_top_down().any(|expr| match expr {
         OptimizedExpr::Push(_) => true,
+        OptimizedExpr::Ident(ref name) if name.starts_with("__HOOK") => true,
         OptimizedExpr::Ident(ref name) if name == "DROP" => true,
         OptimizedExpr::Ident(ref name) if name == "POP" => true,
         OptimizedExpr::Ident(ref name) => match cache.get(name).cloned() {
