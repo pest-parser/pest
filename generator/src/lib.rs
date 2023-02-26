@@ -192,7 +192,7 @@ fn get_attribute_custom_state(attr: &Attribute) -> TokenStream {
     match attr.parse_meta() {
         Ok(Meta::List(list)) => match list.nested.first() {
             Some(x) => {
-                return x.to_token_stream();
+                x.to_token_stream()
             }
             _ => panic!(),
         },

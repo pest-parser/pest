@@ -65,12 +65,13 @@ pub(crate) fn generate(
 
     let parser_impl = quote! {
         #[allow(clippy::all)]
-        impl #impl_generics ::pest::Parser<Rule> for #name #ty_generics #where_clause {
-            fn parse<'i>(
+        impl #impl_generics ::pest::StateParser<Rule, #custom_state> for #name #ty_generics #where_clause {
+            fn parse_with_state<'i>(
                 rule: Rule,
-                input: &'i str
+                input: &'i str,
+                state: #custom_state
             ) -> #result<
-                ::pest::iterators::Pairs<'i, Rule>,
+                (#custom_state, ::pest::iterators::Pairs<'i, Rule>),
                 ::pest::error::Error<Rule>
             > {
                 mod rules {
@@ -92,7 +93,7 @@ pub(crate) fn generate(
                     match rule {
                         #patterns
                     }
-                })
+                }, state)
             }
         }
     };
@@ -1129,7 +1130,7 @@ mod tests {
                 }
 
                 #[allow(clippy::all)]
-                impl ::pest::Parser<Rule> for MyParser {
+                impl ::pest::StateParser<Rule, #custom_state> for MyParser {
                     fn parse<'i>(
                         rule: Rule,
                         input: &'i str

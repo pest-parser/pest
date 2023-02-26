@@ -142,9 +142,13 @@ where
     custom_state: Box<S>,
 }
 
+/// Trait for custom state that can be stored in a [`ParserState`].
 pub trait StateCheckpoint {
+    /// Saves the current state of the parser.
     fn snapshot(&mut self);
+    /// Clears the saved state of the parser.
     fn clear_snapshot(&mut self);
+    /// Restores the saved state of the parser.
     fn restore(&mut self);
 }
 
@@ -168,7 +172,8 @@ pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i
 where
     F: FnOnce(Box<ParserState<'i, R, ()>>) -> ParseResult<Box<ParserState<'i, R, ()>>>,
 {
-    state_custom(input, f)
+    let (_, pairs) = state_custom(input, f, ())?;
+    Ok(pairs)
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -184,17 +189,21 @@ where
 pub fn state_custom<'i, R: RuleType, F, S>(
     input: &'i str,
     f: F,
-) -> Result<pairs::Pairs<'i, R>, Error<R>>
+    custom_state: S,
+) -> Result<(S, pairs::Pairs<'i, R>), Error<R>>
 where
     F: FnOnce(Box<ParserState<'i, R, S>>) -> ParseResult<Box<ParserState<'i, R, S>>>,
-    S: Default + StateCheckpoint,
+    S: StateCheckpoint,
 {
-    let state = ParserState::new(input);
+    let state = ParserState::new_with_state(input, custom_state);
 
     match f(state) {
         Ok(state) => {
             let len = state.queue.len();
-            Ok(pairs::new(Rc::new(state.queue), input, None, 0, len))
+            Ok((
+                *state.custom_state,
+                pairs::new(Rc::new(state.queue), input, None, 0, len),
+            ))
         }
         Err(mut state) => {
             let variant = if state.reached_call_limit() {
@@ -268,12 +277,12 @@ impl<'i, R: RuleType, S: StateCheckpoint> ParserState<'i, R, S> {
 
     /// Get the current custom state.
     pub fn state_mut(&mut self) -> &mut S {
-        &mut *self.custom_state
+        &mut self.custom_state
     }
 
     /// Get the current custom state.
     pub fn state(&self) -> &S {
-        &*self.custom_state
+        &self.custom_state
     }
 
     /// Returns a reference to the current `Position` of the `ParserState`.

@@ -9,11 +9,25 @@
 
 use crate::error::Error;
 use crate::iterators::Pairs;
-use crate::RuleType;
+use crate::{RuleType, StateCheckpoint};
 
 /// A trait with a single method that parses strings.
-pub trait Parser<R: RuleType> {
+pub trait Parser<R: RuleType, S: Default + StateCheckpoint = ()> {
     /// Parses a `&str` starting from `rule`.
     #[allow(clippy::perf)]
     fn parse(rule: R, input: &str) -> Result<Pairs<'_, R>, Error<R>>;
+}
+
+/// A trait with a single method that parses strings.
+pub trait StateParser<R: RuleType, S: StateCheckpoint> {
+    /// Parses a `&str` starting from `rule`.
+    #[allow(clippy::perf)]
+    fn parse_with_state(rule: R, input: &str, state: S) -> Result<(S, Pairs<'_, R>), Error<R>>;
+}
+
+impl<R: RuleType, S: StateCheckpoint + Default, T: StateParser<R, S>> Parser<R, S> for T {
+    fn parse(rule: R, input: &str) -> Result<Pairs<'_, R>, Error<R>> {
+        let (_, pairs) = Self::parse_with_state(rule, input, S::default())?;
+        Ok(pairs)
+    }
 }
