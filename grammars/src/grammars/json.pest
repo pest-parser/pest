@@ -19,6 +19,10 @@ pair   = { string ~ ":" ~ value }
 
 array = { "[" ~ value ~ ("," ~ value)* ~ "]" | "[" ~ "]" }
 
+
+//////////////////////
+/// Matches value, e.g.: `"foo"`, `42`, `true`, `null`, `[]`, `{}`.
+//////////////////////
 value = { string | number | object | array | bool | null }
 
 string  = @{ "\"" ~ inner ~ "\"" }
