@@ -171,6 +171,6 @@ space       = _{ " " | "\t" }
 /// A top-level comment.
 grammar_doc = ${ "//!" ~ space? ~ inner_doc }
 /// A rule comment.
-line_doc    = ${ "///" ~ space? ~ !"/" ~ inner_doc }
+line_doc    = ${ "///" ~ space? ~ inner_doc }
 /// A comment content.
 inner_doc   = @{ (!newline ~ ANY)* }
