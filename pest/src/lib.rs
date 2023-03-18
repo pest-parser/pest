@@ -334,9 +334,10 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
-pub use crate::parser::Parser;
+pub use crate::parser::{Parser, StateParser};
 pub use crate::parser_state::{
-    set_call_limit, state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState,
+    set_call_limit, state, state_custom, Atomicity, Lookahead, MatchDir, ParseResult, ParserState,
+    StateCheckpoint,
 };
 pub use crate::position::Position;
 pub use crate::span::{Lines, LinesSpan, Span};

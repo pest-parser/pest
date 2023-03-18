@@ -1,0 +1,5 @@
+WHITESPACE   =  _{ " " | "\t" | NEWLINE }
+int          =  @{ (ASCII_NONZERO_DIGIT ~ ASCII_DIGIT+ | ASCII_DIGIT) }
+__HOOK_INT   =  _{ int }
+ints         =  { SOI ~ __HOOK_INT* ~ EOI }
+ints2        =  { SOI ~ (__HOOK_INT ~ "yes" | int ~ "no")* ~ EOI }

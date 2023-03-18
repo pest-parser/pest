@@ -27,10 +27,17 @@ pub(crate) fn generate(
     defaults: Vec<&str>,
     doc_comment: &DocComment,
     include_grammar: bool,
+    custom_state: Option<TokenStream>,
 ) -> TokenStream {
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
 
-    let builtins = generate_builtin_rules();
+    let custom_state = if let Some(custom_state) = custom_state {
+        quote! { #custom_state }
+    } else {
+        quote! { () }
+    };
+
+    let builtins = generate_builtin_rules(custom_state.clone());
     let include_fix = if include_grammar {
         generate_include(&name, paths)
     } else {
@@ -38,9 +45,12 @@ pub(crate) fn generate(
     };
     let rule_enum = generate_enum(&rules, doc_comment, uses_eoi);
     let patterns = generate_patterns(&rules, uses_eoi);
-    let skip = generate_skip(&rules);
+    let skip = generate_skip(&rules, custom_state.clone());
 
-    let mut rules: Vec<_> = rules.into_iter().map(generate_rule).collect();
+    let mut rules: Vec<_> = rules
+        .into_iter()
+        .map(|rule| generate_rule(&name, custom_state.clone(), rule))
+        .collect();
     rules.extend(builtins.into_iter().filter_map(|(builtin, tokens)| {
         if defaults.contains(&builtin) {
             Some(tokens)
@@ -55,12 +65,13 @@ pub(crate) fn generate(
 
     let parser_impl = quote! {
         #[allow(clippy::all)]
-        impl #impl_generics ::pest::Parser<Rule> for #name #ty_generics #where_clause {
-            fn parse<'i>(
+        impl #impl_generics ::pest::StateParser<Rule, #custom_state> for #name #ty_generics #where_clause {
+            fn parse_with_state<'i>(
                 rule: Rule,
-                input: &'i str
+                input: &'i str,
+                state: #custom_state
             ) -> #result<
-                ::pest::iterators::Pairs<'i, Rule>,
+                (#custom_state, ::pest::iterators::Pairs<'i, Rule>),
                 ::pest::error::Error<Rule>
             > {
                 mod rules {
@@ -78,11 +89,11 @@ pub(crate) fn generate(
                     pub use self::visible::*;
                 }
 
-                ::pest::state(input, |state| {
+                ::pest::state_custom(input, |state| {
                     match rule {
                         #patterns
                     }
-                })
+                }, state)
             }
         }
     };
@@ -96,42 +107,75 @@ pub(crate) fn generate(
 
 // Note: All builtin rules should be validated as pest builtins in meta/src/validator.rs.
 // Some should also be keywords.
-fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
+fn generate_builtin_rules(custom_state: TokenStream) -> Vec<(&'static str, TokenStream)> {
     let mut builtins = Vec::new();
 
-    insert_builtin!(builtins, ANY, state.skip(1));
+    insert_builtin!(builtins, ANY, state.skip(1), custom_state);
     insert_builtin!(
         builtins,
         EOI,
-        state.rule(Rule::EOI, |state| state.end_of_input())
+        state.rule(Rule::EOI, |state| state.end_of_input()),
+        custom_state
     );
-    insert_builtin!(builtins, SOI, state.start_of_input());
-    insert_builtin!(builtins, PEEK, state.stack_peek());
-    insert_builtin!(builtins, PEEK_ALL, state.stack_match_peek());
-    insert_builtin!(builtins, POP, state.stack_pop());
-    insert_builtin!(builtins, POP_ALL, state.stack_match_pop());
-    insert_builtin!(builtins, DROP, state.stack_drop());
+    insert_builtin!(builtins, SOI, state.start_of_input(), custom_state);
+    insert_builtin!(builtins, PEEK, state.stack_peek(), custom_state);
+    insert_builtin!(builtins, PEEK_ALL, state.stack_match_peek(), custom_state);
+    insert_builtin!(builtins, POP, state.stack_pop(), custom_state);
+    insert_builtin!(builtins, POP_ALL, state.stack_match_pop(), custom_state);
+    insert_builtin!(builtins, DROP, state.stack_drop(), custom_state);
 
-    insert_builtin!(builtins, ASCII_DIGIT, state.match_range('0'..'9'));
-    insert_builtin!(builtins, ASCII_NONZERO_DIGIT, state.match_range('1'..'9'));
-    insert_builtin!(builtins, ASCII_BIN_DIGIT, state.match_range('0'..'1'));
-    insert_builtin!(builtins, ASCII_OCT_DIGIT, state.match_range('0'..'7'));
+    insert_builtin!(
+        builtins,
+        ASCII_DIGIT,
+        state.match_range('0'..'9'),
+        custom_state
+    );
+    insert_builtin!(
+        builtins,
+        ASCII_NONZERO_DIGIT,
+        state.match_range('1'..'9'),
+        custom_state
+    );
+    insert_builtin!(
+        builtins,
+        ASCII_BIN_DIGIT,
+        state.match_range('0'..'1'),
+        custom_state
+    );
+    insert_builtin!(
+        builtins,
+        ASCII_OCT_DIGIT,
+        state.match_range('0'..'7'),
+        custom_state
+    );
     insert_builtin!(
         builtins,
         ASCII_HEX_DIGIT,
         state
             .match_range('0'..'9')
             .or_else(|state| state.match_range('a'..'f'))
-            .or_else(|state| state.match_range('A'..'F'))
+            .or_else(|state| state.match_range('A'..'F')),
+        custom_state
     );
-    insert_builtin!(builtins, ASCII_ALPHA_LOWER, state.match_range('a'..'z'));
-    insert_builtin!(builtins, ASCII_ALPHA_UPPER, state.match_range('A'..'Z'));
+    insert_builtin!(
+        builtins,
+        ASCII_ALPHA_LOWER,
+        state.match_range('a'..'z'),
+        custom_state
+    );
+    insert_builtin!(
+        builtins,
+        ASCII_ALPHA_UPPER,
+        state.match_range('A'..'Z'),
+        custom_state
+    );
     insert_builtin!(
         builtins,
         ASCII_ALPHA,
         state
             .match_range('a'..'z')
-            .or_else(|state| state.match_range('A'..'Z'))
+            .or_else(|state| state.match_range('A'..'Z')),
+        custom_state
     );
     insert_builtin!(
         builtins,
@@ -139,16 +183,23 @@ fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
         state
             .match_range('a'..'z')
             .or_else(|state| state.match_range('A'..'Z'))
-            .or_else(|state| state.match_range('0'..'9'))
+            .or_else(|state| state.match_range('0'..'9')),
+        custom_state
     );
-    insert_builtin!(builtins, ASCII, state.match_range('\x00'..'\x7f'));
+    insert_builtin!(
+        builtins,
+        ASCII,
+        state.match_range('\x00'..'\x7f'),
+        custom_state
+    );
     insert_builtin!(
         builtins,
         NEWLINE,
         state
             .match_string("\n")
             .or_else(|state| state.match_string("\r\n"))
-            .or_else(|state| state.match_string("\r"))
+            .or_else(|state| state.match_string("\r")),
+        custom_state
     );
 
     let box_ty = box_type();
@@ -159,7 +210,7 @@ fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
         builtins.push((property, quote! {
             #[inline]
             #[allow(dead_code, non_snake_case, unused_variables)]
-            fn #property_ident(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
+            fn #property_ident(state: #box_ty<::pest::ParserState<'_, Rule, #custom_state>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule, #custom_state>>> {
                 state.match_char_by(::pest::unicode::#property_ident)
             }
         }));
@@ -258,7 +309,31 @@ fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
     }
 }
 
-fn generate_rule(rule: OptimizedRule) -> TokenStream {
+fn generate_expr_hooked(parser_name: &Ident, name: Ident, expr: OptimizedExpr) -> TokenStream {
+    if let OptimizedExpr::Ident(ident) = expr {
+        let name = format_ident!("r#hook{}", name);
+        let ident = format_ident!("r#{}", ident);
+        quote! {
+          let start = *state.position();
+          let mut state = self::#ident(state)?;
+          let end = *state.position();
+          let span = start.span(&end);
+          if super::super::#parser_name::#name(state.state_mut(), span) {
+            Ok(state)
+          } else {
+            Err(state)
+          }
+        }
+    } else {
+        unreachable!("__HOOK can be only applied in grammars with a single ident");
+    }
+}
+
+fn generate_rule(
+    parser_name: &Ident,
+    custom_state: TokenStream,
+    rule: OptimizedRule,
+) -> TokenStream {
     let name = format_ident!("r#{}", rule.name);
     let expr = if rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic {
         generate_expr_atomic(rule.expr)
@@ -270,6 +345,8 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
                 #atomic
             })
         }
+    } else if rule.name.starts_with("__HOOK") {
+        generate_expr_hooked(parser_name, name.clone(), rule.expr)
     } else {
         generate_expr(rule.expr)
     };
@@ -280,7 +357,7 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
         RuleType::Normal => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule, #custom_state>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule, #custom_state>>> {
                 state.rule(Rule::#name, |state| {
                     #expr
                 })
@@ -289,14 +366,14 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
         RuleType::Silent => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule, #custom_state>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule, #custom_state>>> {
                 #expr
             }
         },
         RuleType::Atomic => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule, #custom_state>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule, #custom_state>>> {
                 state.rule(Rule::#name, |state| {
                     state.atomic(::pest::Atomicity::Atomic, |state| {
                         #expr
@@ -307,7 +384,7 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
         RuleType::CompoundAtomic => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule, #custom_state>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule, #custom_state>>> {
                 state.atomic(::pest::Atomicity::CompoundAtomic, |state| {
                     state.rule(Rule::#name, |state| {
                         #expr
@@ -318,7 +395,7 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
         RuleType::NonAtomic => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
-            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
+            pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule, #custom_state>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule, #custom_state>>> {
                 state.atomic(::pest::Atomicity::NonAtomic, |state| {
                     state.rule(Rule::#name, |state| {
                         #expr
@@ -329,19 +406,20 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
     }
 }
 
-fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
+fn generate_skip(rules: &[OptimizedRule], custom_state: TokenStream) -> TokenStream {
     let whitespace = rules.iter().any(|rule| rule.name == "WHITESPACE");
     let comment = rules.iter().any(|rule| rule.name == "COMMENT");
 
     match (whitespace, comment) {
-        (false, false) => generate_rule!(skip, Ok(state)),
+        (false, false) => generate_rule!(skip, Ok(state), custom_state),
         (true, false) => generate_rule!(
             skip,
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
                 state.repeat(|state| super::visible::WHITESPACE(state))
             } else {
                 Ok(state)
-            }
+            },
+            custom_state
         ),
         (false, true) => generate_rule!(
             skip,
@@ -349,7 +427,8 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
                 state.repeat(|state| super::visible::COMMENT(state))
             } else {
                 Ok(state)
-            }
+            },
+            custom_state
         ),
         (true, true) => generate_rule!(
             skip,
@@ -369,7 +448,8 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
                 })
             } else {
                 Ok(state)
-            }
+            },
+            custom_state
         ),
     }
 }
@@ -1035,7 +1115,7 @@ mod tests {
         let test_path = current_dir.join("test.pest").to_str().unwrap().to_string();
 
         assert_eq!(
-            generate(name, &generics, vec![PathBuf::from("base.pest"), PathBuf::from("test.pest")], rules, defaults, doc_comment, true).to_string(),
+            generate(name, &generics, vec![PathBuf::from("base.pest"), PathBuf::from("test.pest")], rules, defaults, doc_comment, true, None).to_string(),
             quote! {
                 #[allow(non_upper_case_globals)]
                 const _PEST_GRAMMAR_MyParser: [&'static str; 2usize] = [include_str!(#base_path), include_str!(#test_path)];
@@ -1050,7 +1130,7 @@ mod tests {
                 }
 
                 #[allow(clippy::all)]
-                impl ::pest::Parser<Rule> for MyParser {
+                impl ::pest::StateParser<Rule, #custom_state> for MyParser {
                     fn parse<'i>(
                         rule: Rule,
                         input: &'i str

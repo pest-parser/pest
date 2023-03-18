@@ -8,18 +8,21 @@
 // modified, or distributed except according to those terms.
 
 macro_rules! insert_builtin {
-    ($builtin: expr, $name: ident, $pattern: expr) => {
-        $builtin.push((stringify!($name), generate_rule!($name, $pattern)));
+    ($builtin: expr, $name: ident, $pattern: expr, $custom_state: ident) => {
+        $builtin.push((
+            stringify!($name),
+            generate_rule!($name, $pattern, $custom_state),
+        ));
     };
 }
 
 #[cfg(feature = "std")]
 macro_rules! generate_rule {
-    ($name: ident, $pattern: expr) => {
+    ($name: ident, $pattern: expr, $custom_state: ident) => {
         quote! {
             #[inline]
             #[allow(dead_code, non_snake_case, unused_variables)]
-            pub fn $name(state: ::std::boxed::Box<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<::std::boxed::Box<::pest::ParserState<'_, Rule>>> {
+            pub fn $name(state: ::std::boxed::Box<::pest::ParserState<'_, Rule, #$custom_state>>) -> ::pest::ParseResult<::std::boxed::Box<::pest::ParserState<'_, Rule, #$custom_state>>> {
                 $pattern
             }
         }
