@@ -27,7 +27,7 @@ use std::io::{self, Read};
 use std::path::Path;
 
 use proc_macro2::TokenStream;
-use syn::{Attribute, DeriveInput, Generics, Ident, Lit, Meta};
+use syn::{Attribute, DeriveInput, Expr, ExprLit, Generics, Ident, Lit, Meta};
 
 #[macro_use]
 mod macros;
@@ -128,11 +128,9 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>) {
     let grammar: Vec<&Attribute> = ast
         .attrs
         .iter()
-        .filter(|attr| match attr.parse_meta() {
-            Ok(Meta::NameValue(name_value)) => {
-                name_value.path.is_ident("grammar") || name_value.path.is_ident("grammar_inline")
-            }
-            _ => false,
+        .filter(|attr| {
+            let path = attr.meta.path();
+            path.is_ident("grammar") || path.is_ident("grammar_inline")
         })
         .collect();
 
@@ -149,9 +147,12 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>) {
 }
 
 fn get_attribute(attr: &Attribute) -> GrammarSource {
-    match attr.parse_meta() {
-        Ok(Meta::NameValue(name_value)) => match name_value.lit {
-            Lit::Str(string) => {
+    match &attr.meta {
+        Meta::NameValue(name_value) => match &name_value.value {
+            Expr::Lit(ExprLit {
+                lit: Lit::Str(string),
+                ..
+            }) => {
                 if name_value.path.is_ident("grammar") {
                     GrammarSource::File(string.value())
                 } else {
