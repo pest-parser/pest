@@ -167,6 +167,8 @@ mod b {
 
 ## Projects using pest
 
+You can find more projects and ecosystem tools in the [awesome-pest](https://github.com/pest-parser/awesome-pest) repo.
+
 * [pest_meta](https://github.com/pest-parser/pest/blob/master/meta/src/grammar.pest) (bootstrapped)
 * [AshPaper](https://github.com/shnewto/ashpaper)
 * [brain](https://github.com/brain-lang/brain)
