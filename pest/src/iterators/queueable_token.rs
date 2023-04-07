@@ -14,7 +14,7 @@
 //   * it finds its pair in O(1) time instead of O(N), since pair positions are known at parse time
 //     and can easily be stored instead of recomputed
 #[derive(Debug)]
-pub enum QueueableToken<R> {
+pub enum QueueableToken<'i, R> {
     Start {
         end_token_index: usize,
         input_pos: usize,
@@ -22,6 +22,8 @@ pub enum QueueableToken<R> {
     End {
         start_token_index: usize,
         rule: R,
+        tag: Option<&'i str>,
+        branch_tag: Option<&'i str>,
         input_pos: usize,
     },
 }

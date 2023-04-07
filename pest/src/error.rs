@@ -418,7 +418,7 @@ impl<R: RuleType> Error<R> {
             .unwrap_or_default();
 
         let pair = (self.line_col.clone(), &self.continued_line);
-        if let (LineColLocation::Span(_, end), &Some(ref continued_line)) = pair {
+        if let (LineColLocation::Span(_, end), Some(ref continued_line)) = pair {
             let has_line_gap = end.0 - self.start().0 > 1;
             if has_line_gap {
                 format!(

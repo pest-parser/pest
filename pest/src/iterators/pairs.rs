@@ -33,20 +33,20 @@ use crate::RuleType;
 /// [`Pair::into_inner`]: struct.Pair.html#method.into_inner
 #[derive(Clone)]
 pub struct Pairs<'i, R> {
-    queue: Rc<Vec<QueueableToken<R>>>,
+    queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
     start: usize,
     end: usize,
     line_index: Rc<LineIndex>,
 }
 
-pub fn new<R: RuleType>(
-    queue: Rc<Vec<QueueableToken<R>>>,
-    input: &str,
+pub fn new<'i, R: RuleType>(
+    queue: Rc<Vec<QueueableToken<'i, R>>>,
+    input: &'i str,
     line_index: Option<Rc<LineIndex>>,
     start: usize,
     end: usize,
-) -> Pairs<'_, R> {
+) -> Pairs<'i, R> {
     let line_index = match line_index {
         Some(line_index) => line_index,
         None => Rc::new(LineIndex::new(input)),
@@ -301,7 +301,7 @@ impl<'i, R: Eq> Eq for Pairs<'i, R> {}
 
 impl<'i, R: Hash> Hash for Pairs<'i, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
+        (&*self.queue as *const Vec<QueueableToken<'i, R>>).hash(state);
         (self.input as *const str).hash(state);
         self.start.hash(state);
         self.end.hash(state);

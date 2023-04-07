@@ -128,7 +128,7 @@ impl CallLimitTracker {
 #[derive(Debug)]
 pub struct ParserState<'i, R: RuleType> {
     position: Position<'i>,
-    queue: Vec<QueueableToken<R>>,
+    queue: Vec<QueueableToken<'i, R>>,
     lookahead: Lookahead,
     pos_attempts: Vec<R>,
     neg_attempts: Vec<R>,
@@ -345,6 +345,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     new_state.queue.push(QueueableToken::End {
                         start_token_index: index,
                         rule,
+                        tag: None,
+                        branch_tag: None,
                         input_pos: new_pos,
                     });
                 }
@@ -371,6 +373,101 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 Err(new_state)
             }
         }
+    }
+
+    /// Tag current node
+    ///
+    /// # Examples
+    ///
+    /// Try to recognize the one specified in a set of characters
+    ///
+    /// ```
+    /// use pest::{state, ParseResult, ParserState, iterators::Pair};
+    /// #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     character,
+    /// }
+    /// fn mark_c(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+    ///     state.sequence(|state| {
+    ///         character(state)
+    ///             .and_then(|state| character(state))
+    ///             .and_then(|state| character(state))
+    ///             .and_then(|state| state.tag_node("c"))
+    ///             .and_then(|state| character(state))
+    ///     })
+    /// }
+    /// fn character(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+    ///     state.rule(Rule::character, |state| state.match_range('a'..'z'))
+    /// }
+    ///
+    /// let input = "abcd";
+    /// let pairs = state(input, mark_c).unwrap();
+    /// // find all node tag as `c`
+    /// let find: Vec<Pair<Rule>> = pairs.filter(|s| s.as_node_tag() == Some("c")).collect();
+    /// assert_eq!(find[0].as_str(), "c")
+    /// ```
+    #[inline]
+    pub fn tag_node(mut self: Box<Self>, tag: &'i str) -> ParseResult<Box<Self>> {
+        if let Some(QueueableToken::End { tag: old, .. }) = self.queue.last_mut() {
+            *old = Some(tag)
+        }
+        Ok(self)
+    }
+
+    /// Tag current branch
+    ///
+    /// # Examples
+    ///
+    /// Try to recognize the branch between add and mul
+    /// ```
+    /// use pest::{state, ParseResult, ParserState};
+    /// #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     number, // 0..9
+    ///     add,    // num + num
+    ///     mul,    // num * num
+    /// }
+    /// fn mark_branch(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+    ///     expr(state, Rule::mul, "*")
+    ///         .and_then(|state| state.tag_branch("mul"))
+    ///         .or_else(|state| expr(state, Rule::add, "+"))
+    ///         .and_then(|state| state.tag_branch("add"))
+    /// }
+    /// fn expr<'a>(
+    ///     state: Box<ParserState<'a, Rule>>,
+    ///     r: Rule,
+    ///     o: &'static str,
+    /// ) -> ParseResult<Box<ParserState<'a, Rule>>> {
+    ///     state.rule(r, |state| {
+    ///         state.sequence(|state| {
+    ///             number(state)
+    ///                 .and_then(|state| state.match_string(o))
+    ///                 .and_then(|state| number(state))
+    ///         })
+    ///     })
+    /// }
+    /// fn number(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+    ///     state.rule(Rule::number, |state| state.match_range('0'..'9'))
+    /// }
+    ///
+    /// let input = "1+1";
+    /// let pairs = state(input, mark_branch).unwrap();
+    /// assert_eq!(
+    ///     pairs.into_iter().next().unwrap().as_branch_tag(),
+    ///     Some("add")
+    /// )
+    /// ```
+    #[inline]
+    pub fn tag_branch(mut self: Box<Self>, tag: &'i str) -> ParseResult<Box<Self>> {
+        if let Some(QueueableToken::End {
+            branch_tag: old, ..
+        }) = self.queue.last_mut()
+        {
+            *old = Some(tag)
+        }
+        Ok(self)
     }
 
     fn attempts_at(&self, pos: usize) -> usize {
