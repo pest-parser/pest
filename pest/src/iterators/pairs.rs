@@ -207,7 +207,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// assert_eq!(pairs.find_first_tagged("mul"), None);
     /// ```
     #[inline]
-    pub fn find_first_tagged(&self, tag: &str) -> Option<Pair<'i, R>> {
+    pub fn find_first_tagged(&self, tag: &'i str) -> Option<Pair<'i, R>> {
         self.clone().find_tagged(tag).next()
     }
 
@@ -262,7 +262,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     #[inline]
     pub fn find_tagged(
         self,
-        tag: &str,
+        tag: &'i str,
     ) -> Filter<FlatPairs<'i, R>, impl FnMut(&Pair<'i, R>) -> bool + '_> {
         self.flatten().filter(move |pair: &Pair<'i, R>| {
             matches!(pair.as_node_tag(), Some(nt) if nt == tag)
