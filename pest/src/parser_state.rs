@@ -444,7 +444,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///         state.sequence(|state| {
     ///             number(state)
     ///                 .and_then(|state| state.match_string(o))
-    ///                 .and_then(|state| number(state))
+    ///                 .and_then(number)
     ///         })
     ///     })
     /// }
