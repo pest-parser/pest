@@ -81,9 +81,8 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         };
 
         data.push_str(&_data);
-        match _path {
-            Some(path) => paths.push(path),
-            None => (),
+        if let Some(path) = _path {
+            paths.push(path);
         }
     }
 

@@ -21,12 +21,7 @@ use crate::ast::{Expr, Rule as AstRule, RuleType};
 use crate::validator;
 
 /// TODO: fix the generator to at least add explicit lifetimes
-#[allow(
-    missing_docs,
-    unused_attributes,
-    elided_lifetimes_in_paths,
-    unused_qualifications
-)]
+#[allow(missing_docs, unused_qualifications)]
 mod grammar {
     include!("grammar.rs");
 }

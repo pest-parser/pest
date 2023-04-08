@@ -13,6 +13,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use core::fmt;
 use core::hash::{Hash, Hasher};
+use core::iter::Filter;
 use core::ptr;
 use core::str;
 
@@ -157,6 +158,116 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     #[inline]
     pub fn flatten(self) -> FlatPairs<'i, R> {
         unsafe { flat_pairs::new(self.queue, self.input, self.start, self.end) }
+    }
+
+    /// Finds the first pair that has its node or branch tagged with the provided
+    /// label.
+    ///
+    /// # Examples
+    ///
+    /// Try to recognize the branch between add and mul
+    /// ```
+    /// use pest::{state, ParseResult, ParserState};
+    /// #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     number, // 0..9
+    ///     add,    // num + num
+    ///     mul,    // num * num
+    /// }
+    /// fn mark_branch(
+    ///     state: Box<ParserState<'_, Rule>>,
+    /// ) -> ParseResult<Box<ParserState<'_, Rule>>> {
+    ///     expr(state, Rule::mul, "*")
+    ///         .and_then(|state| state.tag_branch("mul"))
+    ///         .or_else(|state| expr(state, Rule::add, "+"))
+    ///         .and_then(|state| state.tag_branch("add"))
+    /// }
+    /// fn expr<'a>(
+    ///     state: Box<ParserState<'a, Rule>>,
+    ///     r: Rule,
+    ///     o: &'static str,
+    /// ) -> ParseResult<Box<ParserState<'a, Rule>>> {
+    ///     state.rule(r, |state| {
+    ///         state.sequence(|state| {
+    ///             number(state)
+    ///                 .and_then(|state| state.tag_node("lhs"))
+    ///                 .and_then(|state| state.match_string(o))
+    ///                 .and_then(|state| number(state))
+    ///                 .and_then(|state| state.tag_node("rhs"))
+    ///         })
+    ///     })
+    /// }
+    /// fn number(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
+    ///     state.rule(Rule::number, |state| state.match_range('0'..'9'))
+    /// }
+    /// let input = "1+2";
+    /// let pairs = state(input, mark_branch).unwrap();
+    /// assert_eq!(pairs.find_first_tagged("add").unwrap().as_rule(), Rule::add);
+    /// assert_eq!(pairs.find_first_tagged("mul"), None);
+    /// ```
+    #[inline]
+    pub fn find_first_tagged(&self, tag: &str) -> Option<Pair<'i, R>> {
+        self.clone().find_tagged(tag).next()
+    }
+
+    /// Returns the iterator over pairs that have their node or branch tagged
+    /// with the provided label.
+    ///
+    /// # Examples
+    ///
+    /// Try to recognize the node between left and right hand side
+    /// ```
+    /// use pest::{state, ParseResult, ParserState};
+    /// #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     number, // 0..9
+    ///     add,    // num + num
+    ///     mul,    // num * num
+    /// }
+    /// fn mark_branch(
+    ///     state: Box<ParserState<'_, Rule>>,
+    /// ) -> ParseResult<Box<ParserState<'_, Rule>>> {
+    ///     expr(state, Rule::mul, "*")
+    ///         .and_then(|state| state.tag_branch("mul"))
+    ///         .or_else(|state| expr(state, Rule::add, "+"))
+    ///         .and_then(|state| state.tag_branch("add"))
+    /// }
+    /// fn expr<'a>(
+    ///     state: Box<ParserState<'a, Rule>>,
+    ///     r: Rule,
+    ///     o: &'static str,
+    /// ) -> ParseResult<Box<ParserState<'a, Rule>>> {
+    ///     state.rule(r, |state| {
+    ///         state.sequence(|state| {
+    ///             number(state)
+    ///                 .and_then(|state| state.tag_node("lhs"))
+    ///                 .and_then(|state| state.match_string(o))
+    ///                 .and_then(|state| number(state))
+    ///                 .and_then(|state| state.tag_node("rhs"))
+    ///         })
+    ///     })
+    /// }
+    /// fn number(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
+    ///     state.rule(Rule::number, |state| state.match_range('0'..'9'))
+    /// }
+    ///
+    /// let input = "1+2";
+    /// let pairs = state(input, mark_branch).unwrap();
+    /// let mut left_numbers = pairs.find_tagged("lhs");
+    /// assert_eq!(left_numbers.next().unwrap().as_str(), "1");
+    /// assert_eq!(left_numbers.next(), None);
+    /// ```
+    #[inline]
+    pub fn find_tagged(
+        self,
+        tag: &str,
+    ) -> Filter<FlatPairs<'i, R>, impl FnMut(&Pair<'i, R>) -> bool + '_> {
+        self.flatten().filter(move |pair: &Pair<'i, R>| {
+            matches!(pair.as_node_tag(), Some(nt) if nt == tag)
+                || matches!(pair.as_branch_tag(), Some(bt) if bt == tag)
+        })
     }
 
     /// Returns the `Tokens` for the `Pairs`.
@@ -330,6 +441,7 @@ mod tests {
     use super::super::super::macros::tests::*;
     use super::super::super::Parser;
     use alloc::borrow::ToOwned;
+    use alloc::boxed::Box;
     use alloc::format;
     use alloc::vec;
     use alloc::vec::Vec;
@@ -478,5 +590,56 @@ mod tests {
         let pair = pairs.next().unwrap();
         assert_eq!(pair.as_str(), "abc");
         assert_eq!(pair.line_col(), (1, 1));
+    }
+
+    #[test]
+    fn test_tag_node_branch() {
+        use crate::{state, ParseResult, ParserState};
+        #[allow(non_camel_case_types)]
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+        enum Rule {
+            number, // 0..9
+            add,    // num + num
+            mul,    // num * num
+        }
+        fn mark_branch(
+            state: Box<ParserState<'_, Rule>>,
+        ) -> ParseResult<Box<ParserState<'_, Rule>>> {
+            expr(state, Rule::mul, "*")
+                .and_then(|state| state.tag_branch("mul"))
+                .or_else(|state| expr(state, Rule::add, "+"))
+                .and_then(|state| state.tag_branch("add"))
+        }
+        fn expr<'a>(
+            state: Box<ParserState<'a, Rule>>,
+            r: Rule,
+            o: &'static str,
+        ) -> ParseResult<Box<ParserState<'a, Rule>>> {
+            state.rule(r, |state| {
+                state.sequence(|state| {
+                    number(state)
+                        .and_then(|state| state.tag_node("lhs"))
+                        .and_then(|state| state.match_string(o))
+                        .and_then(|state| number(state))
+                        .and_then(|state| state.tag_node("rhs"))
+                })
+            })
+        }
+        fn number(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
+            state.rule(Rule::number, |state| state.match_range('0'..'9'))
+        }
+        let input = "1+2";
+        let pairs = state(input, mark_branch).unwrap();
+        assert_eq!(pairs.find_first_tagged("add").unwrap().as_rule(), Rule::add);
+        assert_eq!(pairs.find_first_tagged("mul"), None);
+
+        let mut left_numbers = pairs.clone().find_tagged("lhs");
+
+        assert_eq!(left_numbers.next().unwrap().as_str(), "1");
+        assert_eq!(left_numbers.next(), None);
+        let mut right_numbers = pairs.find_tagged("rhs");
+
+        assert_eq!(right_numbers.next().unwrap().as_str(), "2");
+        assert_eq!(right_numbers.next(), None);
     }
 }
