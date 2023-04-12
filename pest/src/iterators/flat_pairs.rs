@@ -243,7 +243,8 @@ mod tests {
         let pairs = pairs.collect::<Vec<_>>();
         assert_eq!(pairs.len(), pairs_len);
 
-        let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().flatten().rev();
+        let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().flatten();
+        let pairs = pairs.rev();
         let pairs_len = pairs.len();
         let pairs = pairs.collect::<Vec<_>>();
         assert_eq!(pairs.len(), pairs_len);
