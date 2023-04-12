@@ -231,6 +231,9 @@ impl Vm {
                     .map(|state| state.as_str())
                     .collect::<Vec<&str>>(),
             ),
+            // TODO: tag state
+            OptimizedExpr::BranchTag(ref expr, ref _tag) => self.parse_expr(expr, state),
+            OptimizedExpr::NodeTag(ref expr, ref _tag) => self.parse_expr(expr, state),
             OptimizedExpr::RestoreOnErr(ref expr) => {
                 state.restore_on_err(|state| self.parse_expr(expr, state))
             }

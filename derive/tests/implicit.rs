@@ -22,4 +22,14 @@ fn test_implicit_whitespace() {
     // see: https://github.com/pest-parser/pest/issues/762#issuecomment-1375374868
     let successful_parse = TestImplicitParser::parse(Rule::program, "a a");
     assert!(successful_parse.is_ok());
+    // dbg!(&successful_parse);
+    let pairs = successful_parse.unwrap();
+    assert!(pairs.find_first_tagged("head").is_some());
+    assert!(pairs.find_first_tagged("tail").is_some());
+    assert!(pairs.find_first_tagged("more_and").is_none());
+    assert!(pairs.find_first_tagged("more_comp").is_none());
+    assert!(pairs.find_first_tagged("more_array").is_none());
+    assert_eq!(pairs.clone().find_tagged("one_and").count(), 2);
+    assert_eq!(pairs.clone().find_tagged("one_comp").count(), 2);
+    assert_eq!(pairs.find_tagged("one_array").count(), 2);
 }

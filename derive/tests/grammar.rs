@@ -263,6 +263,62 @@ fn choice_prefix() {
 }
 
 #[test]
+fn node_tag() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::node_tag,
+        tokens: [
+            node_tag(0, 3, [
+                string(0, 3)
+            ])
+        ]
+    };
+}
+
+#[test]
+fn choice_string_tagged() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::branch_tag,
+        tokens: [
+            branch_tag(0, 3, [
+                string(0, 3)
+            ])
+        ]
+    };
+}
+
+#[test]
+fn choice_range_tagged() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "0",
+        rule: Rule::branch_tag,
+        tokens: [
+            branch_tag(0, 1, [
+                range(0, 1)
+            ])
+        ]
+    };
+}
+
+#[test]
+fn choice_prefix_tagged() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::branch_tag_prefix,
+        tokens: [
+            branch_tag_prefix(0, 3, [
+                string(0, 3)
+            ])
+        ]
+    };
+}
+
+#[test]
 fn optional_string() {
     parses_to! {
         parser: GrammarParser,
