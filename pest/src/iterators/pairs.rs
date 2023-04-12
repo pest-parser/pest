@@ -237,6 +237,23 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     }
 }
 
+impl<'i, R: RuleType> ExactSizeIterator for Pairs<'i, R> {
+    fn len(&self) -> usize {
+        let mut start = self.start;
+        let mut count = 0;
+        while start < self.end {
+            start = match self.queue[start] {
+                QueueableToken::Start {
+                    end_token_index, ..
+                } => end_token_index + 1,
+                _ => unreachable!(),
+            };
+            count += 1;
+        }
+        count
+    }
+}
+
 impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
     type Item = Pair<'i, R>;
 
@@ -245,6 +262,11 @@ impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
 
         self.start = self.pair() + 1;
         Some(pair)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = <Self as ExactSizeIterator>::len(self);
+        (len, Some(len))
     }
 }
 
@@ -327,6 +349,8 @@ impl<'i, R: RuleType> ::serde::Serialize for Pairs<'i, R> {
 
 #[cfg(test)]
 mod tests {
+    use crate::iterators::Pair;
+
     use super::super::super::macros::tests::*;
     use super::super::super::Parser;
     use alloc::borrow::ToOwned;
@@ -478,5 +502,23 @@ mod tests {
         let pair = pairs.next().unwrap();
         assert_eq!(pair.as_str(), "abc");
         assert_eq!(pair.line_col(), (1, 1));
+    }
+
+    #[test]
+    fn exact_size_iter_for_pairs() {
+        let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap();
+        let pairs_len = pairs.len();
+        let pairs = pairs.collect::<Vec<Pair<'_, Rule>>>();
+        assert_eq!(pairs.len(), pairs_len);
+
+        let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().rev();
+        let pairs_len = pairs.len();
+        let pairs = pairs.collect::<Vec<Pair<'_, Rule>>>();
+        assert_eq!(pairs.len(), pairs_len);
+
+        let mut pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap();
+        let pairs_len = pairs.len();
+        let _ = pairs.next().unwrap();
+        assert_eq!(pairs.len() + 1, pairs_len);
     }
 }

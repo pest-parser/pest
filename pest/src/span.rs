@@ -298,6 +298,26 @@ pub struct LinesSpan<'i> {
     pos: usize,
 }
 
+impl<'i> ExactSizeIterator for LinesSpan<'i> {
+    fn len(&self) -> usize {
+        let mut self_pos = self.pos;
+        let mut count = 0;
+        while self_pos < self.span.end {
+            let pos = match position::Position::new(self.span.input, self_pos) {
+                Some(pos) => pos,
+                None => break,
+            };
+            if pos.at_end() {
+                break;
+            }
+
+            self_pos = pos.find_line_end();
+            count += 1;
+        }
+        count
+    }
+}
+
 impl<'i> Iterator for LinesSpan<'i> {
     type Item = Span<'i>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -314,6 +334,11 @@ impl<'i> Iterator for LinesSpan<'i> {
 
         Span::new(self.span.input, line_start, self.pos)
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = <Self as ExactSizeIterator>::len(self);
+        (len, Some(len))
+    }
 }
 
 /// Line iterator for Spans, created by [`Span::lines()`].
@@ -325,10 +350,20 @@ pub struct Lines<'i> {
     inner: LinesSpan<'i>,
 }
 
+impl<'i> ExactSizeIterator for Lines<'i> {
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
+}
+
 impl<'i> Iterator for Lines<'i> {
     type Item = &'i str;
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|span| span.as_str())
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
     }
 }
 
@@ -446,5 +481,21 @@ mod tests {
                 .collect::<Vec<_>>(),
             lines
         );
+    }
+
+    #[test]
+    fn exact_size_iter_for_lines_span() {
+        let input = "abc\ndef\nghi";
+        let span = Span::new(input, 1, 7).unwrap();
+
+        let lines_span = span.lines_span();
+        let lines_len = lines_span.len();
+        let lines_span = lines_span.collect::<Vec<_>>();
+        assert_eq!(lines_span.len(), lines_len);
+
+        let mut lines_span = span.lines_span();
+        let lines_len = lines_span.len();
+        let _ = lines_span.next().unwrap();
+        assert_eq!(lines_span.len() + 1, lines_len);
     }
 }

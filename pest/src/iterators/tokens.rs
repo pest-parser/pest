@@ -92,6 +92,12 @@ impl<'i, R: RuleType> Tokens<'i, R> {
     }
 }
 
+impl<'i, R: RuleType> ExactSizeIterator for Tokens<'i, R> {
+    fn len(&self) -> usize {
+        self.end - self.start
+    }
+}
+
 impl<'i, R: RuleType> Iterator for Tokens<'i, R> {
     type Item = Token<'i, R>;
 
@@ -105,6 +111,11 @@ impl<'i, R: RuleType> Iterator for Tokens<'i, R> {
         self.start += 1;
 
         Some(token)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = <Self as ExactSizeIterator>::len(self);
+        (len, Some(len))
     }
 }
 
@@ -142,5 +153,23 @@ mod tests {
         tokens.reverse();
         let reverse_tokens = pairs.tokens().rev().collect::<Vec<Token<'_, Rule>>>();
         assert_eq!(tokens, reverse_tokens);
+    }
+
+    #[test]
+    fn exact_size_iter_for_tokens() {
+        let tokens = AbcParser::parse(Rule::a, "abcde").unwrap().tokens();
+        let tokens_len = tokens.len();
+        let tokens = tokens.collect::<Vec<Token<'_, Rule>>>();
+        assert_eq!(tokens.len(), tokens_len);
+
+        let tokens = AbcParser::parse(Rule::a, "abcde").unwrap().tokens().rev();
+        let tokens_len = tokens.len();
+        let tokens = tokens.collect::<Vec<Token<'_, Rule>>>();
+        assert_eq!(tokens.len(), tokens_len);
+
+        let mut tokens = AbcParser::parse(Rule::a, "abcde").unwrap().tokens();
+        let tokens_len = tokens.len();
+        let _ = tokens.next().unwrap();
+        assert_eq!(tokens.len() + 1, tokens_len);
     }
 }
