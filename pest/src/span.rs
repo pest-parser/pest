@@ -489,13 +489,11 @@ mod tests {
         let span = Span::new(input, 1, 7).unwrap();
 
         let lines_span = span.lines_span();
-        let lines_len = lines_span.len();
-        let lines_span = lines_span.collect::<Vec<_>>();
-        assert_eq!(lines_span.len(), lines_len);
+        assert_eq!(lines_span.len(), lines_span.count());
 
         let mut lines_span = span.lines_span();
         let lines_len = lines_span.len();
         let _ = lines_span.next().unwrap();
-        assert_eq!(lines_span.len() + 1, lines_len);
+        assert_eq!(lines_span.count() + 1, lines_len);
     }
 }

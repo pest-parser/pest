@@ -349,8 +349,6 @@ impl<'i, R: RuleType> ::serde::Serialize for Pairs<'i, R> {
 
 #[cfg(test)]
 mod tests {
-    use crate::iterators::Pair;
-
     use super::super::super::macros::tests::*;
     use super::super::super::Parser;
     use alloc::borrow::ToOwned;
@@ -507,18 +505,14 @@ mod tests {
     #[test]
     fn exact_size_iter_for_pairs() {
         let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap();
-        let pairs_len = pairs.len();
-        let pairs = pairs.collect::<Vec<Pair<'_, Rule>>>();
-        assert_eq!(pairs.len(), pairs_len);
+        assert_eq!(pairs.len(), pairs.count());
 
         let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().rev();
-        let pairs_len = pairs.len();
-        let pairs = pairs.collect::<Vec<Pair<'_, Rule>>>();
-        assert_eq!(pairs.len(), pairs_len);
+        assert_eq!(pairs.len(), pairs.count());
 
         let mut pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap();
         let pairs_len = pairs.len();
         let _ = pairs.next().unwrap();
-        assert_eq!(pairs.len() + 1, pairs_len);
+        assert_eq!(pairs.count() + 1, pairs_len);
     }
 }

@@ -239,19 +239,15 @@ mod tests {
     #[test]
     fn exact_size_iter_for_pairs() {
         let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().flatten();
-        let pairs_len = pairs.len();
-        let pairs = pairs.collect::<Vec<_>>();
-        assert_eq!(pairs.len(), pairs_len);
+        assert_eq!(pairs.len(), pairs.count());
 
         let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().flatten();
         let pairs = pairs.rev();
-        let pairs_len = pairs.len();
-        let pairs = pairs.collect::<Vec<_>>();
-        assert_eq!(pairs.len(), pairs_len);
+        assert_eq!(pairs.len(), pairs.count());
 
         let mut pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().flatten();
         let pairs_len = pairs.len();
         let _ = pairs.next().unwrap();
-        assert_eq!(pairs.len() + 1, pairs_len);
+        assert_eq!(pairs.count() + 1, pairs_len);
     }
 }

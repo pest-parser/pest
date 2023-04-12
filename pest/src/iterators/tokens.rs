@@ -158,18 +158,14 @@ mod tests {
     #[test]
     fn exact_size_iter_for_tokens() {
         let tokens = AbcParser::parse(Rule::a, "abcde").unwrap().tokens();
-        let tokens_len = tokens.len();
-        let tokens = tokens.collect::<Vec<Token<'_, Rule>>>();
-        assert_eq!(tokens.len(), tokens_len);
+        assert_eq!(tokens.len(), tokens.count());
 
         let tokens = AbcParser::parse(Rule::a, "abcde").unwrap().tokens().rev();
-        let tokens_len = tokens.len();
-        let tokens = tokens.collect::<Vec<Token<'_, Rule>>>();
-        assert_eq!(tokens.len(), tokens_len);
+        assert_eq!(tokens.len(), tokens.count());
 
         let mut tokens = AbcParser::parse(Rule::a, "abcde").unwrap().tokens();
         let tokens_len = tokens.len();
         let _ = tokens.next().unwrap();
-        assert_eq!(tokens.len() + 1, tokens_len);
+        assert_eq!(tokens.count() + 1, tokens_len);
     }
 }
