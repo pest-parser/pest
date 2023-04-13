@@ -1,5 +1,5 @@
 // pest. The Elegant Parser
-// Copyright (c) 2018-2022 Dragoș Tiselice, Tomas Tauber
+// Copyright (c) 2018-2023 Dragoș Tiselice, Tomas Tauber
 //
 // Licensed under the Apache License, Version 2.0
 // <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
@@ -9,7 +9,7 @@
 //! # pest debugger
 //!
 //! This crate contains definitions for the debugger.
-//! A sample CLI-based debugger is available in `main.rs`.
+//! A sample CLI-based debugger is available in `cli.rs`.
 //! Other debugger frontends can be implemented using this
 //! crate's `DebuggerContext`:
 //!
