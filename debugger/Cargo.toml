@@ -13,13 +13,18 @@ license = "MIT/Apache-2.0"
 readme = "_README.md"
 rust-version = "1.56"
 
+[features]
+# TODO: no need for this when this is fixed in Cargo https://github.com/rust-lang/cargo/issues/1982
+default = ["cli"]
+cli = ["reqwest", "rustyline", "serde_json"]
+
 [dependencies]
 pest = { path = "../pest", version = "2.5.7" }
 pest_meta = { path = "../meta", version = "2.5.7" }
 pest_vm = { path = "../vm", version = "2.5.7" }
-reqwest = { version = "0.11", default-features = false, features = ["blocking", "json", "default-tls"] }
-rustyline = "10"
-serde_json = "1"
+reqwest = { version = "0.11", default-features = false, features = ["blocking", "json", "default-tls"], optional = true }
+rustyline = { version = "10", optional = true }
+serde_json = { version = "1", optional = true }
 thiserror = "1"
 
 [badges]
