@@ -12,6 +12,7 @@ use alloc::rc::Rc;
 #[cfg(feature = "pretty-print")]
 use alloc::string::String;
 use alloc::vec::Vec;
+use core::borrow::Borrow;
 use core::fmt;
 use core::hash::{Hash, Hasher};
 use core::ptr;
@@ -184,8 +185,8 @@ impl<'i, R: RuleType> Pair<'i, R> {
     /// Get current node tag
     #[inline]
     pub fn as_node_tag(&self) -> Option<&str> {
-        match self.queue[self.pair()] {
-            QueueableToken::End { tag, .. } => tag,
+        match &self.queue[self.pair()] {
+            QueueableToken::End { tag, .. } => tag.as_ref().map(|x| x.borrow()),
             _ => None,
         }
     }

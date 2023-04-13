@@ -191,10 +191,10 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     ///     state.rule(r, |state| {
     ///         state.sequence(|state| {
     ///             number(state)
-    ///                 .and_then(|state| state.tag_node("lhs"))
+    ///                 .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("lhs")))
     ///                 .and_then(|state| state.match_string(o))
     ///                 .and_then(number)
-    ///                 .and_then(|state| state.tag_node("rhs"))
+    ///                 .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("rhs")))
     ///         })
     ///     })
     /// }
@@ -242,10 +242,10 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     ///     state.rule(r, |state| {
     ///         state.sequence(|state| {
     ///             number(state)
-    ///                 .and_then(|state| state.tag_node("lhs"))
+    ///                 .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("lhs")))
     ///                 .and_then(|state| state.match_string(o))
     ///                 .and_then(number)
-    ///                 .and_then(|state| state.tag_node("rhs"))
+    ///                 .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("rhs")))
     ///         })
     ///     })
     /// }
@@ -618,10 +618,10 @@ mod tests {
             state.rule(r, |state| {
                 state.sequence(|state| {
                     number(state)
-                        .and_then(|state| state.tag_node("lhs"))
+                        .and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed("lhs")))
                         .and_then(|state| state.match_string(o))
                         .and_then(number)
-                        .and_then(|state| state.tag_node("rhs"))
+                        .and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed("rhs")))
                 })
             })
         }
