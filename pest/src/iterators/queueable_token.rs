@@ -25,7 +25,6 @@ pub enum QueueableToken<'i, R> {
         start_token_index: usize,
         rule: R,
         tag: Option<Cow<'i, str>>,
-        branch_tag: Option<&'i str>,
         input_pos: usize,
     },
 }

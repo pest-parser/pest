@@ -22,8 +22,6 @@ sequence_atomic_compound = @{ sequence_compound }
 sequence_nested = { string ~ string }
 sequence_compound_nested = ${ sequence_nested }
 node_tag = { #string = string }
-branch_tag = { string #string | range #range }
-branch_tag_prefix = { | string #string | range #range }
 choice = { string | range }
 choice_prefix = { | string | range }
 optional = { string? }

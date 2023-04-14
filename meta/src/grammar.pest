@@ -59,15 +59,13 @@ non_atomic_modifier      = { "!" }
 
 /// A tag label.
 tag_id = @{ "#" ~ ("_" | alpha) ~ ("_" | alpha_num)* }
-
+/// For assigning labels to nodes.
 node_tag = _{ tag_id ~ assignment_operator }
-
-branch_tag = _{ tag_id }
 
 /// A rule expression.
 expression =  { choice_operator? ~ term ~ (infix_operator ~ term)* }
 /// A rule term.
-term       =  { node_tag? ~ prefix_operator* ~ node ~ postfix_operator* ~ branch_tag? }
+term       =  { node_tag? ~ prefix_operator* ~ node ~ postfix_operator* }
 /// A rule node (inside terms).
 node       = _{ opening_paren ~ expression ~ closing_paren | terminal }
 /// A terminal expression.

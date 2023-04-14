@@ -231,8 +231,6 @@ impl Vm {
                     .map(|state| state.as_str())
                     .collect::<Vec<&str>>(),
             ),
-            // TODO: tag state
-            OptimizedExpr::BranchTag(ref expr, ref _tag) => self.parse_expr(expr, state),
             OptimizedExpr::NodeTag(ref expr, ref tag) => self
                 .parse_expr(expr, state)
                 .and_then(|state| state.tag_node(std::borrow::Cow::Owned(tag.clone()))),

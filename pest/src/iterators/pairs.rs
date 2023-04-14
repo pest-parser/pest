@@ -179,9 +179,9 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     ///     state: Box<ParserState<'_, Rule>>,
     /// ) -> ParseResult<Box<ParserState<'_, Rule>>> {
     ///     expr(state, Rule::mul, "*")
-    ///         .and_then(|state| state.tag_branch("mul"))
+    ///         .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("mul")))
     ///         .or_else(|state| expr(state, Rule::add, "+"))
-    ///         .and_then(|state| state.tag_branch("add"))
+    ///         .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("add")))
     /// }
     /// fn expr<'a>(
     ///     state: Box<ParserState<'a, Rule>>,
@@ -230,9 +230,9 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     ///     state: Box<ParserState<'_, Rule>>,
     /// ) -> ParseResult<Box<ParserState<'_, Rule>>> {
     ///     expr(state, Rule::mul, "*")
-    ///         .and_then(|state| state.tag_branch("mul"))
+    ///         .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("mul")))
     ///         .or_else(|state| expr(state, Rule::add, "+"))
-    ///         .and_then(|state| state.tag_branch("add"))
+    ///         .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("add")))
     /// }
     /// fn expr<'a>(
     ///     state: Box<ParserState<'a, Rule>>,
@@ -264,10 +264,8 @@ impl<'i, R: RuleType> Pairs<'i, R> {
         self,
         tag: &'i str,
     ) -> Filter<FlatPairs<'i, R>, impl FnMut(&Pair<'i, R>) -> bool + '_> {
-        self.flatten().filter(move |pair: &Pair<'i, R>| {
-            matches!(pair.as_node_tag(), Some(nt) if nt == tag)
-                || matches!(pair.as_branch_tag(), Some(bt) if bt == tag)
-        })
+        self.flatten()
+            .filter(move |pair: &Pair<'i, R>| matches!(pair.as_node_tag(), Some(nt) if nt == tag))
     }
 
     /// Returns the `Tokens` for the `Pairs`.
@@ -606,9 +604,9 @@ mod tests {
             state: Box<ParserState<'_, Rule>>,
         ) -> ParseResult<Box<ParserState<'_, Rule>>> {
             expr(state, Rule::mul, "*")
-                .and_then(|state| state.tag_branch("mul"))
+                .and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed("mul")))
                 .or_else(|state| expr(state, Rule::add, "+"))
-                .and_then(|state| state.tag_branch("add"))
+                .and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed("add")))
         }
         fn expr<'a>(
             state: Box<ParserState<'a, Rule>>,

@@ -94,10 +94,8 @@ pub enum Expr {
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<Expr>),
-    /// #tag = exp
+    /// Matches an expression and assigns a label to it, e.g. #label = exp
     NodeTag(Box<Expr>, String),
-    /// exp #tag | exp #tag
-    BranchTag(Box<Expr>, String),
 }
 
 impl Expr {
@@ -168,10 +166,6 @@ impl Expr {
                 Expr::Push(expr) => {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
-                }
-                Expr::BranchTag(expr, tag) => {
-                    let mapped = Box::new(map_internal(*expr, f));
-                    Expr::BranchTag(mapped, tag)
                 }
                 Expr::NodeTag(expr, tag) => {
                     let mapped = Box::new(map_internal(*expr, f));
@@ -245,10 +239,6 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
-                Expr::BranchTag(expr, tag) => {
-                    let mapped = Box::new(map_internal(*expr, f));
-                    Expr::BranchTag(mapped, tag)
-                }
                 Expr::NodeTag(expr, tag) => {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::NodeTag(mapped, tag)
@@ -303,7 +293,6 @@ impl ExprTopDownIterator {
             | Expr::RepMinMax(expr, ..)
             | Expr::Opt(expr)
             | Expr::Push(expr)
-            | Expr::BranchTag(expr, _)
             | Expr::NodeTag(expr, _) => {
                 self.next = Some(*expr);
             }

@@ -159,10 +159,8 @@ pub enum ParserExpr<'i> {
     RepMinMax(Box<ParserNode<'i>>, u32, u32),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<ParserNode<'i>>),
-    /// #tag = exp
+    /// Matches an expression and assigns a label to it, e.g. #label = exp
     NodeTag(Box<ParserNode<'i>>, String),
-    /// exp #tag | exp #tag
-    BranchTag(Box<ParserNode<'i>>, String),
 }
 
 fn convert_rule(rule: ParserRule<'_>) -> AstRule {
@@ -198,7 +196,6 @@ fn convert_node(node: ParserNode<'_>) -> Expr {
             Expr::RepMinMax(Box::new(convert_node(*node)), min, max)
         }
         ParserExpr::Push(node) => Expr::Push(Box::new(convert_node(*node))),
-        ParserExpr::BranchTag(node, tag) => Expr::BranchTag(Box::new(convert_node(*node)), tag),
         ParserExpr::NodeTag(node, tag) => Expr::NodeTag(Box::new(convert_node(*node)), tag),
     }
 }
@@ -621,17 +618,6 @@ fn consume_expr<'i>(
 
                                 ParserNode {
                                     expr: node.expr,
-                                    span: start.span(&pair.as_span().end_pos()),
-                                }
-                            }
-                            Rule::tag_id => {
-                                let start = node.span.start_pos();
-
-                                ParserNode {
-                                    expr: ParserExpr::BranchTag(
-                                        Box::new(node),
-                                        pair.as_str()[1..].to_owned(),
-                                    ),
                                     span: start.span(&pair.as_span().end_pos()),
                                 }
                             }
@@ -1278,7 +1264,6 @@ mod tests {
             positives: vec![
                 Rule::opening_brace,
                 Rule::closing_brace,
-                Rule::tag_id,
                 Rule::sequence_operator,
                 Rule::choice_operator,
                 Rule::optional_operator,
@@ -1299,7 +1284,6 @@ mod tests {
             positives: vec![
                 Rule::opening_brace,
                 Rule::closing_paren,
-                Rule::tag_id,
                 Rule::sequence_operator,
                 Rule::choice_operator,
                 Rule::optional_operator,
@@ -1390,7 +1374,6 @@ mod tests {
             positives: vec![
                 Rule::opening_brace,
                 Rule::closing_brace,
-                Rule::tag_id,
                 Rule::sequence_operator,
                 Rule::choice_operator,
                 Rule::optional_operator,
@@ -1465,59 +1448,6 @@ mod tests {
             positives: vec![
                 Rule::opening_brace,
                 Rule::closing_brace,
-                Rule::tag_id,
-                Rule::sequence_operator,
-                Rule::choice_operator,
-                Rule::optional_operator,
-                Rule::repeat_operator,
-                Rule::repeat_once_operator
-            ],
-            negatives: vec![],
-            pos: 8
-        };
-    }
-
-    #[test]
-    fn branch_tag() {
-        parses_to! {
-            parser: PestParser,
-            input: "a #a",
-            rule: Rule::expression,
-            tokens: [
-                expression(0, 4, [
-                    term(0, 4, [
-                        identifier(0, 1),
-                        tag_id(2, 4)
-                    ])
-                ])
-            ]
-        };
-    }
-
-    #[test]
-    fn incomplete_branch_tag_assignment() {
-        fails_with! {
-            parser: PestParser,
-            input: "a = { #a }",
-            rule: Rule::grammar_rules,
-            positives: vec![
-                Rule::assignment_operator
-            ],
-            negatives: vec![],
-            pos: 9
-        };
-    }
-
-    #[test]
-    fn incomplete_branch_tag_id() {
-        fails_with! {
-            parser: PestParser,
-            input: "a = { a # }",
-            rule: Rule::grammar_rules,
-            positives: vec![
-                Rule::opening_brace,
-                Rule::closing_brace,
-                Rule::tag_id,
                 Rule::sequence_operator,
                 Rule::choice_operator,
                 Rule::optional_operator,

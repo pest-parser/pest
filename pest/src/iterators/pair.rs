@@ -191,15 +191,6 @@ impl<'i, R: RuleType> Pair<'i, R> {
         }
     }
 
-    /// Get current branch tag
-    #[inline]
-    pub fn as_branch_tag(&self) -> Option<&str> {
-        match self.queue[self.pair()] {
-            QueueableToken::End { branch_tag, .. } => branch_tag,
-            _ => None,
-        }
-    }
-
     /// Returns the inner `Pairs` between the `Pair`, consuming it.
     ///
     /// # Examples
@@ -315,9 +306,6 @@ impl<'i, R: RuleType> fmt::Debug for Pair<'i, R> {
         // In order not to break compatibility
         if let Some(s) = self.as_node_tag() {
             pair.field("node_tag", &s);
-        }
-        if let Some(s) = self.as_branch_tag() {
-            pair.field("branch_tag", &s);
         }
         pair.field("span", &self.as_span())
             .field("inner", &self.clone().into_inner().collect::<Vec<_>>())
