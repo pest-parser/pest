@@ -12,6 +12,7 @@ use alloc::rc::Rc;
 #[cfg(feature = "pretty-print")]
 use alloc::string::String;
 use alloc::vec::Vec;
+use core::borrow::Borrow;
 use core::fmt;
 use core::hash::{Hash, Hasher};
 use core::ptr;
@@ -40,7 +41,7 @@ pub struct Pair<'i, R> {
     /// # Safety
     ///
     /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
-    queue: Rc<Vec<QueueableToken<R>>>,
+    queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
     /// Token index into `queue`.
     start: usize,
@@ -50,12 +51,12 @@ pub struct Pair<'i, R> {
 /// # Safety
 ///
 /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
-pub unsafe fn new<R: RuleType>(
-    queue: Rc<Vec<QueueableToken<R>>>,
-    input: &str,
+pub unsafe fn new<'i, R: RuleType>(
+    queue: Rc<Vec<QueueableToken<'i, R>>>,
+    input: &'i str,
     line_index: Rc<LineIndex>,
     start: usize,
-) -> Pair<'_, R> {
+) -> Pair<'i, R> {
     Pair {
         queue,
         input,
@@ -181,6 +182,15 @@ impl<'i, R: RuleType> Pair<'i, R> {
         unsafe { span::Span::new_unchecked(self.input, start, end) }
     }
 
+    /// Get current node tag
+    #[inline]
+    pub fn as_node_tag(&self) -> Option<&str> {
+        match &self.queue[self.pair()] {
+            QueueableToken::End { tag, .. } => tag.as_ref().map(|x| x.borrow()),
+            _ => None,
+        }
+    }
+
     /// Returns the inner `Pairs` between the `Pair`, consuming it.
     ///
     /// # Examples
@@ -291,9 +301,13 @@ impl<'i, R: RuleType> Pairs<'i, R> {
 
 impl<'i, R: RuleType> fmt::Debug for Pair<'i, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Pair")
-            .field("rule", &self.as_rule())
-            .field("span", &self.as_span())
+        let pair = &mut f.debug_struct("Pair");
+        pair.field("rule", &self.as_rule());
+        // In order not to break compatibility
+        if let Some(s) = self.as_node_tag() {
+            pair.field("node_tag", &s);
+        }
+        pair.field("span", &self.as_span())
             .field("inner", &self.clone().into_inner().collect::<Vec<_>>())
             .finish()
     }
@@ -336,7 +350,7 @@ impl<'i, R: Eq> Eq for Pair<'i, R> {}
 
 impl<'i, R: Hash> Hash for Pair<'i, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (&*self.queue as *const Vec<QueueableToken<R>>).hash(state);
+        (&*self.queue as *const Vec<QueueableToken<'i, R>>).hash(state);
         (self.input as *const str).hash(state);
         self.start.hash(state);
     }

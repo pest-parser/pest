@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use alloc::borrow::ToOwned;
+use alloc::borrow::{Cow, ToOwned};
 use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::vec;
@@ -128,7 +128,7 @@ impl CallLimitTracker {
 #[derive(Debug)]
 pub struct ParserState<'i, R: RuleType> {
     position: Position<'i>,
-    queue: Vec<QueueableToken<R>>,
+    queue: Vec<QueueableToken<'i, R>>,
     lookahead: Lookahead,
     pos_attempts: Vec<R>,
     neg_attempts: Vec<R>,
@@ -345,6 +345,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     new_state.queue.push(QueueableToken::End {
                         start_token_index: index,
                         rule,
+                        tag: None,
                         input_pos: new_pos,
                     });
                 }
@@ -371,6 +372,46 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 Err(new_state)
             }
         }
+    }
+
+    /// Tag current node
+    ///
+    /// # Examples
+    ///
+    /// Try to recognize the one specified in a set of characters
+    ///
+    /// ```
+    /// use pest::{state, ParseResult, ParserState, iterators::Pair};
+    /// #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     character,
+    /// }
+    /// fn mark_c(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+    ///     state.sequence(|state| {
+    ///         character(state)
+    ///             .and_then(|state| character(state))
+    ///             .and_then(|state| character(state))
+    ///             .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("c")))
+    ///             .and_then(|state| character(state))
+    ///     })
+    /// }
+    /// fn character(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+    ///     state.rule(Rule::character, |state| state.match_range('a'..'z'))
+    /// }
+    ///
+    /// let input = "abcd";
+    /// let pairs = state(input, mark_c).unwrap();
+    /// // find all node tag as `c`
+    /// let find: Vec<Pair<Rule>> = pairs.filter(|s| s.as_node_tag() == Some("c")).collect();
+    /// assert_eq!(find[0].as_str(), "c")
+    /// ```
+    #[inline]
+    pub fn tag_node(mut self: Box<Self>, tag: Cow<'i, str>) -> ParseResult<Box<Self>> {
+        if let Some(QueueableToken::End { tag: old, .. }) = self.queue.last_mut() {
+            *old = Some(tag)
+        }
+        Ok(self)
     }
 
     fn attempts_at(&self, pos: usize) -> usize {

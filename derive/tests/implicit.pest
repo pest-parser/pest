@@ -1,9 +1,9 @@
 program = _{ SOI ~ implicit ~ EOI  }
-implicit= ${ or ~ (WHITESPACE+ ~ or )* }
+implicit= ${ #head = or ~ #tail = (WHITESPACE+ ~ or)* }
 
-or  = !{ and ~ (or_op ~ and)+ | and }
-and = { comp ~ (and_op ~ comp)+ | comp }
-comp = { array ~ eq_op ~ array | array }
+or  = !{ #more_and = and ~ (or_op ~ and)+ | #one_and = and }
+and = { #more_comp = comp ~ (and_op ~ comp)+ | #one_comp = comp }
+comp = { #more_array = array ~ eq_op ~ array | #one_array = array }
 
 array = ${ term }
 
