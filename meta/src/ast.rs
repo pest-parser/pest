@@ -94,6 +94,8 @@ pub enum Expr {
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<Expr>),
+    /// Matches an expression and assigns a label to it, e.g. #label = exp
+    NodeTag(Box<Expr>, String),
 }
 
 impl Expr {
@@ -165,6 +167,10 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
+                Expr::NodeTag(expr, tag) => {
+                    let mapped = Box::new(map_internal(*expr, f));
+                    Expr::NodeTag(mapped, tag)
+                }
                 expr => expr,
             }
         }
@@ -233,6 +239,10 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
+                Expr::NodeTag(expr, tag) => {
+                    let mapped = Box::new(map_internal(*expr, f));
+                    Expr::NodeTag(mapped, tag)
+                }
                 expr => expr,
             };
 
@@ -282,7 +292,8 @@ impl ExprTopDownIterator {
             | Expr::RepMax(expr, _)
             | Expr::RepMinMax(expr, ..)
             | Expr::Opt(expr)
-            | Expr::Push(expr) => {
+            | Expr::Push(expr)
+            | Expr::NodeTag(expr, _) => {
                 self.next = Some(*expr);
             }
             _ => {

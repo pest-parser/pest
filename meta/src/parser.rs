@@ -15,18 +15,13 @@ use std::iter::Peekable;
 use pest::error::{Error, ErrorVariant};
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::{Assoc, Op, PrattParser};
-use pest::{Parser, Span};
+use pest::{Parser, Position, Span};
 
 use crate::ast::{Expr, Rule as AstRule, RuleType};
 use crate::validator;
 
 /// TODO: fix the generator to at least add explicit lifetimes
-#[allow(
-    missing_docs,
-    unused_attributes,
-    elided_lifetimes_in_paths,
-    unused_qualifications
-)]
+#[allow(missing_docs, unused_qualifications)]
 mod grammar {
     include!("grammar.rs");
 }
@@ -164,6 +159,8 @@ pub enum ParserExpr<'i> {
     RepMinMax(Box<ParserNode<'i>>, u32, u32),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<ParserNode<'i>>),
+    /// Matches an expression and assigns a label to it, e.g. #label = exp
+    NodeTag(Box<ParserNode<'i>>, String),
 }
 
 fn convert_rule(rule: ParserRule<'_>) -> AstRule {
@@ -199,6 +196,7 @@ fn convert_node(node: ParserNode<'_>) -> Expr {
             Expr::RepMinMax(Box::new(convert_node(*node)), min, max)
         }
         ParserExpr::Push(node) => Expr::Push(Box::new(convert_node(*node))),
+        ParserExpr::NodeTag(node, tag) => Expr::NodeTag(Box::new(convert_node(*node)), tag),
     }
 }
 
@@ -305,6 +303,29 @@ fn consume_rules_with_spans(
         .collect()
 }
 
+fn get_node_tag<'i>(
+    pairs: &mut Peekable<Pairs<'i, Rule>>,
+) -> (Pair<'i, Rule>, Option<(String, Position<'i>)>) {
+    let pair_or_tag = pairs.next().unwrap();
+    if let Some(next_pair) = pairs.peek() {
+        if next_pair.as_rule() == Rule::assignment_operator {
+            pairs.next().unwrap();
+            let pair = pairs.next().unwrap();
+            (
+                pair,
+                Some((
+                    pair_or_tag.as_str()[1..].to_string(),
+                    pair_or_tag.as_span().start_pos(),
+                )),
+            )
+        } else {
+            (pair_or_tag, None)
+        }
+    } else {
+        (pair_or_tag, None)
+    }
+}
+
 fn consume_expr<'i>(
     pairs: Peekable<Pairs<'i, Rule>>,
     pratt: &PrattParser<Rule>,
@@ -313,7 +334,7 @@ fn consume_expr<'i>(
         mut pairs: Peekable<Pairs<'i, Rule>>,
         pratt: &PrattParser<Rule>,
     ) -> Result<ParserNode<'i>, Vec<Error<Rule>>> {
-        let pair = pairs.next().unwrap();
+        let (pair, tag_start) = get_node_tag(&mut pairs);
 
         let node = match pair.as_rule() {
             Rule::opening_paren => {
@@ -370,7 +391,7 @@ fn consume_expr<'i>(
                                 pairs.next().unwrap(); // ..
                                 pair_start.as_str().parse().unwrap()
                             }
-                            _ => unreachable!(),
+                            _ => unreachable!("peek start"),
                         };
                         let pair_end = pairs.next().unwrap(); // integer or }
                         let end: Option<i32> = match pair_end.as_rule() {
@@ -379,7 +400,7 @@ fn consume_expr<'i>(
                                 pairs.next().unwrap(); // }
                                 Some(pair_end.as_str().parse().unwrap())
                             }
-                            _ => unreachable!(),
+                            _ => unreachable!("peek end"),
                         };
                         ParserNode {
                             expr: ParserExpr::PeekSlice(start, end),
@@ -422,7 +443,7 @@ fn consume_expr<'i>(
                             span: start_pos.span(&end_pos),
                         }
                     }
-                    _ => unreachable!(),
+                    x => unreachable!("other rule: {:?}", x),
                 };
 
                 pairs.fold(
@@ -600,7 +621,7 @@ fn consume_expr<'i>(
                                     span: start.span(&pair.as_span().end_pos()),
                                 }
                             }
-                            _ => unreachable!(),
+                            rule => unreachable!("node: {:?}", rule),
                         };
 
                         Ok(node)
@@ -608,8 +629,15 @@ fn consume_expr<'i>(
                 )?
             }
         };
-
-        Ok(node)
+        if let Some((tag, start)) = tag_start {
+            let span = start.span(&node.span.end_pos());
+            Ok(ParserNode {
+                expr: ParserExpr::NodeTag(Box::new(node), tag),
+                span,
+            })
+        } else {
+            Ok(node)
+        }
     }
 
     let term = |pair: Pair<'i, Rule>| unaries(pair.into_inner().peekable(), pratt);
@@ -640,7 +668,7 @@ fn consume_expr<'i>(
                 span: start.span(&end),
             })
         }
-        _ => unreachable!(),
+        _ => unreachable!("infix"),
     };
 
     pratt.map_primary(term).map_infix(infix).parse(pairs)
@@ -1354,6 +1382,80 @@ mod tests {
             ],
             negatives: vec![],
             pos: 7
+        };
+    }
+
+    #[test]
+    fn node_tag() {
+        parses_to! {
+            parser: PestParser,
+            input: "#a = a",
+            rule: Rule::expression,
+            tokens: [
+                expression(0, 6, [
+                    term(0, 6, [
+                        tag_id(0, 2),
+                        assignment_operator(3, 4),
+                        identifier(5, 6)
+                    ])
+                ])
+            ]
+        };
+    }
+
+    #[test]
+    fn incomplete_node_tag() {
+        fails_with! {
+            parser: PestParser,
+            input: "a = { # }",
+            rule: Rule::grammar_rules,
+            positives: vec![
+                Rule::expression
+            ],
+            negatives: vec![],
+            pos: 6
+        };
+    }
+
+    #[test]
+    fn incomplete_node_tag_assignment() {
+        fails_with! {
+            parser: PestParser,
+            input: "a = { #a = }",
+            rule: Rule::grammar_rules,
+            positives: vec![
+                Rule::opening_paren,
+                Rule::positive_predicate_operator,
+                Rule::negative_predicate_operator,
+                Rule::_push,
+                Rule::peek_slice,
+                Rule::identifier,
+                Rule::insensitive_string,
+                Rule::quote,
+                Rule::single_quote
+            ],
+            negatives: vec![],
+            pos: 11
+        };
+    }
+
+    #[test]
+    fn incomplete_node_tag_pound_key() {
+        fails_with! {
+            parser: PestParser,
+            input: "a = { a = a }",
+            rule: Rule::grammar_rules,
+            positives: vec![
+                Rule::opening_brace,
+                Rule::closing_brace,
+                Rule::sequence_operator,
+                Rule::choice_operator,
+                Rule::optional_operator,
+                Rule::repeat_operator,
+                Rule::repeat_once_operator
+            ],
+            negatives: vec![],
+            pos: 8
         };
     }
 

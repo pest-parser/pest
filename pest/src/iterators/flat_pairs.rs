@@ -25,7 +25,7 @@ pub struct FlatPairs<'i, R> {
     /// # Safety
     ///
     /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
-    queue: Rc<Vec<QueueableToken<R>>>,
+    queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
     start: usize,
     end: usize,
@@ -35,12 +35,12 @@ pub struct FlatPairs<'i, R> {
 /// # Safety
 ///
 /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
-pub unsafe fn new<R: RuleType>(
-    queue: Rc<Vec<QueueableToken<R>>>,
-    input: &str,
+pub unsafe fn new<'i, R: RuleType>(
+    queue: Rc<Vec<QueueableToken<'i, R>>>,
+    input: &'i str,
     start: usize,
     end: usize,
-) -> FlatPairs<'_, R> {
+) -> FlatPairs<'i, R> {
     FlatPairs {
         queue,
         input,

@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use alloc::borrow::Cow;
+
 // This structure serves to improve performance over Token objects in two ways:
 //
 //   * it is smaller than a Token, leading to both less memory use when stored in the queue but also
@@ -14,7 +16,7 @@
 //   * it finds its pair in O(1) time instead of O(N), since pair positions are known at parse time
 //     and can easily be stored instead of recomputed
 #[derive(Debug)]
-pub enum QueueableToken<R> {
+pub enum QueueableToken<'i, R> {
     Start {
         end_token_index: usize,
         input_pos: usize,
@@ -22,6 +24,7 @@ pub enum QueueableToken<R> {
     End {
         start_token_index: usize,
         rule: R,
+        tag: Option<Cow<'i, str>>,
         input_pos: usize,
     },
 }

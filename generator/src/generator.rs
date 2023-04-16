@@ -517,6 +517,12 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
                 state.restore_on_err(|state| #expr)
             }
         }
+        OptimizedExpr::NodeTag(expr, tag) => {
+            let expr = generate_expr(*expr);
+            quote! {
+                #expr.and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed(#tag)))
+            }
+        }
     }
 }
 
@@ -647,6 +653,12 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
 
             quote! {
                 state.restore_on_err(|state| #expr)
+            }
+        }
+        OptimizedExpr::NodeTag(expr, tag) => {
+            let expr = generate_expr_atomic(*expr);
+            quote! {
+                #expr.and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed(#tag)))
             }
         }
     }

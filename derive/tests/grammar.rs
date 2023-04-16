@@ -263,6 +263,20 @@ fn choice_prefix() {
 }
 
 #[test]
+fn node_tag() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::node_tag,
+        tokens: [
+            node_tag(0, 3, [
+                string(0, 3)
+            ])
+        ]
+    };
+}
+
+#[test]
 fn optional_string() {
     parses_to! {
         parser: GrammarParser,
