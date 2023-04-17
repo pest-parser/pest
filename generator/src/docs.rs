@@ -119,4 +119,14 @@ mod tests {
             doc_comment.grammar_doc
         );
     }
+
+    #[test]
+    fn test_empty_grammar_doc() {
+        assert!(parser::parse(Rule::grammar_rules, "//!").is_ok());
+        assert!(parser::parse(Rule::grammar_rules, "///").is_ok());
+        assert!(parser::parse(Rule::grammar_rules, "//").is_ok());
+        assert!(parser::parse(Rule::grammar_rules, "/// Line Doc").is_ok());
+        assert!(parser::parse(Rule::grammar_rules, "//! Grammar Doc").is_ok());
+        assert!(parser::parse(Rule::grammar_rules, "// Comment").is_ok());
+    }
 }

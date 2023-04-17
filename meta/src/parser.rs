@@ -1171,7 +1171,7 @@ mod tests {
             parser: PestParser,
             input: "0",
             rule: Rule::grammar_rules,
-            positives: vec![Rule::grammar_rule, Rule::grammar_doc],
+            positives: vec![Rule::EOI, Rule::grammar_rule, Rule::grammar_doc],
             negatives: vec![],
             pos: 0
         };
