@@ -104,17 +104,8 @@ impl<'i, R: RuleType> FlatPairs<'i, R> {
 
 impl<'i, R: RuleType> ExactSizeIterator for FlatPairs<'i, R> {
     fn len(&self) -> usize {
-        let mut start = self.start;
-        let mut count = 0;
-        while start < self.end {
-            start += 1;
-            while start < self.end && !self.is_start(start) {
-                start += 1;
-            }
-
-            count += 1;
-        }
-        count
+        // Tokens len is exactly twice as flatten pairs len
+        (self.end - self.start) >> 1
     }
 }
 
@@ -239,6 +230,9 @@ mod tests {
     #[test]
     fn exact_size_iter_for_pairs() {
         let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().flatten();
+        assert_eq!(pairs.len(), pairs.count());
+
+        let pairs = AbcParser::parse(Rule::a, "我很漂亮efgh").unwrap().flatten();
         assert_eq!(pairs.len(), pairs.count());
 
         let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().flatten();

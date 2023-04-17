@@ -38,6 +38,7 @@ pub struct Pairs<'i, R> {
     input: &'i str,
     start: usize,
     end: usize,
+    pairs_count: usize,
     line_index: Rc<LineIndex>,
 }
 
@@ -53,11 +54,24 @@ pub fn new<'i, R: RuleType>(
         None => Rc::new(LineIndex::new(input)),
     };
 
+    let mut pairs_count = 0;
+    let mut cursor = start;
+    while cursor < end {
+        cursor = match queue[cursor] {
+            QueueableToken::Start {
+                end_token_index, ..
+            } => end_token_index,
+            _ => unreachable!(),
+        } + 1;
+        pairs_count += 1;
+    }
+
     Pairs {
         queue,
         input,
         start,
         end,
+        pairs_count,
         line_index,
     }
 }
@@ -347,19 +361,9 @@ impl<'i, R: RuleType> Pairs<'i, R> {
 }
 
 impl<'i, R: RuleType> ExactSizeIterator for Pairs<'i, R> {
+    #[inline]
     fn len(&self) -> usize {
-        let mut start = self.start;
-        let mut count = 0;
-        while start < self.end {
-            start = match self.queue[start] {
-                QueueableToken::Start {
-                    end_token_index, ..
-                } => end_token_index + 1,
-                _ => unreachable!(),
-            };
-            count += 1;
-        }
-        count
+        self.pairs_count
     }
 }
 
@@ -370,6 +374,7 @@ impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
         let pair = self.peek()?;
 
         self.start = self.pair() + 1;
+        self.pairs_count -= 1;
         Some(pair)
     }
 
@@ -386,6 +391,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
         }
 
         self.end = self.pair_from_end();
+        self.pairs_count -= 1;
 
         let pair = unsafe {
             pair::new(

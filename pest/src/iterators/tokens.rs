@@ -160,6 +160,9 @@ mod tests {
         let tokens = AbcParser::parse(Rule::a, "abcde").unwrap().tokens();
         assert_eq!(tokens.len(), tokens.count());
 
+        let tokens = AbcParser::parse(Rule::a, "我很漂亮e").unwrap().tokens();
+        assert_eq!(tokens.len(), tokens.count());
+
         let tokens = AbcParser::parse(Rule::a, "abcde").unwrap().tokens().rev();
         assert_eq!(tokens.len(), tokens.count());
 
