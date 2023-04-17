@@ -38,6 +38,7 @@ pub struct Pairs<'i, R> {
     input: &'i str,
     start: usize,
     end: usize,
+    pairs_count: usize,
     line_index: Rc<LineIndex>,
 }
 
@@ -53,11 +54,24 @@ pub fn new<'i, R: RuleType>(
         None => Rc::new(LineIndex::new(input)),
     };
 
+    let mut pairs_count = 0;
+    let mut cursor = start;
+    while cursor < end {
+        cursor = match queue[cursor] {
+            QueueableToken::Start {
+                end_token_index, ..
+            } => end_token_index,
+            _ => unreachable!(),
+        } + 1;
+        pairs_count += 1;
+    }
+
     Pairs {
         queue,
         input,
         start,
         end,
+        pairs_count,
         line_index,
     }
 }
@@ -346,6 +360,13 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     }
 }
 
+impl<'i, R: RuleType> ExactSizeIterator for Pairs<'i, R> {
+    #[inline]
+    fn len(&self) -> usize {
+        self.pairs_count
+    }
+}
+
 impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
     type Item = Pair<'i, R>;
 
@@ -353,7 +374,13 @@ impl<'i, R: RuleType> Iterator for Pairs<'i, R> {
         let pair = self.peek()?;
 
         self.start = self.pair() + 1;
+        self.pairs_count -= 1;
         Some(pair)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = <Self as ExactSizeIterator>::len(self);
+        (len, Some(len))
     }
 }
 
@@ -364,6 +391,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
         }
 
         self.end = self.pair_from_end();
+        self.pairs_count -= 1;
 
         let pair = unsafe {
             pair::new(
@@ -639,5 +667,19 @@ mod tests {
 
         assert_eq!(right_numbers.next().unwrap().as_str(), "2");
         assert_eq!(right_numbers.next(), None);
+    }
+
+    #[test]
+    fn exact_size_iter_for_pairs() {
+        let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap();
+        assert_eq!(pairs.len(), pairs.count());
+
+        let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().rev();
+        assert_eq!(pairs.len(), pairs.count());
+
+        let mut pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap();
+        let pairs_len = pairs.len();
+        let _ = pairs.next().unwrap();
+        assert_eq!(pairs.count() + 1, pairs_len);
     }
 }

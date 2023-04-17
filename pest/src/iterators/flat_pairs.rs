@@ -102,6 +102,13 @@ impl<'i, R: RuleType> FlatPairs<'i, R> {
     }
 }
 
+impl<'i, R: RuleType> ExactSizeIterator for FlatPairs<'i, R> {
+    fn len(&self) -> usize {
+        // Tokens len is exactly twice as flatten pairs len
+        (self.end - self.start) >> 1
+    }
+}
+
 impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
     type Item = Pair<'i, R>;
 
@@ -121,6 +128,11 @@ impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
         self.next_start();
 
         Some(pair)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = <Self as ExactSizeIterator>::len(self);
+        (len, Some(len))
     }
 }
 
@@ -213,5 +225,23 @@ mod tests {
         assert_eq!(pair.as_str(), "e");
         assert_eq!(pair.line_col(), (1, 5));
         assert_eq!(pair.line_col(), pair.as_span().start_pos().line_col());
+    }
+
+    #[test]
+    fn exact_size_iter_for_pairs() {
+        let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().flatten();
+        assert_eq!(pairs.len(), pairs.count());
+
+        let pairs = AbcParser::parse(Rule::a, "我很漂亮efgh").unwrap().flatten();
+        assert_eq!(pairs.len(), pairs.count());
+
+        let pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().flatten();
+        let pairs = pairs.rev();
+        assert_eq!(pairs.len(), pairs.count());
+
+        let mut pairs = AbcParser::parse(Rule::a, "abc\nefgh").unwrap().flatten();
+        let pairs_len = pairs.len();
+        let _ = pairs.next().unwrap();
+        assert_eq!(pairs.count() + 1, pairs_len);
     }
 }

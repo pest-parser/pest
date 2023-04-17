@@ -88,6 +88,10 @@ fn bench_line_col(c: &mut Criterion) {
 // pairs nested iter (with LineIndex)   time:   [14.716 µs 14.822 µs 14.964 µs]
 // pairs flatten iter (v2.5.2)          time:   [1.1230 µs 1.1309 µs 1.1428 µs]
 // pairs flatten iter (with LineIndex)  time:   [5.4637 µs 5.6061 µs 5.7886 µs]
+// pairs nested collect (v2.5.7)        time:   [8.4609 µs 8.4644 µs 8.4680 µs]
+// pairs nested collect (ExactSize)     time:   [7.9492 µs 7.9604 µs 7.9751 µs]
+// pairs flatten collect (v2.5.7)       time:   [11.471 µs 11.475 µs 11.480 µs]
+// pairs flatten collect (ExactSize)    time:   [11.058 µs 11.062 µs 11.066 µs]
 fn bench_pairs_iter(c: &mut Criterion) {
     let data = include_str!("data.json");
 
@@ -109,6 +113,22 @@ fn bench_pairs_iter(c: &mut Criterion) {
             for _pair in pairs.clone().flatten() {
                 // do nothing
             }
+        });
+    });
+
+    c.bench_function("pairs nested collect", |b| {
+        let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, data).unwrap();
+
+        b.iter(move || {
+            let _pairs = pairs.clone().collect::<Vec<_>>();
+        });
+    });
+
+    c.bench_function("pairs flatten collect", |b| {
+        let pairs = autocorrect::JsonParser::parse(autocorrect::Rule::item, data).unwrap();
+
+        b.iter(move || {
+            let _pairs = pairs.clone().flatten().collect::<Vec<_>>();
         });
     });
 }
