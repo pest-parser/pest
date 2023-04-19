@@ -91,10 +91,17 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/resources/test/jsonfuzzsample1.json"
         ));
+        let sample2 = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/resources/test/jsonfuzzsample2.json"
+        ));
         const ERROR: &str = "call limit reached";
-        pest::set_call_limit(Some(45_000usize.try_into().unwrap()));
+        pest::set_call_limit(Some(8_000usize.try_into().unwrap()));
         let s1 = json::JsonParser::parse(json::Rule::json, sample1);
         assert!(s1.is_err());
         assert_eq!(s1.unwrap_err().variant.message(), ERROR);
+        let s2 = json::JsonParser::parse(json::Rule::json, sample2);
+        assert!(s2.is_err());
+        assert_eq!(s2.unwrap_err().variant.message(), ERROR);
     }
 }
