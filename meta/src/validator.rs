@@ -229,19 +229,34 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rul
     errors
 }
 
+/// Checks if `expr` is non-progressing, that is it matches an empty input.
+/// 
+/// # Example
+/// 
+/// ```pest
+/// not_progressing_1 = { "" }
+/// not_progressing_2 = { "a"? }
+/// not_progressing_3 = { !"a" }
 fn is_non_progressing<'i>(
     expr: &ParserExpr<'i>,
     rules: &HashMap<String, &ParserNode<'i>>,
     trace: &mut Vec<String>,
 ) -> bool {
     match *expr {
-        ParserExpr::Str(ref string) => string.is_empty(),
+        ParserExpr::Str(ref string) | ParserExpr::Insens(ref string) => string.is_empty(),
         ParserExpr::Ident(ref ident) => {
-            if ident == "soi" || ident == "eoi" {
+            if ident == "SOI" || ident == "EOI" {
                 return true;
             }
 
+            // Commented because it doesn't change anything, but helps understanding the behaviour
+            // if ident == "POP" || ident == "PUSH" {
+            // // BUG: The slice being matched might be non progressing
+            // return false;
+            // }
+
             if !trace.contains(ident) {
+
                 if let Some(node) = rules.get(ident) {
                     trace.push(ident.clone());
                     let result = is_non_progressing(&node.expr, rules, trace);
@@ -253,8 +268,6 @@ fn is_non_progressing<'i>(
 
             false
         }
-        ParserExpr::PosPred(_) => true,
-        ParserExpr::NegPred(_) => true,
         ParserExpr::Seq(ref lhs, ref rhs) => {
             is_non_progressing(&lhs.expr, rules, trace)
                 && is_non_progressing(&rhs.expr, rules, trace)
@@ -263,7 +276,25 @@ fn is_non_progressing<'i>(
             is_non_progressing(&lhs.expr, rules, trace)
                 || is_non_progressing(&rhs.expr, rules, trace)
         }
-        _ => false,
+        ParserExpr::PosPred(_)
+        | ParserExpr::NegPred(_)
+        | ParserExpr::Rep(_)
+        | ParserExpr::Opt(_) => true,
+        ParserExpr::Range(_, _) => false,
+        ParserExpr::PeekSlice(_, _) => {
+            // BUG: The slice being matched might be non progressing
+            false
+        }
+
+        ParserExpr::RepExact(ref inner, min)
+        | ParserExpr::RepMin(ref inner, min)
+        | ParserExpr::RepMinMax(ref inner, min, _) => {
+            min > 0 && is_non_progressing(&inner.expr, rules, trace)
+        }
+        ParserExpr::RepMax(_, _) => false,
+        ParserExpr::RepOnce(ref inner)
+        | ParserExpr::Push(ref inner)
+        | ParserExpr::NodeTag(ref inner, _) => is_non_progressing(&inner.expr, rules, trace),
     }
 }
 
@@ -583,12 +614,12 @@ mod tests {
 
  --> 1:13
   |
-1 | COMMENT = { soi }
+1 | COMMENT = { SOI }
   |             ^-^
   |
   = COMMENT is non-progressing and will repeat infinitely")]
     fn non_progressing_comment() {
-        let input = "COMMENT = { soi }";
+        let input = "COMMENT = { SOI }";
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap(),
         ));
@@ -647,12 +678,12 @@ mod tests {
 
  --> 1:7
   |
-1 | a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }
+1 | a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (SOI | EOI))* }
   |       ^-------------------------------^
   |
   = expression inside repetition is non-progressing and will repeat infinitely")]
     fn non_progressing_repetition() {
-        let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (soi | eoi))* }";
+        let input = "a = { (\"\" ~ &\"a\" ~ !\"a\" ~ (SOI | EOI))* }";
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap(),
         ));
