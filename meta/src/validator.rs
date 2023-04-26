@@ -216,6 +216,12 @@ pub fn validate_undefined<'i>(
 pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rule>> {
     let mut errors = vec![];
 
+    // WARNING: validate_{repetition,choice,whitespace_comment}
+    // use is_non_failing and is_non_progressing breaking assumptions:
+    // - for every `ParserExpr::RepMinMax(inner,min,max)`,
+    //   `min<=max` was not checked
+    // - left recursion was not checked
+    // - Every expression might not be checked
     errors.extend(validate_repetition(rules));
     errors.extend(validate_choices(rules));
     errors.extend(validate_whitespace_comment(rules));
@@ -230,7 +236,7 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rul
 }
 
 /// Checks if `expr` is non-progressing, that is the expression does not
-/// consume any input. This includes expressions matching the empty input,
+/// consume any input or any stack. This includes expressions matching the empty input,
 /// `SOI` and ̀ `EOI`, predicates and repetitions.
 ///
 /// # Example
@@ -243,9 +249,9 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rul
 ///
 /// # Assumptions
 /// - In `ParserExpr::RepMinMax(inner,min,max)`, `min<=max`
-/// - `ParserExpr::Range(bound_1,bound_2)` are consuming
 /// - All rules identiers have a matching definition
-/// - There is no left-recursion (if broken returns false)
+/// - There is no left-recursion (if only this one is broken returns false)
+/// - Every expression is being checked
 fn is_non_progressing<'i>(
     expr: &ParserExpr<'i>,
     rules: &HashMap<String, &ParserNode<'i>>,
@@ -254,15 +260,9 @@ fn is_non_progressing<'i>(
     match *expr {
         ParserExpr::Str(ref string) | ParserExpr::Insens(ref string) => string.is_empty(),
         ParserExpr::Ident(ref ident) => {
-            if ident == "SOI" || ident == "EOI" || ident == "DROP" {
+            if ident == "SOI" || ident == "EOI" {
                 return true;
             }
-
-            // Commented because it doesn't change anything, but helps understanding the behaviour
-            // if ident == "POP" || ident == "PUSH" {
-            // // BUG: The slice being matched might be non progressing
-            // return false;
-            // }
 
             if !trace.contains(ident) {
                 if let Some(node) = rules.get(ident) {
@@ -274,15 +274,22 @@ fn is_non_progressing<'i>(
                 }
                 // else
                 // the ident is
-                // - "POP","PEEK","POP_ALL","PEEK_ALL" => false
-                //       BUG: The slice being matched might be non progressing
+                // - "POP","PEEK" => false
+                //      the slice being checked is not non_progressing since every
+                //      PUSH is being checked (assumption 4) and the expr
+                //      of a PUSH has to be non_progressing.
+                // - "POPALL", "PEEKALL" => false
+                //      same as "POP", "PEEK" unless the following:
+                //      BUG: if the stack is empty they are non_progressing
+                // - "DROP" => false doesn't consume the input but consumes the stack,
                 // - "ANY", "ASCII_*", UNICODE categories, "NEWLINE" => false
                 // - referring to another rule that is undefined (breaks assumption)
             }
             // else referring to another rule that was already seen.
             //    this happens only if there is a left-recursion
             //    that is only if an assumption is broken,
-            //    we can choose to return false
+            //    WARNING: we can choose to return false, but that might
+            //    cause bugs into the left_recursion check
 
             false
         }
@@ -294,13 +301,22 @@ fn is_non_progressing<'i>(
             is_non_progressing(&lhs.expr, rules, trace)
                 || is_non_progressing(&rhs.expr, rules, trace)
         }
-        ParserExpr::PosPred(_)
-        | ParserExpr::NegPred(_)
-        | ParserExpr::Rep(_)
-        | ParserExpr::Opt(_) => true,
+        // WARNING: the predicate indeed won't make progress on input but  it
+        // might progress on the stack
+        // ex: @{ PUSH(ANY) ~ (&(DROP))* ~ ANY }, input="AA"
+        //     Notice that this is ex not working as of now, the debugger seems
+        //     to run into an infinite loop on it
+        ParserExpr::PosPred(_) | ParserExpr::NegPred(_) => true,
+        ParserExpr::Rep(_) | ParserExpr::Opt(_) => true,
+        // it either always fail (failing is progressing)
+        // or always match at least a character
         ParserExpr::Range(_, _) => false,
         ParserExpr::PeekSlice(_, _) => {
-            // BUG: The slice being matched might be non progressing
+            // the slice being checked is not non_progressing since every
+            // PUSH is being checked (assumption 4) and the expr
+            // of a PUSH has to be non_progressing.
+            // BUG: if the slice is of size 0, or the stack is not large
+            // enough it might be non-failing
             false
         }
 
@@ -310,19 +326,34 @@ fn is_non_progressing<'i>(
         | ParserExpr::RepMinMax(ref inner, min, _) => {
             min > 0 && is_non_progressing(&inner.expr, rules, trace)
         }
-        ParserExpr::RepOnce(ref inner)
-        | ParserExpr::Push(ref inner)
-        | ParserExpr::NodeTag(ref inner, _) => is_non_progressing(&inner.expr, rules, trace),
+        ParserExpr::Push(ref inner) => is_non_progressing(&inner.expr, rules, trace),
+        ParserExpr::RepOnce(ref inner) | ParserExpr::NodeTag(ref inner, _) => {
+            is_non_progressing(&inner.expr, rules, trace)
+        }
     }
 }
 
+/// Checks if `expr` is non-failing, that is it matches any input.
+///
+/// # Example
+///
+/// ```pest
+/// non_failing_1 = { "" }
+/// ```
+///
+/// # Assumptions
+/// - In `ParserExpr::RepMinMax(inner,min,max)`, `min<=max`
+/// - In `ParserExpr::PeekSlice(max,Some(min))`, `max>=min`
+/// - All rules identiers have a matching definition
+/// - There is no left-recursion
+/// - All rules are being checked
 fn is_non_failing<'i>(
     expr: &ParserExpr<'i>,
     rules: &HashMap<String, &ParserNode<'i>>,
     trace: &mut Vec<String>,
 ) -> bool {
     match *expr {
-        ParserExpr::Str(ref string) => string.is_empty(),
+        ParserExpr::Str(ref string) | ParserExpr::Insens(ref string) => string.is_empty(),
         ParserExpr::Ident(ref ident) => {
             if !trace.contains(ident) {
                 if let Some(node) = rules.get(ident) {
@@ -331,10 +362,31 @@ fn is_non_failing<'i>(
                     trace.pop().unwrap();
 
                     return result;
+                } else {
+                    // else
+                    // the ident is
+                    // - "POP","PEEK" => false
+                    //      the slice being checked is not non_failing since every
+                    //      PUSH is being checked (assumption 4) and the expr
+                    //      of a PUSH has to be non_failing.
+                    // - "POP_ALL", "PEEK_ALL" => false
+                    //      same as "POP", "PEEK" unless the following:
+                    //      BUG: if the stack is empty they are non_failing
+                    // - "DROP" => false
+                    // - "ANY", "ASCII_*", UNICODE categories, "NEWLINE",
+                    //      "SOI", "EOI" => false
+                    // - referring to another rule that is undefined (breaks assumption)
+                    //      WARNING: might want to introduce a panic or report the error
+                    return false;
                 }
+            } else {
+                // referring to another rule R that was already seen
+                // WARNING: this might mean there is a circular non-failing path
+                //   it's not obvious wether this can happen without left-recursion
+                //   and thus breaking the assumption. Until there is answer to
+                //   this, to avoid changing behaviour we return:
+                false
             }
-
-            false
         }
         ParserExpr::Opt(_) => true,
         ParserExpr::Rep(_) => true,
@@ -344,7 +396,31 @@ fn is_non_failing<'i>(
         ParserExpr::Choice(ref lhs, ref rhs) => {
             is_non_failing(&lhs.expr, rules, trace) || is_non_failing(&rhs.expr, rules, trace)
         }
-        _ => false,
+        // it either always fail
+        // or always match at least a character
+        ParserExpr::Range(_, _) => false,
+        ParserExpr::PeekSlice(_, _) => {
+            // the slice being checked is not non_failing since every
+            // PUSH is being checked (assumption 4) and the expr
+            // of a PUSH has to be non_failing.
+            // BUG: if the slice is of size 0, or the stack is not large
+            // enough it might be non-failing
+            false
+        }
+        ParserExpr::RepExact(ref inner, min)
+        | ParserExpr::RepMin(ref inner, min)
+        | ParserExpr::RepMax(ref inner, min)
+        | ParserExpr::RepMinMax(ref inner, min, _) => {
+            min > 0 && is_non_failing(&inner.expr, rules, trace)
+        }
+        // BUG: the predicate may always fail, resulting in this expr non_failing
+        // ex of always failing predicates :
+        //     @{EOI ~ ANY | ANY ~ SOI | &("A") ~ &("B") | 'z'..'a'}
+        ParserExpr::NegPred(_) => false,
+        ParserExpr::RepOnce(ref inner) => is_non_failing(&inner.expr, rules, trace),
+        ParserExpr::Push(ref inner)
+        | ParserExpr::NodeTag(ref inner, _)
+        | ParserExpr::PosPred(ref inner) => is_non_failing(&inner.expr, rules, trace),
     }
 }
 
