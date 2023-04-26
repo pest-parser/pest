@@ -229,14 +229,23 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rul
     errors
 }
 
-/// Checks if `expr` is non-progressing, that is it matches an empty input.
-/// 
+/// Checks if `expr` is non-progressing, that is the expression does not
+/// consume any input. This includes expressions matching the empty input,
+/// `SOI` and ̀ `EOI`, predicates and repetitions.
+///
 /// # Example
-/// 
+///
 /// ```pest
 /// not_progressing_1 = { "" }
 /// not_progressing_2 = { "a"? }
 /// not_progressing_3 = { !"a" }
+/// ```
+///
+/// # Assumptions
+/// - In `ParserExpr::RepMinMax(inner,min,max)`, `min<=max`
+/// - `ParserExpr::Range(bound_1,bound_2)` are consuming
+/// - All rules identiers have a matching definition
+/// - There is no left-recursion (if broken returns false)
 fn is_non_progressing<'i>(
     expr: &ParserExpr<'i>,
     rules: &HashMap<String, &ParserNode<'i>>,
@@ -245,7 +254,7 @@ fn is_non_progressing<'i>(
     match *expr {
         ParserExpr::Str(ref string) | ParserExpr::Insens(ref string) => string.is_empty(),
         ParserExpr::Ident(ref ident) => {
-            if ident == "SOI" || ident == "EOI" {
+            if ident == "SOI" || ident == "EOI" || ident == "DROP" {
                 return true;
             }
 
@@ -256,7 +265,6 @@ fn is_non_progressing<'i>(
             // }
 
             if !trace.contains(ident) {
-
                 if let Some(node) = rules.get(ident) {
                     trace.push(ident.clone());
                     let result = is_non_progressing(&node.expr, rules, trace);
@@ -264,7 +272,17 @@ fn is_non_progressing<'i>(
 
                     return result;
                 }
+                // else
+                // the ident is
+                // - "POP","PEEK","POP_ALL","PEEK_ALL" => false
+                //       BUG: The slice being matched might be non progressing
+                // - "ANY", "ASCII_*", UNICODE categories, "NEWLINE" => false
+                // - referring to another rule that is undefined (breaks assumption)
             }
+            // else referring to another rule that was already seen.
+            //    this happens only if there is a left-recursion
+            //    that is only if an assumption is broken,
+            //    we can choose to return false
 
             false
         }
@@ -288,10 +306,10 @@ fn is_non_progressing<'i>(
 
         ParserExpr::RepExact(ref inner, min)
         | ParserExpr::RepMin(ref inner, min)
+        | ParserExpr::RepMax(ref inner, min)
         | ParserExpr::RepMinMax(ref inner, min, _) => {
             min > 0 && is_non_progressing(&inner.expr, rules, trace)
         }
-        ParserExpr::RepMax(_, _) => false,
         ParserExpr::RepOnce(ref inner)
         | ParserExpr::Push(ref inner)
         | ParserExpr::NodeTag(ref inner, _) => is_non_progressing(&inner.expr, rules, trace),
