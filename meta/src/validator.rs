@@ -1292,10 +1292,13 @@ mod tests {
     #[test]
     fn failing_non_zero_repetitions() {
         let failing = Box::new(ParserNode {
-            expr: ParserExpr::NodeTag(Box::new(ParserNode {
-                expr: ParserExpr::Range("A".into(), "B".into()),
-                span: Span::new(" ", 0, 1).unwrap(),
-            }),"Tag".into()),
+            expr: ParserExpr::NodeTag(
+                Box::new(ParserNode {
+                    expr: ParserExpr::Range("A".into(), "B".into()),
+                    span: Span::new(" ", 0, 1).unwrap(),
+                }),
+                "Tag".into(),
+            ),
             span: Span::new(" ", 0, 1).unwrap(),
         });
         assert!(!is_non_failing(
@@ -1508,11 +1511,7 @@ mod tests {
         let failing = ParserExpr::Range("A".into(), "Z".into());
         let always_failing = ParserExpr::Range("Z".into(), "A".into());
 
-        assert!(!is_non_failing(
-            &failing,
-            &HashMap::new(),
-            &mut Vec::new()
-        ));
+        assert!(!is_non_failing(&failing, &HashMap::new(), &mut Vec::new()));
         assert!(!is_non_failing(
             &always_failing,
             &HashMap::new(),
@@ -1574,8 +1573,6 @@ mod tests {
             &mut Vec::new()
         ));
     }
-
-
 
     #[test]
     #[should_panic(expected = "grammar error
