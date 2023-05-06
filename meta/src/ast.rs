@@ -116,7 +116,6 @@ impl Expr {
             let expr = f(expr);
 
             match expr {
-                // TODO: Use box syntax when it gets stabilized.
                 Expr::PosPred(expr) => {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::PosPred(mapped)
@@ -189,7 +188,6 @@ impl Expr {
         {
             let mapped = match expr {
                 Expr::PosPred(expr) => {
-                    // TODO: Use box syntax when it gets stabilized.
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::PosPred(mapped)
                 }

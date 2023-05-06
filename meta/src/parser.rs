@@ -71,7 +71,6 @@ impl<'i> ParserNode<'i> {
             }
 
             match node.expr {
-                // TODO: Use box syntax when it gets stabilized.
                 ParserExpr::PosPred(node) => {
                     filter_internal(*node, f, result);
                 }

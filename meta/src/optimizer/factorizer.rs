@@ -15,7 +15,6 @@ pub fn factor(rule: Rule) -> Rule {
         name,
         ty,
         expr: expr.map_top_down(|expr| {
-            // TODO: Use box syntax when it gets stabilized.
             match expr {
                 Expr::Choice(lhs, rhs) => match (*lhs, *rhs) {
                     (Expr::Seq(l1, r1), Expr::Seq(l2, r2)) => {

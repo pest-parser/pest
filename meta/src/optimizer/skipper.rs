@@ -34,7 +34,6 @@ pub fn skip(rule: Rule) -> Rule {
         ty,
         expr: if ty == RuleType::Atomic {
             expr.map_top_down(|expr| {
-                // TODO: Use box syntax when it gets stabilized.
                 if let Expr::Rep(expr) = expr.clone() {
                     if let Expr::Seq(lhs, rhs) = *expr {
                         if let (Expr::NegPred(expr), Expr::Ident(ident)) = (*lhs, *rhs) {

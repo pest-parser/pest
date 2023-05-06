@@ -15,7 +15,6 @@ pub fn list(rule: Rule) -> Rule {
         name,
         ty,
         expr: expr.map_bottom_up(|expr| {
-            // TODO: Use box syntax when it gets stabilized.
             match expr {
                 Expr::Seq(l, r) => match *l {
                     Expr::Rep(l) => {
