@@ -162,7 +162,6 @@ impl OptimizedExpr {
             let expr = f(expr);
 
             match expr {
-                // TODO: Use box syntax when it gets stabilized.
                 OptimizedExpr::PosPred(expr) => {
                     let mapped = Box::new(map_internal(*expr, f));
                     OptimizedExpr::PosPred(mapped)
@@ -211,7 +210,6 @@ impl OptimizedExpr {
         {
             let mapped = match expr {
                 OptimizedExpr::PosPred(expr) => {
-                    // TODO: Use box syntax when it gets stabilized.
                     let mapped = Box::new(map_internal(*expr, f));
                     OptimizedExpr::PosPred(mapped)
                 }
