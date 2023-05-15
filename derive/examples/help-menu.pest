@@ -1,0 +1,36 @@
+WHITESPACE    = _{ " " }
+
+WordAtom  = ! { ( ASCII_ALPHANUMERIC | "_" | "-" ) + }
+WordOne   = { WordAtom }
+WordGroup = { WordAtom ~ ( " " ~ WordAtom ) * }
+
+ArgumentAtom = ! { ( ASCII_ALPHANUMERIC | "_" | "-" ) + }
+ArgumentRequiredChoiceOne = { "<" ~ ArgumentAtom ~ ">" }
+ArgumentOptionalChoiceOne = { "[" ~ ArgumentAtom ~ "]" }
+ArgumentChoiceOne = { ArgumentRequiredChoiceOne
+                      | ArgumentOptionalChoiceOne }
+
+// Argument groups are nonatomic;
+// "<whitespace |between|the|bar|or|braces |is | OK>"
+ArgumentOptionalChoiceGroup = {
+    ( "[" ~ ArgumentAtom + ~ ( "|" ~ ArgumentAtom + ) * ~ "]" ) + }
+ArgumentRequiredChoiceGroup = {
+    ( "<" ~ ArgumentAtom + ~ ( "|" ~ ArgumentAtom + ) * ~ ">" ) + }
+ArgumentChoiceGroup = { ArgumentOptionalChoiceGroup
+                        | ArgumentRequiredChoiceGroup }
+
+Command = {
+    ( WordOne | WordGroup ) ~
+    ( ArgumentChoiceOne | ArgumentChoiceGroup ) *
+}
+
+HelpMenu = {
+    SOI ~
+
+    (
+        Command ~
+        NEWLINE
+    ) * ~
+
+    EOI
+}
