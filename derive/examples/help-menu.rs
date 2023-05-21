@@ -12,6 +12,7 @@ const INPUT: &str = r"cli help
 cli positional-command <required-single-argument> [optional-single-argument]
 cli [choice | of | one | or | none | of | these | options]
 cli <choice | of | one | of | these | options>
+cli [nesting | <is | ok>]
 ";
 
 fn main() {
