@@ -10,23 +10,18 @@ struct HelpMenuGrammar;
 
 const INPUT: &str = r"cli help
 cli positional-command <required-single-argument> [optional-single-argument]
-cli [choice | of | these | options]
-cli <choice | of | these | required | options>
+cli [choice | of | one | or | none | of | these | options]
+cli <choice | of | one | of | these | options>
 ";
 
 fn main() {
-    match HelpMenuGrammar::parse(Rule::HelpMenu, &INPUT) {
-        Ok(mut file) => {
-            let file = file.next().expect("Infallible");
-            for line in file.into_inner() {
-                match line.as_rule() {
-                    Rule::Command => {
-                        println!("Line: {:#?}", line);
-                    }
-                    _ => (),
-                }
-            }
-        }
-        Err(e) => println!("Error parsing input: {}", e),
-    }
+    HelpMenuGrammar::parse(Rule::HelpMenu, INPUT)
+        .expect("Error parsing file")
+        .next()
+        .expect("Infallible")
+        .into_inner()
+        .filter(|pair| Rule::Command == pair.as_rule())
+        .for_each(|pair| {
+            println!("{:#?}", pair);
+        });
 }

@@ -1,27 +1,27 @@
-WHITESPACE    = _{ " " }
+WHITESPACE = _{ " " }
 
-WordAtom  = ! { ( ASCII_ALPHANUMERIC | "_" | "-" ) + }
-WordOne   = { WordAtom }
-WordGroup = { WordAtom ~ ( " " ~ WordAtom ) * }
-
-ArgumentAtom = ! { ( ASCII_ALPHANUMERIC | "_" | "-" ) + }
-ArgumentRequiredChoiceOne = { "<" ~ ArgumentAtom ~ ">" }
-ArgumentOptionalChoiceOne = { "[" ~ ArgumentAtom ~ "]" }
-ArgumentChoiceOne = { ArgumentRequiredChoiceOne
-                      | ArgumentOptionalChoiceOne }
+Rew       = ! { ( ASCII_DIGIT | ASCII_ALPHA_UPPER | "_" | "-" ) + }
+Lit       = ! { ( ASCII_ALPHANUMERIC              | "_" | "-" ) + }
+Word      = _ { Rew | Lit }
+WordGroup = _ { Word ~ ( " " ~ Word ) * }
 
 // Argument groups are nonatomic;
 // "<whitespace |between|the|bar|or|braces |is | OK>"
-ArgumentOptionalChoiceGroup = {
-    ( "[" ~ ArgumentAtom + ~ ( "|" ~ ArgumentAtom + ) * ~ "]" ) + }
-ArgumentRequiredChoiceGroup = {
-    ( "<" ~ ArgumentAtom + ~ ( "|" ~ ArgumentAtom + ) * ~ ">" ) + }
-ArgumentChoiceGroup = { ArgumentOptionalChoiceGroup
-                        | ArgumentRequiredChoiceGroup }
+
+ArgOptChoiceGroup = { ( "[" ~ Word + ~
+                      ( "|" ~ ( Word
+                              | ArgChoiceGroup ) + ) * ~
+                        "]" ) + }
+ArgReqChoiceGroup = { ( "<" ~ Word + ~
+                      ( "|" ~ ( Word
+                              | ArgChoiceGroup ) + ) * ~
+                        ">" ) + }
+ArgChoiceGroup    = _ { ArgOptChoiceGroup
+                      | ArgReqChoiceGroup }
 
 Command = {
-    ( WordOne | WordGroup ) ~
-    ( ArgumentChoiceOne | ArgumentChoiceGroup ) *
+    ( WordGroup ) ~
+    ( ArgChoiceGroup ) *
 }
 
 HelpMenu = {
