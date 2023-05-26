@@ -74,6 +74,19 @@ pub enum LineColLocation {
     Span((usize, usize), (usize, usize)),
 }
 
+impl From<Position<'_>> for LineColLocation {
+    fn from(value: Position<'_>) -> Self {
+        Self::Pos(value.line_col())
+    }
+}
+
+impl From<Span<'_>> for LineColLocation {
+    fn from(value: Span<'_>) -> Self {
+        let (start, end) = value.split();
+        Self::Span(start.line_col(), end.line_col())
+    }
+}
+
 impl<R: RuleType> Error<R> {
     /// Creates `Error` from `ErrorVariant` and `Position`.
     ///
