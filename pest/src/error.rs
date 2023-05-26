@@ -905,4 +905,26 @@ mod tests {
             .join("\n")
         );
     }
+
+    #[test]
+    fn pos_to_lcl_conversion() {
+        let input = "input";
+
+        let pos = Position::new(input, 2).unwrap();
+
+        assert_eq!(LineColLocation::Pos(pos.line_col()), pos.into());
+    }
+
+    #[test]
+    fn span_to_lcl_conversion() {
+        let input = "input";
+
+        let span = Span::new(input, 2, 4).unwrap();
+        let (start, end) = span.split();
+
+        assert_eq!(
+            LineColLocation::Span(start.line_col(), end.line_col()),
+            span.into()
+        );
+    }
 }
