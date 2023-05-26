@@ -74,6 +74,19 @@ pub enum LineColLocation {
     Span((usize, usize), (usize, usize)),
 }
 
+impl From<Position<'_>> for LineColLocation {
+    fn from(value: Position<'_>) -> Self {
+        Self::Pos(value.line_col())
+    }
+}
+
+impl From<Span<'_>> for LineColLocation {
+    fn from(value: Span<'_>) -> Self {
+        let (start, end) = value.split();
+        Self::Span(start.line_col(), end.line_col())
+    }
+}
+
 impl<R: RuleType> Error<R> {
     /// Creates `Error` from `ErrorVariant` and `Position`.
     ///
@@ -890,6 +903,28 @@ mod tests {
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
             ]
             .join("\n")
+        );
+    }
+
+    #[test]
+    fn pos_to_lcl_conversion() {
+        let input = "input";
+
+        let pos = Position::new(input, 2).unwrap();
+
+        assert_eq!(LineColLocation::Pos(pos.line_col()), pos.into());
+    }
+
+    #[test]
+    fn span_to_lcl_conversion() {
+        let input = "input";
+
+        let span = Span::new(input, 2, 4).unwrap();
+        let (start, end) = span.split();
+
+        assert_eq!(
+            LineColLocation::Span(start.line_col(), end.line_col()),
+            span.into()
         );
     }
 }
