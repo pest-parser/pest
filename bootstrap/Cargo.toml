@@ -14,3 +14,9 @@ rust-version = "1.56"
 [dependencies]
 pest_generator = "2.1.1" # Use the crates-io version, which (should be) known-good
 quote = "1.0"
+
+[features]
+default = []
+# Whether or not the bootstrapper should put the generated .rs file in the
+# source tree or in the output tree
+not-bootstrap-in-src = []
