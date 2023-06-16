@@ -142,8 +142,8 @@ impl<R: RuleType> BitOr for Op<R> {
 ///         .op(Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::sub, Assoc::Left))
 ///         .op(Op::infix(Rule::mul, Assoc::Left) | Op::infix(Rule::div, Assoc::Left))
 ///         .op(Op::infix(Rule::pow, Assoc::Right))
-///         .op(Op::postfix(Rule::fac))
-///         .op(Op::prefix(Rule::neg));
+///         .op(Op::prefix(Rule::neg))
+///         .op(Op::postfix(Rule::fac));
 /// ```
 ///
 /// To parse an expression, call the [`map_primary`], [`map_prefix`], [`map_postfix`],

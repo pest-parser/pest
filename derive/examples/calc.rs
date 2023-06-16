@@ -72,8 +72,8 @@ fn main() {
         .op(Op::infix(Rule::add, Left) | Op::infix(Rule::sub, Left))
         .op(Op::infix(Rule::mul, Left) | Op::infix(Rule::div, Left))
         .op(Op::infix(Rule::pow, Right))
-        .op(Op::postfix(Rule::fac))
-        .op(Op::prefix(Rule::neg));
+        .op(Op::prefix(Rule::neg))
+        .op(Op::postfix(Rule::fac));
 
     let stdin = stdin();
     let mut stdout = stdout();
