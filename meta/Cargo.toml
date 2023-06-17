@@ -21,7 +21,7 @@ once_cell = "1.8.0"
 
 [build-dependencies]
 sha2 = { version = "0.10", default-features = false }
-cargo = { version = "0.62", optional = true }
+cargo = { version = "0.70", optional = true }
 
 [features]
 default = []

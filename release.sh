@@ -18,7 +18,12 @@ get_manifest_path() {
 
 publish() {
   echo "Publishing crate $1..."
-  cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty --all-features
+  if [ "${1}" == "pest" ]; then
+    cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty --all-features
+  else
+    # cannot publish with the `not-bootstrap-in-src` feature enabled
+    cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty
+  fi
   echo ""
 }
 
