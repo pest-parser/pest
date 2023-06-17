@@ -13,7 +13,7 @@ license = "MIT/Apache-2.0"
 readme = "_README.md"
 exclude = ["src/grammar.pest"]
 include = ["Cargo.toml", "src/**/*", "src/grammar.rs", "_README.md", "LICENSE-*"]
-rust-version = "1.56"
+rust-version = "1.60"
 
 [dependencies]
 pest = { path = "../pest", version = "2.6.1" }
@@ -25,4 +25,4 @@ cargo = { version = "0.70", optional = true }
 
 [features]
 default = []
-not-bootstrap-in-src = ["cargo"]
+not-bootstrap-in-src = ["dep:cargo"]

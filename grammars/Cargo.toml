@@ -11,7 +11,7 @@ keywords = ["pest", "parser", "peg", "grammar"]
 categories = ["parsing"]
 license = "MIT/Apache-2.0"
 readme = "_README.md"
-rust-version = "1.56"
+rust-version = "1.60"
 
 [dependencies]
 pest = { path = "../pest", version = "2.6.1" }
