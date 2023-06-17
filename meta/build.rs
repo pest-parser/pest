@@ -1,8 +1,19 @@
+#[cfg(feature = "not-bootstrap-in-src")]
+use cargo::{
+    core::{resolver::CliFeatures, Workspace},
+    ops,
+    ops::{CompileOptions, Packages},
+    util::command_prelude::CompileMode,
+    Config,
+};
 use sha2::{Digest, Sha256};
 use std::env;
+#[cfg(feature = "not-bootstrap-in-src")]
+use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
+#[cfg(not(feature = "not-bootstrap-in-src"))]
 use std::process::Command;
 
 fn display_digest(digest: &[u8]) -> String {
@@ -43,19 +54,56 @@ fn main() {
             let mut hash_file = File::create(hash_path).unwrap();
             writeln!(hash_file, "{}", current_hash).unwrap();
 
-            // This "dynamic linking" is probably so fragile I don't even want to hear it
-            let status = Command::new(manifest_dir.join("../target/debug/pest_bootstrap"))
-                .spawn()
-                .unwrap_or_else(|_| {
+            #[cfg(not(feature = "not-bootstrap-in-src"))]
+            {
+                // This "dynamic linking" is probably so fragile I don't even want to hear it
+                let status = Command::new(manifest_dir.join("../target/debug/pest_bootstrap"))
+                    .spawn()
+                    .unwrap_or_else(|_| {
+                        panic!(
+                            "Bootstrap failed because no bootstrap executable was found. \
+                        Please run `cargo build --package pest_bootstrap` or `cargo bootstrap` \
+                        and then try again.",
+                        )
+                    })
+                    .wait()
+                    .unwrap();
+                assert!(status.success(), "Bootstrap failed");
+            }
+
+            #[cfg(feature = "not-bootstrap-in-src")]
+            {
+                let config = Config::default().expect("cargo config");
+                let workspace_manifest = manifest_dir
+                    .join("../Cargo.toml")
+                    .canonicalize()
+                    .expect("workspace manifest");
+                let workspace = Workspace::new(&workspace_manifest, &config).expect("workspace");
+
+                let mut opts =
+                    CompileOptions::new(&config, CompileMode::Build).expect("compile options");
+                opts.spec = Packages::Packages(vec!["pest_bootstrap".to_owned()]);
+                opts.cli_features = CliFeatures::from_command_line(
+                    &["not-bootstrap-in-src".to_owned()],
+                    false,
+                    true,
+                )
+                .expect("cli features");
+
+                let path = format!(
+                    "{}/__pest_grammar.rs",
+                    env::var("OUT_DIR").expect("OUT_DIR env var")
+                )
+                .parse::<OsString>()
+                .expect("grammar path");
+                if let Err(e) = ops::run(&workspace, &opts, &[path]) {
                     panic!(
-                        "Bootstrap failed because no bootstrap executable was found. \
-                         Please run `cargo build --package pest_bootstrap` or `cargo bootstrap` \
-                         and then try again.",
-                    )
-                })
-                .wait()
-                .unwrap();
-            assert!(status.success(), "Bootstrap failed");
+                        "Bootstrap failed: {e}. \
+                        Please run `cargo build --package pest_bootstrap` or `cargo bootstrap` \
+                        and then try again."
+                    );
+                }
+            }
         } else {
             println!("       Fresh `meta/src/grammar.rs`");
         }
