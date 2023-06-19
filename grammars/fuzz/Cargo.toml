@@ -3,7 +3,7 @@ name = "pest_grammars-fuzz"
 version = "0.0.0"
 authors = ["Automatically generated"]
 publish = false
-rust-version = "1.56"
+rust-version = "1.60"
 
 [package.metadata]
 cargo-fuzz = true

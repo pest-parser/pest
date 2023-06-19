@@ -11,14 +11,14 @@ keywords = ["pest", "parser", "peg", "grammar"]
 categories = ["parsing"]
 license = "MIT/Apache-2.0"
 readme = "_README.md"
-rust-version = "1.56"
+rust-version = "1.60"
 
 [features]
 default = ["std"]
 # Implements `std::error::Error` for the `Error` type
-std = ["ucd-trie/std", "thiserror"]
+std = ["ucd-trie/std", "dep:thiserror"]
 # Enables the `to_json` function for `Pair` and `Pairs`
-pretty-print = ["serde", "serde_json"]
+pretty-print = ["dep:serde", "dep:serde_json"]
 # Enable const fn constructor for `PrecClimber`
 const_prec_climber = []
 
