@@ -199,10 +199,11 @@ You can find more projects and ecosystem tools in the [awesome-pest](https://git
 * [qubit](https://github.com/abhimanyu003/qubit)
 * [caith](https://github.com/Geobert/caith) (a dice roller crate)
 * [Melody](https://github.com/yoav-lavi/melody)
+* [json5-nodes](https://github.com/jlyonsmith/json5-nodes)
 
 ## Minimum Supported Rust Version (MSRV)
 
-This library should always compile with default features on **Rust 1.60.0** 
+This library should always compile with default features on **Rust 1.60.0**
 or **Rust 1.61** with `const_prec_climber`.
 
 ## no_std support
