@@ -140,7 +140,7 @@ jobs:
         with:
           kind: check
           components: rust-src
-          toolchain: nightly-2023-05-20 # upgrade this regularly
+          toolchain: nightly-2023-03-20 # upgrade this regularly
       - name: check no_std compatibility
         run: cd pest && cargo build -j1 -Z build-std=core,alloc --no-default-features --target x86_64-unknown-linux-gnu
 
@@ -156,7 +156,7 @@ jobs:
         id: setup
         with:
           kind: check
-          toolchain: nightly-2023-05-20
+          toolchain: nightly-2023-03-20
           tools: cargo-semver-checks
       - name: check semver compatibility
         shell: bash
