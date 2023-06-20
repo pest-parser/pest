@@ -25,7 +25,7 @@ jobs:
           kind: check
           toolchain: 1.64.0
       - name: cargo check
-        run: cargo check --all --features pretty-print,const_prec_climber,memchr --all-targets
+        run: cargo check --all --features pretty-print,const_prec_climber,memchr,grammar-extras --all-targets
 
   testing:
     name: Unit, Style, and Lint Testing
@@ -44,9 +44,9 @@ jobs:
       - name: cargo fmt
         run: cargo fmt --all -- --check
       - name: cargo clippy
-        run: cargo clippy --all --features pretty-print,const_prec_climber,memchr --all-targets -- -Dwarnings
+        run: cargo clippy --all --features pretty-print,const_prec_climber,memchr,grammar-extras --all-targets -- -Dwarnings
       - name: cargo test
-        run: cargo test --all --features pretty-print,const_prec_climber,memchr --release
+        run: cargo test --all --features pretty-print,const_prec_climber,memchr,grammar-extras --release
       - name: cargo test (ignored)
         run: cargo test -p pest_grammars --lib --verbose --release -- --ignored tests::toml_handles_deep_nesting_unstable
 
@@ -64,7 +64,7 @@ jobs:
           kind: check
           toolchain: 1.64.0
       - name: cargo doc
-        run: cargo doc --all --features pretty-print,const_prec_climber,memchr
+        run: cargo doc --all --features pretty-print,const_prec_climber,memchr,grammar-extras
 
   dependency:
     name: Minimal Versions Testing
@@ -101,7 +101,7 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov --features pretty-print,const_prec_climber,memchr --workspace --lcov --output-path lcov.info
+        run: cargo llvm-cov --features pretty-print,const_prec_climber,memchr,grammar-extras --workspace --lcov --output-path lcov.info
       - name: Upload Results to Codecov
         uses: codecov/codecov-action@v3
         with:

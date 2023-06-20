@@ -9,6 +9,7 @@ extern crate alloc;
 extern crate pest;
 extern crate pest_derive;
 
+#[cfg(feature = "grammar-extras")]
 use pest::Parser;
 use pest_derive::Parser;
 
@@ -17,6 +18,7 @@ use pest_derive::Parser;
 struct TestImplicitParser;
 
 #[test]
+#[cfg(feature = "grammar-extras")]
 fn test_implicit_whitespace() {
     // this failed to parse due to a bug in the optimizer
     // see: https://github.com/pest-parser/pest/issues/762#issuecomment-1375374868

@@ -326,9 +326,9 @@ fn is_non_progressing<'i>(
             min == 0 || is_non_progressing(&inner.expr, rules, trace)
         }
         ParserExpr::Push(ref inner) => is_non_progressing(&inner.expr, rules, trace),
-        ParserExpr::RepOnce(ref inner) | ParserExpr::NodeTag(ref inner, _) => {
-            is_non_progressing(&inner.expr, rules, trace)
-        }
+        ParserExpr::RepOnce(ref inner) => is_non_progressing(&inner.expr, rules, trace),
+        #[cfg(feature = "grammar-extras")]
+        ParserExpr::NodeTag(ref inner, _) => is_non_progressing(&inner.expr, rules, trace),
     }
 }
 
@@ -417,9 +417,11 @@ fn is_non_failing<'i>(
         //     @{EOI ~ ANY | ANY ~ SOI | &("A") ~ &("B") | 'z'..'a'}
         ParserExpr::NegPred(_) => false,
         ParserExpr::RepOnce(ref inner) => is_non_failing(&inner.expr, rules, trace),
-        ParserExpr::Push(ref inner)
-        | ParserExpr::NodeTag(ref inner, _)
-        | ParserExpr::PosPred(ref inner) => is_non_failing(&inner.expr, rules, trace),
+        ParserExpr::Push(ref inner) | ParserExpr::PosPred(ref inner) => {
+            is_non_failing(&inner.expr, rules, trace)
+        }
+        #[cfg(feature = "grammar-extras")]
+        ParserExpr::NodeTag(ref inner, _) => is_non_failing(&inner.expr, rules, trace),
     }
 }
 
@@ -933,19 +935,22 @@ mod tests {
             &HashMap::new(),
             &mut Vec::new()
         ));
-        let progressing = ParserExpr::NodeTag(progressing_node.clone(), "TAG".into());
-        let non_progressing = ParserExpr::NodeTag(non_progressing_node.clone(), "TAG".into());
+        #[cfg(feature = "grammar-extras")]
+        {
+            let progressing = ParserExpr::NodeTag(progressing_node.clone(), "TAG".into());
+            let non_progressing = ParserExpr::NodeTag(non_progressing_node.clone(), "TAG".into());
 
-        assert!(!is_non_progressing(
-            &progressing,
-            &HashMap::new(),
-            &mut Vec::new()
-        ));
-        assert!(is_non_progressing(
-            &non_progressing,
-            &HashMap::new(),
-            &mut Vec::new()
-        ));
+            assert!(!is_non_progressing(
+                &progressing,
+                &HashMap::new(),
+                &mut Vec::new()
+            ));
+            assert!(is_non_progressing(
+                &non_progressing,
+                &HashMap::new(),
+                &mut Vec::new()
+            ));
+        }
     }
 
     #[test]
@@ -1290,6 +1295,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "grammar-extras")]
     fn failing_non_zero_repetitions() {
         let failing = Box::new(ParserNode {
             expr: ParserExpr::NodeTag(
@@ -1540,16 +1546,19 @@ mod tests {
             &mut Vec::new()
         ));
 
-        assert!(!is_non_failing(
-            &ParserExpr::NodeTag(failing_node.clone(), "TAG".into()),
-            &HashMap::new(),
-            &mut Vec::new()
-        ));
-        assert!(is_non_failing(
-            &ParserExpr::NodeTag(non_failing_node.clone(), "TAG".into()),
-            &HashMap::new(),
-            &mut Vec::new()
-        ));
+        #[cfg(feature = "grammar-extras")]
+        {
+            assert!(!is_non_failing(
+                &ParserExpr::NodeTag(failing_node.clone(), "TAG".into()),
+                &HashMap::new(),
+                &mut Vec::new()
+            ));
+            assert!(is_non_failing(
+                &ParserExpr::NodeTag(non_failing_node.clone(), "TAG".into()),
+                &HashMap::new(),
+                &mut Vec::new()
+            ));
+        }
 
         assert!(!is_non_failing(
             &ParserExpr::Push(failing_node.clone()),

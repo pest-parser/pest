@@ -95,6 +95,7 @@ pub enum Expr {
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<Expr>),
     /// Matches an expression and assigns a label to it, e.g. #label = exp
+    #[cfg(feature = "grammar-extras")]
     NodeTag(Box<Expr>, String),
 }
 
@@ -166,6 +167,7 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
+                #[cfg(feature = "grammar-extras")]
                 Expr::NodeTag(expr, tag) => {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::NodeTag(mapped, tag)
@@ -237,6 +239,7 @@ impl Expr {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::Push(mapped)
                 }
+                #[cfg(feature = "grammar-extras")]
                 Expr::NodeTag(expr, tag) => {
                     let mapped = Box::new(map_internal(*expr, f));
                     Expr::NodeTag(mapped, tag)
@@ -290,8 +293,11 @@ impl ExprTopDownIterator {
             | Expr::RepMax(expr, _)
             | Expr::RepMinMax(expr, ..)
             | Expr::Opt(expr)
-            | Expr::Push(expr)
-            | Expr::NodeTag(expr, _) => {
+            | Expr::Push(expr) => {
+                self.next = Some(*expr);
+            }
+            #[cfg(feature = "grammar-extras")]
+            Expr::NodeTag(expr, _) => {
                 self.next = Some(*expr);
             }
             _ => {
