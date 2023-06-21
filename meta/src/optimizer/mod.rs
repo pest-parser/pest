@@ -68,6 +68,7 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
             Expr::Rep(expr) => OptimizedExpr::Rep(Box::new(to_optimized(*expr))),
             Expr::Skip(strings) => OptimizedExpr::Skip(strings),
             Expr::Push(expr) => OptimizedExpr::Push(Box::new(to_optimized(*expr))),
+            #[cfg(feature = "grammar-extras")]
             Expr::NodeTag(expr, tag) => OptimizedExpr::NodeTag(Box::new(to_optimized(*expr)), tag),
             Expr::RepOnce(_)
             | Expr::RepExact(..)
@@ -139,6 +140,7 @@ pub enum OptimizedExpr {
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<OptimizedExpr>),
     /// Matches an expression and assigns a label to it, e.g. #label = exp
+    #[cfg(feature = "grammar-extras")]
     NodeTag(Box<OptimizedExpr>, String),
     /// Restores an expression's checkpoint
     RestoreOnErr(Box<OptimizedExpr>),

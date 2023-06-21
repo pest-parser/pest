@@ -18,11 +18,11 @@ get_manifest_path() {
 
 publish() {
   echo "Publishing crate $1..."
-  if [ "${1}" == "pest" ]; then
+  if [ "${1}" = "pest" ] || [ "${1}" = "pest_grammars" ] || [ "${1}" = "pest_debugger" ]; then
     cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty --all-features
   else
     # cannot publish with the `not-bootstrap-in-src` feature enabled
-    cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty
+    cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty --features grammar-extras
   fi
   echo ""
 }

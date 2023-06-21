@@ -20,7 +20,6 @@ use pest::{Parser, Position, Span};
 use crate::ast::{Expr, Rule as AstRule, RuleType};
 use crate::validator;
 
-/// TODO: fix the generator to at least add explicit lifetimes
 #[allow(missing_docs, unused_qualifications)]
 mod grammar {
     #[cfg(not(feature = "not-bootstrap-in-src"))]
@@ -163,6 +162,7 @@ pub enum ParserExpr<'i> {
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<ParserNode<'i>>),
     /// Matches an expression and assigns a label to it, e.g. #label = exp
+    #[cfg(feature = "grammar-extras")]
     NodeTag(Box<ParserNode<'i>>, String),
 }
 
@@ -199,6 +199,7 @@ fn convert_node(node: ParserNode<'_>) -> Expr {
             Expr::RepMinMax(Box::new(convert_node(*node)), min, max)
         }
         ParserExpr::Push(node) => Expr::Push(Box::new(convert_node(*node))),
+        #[cfg(feature = "grammar-extras")]
         ParserExpr::NodeTag(node, tag) => Expr::NodeTag(Box::new(convert_node(*node)), tag),
     }
 }
@@ -337,7 +338,10 @@ fn consume_expr<'i>(
         mut pairs: Peekable<Pairs<'i, Rule>>,
         pratt: &PrattParser<Rule>,
     ) -> Result<ParserNode<'i>, Vec<Error<Rule>>> {
+        #[cfg(feature = "grammar-extras")]
         let (pair, tag_start) = get_node_tag(&mut pairs);
+        #[cfg(not(feature = "grammar-extras"))]
+        let (pair, _tag_start) = get_node_tag(&mut pairs);
 
         let node = match pair.as_rule() {
             Rule::opening_paren => {
@@ -632,6 +636,7 @@ fn consume_expr<'i>(
                 )?
             }
         };
+        #[cfg(feature = "grammar-extras")]
         if let Some((tag, start)) = tag_start {
             let span = start.span(&node.span.end_pos());
             Ok(ParserNode {
@@ -641,6 +646,8 @@ fn consume_expr<'i>(
         } else {
             Ok(node)
         }
+        #[cfg(not(feature = "grammar-extras"))]
+        Ok(node)
     }
 
     let term = |pair: Pair<'i, Rule>| unaries(pair.into_inner().peekable(), pratt);

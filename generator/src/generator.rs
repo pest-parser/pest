@@ -517,6 +517,7 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
                 state.restore_on_err(|state| #expr)
             }
         }
+        #[cfg(feature = "grammar-extras")]
         OptimizedExpr::NodeTag(expr, tag) => {
             let expr = generate_expr(*expr);
             quote! {
@@ -655,6 +656,7 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
                 state.restore_on_err(|state| #expr)
             }
         }
+        #[cfg(feature = "grammar-extras")]
         OptimizedExpr::NodeTag(expr, tag) => {
             let expr = generate_expr_atomic(*expr);
             quote! {
