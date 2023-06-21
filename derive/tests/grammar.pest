@@ -68,6 +68,7 @@ han = { HAN+ }
 hangul = { HANGUL+ }
 hiragana = { HIRAGANA+ }
 arabic = { ARABIC+ }
+emoji = { EMOJI+ }
 
 WHITESPACE = _{ " " }
 COMMENT = _{ "$"+ }

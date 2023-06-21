@@ -1005,3 +1005,15 @@ fn arabic() {
         ]
     }
 }
+
+#[test]
+fn emoji() {
+    parses_to! {
+        parser: vm(),
+        input: "👶",
+        rule: "emoji",
+        tokens: [
+            emoji(0, 4)
+        ]
+    }
+}
