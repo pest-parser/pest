@@ -10,7 +10,6 @@
 use pest_meta::{ast::RuleType, optimizer::OptimizedRule};
 use proc_macro2::{Ident, TokenStream};
 pub use std::collections::BTreeMap as Map;
-use std::ops::Deref;
 
 use crate::optimizer::OptimizedExpr;
 
@@ -31,30 +30,26 @@ fn quote_ident(s: &str) -> TokenStream {
     quote! {#ident}
 }
 
-macro_rules! walk {
-    ($var:ident) => {{
-        let mut nodes: Vec<&Box<OptimizedExpr>> = vec![lhs];
-        let mut names = vec![generate_graph_node::<false>(
-            lhs,
-            format!("{}_0", candidate_name),
-            map,
-        )];
-        let mut current: &Box<OptimizedExpr> = rhs;
-        let mut i = 1usize;
-        while let OptimizedExpr::$var(lhs, rhs) = current.deref() {
+macro_rules! walk_tree {
+    ($ivar: ident, $ovar: ident, $expr: ident, $map: ident, $candidate_name: ident) => {{
+        let mut nodes: Vec<&OptimizedExpr> = Vec::new();
+        let mut names: Vec<TokenStream> = Vec::new();
+        let mut i = 0usize;
+        let mut current = $expr;
+        while let OptimizedExpr::$ivar(lhs, rhs) = current {
             nodes.push(lhs);
             names.push(generate_graph_node::<false>(
                 lhs,
-                format!("{}_{}", candidate_name, i),
-                map,
+                format!("{}_{}", $candidate_name, i),
+                $map,
             ));
             current = rhs;
             i += 1;
         }
         nodes.push(current);
-        map.entry(candidate_name.clone())
-            .or_insert(GraphNode::Sequence(names));
-        quote_ident(&candidate_name)
+        $map.entry($candidate_name.clone())
+            .or_insert(GraphNode::$ovar(names));
+        quote_ident(&$candidate_name)
     }};
 }
 
@@ -81,16 +76,12 @@ fn generate_graph_node<const FORCED: bool>(
         OptimizedExpr::Range(_, _) => {
             copy_if_forced(candidate_name, quote! {::std::primitive::char})
         }
-        OptimizedExpr::Ident(id) => quote_ident(id),
+        OptimizedExpr::Ident(id) => copy_if_forced(candidate_name, quote_ident(id)),
         OptimizedExpr::PosPred(_) | OptimizedExpr::NegPred(_) | OptimizedExpr::RestoreOnErr(_) => {
             copy_if_forced(candidate_name, quote! {()})
         }
-        OptimizedExpr::Seq(lhs, rhs) => {
-            walk!(Seq)
-        }
-        OptimizedExpr::Choice(lhs, rhs) => {
-            walk!(Choice)
-        }
+        OptimizedExpr::Seq(_lhs, _rhs) => walk_tree!(Seq, Sequence, expr, map, candidate_name),
+        OptimizedExpr::Choice(_lhs, _rhs) => walk_tree!(Choice, Variant, expr, map, candidate_name),
         OptimizedExpr::Opt(inner) => {
             let inner_name =
                 generate_graph_node::<false>(inner, format!("{}_0", candidate_name), map);
@@ -107,7 +98,7 @@ fn generate_graph_node<const FORCED: bool>(
         }
         #[cfg(feature = "grammar-extras")]
         OptimizedExpr::NodeTag(inner_expr, _tag) => {
-            generate_graph_node::<false>(inner_expr, format!("{}_0", candidate_name), map);
+            generate_graph_node::<false>(inner_expr, format!("{}_0", candidate_name), map)
         }
     }
 }
@@ -123,10 +114,13 @@ pub fn generate_graph(rules: &[OptimizedRule]) -> Map<String, GraphNode> {
                 generate_graph_node::<true>(&rule.expr, rule.name.clone(), &mut res);
             }
             RuleType::Atomic => {
+                // eprintln!("{}", rule.name);
                 res.entry(rule.name.clone())
                     .or_insert(GraphNode::Single(quote!(::std::string::String)));
             }
         }
     }
+    // eprintln!("{:?}", res.keys());
+    // eprintln!("{:#?}", rules);
     res
 }

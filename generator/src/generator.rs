@@ -265,15 +265,15 @@ fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bo
 
 fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
     let graph = generate_graph(rules);
-    eprintln!("{:?}", graph);
     let ident = |s: &String| -> Ident { format_ident!("r#{}", s) };
     let pairs = graph.iter().map(|(name, rule)| {
         let name = ident(name);
         match rule {
             crate::graph::GraphNode::Sequence(inner) => {
                 let fields = inner.iter().map(|i| i);
-                quote! { 
-                    struct #name(#(#fields),*);
+                quote! {
+                    pub struct #name(#(#fields),*);
+                    impl ::pest::iterators::TypedNode for #name {}
                 }
             }
             crate::graph::GraphNode::Variant(inner) => {
@@ -283,26 +283,30 @@ fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
                     .map(|(i, n)| (format_ident!("var_{}", i), n))
                     .unzip();
                 quote! {
-                    enum #name {
+                    pub enum #name {
                         #( #names(#vars) ),*
                     }
+                    impl ::pest::iterators::TypedNode for #name {}
                 }
             }
             crate::graph::GraphNode::Single(inner) => {
                 quote! {
-                    struct #name(#inner);
+                    pub struct #name(#inner);
+                    impl ::pest::iterators::TypedNode for #name {}
                 }
             }
             crate::graph::GraphNode::Option(inner) => {
                 let option = option_type();
                 quote! {
-                    struct #name(#option::<#inner>);
+                    pub struct #name(#option::<#inner>);
+                    impl ::pest::iterators::TypedNode for #name {}
                 }
             }
             crate::graph::GraphNode::Repeated(inner) => {
                 let vec = vec_type();
                 quote! {
-                    struct #name(#vec::<#inner>);
+                    pub struct #name(#vec::<#inner>);
+                    impl ::pest::iterators::TypedNode for #name {}
                 }
             }
         }
