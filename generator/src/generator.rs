@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::{ops::Deref, path::PathBuf};
+use std::path::PathBuf;
 
 use proc_macro2::TokenStream;
 use quote::{ToTokens, TokenStreamExt};
@@ -18,6 +18,7 @@ use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
 use crate::docs::DocComment;
+use crate::graph::generate_graph;
 
 /// Generate codes for Parser.
 pub(crate) fn generate<const TYPED: bool>(
@@ -263,9 +264,49 @@ fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bo
 }
 
 fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
-    let pairs = rules
-        .iter()
-        .flat_map(|rule| generate_typed_pair_from_expression(&rule.expr, &rule.name));
+    let graph = generate_graph(rules);
+    eprintln!("{:?}", graph);
+    let ident = |s: &String| -> Ident { format_ident!("r#{}", s) };
+    let pairs = graph.iter().map(|(name, rule)| {
+        let name = ident(name);
+        match rule {
+            crate::graph::GraphNode::Sequence(inner) => {
+                let fields = inner.iter().map(|i| i);
+                quote! { 
+                    struct #name(#(#fields),*);
+                }
+            }
+            crate::graph::GraphNode::Variant(inner) => {
+                let (names, vars): (Vec<_>, Vec<_>) = inner
+                    .iter()
+                    .enumerate()
+                    .map(|(i, n)| (format_ident!("var_{}", i), n))
+                    .unzip();
+                quote! {
+                    enum #name {
+                        #( #names(#vars) ),*
+                    }
+                }
+            }
+            crate::graph::GraphNode::Single(inner) => {
+                quote! {
+                    struct #name(#inner);
+                }
+            }
+            crate::graph::GraphNode::Option(inner) => {
+                let option = option_type();
+                quote! {
+                    struct #name(#option::<#inner>);
+                }
+            }
+            crate::graph::GraphNode::Repeated(inner) => {
+                let vec = vec_type();
+                quote! {
+                    struct #name(#vec::<#inner>);
+                }
+            }
+        }
+    });
     // let names = rules.iter().map(|rule| format_ident!("r#{}", rule.name));
     let res = quote! {
         pub mod pairs {
@@ -278,125 +319,6 @@ fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
     };
     // eprintln!("{}", res);
     res
-}
-
-fn child_name(expr: &OptimizedExpr, name: &String, index: usize) -> (TokenStream, String) {
-    // Be cautious of recursive rules.
-    match expr {
-        OptimizedExpr::Ident(id) => {
-            let s = id.clone();
-            (TokenStream::new(), s)
-        }
-        _ => {
-            let s = format!("{}_{}", name, index);
-            (generate_typed_pair_from_expression(expr, &s), s)
-        }
-    }
-}
-fn child_ident(expr: &OptimizedExpr, name: &String, index: usize) -> (TokenStream, Ident) {
-    let (stream, s) = child_name(expr, name, index);
-    (stream, format_ident!("r#{}", s))
-}
-
-fn generate_typed_pair_from_expression(expr: &OptimizedExpr, name: &String) -> TokenStream {
-    let ident: Ident = format_ident!("r#{}", name);
-    // Still some compile-time information not taken
-    match expr {
-        OptimizedExpr::Str(_)
-        | OptimizedExpr::Insens(_)
-        | OptimizedExpr::PeekSlice(_, _)
-        | OptimizedExpr::Push(_)
-        | OptimizedExpr::Skip(_) => {
-            quote! {
-                pub struct #ident(::std::string::String);
-            }
-        }
-        OptimizedExpr::Range(_, _) => {
-            quote! {
-                pub struct #ident(::std::primitive::char);
-            }
-        }
-        OptimizedExpr::Ident(id) => {
-            // let id = format_ident!("r#{}", id);
-            quote! {}
-        }
-        OptimizedExpr::PosPred(_) | OptimizedExpr::NegPred(_) => {
-            quote! {
-                pub struct #ident();
-            }
-        }
-        OptimizedExpr::Seq(lhs, rhs) => {
-            let mut nodes: Vec<&Box<OptimizedExpr>> = vec![lhs];
-            let mut current: &Box<OptimizedExpr> = rhs;
-            while let OptimizedExpr::Seq(lhs, rhs) = current.deref() {
-                nodes.push(lhs);
-                current = rhs;
-            }
-            nodes.push(current);
-            let (pairs, elems): (Vec<_>, Vec<_>) = nodes
-                .iter()
-                .enumerate()
-                .map(|(i, n)| {
-                    let (stream, id) = child_ident(n, name, i);
-                    let i = format_ident!("r#field{}", i);
-                    (stream, quote! { pub #i : ::std::boxed::Box< #id > })
-                })
-                .unzip();
-            quote! {
-                pub struct #ident {
-                    #( #elems ),*
-                }
-                impl ::pest::iterators::TypedNode for #ident {
-
-                }
-                #( #pairs )*
-            }
-        }
-        OptimizedExpr::Choice(lhs, rhs) => {
-            let mut nodes = vec![lhs];
-            let mut current: &Box<OptimizedExpr> = rhs;
-            while let OptimizedExpr::Seq(lhs, rhs) = current.deref() {
-                nodes.push(lhs);
-                current = rhs;
-            }
-            nodes.push(current);
-            let (pairs, variant): (Vec<_>, Vec<_>) = nodes
-                .iter()
-                .enumerate()
-                .map(|(i, n)| {
-                    let (stream, id) = child_ident(n, name, i);
-                    let i = format_ident!("r#var{}", i);
-                    (stream, quote! { #i ( #id ) })
-                })
-                .unzip();
-            quote! {
-                pub enum #ident {
-                    #( #variant ),*
-                }
-                impl ::pest::iterators::TypedNode for #ident {
-
-                }
-                #( #pairs )*
-            }
-        }
-        OptimizedExpr::Opt(inner) => {
-            let (pairs, inner) = child_ident(inner, name, 0);
-            quote! {
-                pub type #ident = ::std::option::Option<#inner>;
-                #pairs
-            }
-        }
-        OptimizedExpr::Rep(inner) => {
-            let (pairs, inner) = child_ident(inner, name, 0);
-            quote! {
-                pub type #ident = ::std::vec::Vec<#inner>;
-                #pairs
-            }
-        }
-        OptimizedExpr::RestoreOnErr(_) => todo!(),
-        #[cfg(feature = "grammar-extras")]
-        OptimizedExpr::NodeTag(_, _) => todo!(),
-    }
 }
 
 fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
@@ -867,6 +789,14 @@ fn option_type() -> TokenStream {
 
     #[cfg(not(feature = "std"))]
     quote! { ::core::option::Option }
+}
+
+fn vec_type() -> TokenStream {
+    #[cfg(feature = "std")]
+    quote! { ::std::vec::Vec }
+
+    #[cfg(not(feature = "std"))]
+    quote! { ::alloc::vec::Vec }
 }
 
 #[cfg(test)]
