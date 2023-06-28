@@ -33,6 +33,7 @@ use syn::{Attribute, DeriveInput, Expr, ExprLit, Generics, Ident, Lit, Meta};
 mod macros;
 mod docs;
 mod generator;
+mod graph;
 
 use pest_meta::parser::{self, rename_meta_rule, Rule};
 use pest_meta::{optimizer, unwrap_or_report, validator};
@@ -40,7 +41,7 @@ use pest_meta::{optimizer, unwrap_or_report, validator};
 /// Processes the derive/proc macro input and generates the corresponding parser based
 /// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
 /// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
-pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
+pub fn derive_parser<const TYPED : bool>(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
     let (name, generics, contents) = parse_derive(ast);
 
@@ -96,7 +97,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
 
-    generator::generate(
+    generator::generate::<TYPED>(
         name,
         &generics,
         paths,
@@ -246,7 +247,7 @@ mod tests {
             pub struct TestParser;
         };
 
-        let token = super::derive_parser(input, true);
+        let token = super::derive_parser::<false>(input, true);
 
         let expected = quote! {
             #[doc = "A parser for JSON file.\nAnd this is a example for JSON parser.\n\n    indent-4-space\n"]

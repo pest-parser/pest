@@ -15,9 +15,11 @@ mod pair;
 pub(crate) mod pairs;
 mod queueable_token;
 mod tokens;
+mod typed_node;
 
 pub use self::flat_pairs::FlatPairs;
 pub use self::pair::Pair;
 pub use self::pairs::Pairs;
 pub(crate) use self::queueable_token::QueueableToken;
 pub use self::tokens::Tokens;
+pub use self::typed_node::TypedNode;

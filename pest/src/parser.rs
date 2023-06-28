@@ -9,6 +9,7 @@
 
 use crate::error::Error;
 use crate::iterators::Pairs;
+use crate::iterators::TypedNode;
 use crate::RuleType;
 
 /// A trait with a single method that parses strings.
@@ -16,4 +17,11 @@ pub trait Parser<R: RuleType> {
     /// Parses a `&str` starting from `rule`.
     #[allow(clippy::perf)]
     fn parse(rule: R, input: &str) -> Result<Pairs<'_, R>, Error<R>>;
+}
+
+/// A trait with a single method that parses strings into typed concrete syntax tree.
+pub trait TypedParser<R: RuleType>: Parser<R> {
+    /// Parses a `&str` into a tree starting from T.
+    #[allow(clippy::perf)]
+    fn parse_typed<T: TypedNode>(input: &str) -> Result<T, Error<R>>;
 }
