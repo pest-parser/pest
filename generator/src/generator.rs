@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::path::PathBuf;
+use std::{ops::Deref, path::PathBuf};
 
 use proc_macro2::TokenStream;
 use quote::{ToTokens, TokenStreamExt};
@@ -19,7 +19,8 @@ use pest_meta::optimizer::*;
 
 use crate::docs::DocComment;
 
-pub(crate) fn generate(
+/// Generate codes for Parser.
+pub(crate) fn generate<const TYPED: bool>(
     name: Ident,
     generics: &Generics,
     paths: Vec<PathBuf>,
@@ -37,6 +38,11 @@ pub(crate) fn generate(
         quote!()
     };
     let rule_enum = generate_enum(&rules, doc_comment, uses_eoi);
+    let pairs = if TYPED {
+        generate_typed_pair_from_rule(&rules)
+    } else {
+        quote! {}
+    };
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
 
@@ -87,11 +93,32 @@ pub(crate) fn generate(
         }
     };
 
-    quote! {
+    let typed_parser_impl = if TYPED {
+        quote! {
+        impl #impl_generics ::pest::TypedParser<Rule> for #name #ty_generics #where_clause {
+                fn parse_typed<'i, N : ::pest::iterators::TypedNode>(
+                    input: &'i str
+                ) -> #result<
+                    N,
+                    ::pest::error::Error<Rule>
+                > {
+                    todo!()
+                }
+            }
+        }
+    } else {
+        TokenStream::new()
+    };
+
+    let res = quote! {
         #include_fix
         #rule_enum
+        #pairs
         #parser_impl
-    }
+        #typed_parser_impl
+    };
+    // eprintln!("{}", res);
+    res
 }
 
 // Note: All builtin rules should be validated as pest builtins in meta/src/validator.rs.
@@ -235,6 +262,143 @@ fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bo
     }
 }
 
+fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
+    let pairs = rules
+        .iter()
+        .flat_map(|rule| generate_typed_pair_from_expression(&rule.expr, &rule.name));
+    // let names = rules.iter().map(|rule| format_ident!("r#{}", rule.name));
+    let res = quote! {
+        pub mod pairs {
+            pub type ANY = char;
+            pub type SOI = ();
+            pub type EOI = ();
+            pub type NEWLINE = ();
+            #( #pairs )*
+        }
+    };
+    // eprintln!("{}", res);
+    res
+}
+
+fn child_name(expr: &OptimizedExpr, name: &String, index: usize) -> (TokenStream, String) {
+    // Be cautious of recursive rules.
+    match expr {
+        OptimizedExpr::Ident(id) => {
+            let s = id.clone();
+            (TokenStream::new(), s)
+        }
+        _ => {
+            let s = format!("{}_{}", name, index);
+            (generate_typed_pair_from_expression(expr, &s), s)
+        }
+    }
+}
+fn child_ident(expr: &OptimizedExpr, name: &String, index: usize) -> (TokenStream, Ident) {
+    let (stream, s) = child_name(expr, name, index);
+    (stream, format_ident!("r#{}", s))
+}
+
+fn generate_typed_pair_from_expression(expr: &OptimizedExpr, name: &String) -> TokenStream {
+    let ident: Ident = format_ident!("r#{}", name);
+    // Still some compile-time information not taken
+    match expr {
+        OptimizedExpr::Str(_)
+        | OptimizedExpr::Insens(_)
+        | OptimizedExpr::PeekSlice(_, _)
+        | OptimizedExpr::Push(_)
+        | OptimizedExpr::Skip(_) => {
+            quote! {
+                pub struct #ident(::std::string::String);
+            }
+        }
+        OptimizedExpr::Range(_, _) => {
+            quote! {
+                pub struct #ident(::std::primitive::char);
+            }
+        }
+        OptimizedExpr::Ident(id) => {
+            // let id = format_ident!("r#{}", id);
+            quote! {}
+        }
+        OptimizedExpr::PosPred(_) | OptimizedExpr::NegPred(_) => {
+            quote! {
+                pub struct #ident();
+            }
+        }
+        OptimizedExpr::Seq(lhs, rhs) => {
+            let mut nodes: Vec<&Box<OptimizedExpr>> = vec![lhs];
+            let mut current: &Box<OptimizedExpr> = rhs;
+            while let OptimizedExpr::Seq(lhs, rhs) = current.deref() {
+                nodes.push(lhs);
+                current = rhs;
+            }
+            nodes.push(current);
+            let (pairs, elems): (Vec<_>, Vec<_>) = nodes
+                .iter()
+                .enumerate()
+                .map(|(i, n)| {
+                    let (stream, id) = child_ident(n, name, i);
+                    let i = format_ident!("r#field{}", i);
+                    (stream, quote! { pub #i : ::std::boxed::Box< #id > })
+                })
+                .unzip();
+            quote! {
+                pub struct #ident {
+                    #( #elems ),*
+                }
+                impl ::pest::iterators::TypedNode for #ident {
+
+                }
+                #( #pairs )*
+            }
+        }
+        OptimizedExpr::Choice(lhs, rhs) => {
+            let mut nodes = vec![lhs];
+            let mut current: &Box<OptimizedExpr> = rhs;
+            while let OptimizedExpr::Seq(lhs, rhs) = current.deref() {
+                nodes.push(lhs);
+                current = rhs;
+            }
+            nodes.push(current);
+            let (pairs, variant): (Vec<_>, Vec<_>) = nodes
+                .iter()
+                .enumerate()
+                .map(|(i, n)| {
+                    let (stream, id) = child_ident(n, name, i);
+                    let i = format_ident!("r#var{}", i);
+                    (stream, quote! { #i ( #id ) })
+                })
+                .unzip();
+            quote! {
+                pub enum #ident {
+                    #( #variant ),*
+                }
+                impl ::pest::iterators::TypedNode for #ident {
+
+                }
+                #( #pairs )*
+            }
+        }
+        OptimizedExpr::Opt(inner) => {
+            let (pairs, inner) = child_ident(inner, name, 0);
+            quote! {
+                pub type #ident = ::std::option::Option<#inner>;
+                #pairs
+            }
+        }
+        OptimizedExpr::Rep(inner) => {
+            let (pairs, inner) = child_ident(inner, name, 0);
+            quote! {
+                pub type #ident = ::std::vec::Vec<#inner>;
+                #pairs
+            }
+        }
+        OptimizedExpr::RestoreOnErr(_) => todo!(),
+        #[cfg(feature = "grammar-extras")]
+        OptimizedExpr::NodeTag(_, _) => todo!(),
+    }
+}
+
 fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
     let mut rules: Vec<TokenStream> = rules
         .iter()
@@ -329,6 +493,7 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
     }
 }
 
+/// Generate rules for automatic skipping, such as WHITESPACE and COMMENT.
 fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
     let whitespace = rules.iter().any(|rule| rule.name == "WHITESPACE");
     let comment = rules.iter().any(|rule| rule.name == "COMMENT");
@@ -374,6 +539,7 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
     }
 }
 
+/// Generate actions from parsing expressions
 fn generate_expr(expr: OptimizedExpr) -> TokenStream {
     match expr {
         OptimizedExpr::Str(string) => {
@@ -527,6 +693,7 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
     }
 }
 
+/// Generate actions from atomic parsing expressions
 fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
     match expr {
         OptimizedExpr::Str(string) => {
@@ -1049,7 +1216,7 @@ mod tests {
         let test_path = current_dir.join("test.pest").to_str().unwrap().to_string();
 
         assert_eq!(
-            generate(name, &generics, vec![PathBuf::from("base.pest"), PathBuf::from("test.pest")], rules, defaults, doc_comment, true).to_string(),
+            generate::<false>(name, &generics, vec![PathBuf::from("base.pest"), PathBuf::from("test.pest")], rules, defaults, doc_comment, true).to_string(),
             quote! {
                 #[allow(non_upper_case_globals)]
                 const _PEST_GRAMMAR_MyParser: [&'static str; 2usize] = [include_str!(#base_path), include_str!(#test_path)];
