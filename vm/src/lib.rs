@@ -224,6 +224,17 @@ impl Vm {
                     })
                 })
             }),
+            #[cfg(feature = "grammar-extras")]
+            OptimizedExpr::RepOnce(ref expr) => state.sequence(|state| {
+                self.parse_expr(expr, state).and_then(|state| {
+                    state.repeat(|state| {
+                        state.sequence(|state| {
+                            self.skip(state)
+                                .and_then(|state| self.parse_expr(expr, state))
+                        })
+                    })
+                })
+            }),
             OptimizedExpr::Push(ref expr) => state.stack_push(|state| self.parse_expr(expr, state)),
             OptimizedExpr::Skip(ref strings) => state.skip_until(
                 &strings
