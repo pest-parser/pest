@@ -1,3 +1,8 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
+#[cfg(not(feature = "std"))]
+use alloc::{format, vec::Vec};
+
 #[cfg(feature = "grammar-extras")]
 use pest::Parser;
 use pest_derive::Parser;
