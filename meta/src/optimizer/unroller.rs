@@ -15,6 +15,7 @@ pub fn unroll(rule: Rule) -> Rule {
         name,
         ty,
         expr: expr.map_bottom_up(|expr| match expr {
+            #[cfg(not(feature = "grammar-extras"))]
             Expr::RepOnce(expr) => Expr::Seq(expr.clone(), Box::new(Expr::Rep(expr))),
             Expr::RepExact(expr, num) => (1..num + 1)
                 .map(|_| *expr.clone())

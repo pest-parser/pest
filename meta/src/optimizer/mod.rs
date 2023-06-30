@@ -70,11 +70,13 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
             Expr::Push(expr) => OptimizedExpr::Push(Box::new(to_optimized(*expr))),
             #[cfg(feature = "grammar-extras")]
             Expr::NodeTag(expr, tag) => OptimizedExpr::NodeTag(Box::new(to_optimized(*expr)), tag),
-            Expr::RepOnce(_)
-            | Expr::RepExact(..)
-            | Expr::RepMin(..)
-            | Expr::RepMax(..)
-            | Expr::RepMinMax(..) => unreachable!("No valid transformation to OptimizedRule"),
+            #[cfg(feature = "grammar-extras")]
+            Expr::RepOnce(expr) => OptimizedExpr::RepOnce(Box::new(to_optimized(*expr))),
+            #[cfg(not(feature = "grammar-extras"))]
+            Expr::RepOnce(_) => unreachable!("No valid transformation to OptimizedRule"),
+            Expr::RepExact(..) | Expr::RepMin(..) | Expr::RepMax(..) | Expr::RepMinMax(..) => {
+                unreachable!("No valid transformation to OptimizedRule")
+            }
         }
     }
 
@@ -135,6 +137,9 @@ pub enum OptimizedExpr {
     Opt(Box<OptimizedExpr>),
     /// Matches an expression zero or more times, e.g. `e*`
     Rep(Box<OptimizedExpr>),
+    /// Matches an expression one or more times, e.g. `e+`
+    #[cfg(feature = "grammar-extras")]
+    RepOnce(Box<OptimizedExpr>),
     /// Continues to match expressions until one of the strings in the `Vec` is found
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
