@@ -34,6 +34,7 @@ mod macros;
 mod docs;
 mod generator;
 mod graph;
+mod types;
 
 use pest_meta::parser::{self, rename_meta_rule, Rule};
 use pest_meta::{optimizer, unwrap_or_report, validator};

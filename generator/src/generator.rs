@@ -18,7 +18,8 @@ use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
 use crate::docs::DocComment;
-use crate::graph::generate_graph;
+use crate::graph::generate_typed_pair_from_rule;
+use crate::types::{box_type, option_type, result_type};
 
 /// Generate codes for Parser.
 pub(crate) fn generate<const TYPED: bool>(
@@ -118,7 +119,7 @@ pub(crate) fn generate<const TYPED: bool>(
                         pub use self::visible::*;
                     }
 
-                    todo!()
+                    N :: try_from (input, None)
                 }
             }
         }
@@ -272,68 +273,6 @@ fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bo
             #( #rules ),*
         }
     }
-}
-
-fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
-    let graph = generate_graph(rules);
-    let ident = |s: &String| -> Ident { format_ident!("r#{}", s) };
-    let pairs = graph.iter().map(|(name, rule)| {
-        let name = ident(name);
-        match rule {
-            crate::graph::GraphNode::Sequence(inner) => {
-                let fields = inner.iter().map(|i| i);
-                quote! {
-                    pub struct #name(#(#fields),*);
-                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {}
-                }
-            }
-            crate::graph::GraphNode::Variant(inner) => {
-                let (names, vars): (Vec<_>, Vec<_>) = inner
-                    .iter()
-                    .enumerate()
-                    .map(|(i, n)| (format_ident!("var_{}", i), n))
-                    .unzip();
-                quote! {
-                    pub enum #name {
-                        #( #names(#vars) ),*
-                    }
-                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {}
-                }
-            }
-            crate::graph::GraphNode::Single(inner) => {
-                quote! {
-                    pub struct #name(#inner);
-                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {}
-                }
-            }
-            crate::graph::GraphNode::Option(inner) => {
-                let option = option_type();
-                quote! {
-                    pub struct #name(#option::<#inner>);
-                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {}
-                }
-            }
-            crate::graph::GraphNode::Repeated(inner) => {
-                let vec = vec_type();
-                quote! {
-                    pub struct #name(#vec::<#inner>);
-                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {}
-                }
-            }
-        }
-    });
-    // let names = rules.iter().map(|rule| format_ident!("r#{}", rule.name));
-    let res = quote! {
-        pub mod pairs {
-            pub type ANY = char;
-            pub type SOI = ();
-            pub type EOI = ();
-            pub type NEWLINE = ();
-            #( #pairs )*
-        }
-    };
-    // eprintln!("{}", res);
-    res
 }
 
 fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
@@ -780,38 +719,6 @@ impl<T: ToTokens> ToTokens for QuoteOption<T> {
             None => quote! { #option::None },
         });
     }
-}
-
-fn box_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::boxed::Box }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::alloc::boxed::Box }
-}
-
-fn result_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::result::Result }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::core::result::Result }
-}
-
-fn option_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::option::Option }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::core::option::Option }
-}
-
-fn vec_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::vec::Vec }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::alloc::vec::Vec }
 }
 
 #[cfg(test)]

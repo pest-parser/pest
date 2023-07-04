@@ -7,22 +7,25 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-// use alloc::{rc::Rc, vec::Vec};
+use super::line_index::LineIndex;
+use crate::{error::Error, RuleType};
+pub use alloc::rc::Rc;
 
-use crate::RuleType;
-
-// use super::{line_index::LineIndex, QueueableToken};
+/// Wrapper for std::option::Option
+#[cfg(feature = "std")]
+pub type Option<T> = ::std::option::Option<T>;
+/// Wrapper for std::option::Option
+#[cfg(not(feature = "std"))]
+pub type Option<T> = ::core::option::Option<T>;
 
 /// Node of concrete syntax tree.
-pub trait TypedNode<'i, R: RuleType> {
-    /*
+pub trait TypedNode<'i, R: RuleType>
+where
+    Self: Sized,
+{
     /// Create typed node from tokens
-    fn new(
-        queue: Rc<Vec<QueueableToken<'i, R>>>,
+    fn try_from(
         input: &'i str,
         line_index: Option<Rc<LineIndex>>,
-        start: usize,
-        end: usize,
-    ) -> Self;
-    */
+    ) -> Result<(&'i str, Self), Error<R>>;
 }
