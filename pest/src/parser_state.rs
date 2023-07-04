@@ -15,10 +15,9 @@ use alloc::vec::Vec;
 use core::num::NonZeroUsize;
 use core::ops::Range;
 use core::sync::atomic::{AtomicUsize, Ordering};
-use std::eprintln;
 
 use crate::error::{Error, ErrorVariant};
-use crate::iterators::{pairs, QueueableToken, TypedNode};
+use crate::iterators::{pairs, QueueableToken};
 use crate::position::{self, Position};
 use crate::span::Span;
 use crate::stack::Stack;
@@ -159,58 +158,6 @@ where
         Ok(state) => {
             let len = state.queue.len();
             Ok(pairs::new(Rc::new(state.queue), input, None, 0, len))
-        }
-        Err(mut state) => {
-            let variant = if state.reached_call_limit() {
-                ErrorVariant::CustomError {
-                    message: "call limit reached".to_owned(),
-                }
-            } else {
-                state.pos_attempts.sort();
-                state.pos_attempts.dedup();
-                state.neg_attempts.sort();
-                state.neg_attempts.dedup();
-                ErrorVariant::ParsingError {
-                    positives: state.pos_attempts.clone(),
-                    negatives: state.neg_attempts.clone(),
-                }
-            };
-
-            Err(Error::new_from_pos(
-                variant,
-                // TODO(performance): Guarantee state.attempt_pos is a valid position
-                position::Position::new(input, state.attempt_pos).unwrap(),
-            ))
-        }
-    }
-}
-
-/// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
-///
-/// # Examples
-///
-/// ```
-/// # use pest;
-/// let input = "";
-/// pest::typed_state::<(), _>(input, |s| Ok(s)).unwrap();
-/// ```
-#[allow(clippy::perf)]
-pub fn typed_state<'i, N: TypedNode<'i, R>, R: RuleType, F>(
-    input: &'i str,
-    f: F,
-) -> Result<N, Error<R>>
-where
-    F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>,
-{
-    let state = ParserState::new(input);
-
-    match f(state) {
-        Ok(state) => {
-            let len = state.queue.len();
-            eprintln!("{}", len);
-            eprintln!("{:#?}", state.queue);
-            todo!();
-            // Ok(N::new(Rc::new(state.queue), input, None, 0, len))
         }
         Err(mut state) => {
             let variant = if state.reached_call_limit() {
