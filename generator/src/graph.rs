@@ -82,12 +82,12 @@ fn generate_graph_node<const FORCED: bool>(
                 type_name
             }
         };
-    const STR: TokenStream = quote!(&::std::primitive::str);
+    let s = quote!(&::std::primitive::str);
     // Still some compile-time information not taken
     match expr {
         OptimizedExpr::Str(content) => copy_if_forced(
             candidate_name,
-            STR,
+            s,
             quote! {
                 if input.starts_with(#content) {
                     return Ok((input.split_at(#content.len()).1, Self(#content)));
@@ -95,9 +95,9 @@ fn generate_graph_node<const FORCED: bool>(
                 todo!();
             },
         ),
-        OptimizedExpr::Insens(_) => copy_if_forced(candidate_name, STR, quote! {todo!()}),
+        OptimizedExpr::Insens(_) => copy_if_forced(candidate_name, s, quote! {todo!()}),
         OptimizedExpr::PeekSlice(_, _) | OptimizedExpr::Push(_) | OptimizedExpr::Skip(_) => {
-            copy_if_forced(candidate_name, STR, quote!(todo!()))
+            copy_if_forced(candidate_name, s, quote!(todo!()))
         }
         OptimizedExpr::Range(start, end) => {
             let start = start.chars().next().unwrap();
@@ -107,7 +107,7 @@ fn generate_graph_node<const FORCED: bool>(
                 quote! {::std::primitive::char},
                 quote! {
                     if let Some(first) = input.chars().next() {
-                        if start <= first && first <= end {
+                        if #start <= first && first <= #end {
                             return Ok((input.split_at(first.len()).1, Self(first)));
                         }
                     }
@@ -141,7 +141,34 @@ fn generate_graph_node<const FORCED: bool>(
 
             res
         }
-        OptimizedExpr::Choice(_lhs, _rhs) => walk_tree!(Choice, Variant),
+        OptimizedExpr::Choice(_lhs, _rhs) => {
+            let (nodes, names, res) = walk_tree!(Choice, Variant);
+            let name = candidate_name.clone();
+            let vars = names
+                .iter()
+                .enumerate()
+                .map(|(i, _n)| format_ident!("var_{}", i));
+            let init = names.iter().map(|var| {
+                quote! {
+                    if let (input, res) = #var::try_from(input, line_index) {
+                        return Ok((input, res));
+                    }
+                }
+            });
+            let def = quote! {
+                pub enum #name {
+                    #( #vars(#names) ),*
+                }
+                impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {
+                    #f {
+                        #(#init)*
+                        panic!("All branches failed.");
+                    }
+                }
+            };
+            map.entry(candidate_name.clone()).or_insert(def);
+            res
+        }
         OptimizedExpr::Opt(inner) => {
             let name = candidate_name.clone();
             let inner_name =
@@ -209,82 +236,7 @@ pub fn generate_graph(rules: &[OptimizedRule]) -> Map<String, TokenStream> {
 
 pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
     let graph = generate_graph(rules);
-    let ident = |s: &String| -> Ident { format_ident!("r#{}", s) };
-    let pairs = graph.iter().map(|(name, rule)| {
-        let name = ident(name);
-        let f = fn_decl();
-        match rule.1 {
-            crate::graph::GraphNode::Sequence(inner) => {
-                let fields = inner.iter().map(|i| i);
-                quote! {
-                    pub struct #name(#(#fields),*);
-                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {
-                        #f {
-                            #(#init)*
-                            Ok(#(#inner),*)
-                        }
-                    }
-                }
-            }
-            crate::graph::GraphNode::Variant(inner) => {
-                let (names, vars): (Vec<_>, Vec<_>) = inner
-                    .iter()
-                    .enumerate()
-                    .map(|(i, n)| (format_ident!("var_{}", i), n))
-                    .unzip();
-                let init = names.iter().zip(vars.iter()).map(|(name, var)| {
-                    quote! {
-                        if let (input, res) = var::try_from(input, line_index) {
-                            return Ok((input, res));
-                        }
-                    }
-                });
-                quote! {
-                    pub enum #name {
-                        #( #names(#vars) ),*
-                    }
-                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {
-                        #f {
-                            #(#init)*
-                            panic!("All branches failed.");
-                        }
-                    }
-                }
-            }
-            crate::graph::GraphNode::Single(inner) => {
-                quote! {
-                    pub struct #name(#inner);
-                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {
-                        #f {
-                            todo!()
-                        }
-                    }
-                }
-            }
-            crate::graph::GraphNode::Option(inner) => {
-                let option = option_type();
-                quote! {
-                    pub struct #name(#option::<#inner>);
-                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {
-                        #f {
-                            todo!()
-                        }
-                    }
-                }
-            }
-            crate::graph::GraphNode::Repeated(inner) => {
-                let vec = vec_type();
-                quote! {
-                    pub struct #name(#vec::<#inner>);
-                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {
-                        #f {
-                            todo!()
-                        }
-                    }
-                }
-            }
-        }
-    });
+    let pairs = graph.iter().map(|(_name, rule)| rule);
     // let names = rules.iter().map(|rule| format_ident!("r#{}", rule.name));
     let res = quote! {
         pub mod pairs {
