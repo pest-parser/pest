@@ -97,12 +97,27 @@ pub(crate) fn generate<const TYPED: bool>(
     let typed_parser_impl = if TYPED {
         quote! {
             impl #impl_generics ::pest::TypedParser<Rule> for #name #ty_generics #where_clause {
-                fn parse_typed<'i, N : ::pest::iterators::TypedNode>(
+                fn parse<'i, N : ::pest::iterators::TypedNode<'i, Rule>>(
                     input: &'i str
                 ) -> #result<
                     N,
                     ::pest::error::Error<Rule>
                 > {
+                    mod rules {
+                        #![allow(clippy::upper_case_acronyms)]
+                        pub mod hidden {
+                            use super::super::Rule;
+                            #skip
+                        }
+
+                        pub mod visible {
+                            use super::super::Rule;
+                            #( #rules )*
+                        }
+
+                        pub use self::visible::*;
+                    }
+
                     todo!()
                 }
             }
@@ -241,24 +256,20 @@ fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bo
     });
 
     let grammar_doc = &doc_comment.grammar_doc;
-    if uses_eoi {
+    let eoi_def = if uses_eoi {
         quote! {
-            #[doc = #grammar_doc]
-            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
-            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-            pub enum Rule {
-                EOI,
-                #( #rules ),*
-            }
+            EOI,
         }
     } else {
-        quote! {
-            #[doc = #grammar_doc]
-            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
-            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-            pub enum Rule {
-                #( #rules ),*
-            }
+        quote! {}
+    };
+    quote! {
+        #[doc = #grammar_doc]
+        #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+        pub enum Rule {
+            #eoi_def
+            #( #rules ),*
         }
     }
 }
@@ -273,7 +284,7 @@ fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
                 let fields = inner.iter().map(|i| i);
                 quote! {
                     pub struct #name(#(#fields),*);
-                    impl ::pest::iterators::TypedNode for #name {}
+                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {}
                 }
             }
             crate::graph::GraphNode::Variant(inner) => {
@@ -286,27 +297,27 @@ fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
                     pub enum #name {
                         #( #names(#vars) ),*
                     }
-                    impl ::pest::iterators::TypedNode for #name {}
+                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {}
                 }
             }
             crate::graph::GraphNode::Single(inner) => {
                 quote! {
                     pub struct #name(#inner);
-                    impl ::pest::iterators::TypedNode for #name {}
+                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {}
                 }
             }
             crate::graph::GraphNode::Option(inner) => {
                 let option = option_type();
                 quote! {
                     pub struct #name(#option::<#inner>);
-                    impl ::pest::iterators::TypedNode for #name {}
+                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {}
                 }
             }
             crate::graph::GraphNode::Repeated(inner) => {
                 let vec = vec_type();
                 quote! {
                     pub struct #name(#vec::<#inner>);
-                    impl ::pest::iterators::TypedNode for #name {}
+                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name {}
                 }
             }
         }
@@ -1210,7 +1221,7 @@ mod tests {
                             pub use self::visible::*;
                         }
 
-                        ::pest::state(input, |state| {
+                        ::pest::typed_state(input, |state| {
                             match rule {
                                 Rule::r#a => rules::r#a(state),
                                 Rule::r#if => rules::r#if(state)
