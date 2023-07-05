@@ -23,5 +23,5 @@ pub trait Parser<R: RuleType> {
 pub trait TypedParser<R: RuleType> {
     /// Parses a `&str` into a tree starting from T.
     #[allow(clippy::perf)]
-    fn parse<'i, T: TypedNode<'i, R>>(input: &'i str) -> Result<T, Error<R>>;
+    fn parse<'i, T: TypedNode<'i, R>>(input: &'i str) -> Result<(&'i str, T), Error<R>>;
 }

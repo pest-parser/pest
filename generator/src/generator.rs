@@ -101,7 +101,7 @@ pub(crate) fn generate<const TYPED: bool>(
                 fn parse<'i, N : ::pest::iterators::TypedNode<'i, Rule>>(
                     input: &'i str
                 ) -> #result<
-                    N,
+                    (&'i str, N),
                     ::pest::error::Error<Rule>
                 > {
                     mod rules {
@@ -119,7 +119,7 @@ pub(crate) fn generate<const TYPED: bool>(
                         pub use self::visible::*;
                     }
 
-                    N :: try_from (input, None)
+                    N :: try_new (input, None)
                 }
             }
         }
@@ -134,7 +134,6 @@ pub(crate) fn generate<const TYPED: bool>(
         #parser_impl
         #typed_parser_impl
     };
-    // eprintln!("{}", res);
     res
 }
 

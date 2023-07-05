@@ -24,7 +24,7 @@ where
     Self: Sized,
 {
     /// Create typed node from tokens
-    fn try_from(
+    fn try_new(
         input: &'i str,
         line_index: Option<Rc<LineIndex>>,
     ) -> Result<(&'i str, Self), Error<R>>;
