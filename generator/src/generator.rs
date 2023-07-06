@@ -271,12 +271,6 @@ fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bo
             #eoi_def
             #( #rules ),*
         }
-        impl ::pest::BuiltInRule<Rule> for Rule {
-            fn ANY() -> Rule { Rule::ANY }
-            fn SOI() -> Rule { Rule::SOI }
-            fn EOI() -> Rule { Rule::EOI }
-            fn NEWLINE() -> Rule { Rule::NEWLINE }
-        }
     }
 }
 

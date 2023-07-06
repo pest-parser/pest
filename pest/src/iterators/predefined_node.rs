@@ -20,20 +20,6 @@ use crate::{
 
 use super::TypedNode;
 
-/// Match any character
-pub struct ANY<'i> {
-    /// Pair span
-    pub span: Span<'i>,
-    /// Matched character
-    pub content: char,
-}
-impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
-    fn try_new(input: Position<'i>) -> Result<(Position<'i>, Self), Error<R>> {
-        let (input, span, content) = any(input)?;
-        Ok((input, Self { span, content }))
-    }
-}
-
 /// Match any character.
 #[inline]
 pub fn any<'i, R: RuleType>(
@@ -62,29 +48,13 @@ pub fn any<'i, R: RuleType>(
 }
 
 /// Match start of input.
-pub struct SOI<'i> {
-    _phantom: PhantomData<&'i str>,
-}
-impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
-    fn try_new(input: Position<'i>) -> Result<(Position<'i>, Self), Error<R>> {
-        let input = soi(input)?;
-        Ok((
-            input,
-            Self {
-                _phantom: PhantomData,
-            },
-        ))
-    }
-}
-
-/// Match start of input.
-pub fn soi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R>> {
+pub fn soi<'i, R: RuleType>(input: Position<'i>, soi: R) -> Result<Position<'i>, Error<R>> {
     if input.at_start() {
         Ok(input)
     } else {
         Err(Error::new_from_pos(
             ErrorVariant::ParsingError {
-                positives: vec![R::EOI()],
+                positives: vec![soi],
                 negatives: vec![],
             },
             input,
@@ -93,45 +63,24 @@ pub fn soi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R
 }
 
 /// Match end of input.
-pub struct EOI<'i> {
-    _phantom: PhantomData<&'i str>,
-}
-impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
-    fn try_new(input: Position<'i>) -> Result<(Position<'i>, Self), Error<R>> {
-        let input = eoi(input)?;
-        Ok((
-            input,
-            Self {
-                _phantom: PhantomData,
-            },
-        ))
-    }
-}
-
-/// Match end of input.
-pub fn eoi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R>> {
+pub fn eoi<'i, R: RuleType>(input: Position<'i>, eoi: R) -> Result<Position<'i>, Error<R>> {
     if input.at_end() {
         Ok(input)
     } else {
-        Err(Error::new_from_pos(var!(), input))
-    }
-}
-
-/// Match end of input.
-pub struct NEWLINE<'i> {
-    /// Pair span
-    pub span: Span<'i>,
-}
-impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
-    fn try_new(input: Position<'i>) -> Result<(Position<'i>, Self), Error<R>> {
-        let (input, span) = new_line(input)?;
-        Ok((input, Self { span }))
+        Err(Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![eoi],
+                negatives: vec![],
+            },
+            input,
+        ))
     }
 }
 
 /// match a single end of line.
 pub fn new_line<'i, R: RuleType>(
     mut input: Position<'i>,
+    new_line: R,
 ) -> Result<(Position<'i>, Span<'i>), Error<R>> {
     let start = input.clone();
     if input.match_string("\n") {
@@ -144,7 +93,13 @@ pub fn new_line<'i, R: RuleType>(
         let span = start.span(&input);
         Ok((input, span))
     } else {
-        Err(Error::new_from_pos(var!(), input))
+        Err(Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![new_line],
+                negatives: vec![],
+            },
+            input,
+        ))
     }
 }
 
@@ -152,13 +107,20 @@ pub fn new_line<'i, R: RuleType>(
 pub fn string<'i, R: RuleType>(
     mut input: Position<'i>,
     content: &'static str,
+    rule: R,
 ) -> Result<(Position<'i>, Span<'i>), Error<R>> {
     let start = input.clone();
     if input.match_string(content) {
         let span = start.span(&input);
         Ok((input, span))
     } else {
-        Err(Error::<R>::new_from_pos(var!(), input))
+        Err(Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![rule],
+                negatives: vec![],
+            },
+            input,
+        ))
     }
 }
 
@@ -168,6 +130,7 @@ pub fn range<'i, R: RuleType>(
     mut input: Position<'i>,
     min: char,
     max: char,
+    rule: R,
 ) -> Result<(Position<'i>, Span<'i>, char), Error<R>> {
     let start = input.clone();
     match input.match_range(min..max) {
@@ -176,20 +139,12 @@ pub fn range<'i, R: RuleType>(
             let content = span.as_str().chars().next().unwrap();
             Ok((input, span, content))
         }
-        false => Err(Error::<R>::new_from_pos(var!(), input)),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::Position;
-    #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-    enum Rule {}
-
-    #[test]
-    fn string() {
-        let input = "x";
-        let input = Position::from_start(input);
-        let _res = super::string::<Rule>(input, "x").unwrap();
+        false => Err(Error::<R>::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![rule],
+                negatives: vec![],
+            },
+            input,
+        )),
     }
 }
