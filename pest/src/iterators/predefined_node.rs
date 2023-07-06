@@ -254,6 +254,7 @@ pub fn negative<'i, R: RuleType, N: TypedNode<'i, R>>(
 }
 
 /// Match any character
+#[derive(Debug)]
 pub struct ANY<'i> {
     /// Pair span
     pub span: Span<'i>,
@@ -272,6 +273,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
 }
 
 /// Match start of input
+#[derive(Debug)]
 pub struct SOI<'i> {
     _phantom: core::marker::PhantomData<&'i str>,
 }
@@ -292,6 +294,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
 }
 
 /// Match end of input
+#[derive(Debug)]
 pub struct EOI<'i> {
     _phantom: core::marker::PhantomData<&'i str>,
 }
@@ -312,6 +315,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
 }
 
 /// Match a new line
+#[derive(Debug)]
 pub struct NEWLINE<'i> {
     /// Pair span
     pub span: Span<'i>,
@@ -329,6 +333,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
 
 /// Peek all in stack
 #[allow(non_camel_case_types)]
+#[derive(Debug)]
 pub struct PEEK_ALL<'i> {
     /// Pair span
     pub span: Span<'i>,

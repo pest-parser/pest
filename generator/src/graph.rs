@@ -35,7 +35,9 @@ fn fn_decl() -> TokenStream {
 
 fn attributes() -> TokenStream {
     // quote! {#[allow(non_snake_case)]}
-    quote! {}
+    quote! {
+        #[derive(Debug)]
+    }
 }
 
 fn process_single(
