@@ -88,15 +88,17 @@ fn generate_graph_node(
     };
     // Still some compile-time information not taken
     match expr {
-        OptimizedExpr::Str(content) => copy_if_forced(
-            map,
-            candidate_name,
-            s.clone(),
-            quote! {
-                let (input, span) = ::pest::iterators::predefined_node::string::<super::Rule>(input, #content)?;
-                Ok((input, Self { span, content: span.as_str() }))
-            },
-        ),
+        OptimizedExpr::Str(content) => {
+            copy_if_forced(
+                map,
+                candidate_name,
+                s.clone(),
+                quote! {
+                    let (input, span) = ::pest::iterators::predefined_node::string::<super::Rule>(input, #content)?;
+                    Ok((input, Self { span, content: span.as_str() }))
+                },
+            )
+        }
         OptimizedExpr::Insens(_) => {
             copy_if_forced(map, candidate_name, s.clone(), quote! {todo!()})
         }
@@ -297,7 +299,7 @@ pub fn generate_builtin() -> TokenStream {
         }
         impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for ANY<'i> {
             fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                let (input, span, content) = ::pest::iterators::predefined_node::any(input, super::Rule::ANY, super::Rule::EOI)?;
+                let (input, span, content) = ::pest::iterators::predefined_node::any(input)?;
                 Ok((input, Self { span, content }))
             }
         }
@@ -307,7 +309,7 @@ pub fn generate_builtin() -> TokenStream {
         }
         impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for SOI<'i> {
             fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                let input = ::pest::iterators::predefined_node::soi(input, super::Rule::SOI)?;
+                let input = ::pest::iterators::predefined_node::soi(input)?;
                 Ok((
                     input,
                     Self {
@@ -322,7 +324,7 @@ pub fn generate_builtin() -> TokenStream {
         }
         impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for EOI<'i> {
             fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                let input = ::pest::iterators::predefined_node::eoi(input, super::Rule::EOI)?;
+                let input = ::pest::iterators::predefined_node::eoi(input)?;
                 Ok((
                     input,
                     Self {
@@ -337,7 +339,7 @@ pub fn generate_builtin() -> TokenStream {
         }
         impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for NEWLINE<'i> {
             fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                let (input, span) = ::pest::iterators::predefined_node::new_line(input, super::Rule::NEWLINE)?;
+                let (input, span) = ::pest::iterators::predefined_node::new_line(input)?;
                 Ok((input, Self { span }))
             }
         }

@@ -20,8 +20,6 @@ use crate::{
 #[inline]
 pub fn any<'i, R: RuleType>(
     mut input: Position<'i>,
-    any: R,
-    eoi: R,
 ) -> Result<(Position<'i>, Span<'i>, char), Error<R>> {
     let original_input = input.clone();
     let mut c: char = ' ';
@@ -35,8 +33,8 @@ pub fn any<'i, R: RuleType>(
         }
         false => Err(Error::new_from_pos(
             ErrorVariant::ParsingError {
-                positives: vec![any],
-                negatives: vec![eoi],
+                positives: vec![],
+                negatives: vec![],
             },
             input,
         )),
@@ -44,13 +42,13 @@ pub fn any<'i, R: RuleType>(
 }
 
 /// Match start of input.
-pub fn soi<'i, R: RuleType>(input: Position<'i>, soi: R) -> Result<Position<'i>, Error<R>> {
+pub fn soi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R>> {
     if input.at_start() {
         Ok(input)
     } else {
         Err(Error::new_from_pos(
             ErrorVariant::ParsingError {
-                positives: vec![soi],
+                positives: vec![],
                 negatives: vec![],
             },
             input,
@@ -59,13 +57,13 @@ pub fn soi<'i, R: RuleType>(input: Position<'i>, soi: R) -> Result<Position<'i>,
 }
 
 /// Match end of input.
-pub fn eoi<'i, R: RuleType>(input: Position<'i>, eoi: R) -> Result<Position<'i>, Error<R>> {
+pub fn eoi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R>> {
     if input.at_end() {
         Ok(input)
     } else {
         Err(Error::new_from_pos(
             ErrorVariant::ParsingError {
-                positives: vec![eoi],
+                positives: vec![],
                 negatives: vec![],
             },
             input,
@@ -76,7 +74,6 @@ pub fn eoi<'i, R: RuleType>(input: Position<'i>, eoi: R) -> Result<Position<'i>,
 /// match a single end of line.
 pub fn new_line<'i, R: RuleType>(
     mut input: Position<'i>,
-    new_line: R,
 ) -> Result<(Position<'i>, Span<'i>), Error<R>> {
     let start = input.clone();
     if input.match_string("\n") {
@@ -91,7 +88,7 @@ pub fn new_line<'i, R: RuleType>(
     } else {
         Err(Error::new_from_pos(
             ErrorVariant::ParsingError {
-                positives: vec![new_line],
+                positives: vec![],
                 negatives: vec![],
             },
             input,
@@ -103,7 +100,6 @@ pub fn new_line<'i, R: RuleType>(
 pub fn string<'i, R: RuleType>(
     mut input: Position<'i>,
     content: &'static str,
-    rule: R,
 ) -> Result<(Position<'i>, Span<'i>), Error<R>> {
     let start = input.clone();
     if input.match_string(content) {
@@ -112,7 +108,7 @@ pub fn string<'i, R: RuleType>(
     } else {
         Err(Error::new_from_pos(
             ErrorVariant::ParsingError {
-                positives: vec![rule],
+                positives: vec![],
                 negatives: vec![],
             },
             input,
@@ -126,7 +122,6 @@ pub fn range<'i, R: RuleType>(
     mut input: Position<'i>,
     min: char,
     max: char,
-    rule: R,
 ) -> Result<(Position<'i>, Span<'i>, char), Error<R>> {
     let start = input.clone();
     match input.match_range(min..max) {
@@ -137,7 +132,7 @@ pub fn range<'i, R: RuleType>(
         }
         false => Err(Error::<R>::new_from_pos(
             ErrorVariant::ParsingError {
-                positives: vec![rule],
+                positives: vec![],
                 negatives: vec![],
             },
             input,
