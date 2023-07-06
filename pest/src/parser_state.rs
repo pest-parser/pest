@@ -1266,7 +1266,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 }
 
-fn constrain_idxs(start: i32, end: Option<i32>, len: usize) -> Option<Range<usize>> {
+pub(crate) fn constrain_idxs(start: i32, end: Option<i32>, len: usize) -> Option<Range<usize>> {
     let start_norm = normalize_index(start, len)?;
     let end_norm = end.map_or(Some(len), |e| normalize_index(e, len))?;
     Some(start_norm..end_norm)

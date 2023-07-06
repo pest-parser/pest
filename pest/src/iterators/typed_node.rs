@@ -7,8 +7,9 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use crate::{error::Error, Position, RuleType};
+use crate::{error::Error, Position, RuleType, Span, Stack};
 pub use alloc::rc::Rc;
+use alloc::vec::Vec;
 
 /// Wrapper for std::option::Option
 #[cfg(feature = "std")]
@@ -23,7 +24,10 @@ where
     Self: Sized,
 {
     /// Create typed node
-    fn try_new(input: Position<'i>) -> Result<(Position<'i>, Self), Error<R>>;
+    fn try_new(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>>;
 }
 
 /// Node of concrete syntax tree.
@@ -38,7 +42,7 @@ where
 impl<'i, R: RuleType, T: TypedNode<'i, R>> ParsableTypedNode<'i, R> for T {
     #[inline]
     fn parse(input: &'i str) -> Result<Self, Error<R>> {
-        let (_pos, res) = T::try_new(Position::from_start(input))?;
+        let (_pos, res) = T::try_new(Position::from_start(input), &mut Stack::new())?;
         Ok(res)
     }
 }

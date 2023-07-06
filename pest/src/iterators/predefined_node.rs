@@ -9,12 +9,15 @@
 
 //! Predefined tree nodes
 
-use alloc::vec;
+use alloc::{format, vec};
 
 use crate::{
     error::{Error, ErrorVariant},
-    Position, RuleType, Span,
+    parser_state::constrain_idxs,
+    Position, RuleType, Span, Stack,
 };
+
+use super::TypedNode;
 
 /// Match any character.
 #[inline]
@@ -116,6 +119,44 @@ pub fn string<'i, R: RuleType>(
     }
 }
 
+/// Match given string.
+pub fn insensitive<'i, R: RuleType>(
+    mut input: Position<'i>,
+    content: &'static str,
+) -> Result<(Position<'i>, Span<'i>), Error<R>> {
+    let start = input.clone();
+    if input.match_insensitive(content) {
+        let span = start.span(&input);
+        Ok((input, span))
+    } else {
+        Err(Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![],
+                negatives: vec![],
+            },
+            input,
+        ))
+    }
+}
+
+/// Skips until one of the given `strings`.
+pub fn skip_until<'i, R: RuleType>(
+    mut input: Position<'i>,
+    strings: &[&str],
+) -> Result<(Position<'i>, Span<'i>), Error<R>> {
+    let start = input.clone();
+    match input.skip_until(strings) {
+        true => Ok((input, start.span(&input))),
+        false => Err(Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![],
+                negatives: vec![],
+            },
+            start,
+        )),
+    }
+}
+
 /// Match a character in the range `[min, max]`.
 /// Inclusively both below and above.
 pub fn range<'i, R: RuleType>(
@@ -137,5 +178,77 @@ pub fn range<'i, R: RuleType>(
             },
             input,
         )),
+    }
+}
+
+/// Match a part of the stack.
+pub fn peek_stack_slice<'i, R: RuleType>(
+    input: Position<'i>,
+    start: i32,
+    end: Option<i32>,
+    stack: &mut Stack<Span<'i>>,
+) -> Result<(Position<'i>, Span<'i>), Error<R>> {
+    let range = match constrain_idxs(start, end, stack.len()) {
+        Some(range) => range,
+        None => {
+            return Err(Error::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: format!(
+                        "Stack slice [{}, {:?}] out of bound [0, {}].",
+                        start,
+                        end,
+                        stack.len()
+                    ),
+                },
+                input,
+            ))
+        }
+    };
+    // return true if an empty sequence is requested
+    if range.end <= range.start {
+        return Ok((input, input.span(&input)));
+    }
+
+    let mut matching_pos = input.clone();
+    let result = {
+        let mut iter_b2t = stack[range].iter();
+        let matcher = |span: &Span<'_>| matching_pos.match_string(span.as_str());
+        iter_b2t.all(matcher)
+    };
+    if result {
+        Ok((matching_pos, input.span(&matching_pos)))
+    } else {
+        Err(Error::new_from_pos(
+            ErrorVariant::CustomError {
+                message: format!("Does not match stack slice."),
+            },
+            input,
+        ))
+    }
+}
+
+/// Positive predicate
+pub fn positive<'i, R: RuleType, N: TypedNode<'i, R>>(
+    input: Position<'i>,
+    stack: &mut Stack<Span<'i>>,
+) -> Result<(), Error<R>> {
+    let (_input, _res) = N::try_new(input, stack)?;
+    Ok(())
+}
+
+/// Negative predicate
+pub fn negative<'i, R: RuleType, N: TypedNode<'i, R>>(
+    input: Position<'i>,
+    stack: &mut Stack<Span<'i>>,
+) -> Result<(), Error<R>> {
+    match N::try_new(input, stack) {
+        Ok(_) => Err(Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![],
+                negatives: vec![],
+            },
+            input,
+        )),
+        Err(_) => Ok(()),
     }
 }
