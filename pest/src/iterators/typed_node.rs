@@ -7,8 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use super::line_index::LineIndex;
-use crate::{error::Error, RuleType};
+use crate::{error::Error, Position, RuleType};
 pub use alloc::rc::Rc;
 
 /// Wrapper for std::option::Option
@@ -23,9 +22,25 @@ pub trait TypedNode<'i, R: RuleType>
 where
     Self: Sized,
 {
-    /// Create typed node from tokens
-    fn try_new(
-        input: &'i str,
-        line_index: Option<Rc<LineIndex>>,
-    ) -> Result<(&'i str, Self), Error<R>>;
+    /// Create typed node
+    fn try_new(input: Position<'i>) -> Result<(Position<'i>, Self), Error<R>>;
+    /// Rule
+    const rule: R;
+}
+
+/// Node of concrete syntax tree.
+pub trait ParsableTypedNode<'i, R: RuleType>
+where
+    Self: Sized,
+{
+    /// Parse into typed node
+    fn parse(input: &'i str) -> Result<Self, Error<R>>;
+}
+
+impl<'i, R: RuleType, T: TypedNode<'i, R>> ParsableTypedNode<'i, R> for T {
+    #[inline]
+    fn parse(input: &'i str) -> Result<Self, Error<R>> {
+        let (_pos, res) = T::try_new(Position::from_start(input))?;
+        Ok(res)
+    }
 }

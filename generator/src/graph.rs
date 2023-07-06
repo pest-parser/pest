@@ -25,7 +25,9 @@ fn quote_ident(s: &str) -> TokenStream {
 fn fn_decl() -> TokenStream {
     quote! {
         #[inline]
-        fn try_new(input: &'i str, line_index: ::pest::iterators::Option<::pest::iterators::Rc<::pest::iterators::line_index::LineIndex>>) -> Result<(&'i ::std::primitive::str, Self), ::pest::error::Error<R>>
+        fn try_new(
+            input: ::pest::Position<'i>,
+        ) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>>
     }
 }
 
@@ -62,66 +64,84 @@ fn generate_graph_node(
     let option = option_type();
     let s = quote!(&'i ::std::primitive::str);
     let attr = quote! {}; // quote! {#[allow(non_snake_case)]};
-    let mut copy_if_forced =
-        |candidate_name: String, type_name: TokenStream, fimpl: TokenStream| -> TokenStream {
-            let name = ident(&candidate_name);
-            let inner = type_name.clone();
-            let s = s.clone();
-            let def = quote! {
-                #attr
-                pub struct #name<'i> {
-                    pub span: #s,
-                    pub content: #inner,
-                }
-                impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name<'i> {
-                    #f {
-                        #fimpl
-                    }
-                }
-            };
-            map.insert(candidate_name.clone(), def);
-            quote_ident(&candidate_name)
+    let mut _copy_if_forced = |map: &mut Map<String, TokenStream>,
+                               candidate_name: String,
+                               type_name: TokenStream|
+     -> TokenStream {
+        let name = ident(&candidate_name);
+        let inner = type_name.clone();
+        let def = quote! {
+            pub type #name<'i> = #inner;
         };
+        map.insert(candidate_name.clone(), def);
+        quote_ident(&candidate_name)
+    };
+    let copy_if_forced = |map: &mut Map<String, TokenStream>,
+                          candidate_name: String,
+                          type_name: TokenStream,
+                          fimpl: TokenStream|
+     -> TokenStream {
+        let name = ident(&candidate_name);
+        let inner = type_name.clone();
+        let def = quote! {
+            #attr
+            pub struct #name<'i, super::Rule> {
+                pub span: ::pest::Span<'i>,
+                pub content: #inner,
+            }
+            impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i, R> {
+                #f {
+                    #fimpl
+                }
+            }
+        };
+        map.insert(candidate_name.clone(), def);
+        quote_ident(&candidate_name)
+    };
     // Still some compile-time information not taken
     match expr {
         OptimizedExpr::Str(content) => copy_if_forced(
+            map,
             candidate_name,
             s.clone(),
             quote! {
-                if input.starts_with(#content) {
-                    let (matched, remained) = input.split_at(#content.len());
-                    return Ok((remained, Self{ span: matched, content: matched }));
-                }
-                todo!();
+                let (input, span) = ::pest::iterators::predefined_node::string::<super::Rule>(input, #content)?;
+                Ok((input, Self { span, content: span.as_str() }))
             },
         ),
-        OptimizedExpr::Insens(_) => copy_if_forced(candidate_name, s.clone(), quote! {todo!()}),
+        OptimizedExpr::Insens(_) => {
+            copy_if_forced(map, candidate_name, s.clone(), quote! {todo!()})
+        }
         OptimizedExpr::PeekSlice(_, _) | OptimizedExpr::Push(_) | OptimizedExpr::Skip(_) => {
-            copy_if_forced(candidate_name, s.clone(), quote!(todo!()))
+            copy_if_forced(map, candidate_name, s.clone(), quote!(todo!()))
         }
         OptimizedExpr::Range(start, end) => {
             let start = start.chars().next().unwrap();
             let end = end.chars().next().unwrap();
-            copy_if_forced(
+            _copy_if_forced(
+                map,
                 candidate_name,
-                quote! {::std::primitive::char},
                 quote! {
-                    if let Some(first) = input.chars().next() {
-                        if #start <= first && first <= #end {
-                            let (matched, remained) = input.split_at(first.len());
-                            return Ok((remained, Self { span: matched, content: matched }));
-                        }
-                    }
-                    todo!();
+                    ::pest::iterators::predefined_node::Range::<'i, super::Rule, #start, #end>
                 },
             )
         }
         OptimizedExpr::Ident(id) => {
             let name = quote_ident(id);
-            copy_if_forced(candidate_name, quote! {#name::<'i>}, quote!(todo!()))
+            copy_if_forced(
+                map,
+                candidate_name,
+                quote! {#name::<'i, super::Rule>},
+                quote! {
+                    let start = input.clone();
+                    let (input, content) = #name::<'i, super::Rule>::try_new(input)?;
+                    let span = input.span(&start);
+                    Ok((input, Self { span, content }))
+                },
+            )
         }
         OptimizedExpr::PosPred(_) | OptimizedExpr::NegPred(_) | OptimizedExpr::RestoreOnErr(_) => {
-            copy_if_forced(candidate_name, quote! {()}, quote!(todo!()))
+            copy_if_forced(map, candidate_name, quote! {()}, quote!(todo!()))
         }
         OptimizedExpr::Seq(_lhs, _rhs) => {
             let (_nodes, names, res) = walk_tree!(Seq, Sequence);
@@ -132,21 +152,23 @@ fn generate_graph_node(
                 .map(|(i, name)| {
                     let field = format_ident!("r#field{}", i);
                     (
-                        quote! { let (input, #field) = #name::<'i>::try_new(input, line_index)?;  },
+                        quote! { let (input, #field) = #name::<'i, super::Rule>::try_new(input)?;  },
                         field,
                     )
                 })
                 .unzip();
             let def = quote! {
                 #attr
-                pub struct #name<'i>{
-                    // span: &'i [char],
+                pub struct #name<'i, R: RuleType> {
+                    span: ::pest::Span::<'i>,
                     #(pub #fields: #names::<'i>),*
                 }
-                impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name<'i> {
+                impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
+                        let start = input.clone();
                         #(#init)*
-                        Ok( Self { #(#fields),* } )
+                        let span = input.span(&start);
+                        Ok( (input, Self { span, #(#fields),* }) )
                     }
                 }
             };
@@ -164,17 +186,17 @@ fn generate_graph_node(
             let init = names.iter().enumerate().map(|(i, var)| {
                 let var_name = format_ident!("var_{}", i);
                 quote! {
-                    if let Ok((input, res)) = #var::<'i>::try_new(input, line_index) {
+                    if let Ok((input, res)) = #var::<'i, super::Rule>::try_new(input) {
                         return Ok((input, #name::#var_name(res)));
                     }
                 }
             });
             let def = quote! {
                 #attr
-                pub enum #name<'i> {
+                pub enum #name<'i, R: RuleType> {
                     #( #vars(#names::<'i>) ),*
                 }
-                impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name<'i> {
+                impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
                         #(#init)*
                         panic!("All branches failed.");
@@ -190,11 +212,11 @@ fn generate_graph_node(
             let def = quote! {
                 #attr
                 pub struct #name<'i>(#option::<#inner_name::<'i>>);
-                impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name<'i> {
+                impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
-                        match #inner_name::<'i>::try_new(input, line_index) {
-                            Ok((input, inner)) => Ok((input, Some(inner))),
-                            Err(_) => Ok((input, None))
+                        match #inner_name::<'i, super::Rule>::try_new(input) {
+                            Ok((input, inner)) => Ok((input, Self(Some(inner)))),
+                            Err(_) => Ok((input, Self(None)))
                         }
                     }
                 }
@@ -208,15 +230,15 @@ fn generate_graph_node(
             let def = quote! {
                 #attr
                 pub struct #name<'i>(#vec::<#inner_name::<'i>>);
-                impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name<'i> {
+                impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
-                        let vec = #vec::<#inner_name::<'i>>::new();
+                        let mut vec = #vec::<#inner_name::<'i, super::Rule>>::new();
                         let mut input = input;
-                        while let Ok(next, elem) = #inner_name::<'i>::try_new(input, line_index) {
+                        while let Ok((next, elem)) = #inner_name::<'i, super::Rule>::try_new(input) {
                             input = next;
                             vec.push(elem);
                         }
-                        Ok((input, vec))
+                        Ok((input, Self(vec)))
                     }
                 }
             };
@@ -244,9 +266,9 @@ pub fn generate_graph(rules: &[OptimizedRule]) -> Map<String, TokenStream> {
             RuleType::Atomic => {
                 let name = ident(&rule.name);
                 let def = quote!(
-                    struct #name<'i>(&'i ::std::primitive::str);
+                    pub struct #name<'i>(&'i ::std::primitive::str);
 
-                    impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for #name<'i> {
+                    impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
                         #f {
                             todo!()
                         }
@@ -265,13 +287,13 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
     // let names = rules.iter().map(|rule| format_ident!("r#{}", rule.name));
     let res = quote! {
         pub mod pairs {
-            pub type ANY<'_i> = char;
-            pub type SOI<'_i> = ();
-            pub type EOI<'_i> = ();
-            pub type NEWLINE<'_i> = ();
+            pub type ANY<'_i> = ::pest::iterators::predefined_node::ANY<'_i>;
+            pub type SOI<'_i> = ::pest::iterators::predefined_node::SOI<'_i>;
+            pub type EOI<'_i> = ::pest::iterators::predefined_node::EOI<'_i>;
+            pub type NEWLINE<'_i> = ::pest::iterators::predefined_node::NEWLINE<'_i>;
             #( #pairs )*
         }
     };
-    println!("{}", res);
+    // println!("{}", res);
     res
 }
