@@ -125,6 +125,25 @@ fn generate_graph_node(
     let option = option_type();
     let s = quote!(&'i ::std::primitive::str);
 
+    let spaces = if inner_spaces {
+        quote! {
+            let mut flag = false;
+            while flag {
+                flag = false;
+                while let Ok((remained, _)) = WHITESPACE::<'i>::try_new(input, stack) {
+                    input = remained;
+                    flag = true;
+                }
+                while let Ok((remained, _)) = COMMENT::<'i>::try_new(input, stack) {
+                    input = remained;
+                    flag = true;
+                }
+            }
+        }
+    } else {
+        quote! {}
+    };
+
     // Still some compile-time information not taken
     match expr {
         OptimizedExpr::Str(content) => process_single(
@@ -296,11 +315,21 @@ fn generate_graph_node(
                 .map(|(i, name)| {
                     let field = format_ident!("r#field{}", i);
                     (
-                        quote! { let (input, #field) = #name::<'i>::try_new(input, stack)?;  },
+                        quote! {
+                            let (remained, #field) = #name::<'i>::try_new(input, stack)?;
+                            input = remained;
+                        },
                         field,
                     )
                 })
                 .unzip();
+            let mut inits = Vec::<TokenStream>::new();
+            for (i, init) in init.into_iter().enumerate() {
+                if i != 0 {
+                    inits.push(spaces.clone());
+                }
+                inits.push(init);
+            }
             let def = quote! {
                 #attr
                 pub struct #name<'i> {
@@ -310,7 +339,8 @@ fn generate_graph_node(
                 impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
                         let start = input.clone();
-                        #(#init)*
+                        let mut input = input;
+                        #(#inits)*
                         let span = start.span(&input);
                         Ok( (input, Self { span, #(#fields),* }) )
                     }
@@ -343,7 +373,11 @@ fn generate_graph_node(
                 impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
                         #(#init)*
-                        panic!("All branches failed.");
+                        return Err(::pest::error::Error::new_from_pos(
+                            ::pest::error::ErrorVariant::CustomError {
+                                message: format!("All choices failed.")
+                            }, input
+                        ))
                     }
                 }
             };
@@ -385,6 +419,28 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
+            let fn_def = if inner_spaces {
+                quote! {
+                    let mut i = 0;
+                    loop {
+                        #spaces
+                        if let Ok((next, elem)) = #inner_name::<'i>::try_new(input, stack) {
+                            input = next;
+                            vec.push(elem);
+                        } else {
+                            break;
+                        }
+                        i += 1;
+                    }
+                }
+            } else {
+                quote! {
+                    while let Ok((next, elem)) = #inner_name::<'i>::try_new(input, stack) {
+                        input = next;
+                        vec.push(elem);
+                    }
+                }
+            };
             let def = quote! {
                 #attr
                 pub struct #name<'i>(#vec::<#inner_name::<'i>>);
@@ -392,10 +448,7 @@ fn generate_graph_node(
                     #f {
                         let mut vec = #vec::<#inner_name::<'i>>::new();
                         let mut input = input;
-                        while let Ok((next, elem)) = #inner_name::<'i>::try_new(input, stack) {
-                            input = next;
-                            vec.push(elem);
-                        }
+                        #fn_def
                         Ok((input, Self(vec)))
                     }
                 }
@@ -453,55 +506,6 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
 
 pub fn generate_builtin() -> TokenStream {
     quote! {
-        pub struct ANY<'i> {
-            pub span: ::pest::Span<'i>,
-            pub content: char,
-        }
-        impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for ANY<'i> {
-            fn try_new(input: ::pest::Position<'i>, stack: &mut ::pest::Stack<::pest::Span<'i>>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                let (input, span, content) = ::pest::iterators::predefined_node::any(input)?;
-                Ok((input, Self { span, content }))
-            }
-        }
-
-        pub struct SOI<'i> {
-            _phantom: core::marker::PhantomData<&'i str>,
-        }
-        impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for SOI<'i> {
-            fn try_new(input: ::pest::Position<'i>, stack: &mut ::pest::Stack<::pest::Span<'i>>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                let input = ::pest::iterators::predefined_node::soi(input)?;
-                Ok((
-                    input,
-                    Self {
-                        _phantom: core::marker::PhantomData,
-                    },
-                ))
-            }
-        }
-
-        pub struct EOI<'i> {
-            _phantom: core::marker::PhantomData<&'i str>,
-        }
-        impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for EOI<'i> {
-            fn try_new(input: ::pest::Position<'i>, stack: &mut ::pest::Stack<::pest::Span<'i>>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                let input = ::pest::iterators::predefined_node::eoi(input)?;
-                Ok((
-                    input,
-                    Self {
-                        _phantom: core::marker::PhantomData,
-                    },
-                ))
-            }
-        }
-
-        pub struct NEWLINE<'i> {
-            pub span: ::pest::Span<'i>,
-        }
-        impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for NEWLINE<'i> {
-            fn try_new(input: ::pest::Position<'i>, stack: &mut ::pest::Stack<::pest::Span<'i>>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                let (input, span) = ::pest::iterators::predefined_node::new_line(input)?;
-                Ok((input, Self { span }))
-            }
-        }
+        use ::pest::iterators::predefined_node::{ANY, SOI, EOI, NEWLINE, PEEK_ALL};
     }
 }

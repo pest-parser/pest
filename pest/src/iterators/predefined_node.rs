@@ -252,3 +252,94 @@ pub fn negative<'i, R: RuleType, N: TypedNode<'i, R>>(
         Err(_) => Ok(()),
     }
 }
+
+/// Match any character
+pub struct ANY<'i> {
+    /// Pair span
+    pub span: Span<'i>,
+    /// Matched character
+    pub content: char,
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
+    #[inline]
+    fn try_new(
+        input: Position<'i>,
+        _stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let (input, span, content) = any(input)?;
+        Ok((input, Self { span, content }))
+    }
+}
+
+/// Match start of input
+pub struct SOI<'i> {
+    _phantom: core::marker::PhantomData<&'i str>,
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
+    #[inline]
+    fn try_new(
+        input: Position<'i>,
+        _stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let input = soi(input)?;
+        Ok((
+            input,
+            Self {
+                _phantom: core::marker::PhantomData,
+            },
+        ))
+    }
+}
+
+/// Match end of input
+pub struct EOI<'i> {
+    _phantom: core::marker::PhantomData<&'i str>,
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
+    #[inline]
+    fn try_new(
+        input: Position<'i>,
+        _stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let input = eoi(input)?;
+        Ok((
+            input,
+            Self {
+                _phantom: core::marker::PhantomData,
+            },
+        ))
+    }
+}
+
+/// Match a new line
+pub struct NEWLINE<'i> {
+    /// Pair span
+    pub span: Span<'i>,
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
+    #[inline]
+    fn try_new(
+        input: Position<'i>,
+        _stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let (input, span) = new_line(input)?;
+        Ok((input, Self { span }))
+    }
+}
+
+/// Peek all in stack
+#[allow(non_camel_case_types)]
+pub struct PEEK_ALL<'i> {
+    /// Pair span
+    pub span: Span<'i>,
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
+    #[inline]
+    fn try_new(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let (input, span) = peek_stack_slice(input, 0, None, stack)?;
+        Ok((input, Self { span }))
+    }
+}

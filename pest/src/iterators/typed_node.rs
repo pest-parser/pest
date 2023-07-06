@@ -9,7 +9,6 @@
 
 use crate::{error::Error, Position, RuleType, Span, Stack};
 pub use alloc::rc::Rc;
-use alloc::vec::Vec;
 
 /// Wrapper for std::option::Option
 #[cfg(feature = "std")]
