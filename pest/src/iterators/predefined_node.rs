@@ -9,16 +9,12 @@
 
 //! Predefined tree nodes
 
-use core::marker::PhantomData;
-
-use alloc::{format, vec};
+use alloc::vec;
 
 use crate::{
     error::{Error, ErrorVariant},
     Position, RuleType, Span,
 };
-
-use super::TypedNode;
 
 /// Match any character.
 #[inline]

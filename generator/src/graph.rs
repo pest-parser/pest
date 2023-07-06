@@ -276,63 +276,70 @@ pub fn generate_graph(rules: &[OptimizedRule]) -> Map<String, TokenStream> {
 pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
     let graph = generate_graph(rules);
     let pairs = graph.iter().map(|(_name, rule)| rule);
+    let builtin = generate_builtin();
     // let names = rules.iter().map(|rule| format_ident!("r#{}", rule.name));
     let res = quote! {
         pub mod pairs {
-            pub struct ANY<'i> {
-                pub span: ::pest::Span<'i>,
-                pub content: char,
-            }
-            impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for ANY<'i> {
-                fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                    let (input, span, content) = ::pest::iterators::predefined_node::any(input, super::Rule::ANY, super::Rule::EOI)?;
-                    Ok((input, Self { span, content }))
-                }
-            }
-
-            pub struct SOI<'i> {
-                _phantom: core::marker::PhantomData<&'i str>,
-            }
-            impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for SOI<'i> {
-                fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                    let input = ::pest::iterators::predefined_node::soi(input, super::Rule::SOI)?;
-                    Ok((
-                        input,
-                        Self {
-                            _phantom: core::marker::PhantomData,
-                        },
-                    ))
-                }
-            }
-
-            pub struct EOI<'i> {
-                _phantom: core::marker::PhantomData<&'i str>,
-            }
-            impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for EOI<'i> {
-                fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                    let input = ::pest::iterators::predefined_node::eoi(input, super::Rule::EOI)?;
-                    Ok((
-                        input,
-                        Self {
-                            _phantom: core::marker::PhantomData,
-                        },
-                    ))
-                }
-            }
-
-            pub struct NEWLINE<'i> {
-                pub span: ::pest::Span<'i>,
-            }
-            impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for NEWLINE<'i> {
-                fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
-                    let (input, span) = ::pest::iterators::predefined_node::new_line(input, super::Rule::NEWLINE)?;
-                    Ok((input, Self { span }))
-                }
-            }
+            #builtin
 
             #( #pairs )*
         }
     };
     println!("{}", res);
     res
+}
+
+pub fn generate_builtin() -> TokenStream {
+    quote! {
+        pub struct ANY<'i> {
+            pub span: ::pest::Span<'i>,
+            pub content: char,
+        }
+        impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for ANY<'i> {
+            fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
+                let (input, span, content) = ::pest::iterators::predefined_node::any(input, super::Rule::ANY, super::Rule::EOI)?;
+                Ok((input, Self { span, content }))
+            }
+        }
+
+        pub struct SOI<'i> {
+            _phantom: core::marker::PhantomData<&'i str>,
+        }
+        impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for SOI<'i> {
+            fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
+                let input = ::pest::iterators::predefined_node::soi(input, super::Rule::SOI)?;
+                Ok((
+                    input,
+                    Self {
+                        _phantom: core::marker::PhantomData,
+                    },
+                ))
+            }
+        }
+
+        pub struct EOI<'i> {
+            _phantom: core::marker::PhantomData<&'i str>,
+        }
+        impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for EOI<'i> {
+            fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
+                let input = ::pest::iterators::predefined_node::eoi(input, super::Rule::EOI)?;
+                Ok((
+                    input,
+                    Self {
+                        _phantom: core::marker::PhantomData,
+                    },
+                ))
+            }
+        }
+
+        pub struct NEWLINE<'i> {
+            pub span: ::pest::Span<'i>,
+        }
+        impl<'i, R: ::pest::RuleType> ::pest::iterators::TypedNode<'i, R> for NEWLINE<'i> {
+            fn try_new(input: ::pest::Position<'i>) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<R>> {
+                let (input, span) = ::pest::iterators::predefined_node::new_line(input, super::Rule::NEWLINE)?;
+                Ok((input, Self { span }))
+            }
+        }
+    }
 }
