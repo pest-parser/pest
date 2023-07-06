@@ -24,8 +24,6 @@ where
 {
     /// Create typed node
     fn try_new(input: Position<'i>) -> Result<(Position<'i>, Self), Error<R>>;
-    /// Rule
-    const rule: R;
 }
 
 /// Node of concrete syntax tree.

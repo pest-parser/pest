@@ -9,24 +9,37 @@
 
 //! Predefined tree nodes
 
-use alloc::format;
+use core::marker::PhantomData;
+
+use alloc::{format, vec};
 
 use crate::{
     error::{Error, ErrorVariant},
     Position, RuleType, Span,
 };
 
-macro_rules! var {
-    () => {
-        ErrorVariant::CustomError {
-            message: format!("{}", file!()),
-        }
-    };
+use super::TypedNode;
+
+/// Match any character
+pub struct ANY<'i> {
+    /// Pair span
+    pub span: Span<'i>,
+    /// Matched character
+    pub content: char,
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
+    fn try_new(input: Position<'i>) -> Result<(Position<'i>, Self), Error<R>> {
+        let (input, span, content) = any(input)?;
+        Ok((input, Self { span, content }))
+    }
 }
 
 /// Match any character.
+#[inline]
 pub fn any<'i, R: RuleType>(
     mut input: Position<'i>,
+    any: R,
+    eoi: R,
 ) -> Result<(Position<'i>, Span<'i>, char), Error<R>> {
     let original_input = input.clone();
     let mut c: char = ' ';
@@ -38,7 +51,29 @@ pub fn any<'i, R: RuleType>(
             let span = original_input.span(&input);
             Ok((input, span, c))
         }
-        false => Err(Error::new_from_pos(var!(), input)),
+        false => Err(Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![any],
+                negatives: vec![eoi],
+            },
+            input,
+        )),
+    }
+}
+
+/// Match start of input.
+pub struct SOI<'i> {
+    _phantom: PhantomData<&'i str>,
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
+    fn try_new(input: Position<'i>) -> Result<(Position<'i>, Self), Error<R>> {
+        let input = soi(input)?;
+        Ok((
+            input,
+            Self {
+                _phantom: PhantomData,
+            },
+        ))
     }
 }
 
@@ -47,7 +82,29 @@ pub fn soi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R
     if input.at_start() {
         Ok(input)
     } else {
-        Err(Error::new_from_pos(var!(), input))
+        Err(Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![R::EOI()],
+                negatives: vec![],
+            },
+            input,
+        ))
+    }
+}
+
+/// Match end of input.
+pub struct EOI<'i> {
+    _phantom: PhantomData<&'i str>,
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
+    fn try_new(input: Position<'i>) -> Result<(Position<'i>, Self), Error<R>> {
+        let input = eoi(input)?;
+        Ok((
+            input,
+            Self {
+                _phantom: PhantomData,
+            },
+        ))
     }
 }
 
@@ -57,6 +114,18 @@ pub fn eoi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R
         Ok(input)
     } else {
         Err(Error::new_from_pos(var!(), input))
+    }
+}
+
+/// Match end of input.
+pub struct NEWLINE<'i> {
+    /// Pair span
+    pub span: Span<'i>,
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
+    fn try_new(input: Position<'i>) -> Result<(Position<'i>, Self), Error<R>> {
+        let (input, span) = new_line(input)?;
+        Ok((input, Self { span }))
     }
 }
 
