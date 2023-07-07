@@ -10,6 +10,8 @@
 use crate::{error::Error, Position, RuleType, Span, Stack};
 pub use alloc::rc::Rc;
 
+use super::predefined_node::EOI;
+
 /// Wrapper for std::option::Option
 #[cfg(feature = "std")]
 pub type Option<T> = ::std::option::Option<T>;
@@ -34,14 +36,16 @@ pub trait ParsableTypedNode<'i, R: RuleType>
 where
     Self: Sized,
 {
-    /// Parse into typed node
+    /// Parse the whole input into given typed node.
     fn parse(input: &'i str) -> Result<Self, Error<R>>;
 }
 
 impl<'i, R: RuleType, T: TypedNode<'i, R>> ParsableTypedNode<'i, R> for T {
     #[inline]
     fn parse(input: &'i str) -> Result<Self, Error<R>> {
-        let (_pos, res) = T::try_new(Position::from_start(input), &mut Stack::new())?;
+        let mut stack = Stack::new();
+        let (input, res) = T::try_new(Position::from_start(input), &mut stack)?;
+        let (_, _) = EOI::try_new(input, &mut stack)?;
         Ok(res)
     }
 }

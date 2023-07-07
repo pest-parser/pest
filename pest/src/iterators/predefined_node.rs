@@ -9,7 +9,9 @@
 
 //! Predefined tree nodes
 
-use alloc::{format, vec};
+use core::any::type_name;
+
+use alloc::{borrow::ToOwned, format};
 
 use crate::{
     error::{Error, ErrorVariant},
@@ -35,9 +37,8 @@ pub fn any<'i, R: RuleType>(
             Ok((input, span, c))
         }
         false => Err(Error::new_from_pos(
-            ErrorVariant::ParsingError {
-                positives: vec![],
-                negatives: vec![],
+            ErrorVariant::CustomError {
+                message: "Expected any character, but got EOI.".to_owned(),
             },
             input,
         )),
@@ -50,9 +51,8 @@ pub fn soi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R
         Ok(input)
     } else {
         Err(Error::new_from_pos(
-            ErrorVariant::ParsingError {
-                positives: vec![],
-                negatives: vec![],
+            ErrorVariant::CustomError {
+                message: "Not at the start of input.".to_owned(),
             },
             input,
         ))
@@ -65,9 +65,8 @@ pub fn eoi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R
         Ok(input)
     } else {
         Err(Error::new_from_pos(
-            ErrorVariant::ParsingError {
-                positives: vec![],
-                negatives: vec![],
+            ErrorVariant::CustomError {
+                message: "Not at the end of input.".to_owned(),
             },
             input,
         ))
@@ -90,9 +89,8 @@ pub fn new_line<'i, R: RuleType>(
         Ok((input, span))
     } else {
         Err(Error::new_from_pos(
-            ErrorVariant::ParsingError {
-                positives: vec![],
-                negatives: vec![],
+            ErrorVariant::CustomError {
+                message: "Expected NEWLINE.".to_owned(),
             },
             input,
         ))
@@ -110,9 +108,8 @@ pub fn string<'i, R: RuleType>(
         Ok((input, span))
     } else {
         Err(Error::new_from_pos(
-            ErrorVariant::ParsingError {
-                positives: vec![],
-                negatives: vec![],
+            ErrorVariant::CustomError {
+                message: format!("Expected exact \"{}\"", content),
             },
             input,
         ))
@@ -130,9 +127,8 @@ pub fn insensitive<'i, R: RuleType>(
         Ok((input, span))
     } else {
         Err(Error::new_from_pos(
-            ErrorVariant::ParsingError {
-                positives: vec![],
-                negatives: vec![],
+            ErrorVariant::CustomError {
+                message: format!("Expected insensitive \"{}\"", content),
             },
             input,
         ))
@@ -148,9 +144,8 @@ pub fn skip_until<'i, R: RuleType>(
     match input.skip_until(strings) {
         true => Ok((input, start.span(&input))),
         false => Err(Error::new_from_pos(
-            ErrorVariant::ParsingError {
-                positives: vec![],
-                negatives: vec![],
+            ErrorVariant::CustomError {
+                message: format!("{:?} not found.", strings),
             },
             start,
         )),
@@ -172,9 +167,8 @@ pub fn range<'i, R: RuleType>(
             Ok((input, span, content))
         }
         false => Err(Error::<R>::new_from_pos(
-            ErrorVariant::ParsingError {
-                positives: vec![],
-                negatives: vec![],
+            ErrorVariant::CustomError {
+                message: format!("Character in range '{}'..'{}' not found.", min, max),
             },
             input,
         )),
@@ -243,9 +237,8 @@ pub fn negative<'i, R: RuleType, N: TypedNode<'i, R>>(
 ) -> Result<(), Error<R>> {
     match N::try_new(input, stack) {
         Ok(_) => Err(Error::new_from_pos(
-            ErrorVariant::ParsingError {
-                positives: vec![],
-                negatives: vec![],
+            ErrorVariant::CustomError {
+                message: format!("Unexpected {}.", type_name::<N>()),
             },
             input,
         )),
