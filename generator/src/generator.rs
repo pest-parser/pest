@@ -1127,7 +1127,7 @@ mod tests {
                             pub use self::visible::*;
                         }
 
-                        ::pest::typed_state(input, |state| {
+                        ::pest::state(input, |state| {
                             match rule {
                                 Rule::r#a => rules::r#a(state),
                                 Rule::r#if => rules::r#if(state)
