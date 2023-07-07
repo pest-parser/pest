@@ -389,7 +389,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Opt<'i, R, T> {
 }
 
 /// Repeatably match `T`
-#[derive(Debug)]
 pub struct Rep<
     'i,
     R: RuleType,
@@ -458,13 +457,28 @@ impl<
         ))
     }
 }
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        const INNER_SPACES: bool,
+        COMMENT: TypedNode<'i, R>,
+        WHITESPACE: TypedNode<'i, R>,
+    > Debug for Rep<'i, R, T, INNER_SPACES, COMMENT, WHITESPACE>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Rep")
+            .field("content", &self.content)
+            .finish()
+    }
+}
 
 /// Drops the top of the stack
-pub struct Drop<'i> {
+pub struct DROP<'i> {
     _phantom: PhantomData<&'i str>,
 }
 
-impl<'i, R: RuleType> TypedNode<'i, R> for Drop<'i> {
+impl<'i, R: RuleType> TypedNode<'i, R> for DROP<'i> {
     #[inline]
     fn try_new(
         input: Position<'i>,
@@ -486,7 +500,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for Drop<'i> {
         }
     }
 }
-impl<'i> Debug for Drop<'i> {
+impl<'i> Debug for DROP<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Drop").finish()
     }

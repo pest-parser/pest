@@ -54,7 +54,6 @@ fn process_single(
     silent: bool,
 ) -> TokenStream {
     let f = fn_decl();
-    let attr = attributes();
     let name = ident(&candidate_name);
     let inner = type_name.clone();
     let fn_def = if silent {
@@ -79,8 +78,28 @@ fn process_single(
         }
     };
     let vis = visibility(explicit);
+    let debug = if silent {
+        quote! {
+            impl<'i> ::core::fmt::Debug for #name<'i> {
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    f.debug_struct(#candidate_name)
+                        .finish()
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl<'i> ::core::fmt::Debug for #name<'i> {
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    f.debug_struct(#candidate_name)
+                        .field("span", &self.span)
+                        .field("content", &self.content)
+                        .finish()
+                }
+            }
+        }
+    };
     let def = quote! {
-        #attr
         #vis struct #name<'i> {
             #fields
         }
@@ -89,6 +108,7 @@ fn process_single(
                 #fn_def
             }
         }
+        #debug
     };
     map.insert(candidate_name.clone(), def);
     quote_ident(&candidate_name)
@@ -243,19 +263,23 @@ fn generate_graph_node(
             )
         }
         OptimizedExpr::Ident(id) => {
-            let name = quote_ident(id);
-            process_single(
-                map,
-                candidate_name,
-                quote! {#name::<'i>},
-                quote! {
-                    let start = input.clone();
-                    let (input, content) = #name::<'i>::try_new(input, stack)?;
-                    let span = start.span(&input);
-                },
-                explicit,
-                silent,
-            )
+            if explicit {
+                let name = quote_ident(id);
+                process_single(
+                    map,
+                    candidate_name,
+                    quote! {#name::<'i>},
+                    quote! {
+                        let start = input.clone();
+                        let (input, content) = #name::<'i>::try_new(input, stack)?;
+                        let span = start.span(&input);
+                    },
+                    explicit,
+                    silent,
+                )
+            } else {
+                quote_ident(id)
+            }
         }
         OptimizedExpr::PosPred(expr) => {
             let inner = generate_graph_node(
@@ -360,7 +384,7 @@ fn generate_graph_node(
             let def = quote! {
                 #attr
                 #vis struct #name<'i> {
-                    span: ::pest::Span::<'i>,
+                    pub span: ::pest::Span::<'i>,
                     #(pub #fields: #names::<'i>),*
                 }
                 impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
@@ -373,6 +397,7 @@ fn generate_graph_node(
                     }
                 }
             };
+            // println!("{}", def);
             map.entry(candidate_name.clone()).or_insert(def);
 
             res
@@ -474,6 +499,7 @@ fn generate_graph_node(
 }
 
 pub fn generate_graph(rules: &[OptimizedRule]) -> Map<String, TokenStream> {
+    // println!("{:#?}", rules);
     let mut res = Map::<String, TokenStream>::new();
     for rule in rules.iter() {
         match rule.ty {
@@ -558,6 +584,6 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
 
 pub fn generate_builtin() -> TokenStream {
     quote! {
-        use ::pest::iterators::predefined_node::{ANY, SOI, EOI, NEWLINE, PEEK_ALL};
+        use ::pest::iterators::predefined_node::{ANY, SOI, EOI, NEWLINE, PEEK_ALL, DROP};
     }
 }
