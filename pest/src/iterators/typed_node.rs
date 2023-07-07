@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use core::fmt::Debug;
+
 use crate::{error::Error, Position, RuleType, Span, Stack};
 pub use alloc::rc::Rc;
 
@@ -22,7 +24,7 @@ pub type Option<T> = ::core::option::Option<T>;
 /// Node of concrete syntax tree.
 pub trait TypedNode<'i, R: RuleType>
 where
-    Self: Sized,
+    Self: Sized + Debug,
 {
     /// Create typed node
     fn try_new(

@@ -32,11 +32,3 @@ pub fn option_type() -> TokenStream {
     #[cfg(not(feature = "std"))]
     quote! { ::core::option::Option }
 }
-
-pub fn vec_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::vec::Vec }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::alloc::vec::Vec }
-}

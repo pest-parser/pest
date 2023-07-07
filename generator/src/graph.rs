@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use crate::types::{option_type, vec_type};
+use crate::types::{option_type, result_type};
 use pest_meta::{ast::RuleType, optimizer::OptimizedRule};
 use proc_macro2::{Ident, TokenStream};
 pub use std::collections::BTreeMap as Map;
@@ -23,13 +23,14 @@ fn quote_ident(s: &str) -> TokenStream {
 }
 
 fn fn_decl() -> TokenStream {
+    let result = result_type();
     quote! {
         #[inline]
         #[allow(unused_variables)]
         fn try_new(
             input: ::pest::Position<'i>,
             stack: &mut ::pest::Stack<::pest::Span<'i>>
-        ) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>>
+        ) -> #result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>>
     }
 }
 
@@ -132,7 +133,6 @@ fn generate_graph_node(
     let vis = visibility(explicit);
     let f = fn_decl();
     let attr = attributes();
-    let vec = vec_type();
     let option = option_type();
     let s = quote!(&'i ::std::primitive::str);
 
@@ -406,9 +406,11 @@ fn generate_graph_node(
                     #f {
                         let mut errors = vec![];
                         #(#init)*
+                        let messages: Vec<_> = errors.into_iter().map(|e|format!("{}", e)).collect();
+                        let message = messages.join("\n");
                         return Err(::pest::error::Error::new_from_pos(
                             ::pest::error::ErrorVariant::CustomError {
-                                message: format!("Choices failed with errors: {:#?}", errors)
+                                message: format!("Choices failed with errors: {}", message)
                             }, input
                         ))
                     }
@@ -429,16 +431,7 @@ fn generate_graph_node(
                 silent,
             );
             let def = quote! {
-                #attr
-                #vis struct #name<'i>(#option::<#inner_name::<'i>>);
-                impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
-                    #f {
-                        match #inner_name::<'i>::try_new(input, stack) {
-                            Ok((input, inner)) => Ok((input, Self(Some(inner)))),
-                            Err(_) => Ok((input, Self(None)))
-                        }
-                    }
-                }
+                pub type #name<'i> = ::pest::iterators::predefined_node::Opt::<'i, super::Rule, #inner_name::<'i>>;
             };
             map.entry(candidate_name.clone()).or_insert(def);
             quote_ident(&candidate_name)
@@ -454,41 +447,15 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
-            let fn_def = if inner_spaces {
-                quote! {
-                    let mut i = 0;
-                    loop {
-                        if i != 0 {
-                            #spaces
-                        }
-                        if let Ok((next, elem)) = #inner_name::<'i>::try_new(input, stack) {
-                            input = next;
-                            vec.push(elem);
-                        } else {
-                            break;
-                        }
-                        i += 1;
-                    }
-                }
-            } else {
-                quote! {
-                    while let Ok((next, elem)) = #inner_name::<'i>::try_new(input, stack) {
-                        input = next;
-                        vec.push(elem);
-                    }
-                }
-            };
             let def = quote! {
-                #attr
-                #vis struct #name<'i>(#vec::<#inner_name::<'i>>);
-                impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
-                    #f {
-                        let mut vec = #vec::<#inner_name::<'i>>::new();
-                        let mut input = input;
-                        #fn_def
-                        Ok((input, Self(vec)))
-                    }
-                }
+                pub type #name<'i> = ::pest::iterators::predefined_node::Rep::<
+                    'i,
+                    super::Rule,
+                    #inner_name::<'i>,
+                    #inner_spaces,
+                    COMMENT::<'i>,
+                    WHITESPACE::<'i>
+                >;
             };
             map.entry(candidate_name.clone()).or_insert(def);
             quote_ident(&candidate_name)
@@ -572,6 +539,8 @@ pub fn generate_graph(rules: &[OptimizedRule]) -> Map<String, TokenStream> {
 }
 
 pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
+    // let names: Vec<_> = rules.iter().map(|rule| &rule.name).collect();
+    // eprintln!("{:#?}", names);
     let graph = generate_graph(rules);
     let pairs = graph.iter().map(|(_name, rule)| rule);
     let builtin = generate_builtin();

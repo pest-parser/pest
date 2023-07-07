@@ -9,14 +9,14 @@
 
 //! Predefined tree nodes
 
-use core::any::type_name;
+use core::{any::type_name, fmt, marker::PhantomData};
 
-use alloc::{borrow::ToOwned, format};
+use alloc::{borrow::ToOwned, format, vec::Vec};
 
 use crate::{
     error::{Error, ErrorVariant},
     parser_state::constrain_idxs,
-    Position, RuleType, Span, Stack,
+    Debug, Position, RuleType, Span, Stack,
 };
 
 use super::TypedNode;
@@ -266,9 +266,8 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
 }
 
 /// Match start of input
-#[derive(Debug)]
 pub struct SOI<'i> {
-    _phantom: core::marker::PhantomData<&'i str>,
+    _phantom: PhantomData<&'i str>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
     #[inline]
@@ -280,16 +279,20 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
         Ok((
             input,
             Self {
-                _phantom: core::marker::PhantomData,
+                _phantom: PhantomData,
             },
         ))
     }
 }
+impl<'i> Debug for SOI<'i> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SOI").finish()
+    }
+}
 
 /// Match end of input
-#[derive(Debug)]
 pub struct EOI<'i> {
-    _phantom: core::marker::PhantomData<&'i str>,
+    _phantom: PhantomData<&'i str>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
     #[inline]
@@ -301,9 +304,14 @@ impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
         Ok((
             input,
             Self {
-                _phantom: core::marker::PhantomData,
+                _phantom: PhantomData,
             },
         ))
+    }
+}
+impl<'i> Debug for EOI<'i> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("EOI").finish()
     }
 }
 
@@ -339,5 +347,147 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
     ) -> Result<(Position<'i>, Self), Error<R>> {
         let (input, span) = peek_stack_slice(input, 0, None, stack)?;
         Ok((input, Self { span }))
+    }
+}
+
+/// Optionally match `T`.
+pub struct Opt<'i, R: RuleType, T: TypedNode<'i, R>> {
+    /// Matched content.
+    pub content: Option<T>,
+    _phantom: PhantomData<&'i R>,
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Opt<'i, R, T> {
+    #[inline]
+    fn try_new(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        match T::try_new(input, stack) {
+            Ok((input, inner)) => Ok((
+                input,
+                Self {
+                    content: Some(inner),
+                    _phantom: PhantomData,
+                },
+            )),
+            Err(_) => Ok((
+                input,
+                Self {
+                    content: None,
+                    _phantom: PhantomData,
+                },
+            )),
+        }
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Opt<'i, R, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Opt")
+            .field("content", &self.content)
+            .finish()
+    }
+}
+
+/// Repeatably match `T`
+#[derive(Debug)]
+pub struct Rep<
+    'i,
+    R: RuleType,
+    T: TypedNode<'i, R>,
+    const INNER_SPACES: bool,
+    COMMENT: TypedNode<'i, R>,
+    WHITESPACE: TypedNode<'i, R>,
+> {
+    /// Matched pairs
+    pub content: Vec<T>,
+    _phantom: PhantomData<(&'i R, &'i COMMENT, &'i WHITESPACE)>,
+}
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        const INNER_SPACES: bool,
+        COMMENT: TypedNode<'i, R>,
+        WHITESPACE: TypedNode<'i, R>,
+    > TypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, COMMENT, WHITESPACE>
+{
+    #[inline]
+    fn try_new(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let mut vec = Vec::<T>::new();
+        let mut input = input;
+        if INNER_SPACES {
+            let mut i = 0;
+            loop {
+                if i != 0 {
+                    let mut flag = false;
+                    while flag {
+                        flag = false;
+                        while let Ok((remained, _)) = WHITESPACE::try_new(input, stack) {
+                            input = remained;
+                            flag = true;
+                        }
+                        while let Ok((remained, _)) = COMMENT::try_new(input, stack) {
+                            input = remained;
+                            flag = true;
+                        }
+                    }
+                }
+                if let Ok((next, elem)) = T::try_new(input, stack) {
+                    input = next;
+                    vec.push(elem);
+                } else {
+                    break;
+                }
+                i += 1;
+            }
+        } else {
+            while let Ok((next, elem)) = T::try_new(input, stack) {
+                input = next;
+                vec.push(elem);
+            }
+        }
+        Ok((
+            input,
+            Self {
+                content: vec,
+                _phantom: PhantomData,
+            },
+        ))
+    }
+}
+
+/// Drops the top of the stack
+pub struct Drop<'i> {
+    _phantom: PhantomData<&'i str>,
+}
+
+impl<'i, R: RuleType> TypedNode<'i, R> for Drop<'i> {
+    #[inline]
+    fn try_new(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        match stack.pop() {
+            Some(_) => Ok((
+                input,
+                Self {
+                    _phantom: PhantomData,
+                },
+            )),
+            None => Err(Error::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: "Nothing to drop.".to_owned(),
+                },
+                input,
+            )),
+        }
+    }
+}
+impl<'i> Debug for Drop<'i> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Drop").finish()
     }
 }
