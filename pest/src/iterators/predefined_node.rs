@@ -78,13 +78,13 @@ fn new_line<'i, R: RuleType>(
     mut input: Position<'i>,
 ) -> Result<(Position<'i>, Span<'i>), Error<R>> {
     let start = input.clone();
-    if input.match_string("\n") {
+    if input.match_string("\r\n") {
+        let span = start.span(&input);
+        Ok((input, span))
+    } else if input.match_string("\n") {
         let span = start.span(&input);
         Ok((input, span))
     } else if input.match_string("\r") {
-        let span = start.span(&input);
-        Ok((input, span))
-    } else if input.match_string("\r\n") {
         let span = start.span(&input);
         Ok((input, span))
     } else {
