@@ -112,6 +112,23 @@ fn process_single(
     }
 }
 
+/// Returns flle name
+fn process_single_alias(
+    map: &mut Map<String, TokenStream>,
+    candidate_name: String,
+    type_name: TokenStream,
+    explicit: bool,
+) -> TokenStream {
+    let name = ident(&candidate_name);
+    if explicit {
+        let def = quote! {pub type #name<'i> = #type_name;};
+        map.insert(candidate_name, def);
+        quote! {#name::<'i>}
+    } else {
+        type_name
+    }
+}
+
 /// Returns type name
 fn generate_graph_node(
     expr: &OptimizedExpr,
@@ -248,17 +265,13 @@ fn generate_graph_node(
         OptimizedExpr::Range(start, end) => {
             let start = start.chars().next().unwrap();
             let end = end.chars().next().unwrap();
-            process_single(
+            process_single_alias(
                 map,
                 candidate_name,
                 quote! {
-                    ::std::primitive::char
-                },
-                quote! {
-                    let (input, span, content) = ::pest::iterators::predefined_node::range::<super::Rule>(input, #start, #end)?;
+                    ::pest::iterators::predefined_node::Range::<'i, super::Rule, #start, #end>
                 },
                 explicit,
-                silent,
             )
         }
         OptimizedExpr::Ident(id) => {
@@ -291,16 +304,13 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
-            process_single(
+            process_single_alias(
                 map,
                 candidate_name,
-                quote! {()},
                 quote! {
-                    let content = ::pest::iterators::predefined_node::positive::<super::Rule, #inner>(input, stack)?;
-                    let span = input.span(&input);
+                    ::pest::iterators::predefined_node::Positive::<'i, super::Rule, #inner>
                 },
                 explicit,
-                silent,
             )
         }
         OptimizedExpr::NegPred(expr) => {
@@ -313,16 +323,13 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
-            process_single(
+            process_single_alias(
                 map,
                 candidate_name,
-                quote! {()},
                 quote! {
-                    let content = ::pest::iterators::predefined_node::negative::<super::Rule, #inner>(input, stack)?;
-                    let span = input.span(&input);
+                    ::pest::iterators::predefined_node::Negative::<'i, super::Rule, #inner>
                 },
                 explicit,
-                silent,
             )
         }
         OptimizedExpr::RestoreOnErr(expr) => {
@@ -447,7 +454,6 @@ fn generate_graph_node(
             res
         }
         OptimizedExpr::Opt(inner) => {
-            let name = ident(&candidate_name);
             let inner_name = generate_graph_node(
                 inner,
                 format!("{}_o", candidate_name),
@@ -457,11 +463,12 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
-            let def = quote! {
-                pub type #name<'i> = ::pest::iterators::predefined_node::Opt::<'i, super::Rule, #inner_name>;
-            };
-            map.entry(candidate_name.clone()).or_insert(def);
-            quote! {#name::<'i>}
+            process_single_alias(
+                map,
+                candidate_name,
+                quote! {::pest::iterators::predefined_node::Opt::<'i, super::Rule, #inner_name>},
+                explicit,
+            )
         }
         OptimizedExpr::Rep(inner) => {
             let name = ident(&candidate_name);

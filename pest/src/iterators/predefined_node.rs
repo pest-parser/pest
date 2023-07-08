@@ -23,7 +23,7 @@ use super::{typed_node::NeverFailedTypedNode, TypedNode};
 
 /// Match any character.
 #[inline]
-pub fn any<'i, R: RuleType>(
+fn any<'i, R: RuleType>(
     mut input: Position<'i>,
 ) -> Result<(Position<'i>, Span<'i>, char), Error<R>> {
     let original_input = input.clone();
@@ -46,7 +46,7 @@ pub fn any<'i, R: RuleType>(
 }
 
 /// Match start of input.
-pub fn soi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R>> {
+fn soi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R>> {
     if input.at_start() {
         Ok(input)
     } else {
@@ -60,7 +60,7 @@ pub fn soi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R
 }
 
 /// Match end of input.
-pub fn eoi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R>> {
+fn eoi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R>> {
     if input.at_end() {
         Ok(input)
     } else {
@@ -74,7 +74,7 @@ pub fn eoi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R
 }
 
 /// match a single end of line.
-pub fn new_line<'i, R: RuleType>(
+fn new_line<'i, R: RuleType>(
     mut input: Position<'i>,
 ) -> Result<(Position<'i>, Span<'i>), Error<R>> {
     let start = input.clone();
@@ -154,29 +154,52 @@ pub fn skip_until<'i, R: RuleType>(
 
 /// Match a character in the range `[min, max]`.
 /// Inclusively both below and above.
-pub fn range<'i, R: RuleType>(
-    mut input: Position<'i>,
-    min: char,
-    max: char,
-) -> Result<(Position<'i>, Span<'i>, char), Error<R>> {
-    let start = input.clone();
-    match input.match_range(min..max) {
-        true => {
-            let span = start.span(&input);
-            let content = span.as_str().chars().next().unwrap();
-            Ok((input, span, content))
+pub struct Range<'i, R: RuleType, const MIN: char, const MAX: char> {
+    /// Matched character
+    pub content: char,
+    _phantom: PhantomData<&'i R>,
+}
+
+impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
+    for Range<'i, R, MIN, MAX>
+{
+    fn try_new(
+        mut input: Position<'i>,
+        _stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let start = input.clone();
+        match input.match_range(MIN..MAX) {
+            true => {
+                let span = start.span(&input);
+                let content = span.as_str().chars().next().unwrap();
+                Ok((
+                    input,
+                    Self {
+                        content,
+                        _phantom: PhantomData,
+                    },
+                ))
+            }
+            false => Err(Error::<R>::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: format!("Character in range '{}'..'{}' not found.", MIN, MAX),
+                },
+                input,
+            )),
         }
-        false => Err(Error::<R>::new_from_pos(
-            ErrorVariant::CustomError {
-                message: format!("Character in range '{}'..'{}' not found.", min, max),
-            },
-            input,
-        )),
+    }
+}
+
+impl<'i, R: RuleType, const MIN: char, const MAX: char> Debug for Range<'i, R, MIN, MAX> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Range")
+            .field("content", &self.content)
+            .finish()
     }
 }
 
 /// Match a part of the stack.
-pub fn peek_stack_slice<'i, R: RuleType>(
+fn peek_stack_slice<'i, R: RuleType>(
     input: Position<'i>,
     start: i32,
     end: Option<i32>,
@@ -221,28 +244,58 @@ pub fn peek_stack_slice<'i, R: RuleType>(
     }
 }
 
-/// Positive predicate
-pub fn positive<'i, R: RuleType, N: TypedNode<'i, R>>(
-    input: Position<'i>,
-    stack: &mut Stack<Span<'i>>,
-) -> Result<(), Error<R>> {
-    let (_input, _res) = N::try_new(input, stack)?;
-    Ok(())
+/// Positive predicate.
+pub struct Positive<'i, R: RuleType, N: TypedNode<'i, R>> {
+    _phantom: PhantomData<(&'i R, &'i N)>,
+}
+impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, N> {
+    fn try_new(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let (_input, _res) = N::try_new(input, stack)?;
+        Ok((
+            input,
+            Self {
+                _phantom: PhantomData,
+            },
+        ))
+    }
+}
+impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Positive<'i, R, N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Positive").finish()
+    }
 }
 
 /// Negative predicate
-pub fn negative<'i, R: RuleType, N: TypedNode<'i, R>>(
-    input: Position<'i>,
-    stack: &mut Stack<Span<'i>>,
-) -> Result<(), Error<R>> {
-    match N::try_new(input, stack) {
-        Ok(_) => Err(Error::new_from_pos(
-            ErrorVariant::CustomError {
-                message: format!("Unexpected {}.", type_name::<N>()),
-            },
-            input,
-        )),
-        Err(_) => Ok(()),
+pub struct Negative<'i, R: RuleType, N: TypedNode<'i, R>> {
+    _phantom: PhantomData<(&'i R, &'i N)>,
+}
+impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Negative<'i, R, N> {
+    fn try_new(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        match N::try_new(input, stack) {
+            Ok(_) => Err(Error::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: format!("Unexpected {}.", type_name::<N>()),
+                },
+                input,
+            )),
+            Err(_) => Ok((
+                input,
+                Self {
+                    _phantom: PhantomData,
+                },
+            )),
+        }
+    }
+}
+impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Negative<'i, R, N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Negative").finish()
     }
 }
 
