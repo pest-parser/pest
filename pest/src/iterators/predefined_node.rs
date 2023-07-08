@@ -444,14 +444,19 @@ pub struct Rep<
     R: RuleType,
     T: TypedNode<'i, R>,
     const INNER_SPACES: bool,
-    IGNORED: TypedNode<'i, R>,
+    IGNORED: NeverFailedTypedNode<'i, R>,
 > {
     /// Matched pairs
     pub content: Vec<T>,
     _phantom: PhantomData<(&'i R, &'i IGNORED)>,
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>, const INNER_SPACES: bool, IGNORED: TypedNode<'i, R>>
-    TypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, IGNORED>
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        const INNER_SPACES: bool,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > TypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, IGNORED>
 {
     #[inline]
     fn try_new(
@@ -464,8 +469,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const INNER_SPACES: bool, IGNORED: Ty
             let mut i = 0;
             loop {
                 if i != 0 {
-                    let (next, _) = IGNORED::try_new(input, stack)
-                        .expect("Never fail to ignore comment or white space.");
+                    let (next, _) = IGNORED::new(input, stack);
                     input = next;
                 }
                 if let Ok((next, elem)) = T::try_new(input, stack) {
@@ -491,8 +495,13 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const INNER_SPACES: bool, IGNORED: Ty
         ))
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>, const INNER_SPACES: bool, IGNORED: TypedNode<'i, R>>
-    Debug for Rep<'i, R, T, INNER_SPACES, IGNORED>
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        const INNER_SPACES: bool,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > Debug for Rep<'i, R, T, INNER_SPACES, IGNORED>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Rep")
@@ -531,5 +540,31 @@ impl<'i, R: RuleType> TypedNode<'i, R> for DROP<'i> {
 impl<'i> Debug for DROP<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Drop").finish()
+    }
+}
+
+pub struct Box<'i, R: RuleType, T: TypedNode<'i, R>> {
+    pub content: ::alloc::boxed::Box<T>,
+    _phantom: PhantomData<&'i R>,
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Box<'i, R, T> {
+    #[inline]
+    fn try_new(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let (input, res) = T::try_new(input, stack)?;
+        Ok((
+            input,
+            Self {
+                content: ::alloc::boxed::Box::new(res),
+                _phantom: PhantomData,
+            },
+        ))
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.content.fmt(f)
     }
 }

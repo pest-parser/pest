@@ -23,4 +23,4 @@ pub use self::pair::Pair;
 pub use self::pairs::Pairs;
 pub(crate) use self::queueable_token::QueueableToken;
 pub use self::tokens::Tokens;
-pub use self::typed_node::{Option, ParsableTypedNode, Rc, TypedNode};
+pub use self::typed_node::{NeverFailedTypedNode, Option, ParsableTypedNode, Rc, TypedNode};

@@ -22,7 +22,7 @@ pub type Option<T> = ::std::option::Option<T>;
 pub type Option<T> = ::core::option::Option<T>;
 
 /// Node of concrete syntax tree that never fails.
-pub trait NeverFailedTypedNode<'i, R: RuleType>
+pub trait NeverFailedTypedNode<'i, R: RuleType>: TypedNode<'i, R>
 where
     Self: Sized + Debug,
 {
