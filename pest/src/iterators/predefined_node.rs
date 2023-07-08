@@ -509,15 +509,19 @@ impl<
         T: TypedNode<'i, R>,
         const INNER_SPACES: bool,
         IGNORED: NeverFailedTypedNode<'i, R>,
-    > NeverFailedTypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, IGNORED>
+    > TypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, IGNORED>
 {
     #[inline]
-    fn new(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
+    fn try_new(
+        mut input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
         let mut vec = Vec::<T>::new();
-        if INNER_SPACES {
-            let mut i = 0;
+
+        {
+            let mut i: usize = 0;
             loop {
-                if i != 0 {
+                if INNER_SPACES && i != 0 {
                     let (next, _) = IGNORED::new(input, stack);
                     input = next;
                 }
@@ -528,36 +532,23 @@ impl<
                     break;
                 }
                 i += 1;
-            }
-        } else {
-            while let Ok((next, elem)) = T::try_new(input, stack) {
-                input = next;
-                vec.push(elem);
+                if i > 1024 {
+                    return Err(Error::<R>::new_from_pos(
+                        ErrorVariant::CustomError {
+                            message: "Repeated too many times.".to_owned(),
+                        },
+                        input,
+                    ));
+                }
             }
         }
-        (
+        Ok((
             input,
             Self {
                 content: vec,
                 _phantom: PhantomData,
             },
-        )
-    }
-}
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        const INNER_SPACES: bool,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-    > TypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, IGNORED>
-{
-    #[inline]
-    fn try_new(
-        input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-    ) -> Result<(Position<'i>, Self), Error<R>> {
-        Ok(Self::new(input, stack))
+        ))
     }
 }
 impl<
