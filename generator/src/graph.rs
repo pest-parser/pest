@@ -478,8 +478,12 @@ fn generate_graph_node(
                     super::Rule,
                     #inner_name::<'i>,
                     #inner_spaces,
-                    COMMENT::<'i>,
-                    WHITESPACE::<'i>
+                    ::pest::iterators::predefined_node::Ign::<
+                        'i,
+                        super::Rule,
+                        COMMENT::<'i>,
+                        WHITESPACE::<'i>,
+                    >
                 >;
             };
             map.entry(candidate_name.clone()).or_insert(def);

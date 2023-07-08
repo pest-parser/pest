@@ -388,27 +388,61 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Opt<'i, R, T> {
     }
 }
 
+/// Ignore comments or white spaces if there is any.
+/// Never fail.
+pub struct Ign<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> {
+    _phantom: PhantomData<(&'i R, &'i COMMENT, &'i WHITESPACE)>,
+}
+impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> TypedNode<'i, R>
+    for Ign<'i, R, COMMENT, WHITESPACE>
+{
+    #[inline]
+    fn try_new(
+        mut input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let mut flag = false;
+        while flag {
+            flag = false;
+            while let Ok((remained, _)) = WHITESPACE::try_new(input, stack) {
+                input = remained;
+                flag = true;
+            }
+            while let Ok((remained, _)) = COMMENT::try_new(input, stack) {
+                input = remained;
+                flag = true;
+            }
+        }
+        Ok((
+            input,
+            Self {
+                _phantom: PhantomData,
+            },
+        ))
+    }
+}
+impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> Debug
+    for Ign<'i, R, COMMENT, WHITESPACE>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Ign").finish()
+    }
+}
+
 /// Repeatably match `T`
 pub struct Rep<
     'i,
     R: RuleType,
     T: TypedNode<'i, R>,
     const INNER_SPACES: bool,
-    COMMENT: TypedNode<'i, R>,
-    WHITESPACE: TypedNode<'i, R>,
+    IGNORED: TypedNode<'i, R>,
 > {
     /// Matched pairs
     pub content: Vec<T>,
-    _phantom: PhantomData<(&'i R, &'i COMMENT, &'i WHITESPACE)>,
+    _phantom: PhantomData<(&'i R, &'i IGNORED)>,
 }
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        const INNER_SPACES: bool,
-        COMMENT: TypedNode<'i, R>,
-        WHITESPACE: TypedNode<'i, R>,
-    > TypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, COMMENT, WHITESPACE>
+impl<'i, R: RuleType, T: TypedNode<'i, R>, const INNER_SPACES: bool, IGNORED: TypedNode<'i, R>>
+    TypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, IGNORED>
 {
     #[inline]
     fn try_new(
@@ -421,18 +455,8 @@ impl<
             let mut i = 0;
             loop {
                 if i != 0 {
-                    let mut flag = false;
-                    while flag {
-                        flag = false;
-                        while let Ok((remained, _)) = WHITESPACE::try_new(input, stack) {
-                            input = remained;
-                            flag = true;
-                        }
-                        while let Ok((remained, _)) = COMMENT::try_new(input, stack) {
-                            input = remained;
-                            flag = true;
-                        }
-                    }
+                    let (next, _) = IGNORED::try_new(input, stack)?;
+                    input = next;
                 }
                 if let Ok((next, elem)) = T::try_new(input, stack) {
                     input = next;
@@ -457,14 +481,8 @@ impl<
         ))
     }
 }
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        const INNER_SPACES: bool,
-        COMMENT: TypedNode<'i, R>,
-        WHITESPACE: TypedNode<'i, R>,
-    > Debug for Rep<'i, R, T, INNER_SPACES, COMMENT, WHITESPACE>
+impl<'i, R: RuleType, T: TypedNode<'i, R>, const INNER_SPACES: bool, IGNORED: TypedNode<'i, R>>
+    Debug for Rep<'i, R, T, INNER_SPACES, IGNORED>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Rep")
