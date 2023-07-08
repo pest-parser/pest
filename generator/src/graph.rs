@@ -158,18 +158,8 @@ fn generate_graph_node(
 
     let spaces = if inner_spaces {
         quote! {
-            let mut flag = false;
-            while flag {
-                flag = false;
-                while let Ok((remained, _)) = WHITESPACE::<'i>::try_new(input, stack) {
-                    input = remained;
-                    flag = true;
-                }
-                while let Ok((remained, _)) = COMMENT::<'i>::try_new(input, stack) {
-                    input = remained;
-                    flag = true;
-                }
-            }
+            let (next, _) = ::pest::iterators::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::new(input, stack);
+            input = next;
         }
     } else {
         quote! {}

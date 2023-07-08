@@ -21,6 +21,15 @@ pub type Option<T> = ::std::option::Option<T>;
 #[cfg(not(feature = "std"))]
 pub type Option<T> = ::core::option::Option<T>;
 
+/// Node of concrete syntax tree that never fails.
+pub trait NeverFailedTypedNode<'i, R: RuleType>
+where
+    Self: Sized + Debug,
+{
+    /// Create typed node
+    fn new(input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self);
+}
+
 /// Node of concrete syntax tree.
 pub trait TypedNode<'i, R: RuleType>
 where

@@ -19,7 +19,7 @@ use crate::{
     Debug, Position, RuleType, Span, Stack,
 };
 
-use super::TypedNode;
+use super::{typed_node::NeverFailedTypedNode, TypedNode};
 
 /// Match any character.
 #[inline]
@@ -393,14 +393,12 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Opt<'i, R, T> {
 pub struct Ign<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> {
     _phantom: PhantomData<(&'i R, &'i COMMENT, &'i WHITESPACE)>,
 }
-impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> TypedNode<'i, R>
-    for Ign<'i, R, COMMENT, WHITESPACE>
+
+impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>>
+    NeverFailedTypedNode<'i, R> for Ign<'i, R, COMMENT, WHITESPACE>
 {
     #[inline]
-    fn try_new(
-        mut input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-    ) -> Result<(Position<'i>, Self), Error<R>> {
+    fn new(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
         let mut flag = false;
         while flag {
             flag = false;
@@ -413,12 +411,23 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> T
                 flag = true;
             }
         }
-        Ok((
+        (
             input,
             Self {
                 _phantom: PhantomData,
             },
-        ))
+        )
+    }
+}
+impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> TypedNode<'i, R>
+    for Ign<'i, R, COMMENT, WHITESPACE>
+{
+    #[inline]
+    fn try_new(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        Ok(Self::new(input, stack))
     }
 }
 impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> Debug
@@ -455,7 +464,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const INNER_SPACES: bool, IGNORED: Ty
             let mut i = 0;
             loop {
                 if i != 0 {
-                    let (next, _) = IGNORED::try_new(input, stack)?;
+                    let (next, _) = IGNORED::try_new(input, stack)
+                        .expect("Never fail to ignore comment or white space.");
                     input = next;
                 }
                 if let Ok((next, elem)) = T::try_new(input, stack) {
