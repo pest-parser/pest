@@ -11,7 +11,7 @@
 
 use core::{any::type_name, fmt, marker::PhantomData};
 
-use alloc::{borrow::ToOwned, format, vec::Vec};
+use alloc::{borrow::ToOwned, format, string::String, vec::Vec};
 
 use crate::{
     error::{Error, ErrorVariant},
@@ -543,7 +543,9 @@ impl<'i> Debug for DROP<'i> {
     }
 }
 
+/// Boxed node for `T`
 pub struct Box<'i, R: RuleType, T: TypedNode<'i, R>> {
+    /// Boxed content
     pub content: ::alloc::boxed::Box<T>,
     _phantom: PhantomData<&'i R>,
 }
@@ -567,4 +569,19 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.content.fmt(f)
     }
+}
+
+fn stack_error<R: RuleType>(error: Error<R>) -> String {
+    let s = format!("{}", error);
+    s.split_terminator('\n')
+        .map(|line| format!("    {}", line))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Stack errors into a string
+pub fn stack_errors<R: RuleType>(errors: Vec<Error<R>>) -> String {
+    let messages: Vec<_> = errors.into_iter().map(stack_error).collect();
+    let message = messages.join("\n    --------------------\n");
+    message
 }

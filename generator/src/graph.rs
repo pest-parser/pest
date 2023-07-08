@@ -364,6 +364,7 @@ fn generate_graph_node(
         OptimizedExpr::Seq(_lhs, _rhs) => {
             let (_nodes, names, res) = walk_tree!(Seq, Sequence);
             let name = ident(&candidate_name);
+            // eprintln!("{} contains {:?}", candidate_name, names);
             let (init, fields): (Vec<_>, Vec<_>) = names
                 .iter()
                 .enumerate()
@@ -437,11 +438,10 @@ fn generate_graph_node(
                     #f {
                         let mut errors = vec![];
                         #(#init)*
-                        let messages: Vec<_> = errors.into_iter().map(|e|format!("{}", e)).collect();
-                        let message = messages.join("\n");
+                        let message = ::pest::iterators::predefined_node::stack_errors(errors);
                         return Err(::pest::error::Error::new_from_pos(
                             ::pest::error::ErrorVariant::CustomError {
-                                message: format!("Choices failed with errors: {}", message)
+                                message: format!("Choices failed with errors: \n{}", message)
                             }, input
                         ))
                     }
