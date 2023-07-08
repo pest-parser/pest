@@ -328,7 +328,7 @@ fn generate_graph_node(
         OptimizedExpr::RestoreOnErr(expr) => {
             let inner = generate_graph_node(
                 expr,
-                format! {"{}_N", candidate_name},
+                format! {"{}_E", candidate_name},
                 map,
                 false,
                 inner_spaces,
