@@ -17,10 +17,6 @@ use crate::optimizer::OptimizedExpr;
 fn ident(s: &str) -> Ident {
     format_ident!("r#{}", s)
 }
-fn quote_ident(s: &str) -> TokenStream {
-    let ident = ident(s);
-    quote! {#ident}
-}
 
 fn fn_decl() -> TokenStream {
     let result = result_type();
@@ -166,7 +162,7 @@ fn generate_graph_node(
     let f = fn_decl();
     let attr = attributes();
     let option = option_type();
-    let Box = box_type();
+    let boxed = box_type();
     let s = quote!(&'i ::std::primitive::str);
 
     let spaces = if inner_spaces {
@@ -271,18 +267,18 @@ fn generate_graph_node(
                 process_single(
                     map,
                     candidate_name,
-                    quote! {#Box::<#name::<'i>>},
+                    quote! {#boxed::<#name::<'i>>},
                     quote! {
                         let start = input.clone();
                         let (input, content) = #name::<'i>::try_new(input, stack)?;
-                        let content = #Box::<#name::<'i>>::new(content);
+                        let content = #boxed::<#name::<'i>>::new(content);
                         let span = start.span(&input);
                     },
                     explicit,
                     silent,
                 )
             } else {
-                quote! {::pest::iterators::predefined_node::Box::<'i, super::Rule, #name::<'i>>}
+                quote! {::pest::iterators::predefined_node::boxed::<'i, super::Rule, #name::<'i>>}
             }
         }
         OptimizedExpr::PosPred(expr) => {
