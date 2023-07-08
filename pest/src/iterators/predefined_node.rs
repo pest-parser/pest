@@ -509,15 +509,11 @@ impl<
         T: TypedNode<'i, R>,
         const INNER_SPACES: bool,
         IGNORED: NeverFailedTypedNode<'i, R>,
-    > TypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, IGNORED>
+    > NeverFailedTypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, IGNORED>
 {
     #[inline]
-    fn try_new(
-        input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-    ) -> Result<(Position<'i>, Self), Error<R>> {
+    fn new(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
         let mut vec = Vec::<T>::new();
-        let mut input = input;
         if INNER_SPACES {
             let mut i = 0;
             loop {
@@ -539,13 +535,29 @@ impl<
                 vec.push(elem);
             }
         }
-        Ok((
+        (
             input,
             Self {
                 content: vec,
                 _phantom: PhantomData,
             },
-        ))
+        )
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        const INNER_SPACES: bool,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > TypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, IGNORED>
+{
+    #[inline]
+    fn try_new(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        Ok(Self::new(input, stack))
     }
 }
 impl<
