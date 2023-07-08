@@ -278,7 +278,7 @@ fn generate_graph_node(
                     silent,
                 )
             } else {
-                quote! {::pest::iterators::predefined_node::boxed::<'i, super::Rule, #name::<'i>>}
+                quote! {::pest::iterators::predefined_node::Box::<'i, super::Rule, #name::<'i>>}
             }
         }
         OptimizedExpr::PosPred(expr) => {
