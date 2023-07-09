@@ -524,7 +524,6 @@ fn generate_graph_node(
             )
         }
         OptimizedExpr::Rep(inner) => {
-            let name = ident(&candidate_name);
             let inner_name = generate_graph_node(
                 inner,
                 format!("{}_r", candidate_name),
@@ -534,22 +533,26 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
-            let def = quote! {
-                pub type #name<'i> = ::pest::iterators::predefined_node::Rep::<
-                    'i,
-                    super::Rule,
-                    #inner_name,
-                    #inner_spaces,
-                    ::pest::iterators::predefined_node::Ign::<
+            process_single_alias(
+                map,
+                expr,
+                candidate_name,
+                quote! {
+                    ::pest::iterators::predefined_node::Rep::<
                         'i,
                         super::Rule,
-                        COMMENT::<'i>,
-                        WHITESPACE::<'i>,
+                        #inner_name,
+                        #inner_spaces,
+                        ::pest::iterators::predefined_node::Ign::<
+                            'i,
+                            super::Rule,
+                            COMMENT::<'i>,
+                            WHITESPACE::<'i>,
+                        >
                     >
-                >;
-            };
-            map.insert(def);
-            quote! {#name::<'i>}
+                },
+                explicit,
+            )
         }
         #[cfg(feature = "grammar-extras")]
         OptimizedExpr::NodeTag(inner_expr, _tag) => {
