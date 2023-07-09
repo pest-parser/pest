@@ -357,7 +357,12 @@ fn generate_graph_node(
                                     let message = ::pest::iterators::predefined_node::stack_error(err);
                                     return Err(::pest::error::Error::new_from_pos(
                                         ::pest::error::ErrorVariant::CustomError {
-                                            message: format!("Sequence failed in {}-th elements: \n{}", #i, message)
+                                            message: format!(
+                                                "Sequence {} failed in {}-th elements: \n{}",
+                                                ::core::any::type_name::<Self>(),
+                                                #i, 
+                                                message,
+                                            )
                                         }, input
                                     ))
                                 }
@@ -432,7 +437,11 @@ fn generate_graph_node(
                         let message = ::pest::iterators::predefined_node::stack_errors(errors);
                         return Err(::pest::error::Error::new_from_pos(
                             ::pest::error::ErrorVariant::CustomError {
-                                message: format!("Choices failed with errors: \n{}", message)
+                                message: format!(
+                                    "Choices {} failed with errors: \n{}",
+                                    ::core::any::type_name::<Self>(),
+                                    message,
+                                )
                             }, input
                         ))
                     }

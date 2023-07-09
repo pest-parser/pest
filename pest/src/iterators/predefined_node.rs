@@ -10,6 +10,7 @@
 //! Predefined tree nodes
 
 use core::{any::type_name, fmt, marker::PhantomData};
+use std::eprintln;
 
 use alloc::{borrow::ToOwned, format, string::String, vec::Vec};
 
@@ -20,6 +21,8 @@ use crate::{
 };
 
 use super::{typed_node::NeverFailedTypedNode, TypedNode};
+
+const DEBUG_LOG: bool = true;
 
 /// Match any character.
 #[inline]
@@ -430,13 +433,18 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Opt<'i, R, T> {
                     _phantom: PhantomData,
                 },
             )),
-            Err(_) => Ok((
-                input,
-                Self {
-                    content: None,
-                    _phantom: PhantomData,
-                },
-            )),
+            Err(_err) => {
+                if DEBUG_LOG {
+                    eprintln!("Match nothing because of following error:\n{}", _err);
+                }
+                Ok((
+                    input,
+                    Self {
+                        content: None,
+                        _phantom: PhantomData,
+                    },
+                ))
+            }
         }
     }
 }
@@ -532,11 +540,22 @@ impl<
                     let (next, _) = IGNORED::new(input, stack);
                     input = next;
                 }
-                if let Ok((next, elem)) = T::try_new(input, stack) {
-                    input = next;
-                    vec.push(elem);
-                } else {
-                    break;
+                match T::try_new(input, stack) {
+                    Ok((next, elem)) => {
+                        input = next;
+                        vec.push(elem);
+                    }
+                    Err(_err) => {
+                        if DEBUG_LOG {
+                            eprintln!(
+                                "Repetition of {} stopped on following error (matched {} times):\n{}",
+                                ::core::any::type_name::<T>(),
+                                i,
+                                _err
+                            );
+                        }
+                        break;
+                    }
                 }
                 i += 1;
                 if i > 1024 {
@@ -656,7 +675,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for Resto
                 stack.clear_snapshot();
                 (input, Some(res))
             }
-            Err(_) => {
+            Err(_err) => {
+                if DEBUG_LOG {
+                    eprintln!("Restored on following error:\n{}", _err);
+                }
                 stack.restore();
                 (input, None)
             }
