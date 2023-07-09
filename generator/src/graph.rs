@@ -257,8 +257,8 @@ fn generate_graph_node(
                 let content = ();
             },
             &match end {
-                Some(end) => format!("Match {}..{} of the stack", start, end),
-                None => format!("Match {}.. of the stack", start),
+                Some(end) => format!("Match `{}..{}` of the stack", start, end),
+                None => format!("Match `{}..` of the stack", start),
             },
             silent,
         ),
@@ -296,7 +296,7 @@ fn generate_graph_node(
                 let content = ();
             ),
             &format!(
-                "Continues to match expressions until one of the strings in {:?} is found.",
+                "Continues to match expressions until one of the strings in `{:?}` is found.",
                 strings
             ),
             silent,
