@@ -24,82 +24,6 @@ use super::{typed_node::NeverFailedTypedNode, TypedNode};
 
 const DEBUG_LOG: bool = true;
 
-/// Match any character.
-#[inline]
-fn any<'i, R: RuleType>(
-    mut input: Position<'i>,
-) -> Result<(Position<'i>, Span<'i>, char), Error<R>> {
-    let original_input = input.clone();
-    let mut c: char = ' ';
-    match input.match_char_by(|ch| {
-        c = ch;
-        true
-    }) {
-        true => {
-            let span = original_input.span(&input);
-            Ok((input, span, c))
-        }
-        false => Err(Error::new_from_pos(
-            ErrorVariant::CustomError {
-                message: "Expected any character, but got EOI.".to_owned(),
-            },
-            input,
-        )),
-    }
-}
-
-/// Match start of input.
-fn soi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R>> {
-    if input.at_start() {
-        Ok(input)
-    } else {
-        Err(Error::new_from_pos(
-            ErrorVariant::CustomError {
-                message: "Not at the start of input.".to_owned(),
-            },
-            input,
-        ))
-    }
-}
-
-/// Match end of input.
-fn eoi<'i, R: RuleType>(input: Position<'i>) -> Result<Position<'i>, Error<R>> {
-    if input.at_end() {
-        Ok(input)
-    } else {
-        Err(Error::new_from_pos(
-            ErrorVariant::CustomError {
-                message: "Not at the end of input.".to_owned(),
-            },
-            input,
-        ))
-    }
-}
-
-/// match a single end of line.
-fn new_line<'i, R: RuleType>(
-    mut input: Position<'i>,
-) -> Result<(Position<'i>, Span<'i>), Error<R>> {
-    let start = input.clone();
-    if input.match_string("\r\n") {
-        let span = start.span(&input);
-        Ok((input, span))
-    } else if input.match_string("\n") {
-        let span = start.span(&input);
-        Ok((input, span))
-    } else if input.match_string("\r") {
-        let span = start.span(&input);
-        Ok((input, span))
-    } else {
-        Err(Error::new_from_pos(
-            ErrorVariant::CustomError {
-                message: "Expected NEWLINE.".to_owned(),
-            },
-            input,
-        ))
-    }
-}
-
 /// A wrapper for string as a generics argument.
 pub trait StringWrapper {
     /// Wrapped string.
@@ -363,11 +287,26 @@ pub struct ANY<'i> {
 impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
     #[inline]
     fn try_new(
-        input: Position<'i>,
+        mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        let (input, span, content) = any(input)?;
-        Ok((input, Self { span, content }))
+        let original_input = input.clone();
+        let mut c: char = ' ';
+        match input.match_char_by(|ch| {
+            c = ch;
+            true
+        }) {
+            true => {
+                let span = original_input.span(&input);
+                Ok((input, Self { span, content: c }))
+            }
+            false => Err(Error::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: "Expected any character, but got EOI.".to_owned(),
+                },
+                input,
+            )),
+        }
     }
 }
 
@@ -381,13 +320,21 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        let input = soi(input)?;
-        Ok((
-            input,
-            Self {
-                _phantom: PhantomData,
-            },
-        ))
+        if input.at_start() {
+            Ok((
+                input,
+                Self {
+                    _phantom: PhantomData,
+                },
+            ))
+        } else {
+            Err(Error::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: "Not at the start of input.".to_owned(),
+                },
+                input,
+            ))
+        }
     }
 }
 impl<'i> Debug for SOI<'i> {
@@ -406,13 +353,21 @@ impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        let input = eoi(input)?;
-        Ok((
-            input,
-            Self {
-                _phantom: PhantomData,
-            },
-        ))
+        if input.at_end() {
+            Ok((
+                input,
+                Self {
+                    _phantom: PhantomData,
+                },
+            ))
+        } else {
+            Err(Error::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: "Not at the end of input.".to_owned(),
+                },
+                input,
+            ))
+        }
     }
 }
 impl<'i> Debug for EOI<'i> {
@@ -430,11 +385,27 @@ pub struct NEWLINE<'i> {
 impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
     #[inline]
     fn try_new(
-        input: Position<'i>,
+        mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        let (input, span) = new_line(input)?;
-        Ok((input, Self { span }))
+        let start = input.clone();
+        if input.match_string("\r\n") {
+            let span = start.span(&input);
+            Ok((input, Self { span }))
+        } else if input.match_string("\n") {
+            let span = start.span(&input);
+            Ok((input, Self { span }))
+        } else if input.match_string("\r") {
+            let span = start.span(&input);
+            Ok((input, Self { span }))
+        } else {
+            Err(Error::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: "Expected NEWLINE.".to_owned(),
+                },
+                input,
+            ))
+        }
     }
 }
 
