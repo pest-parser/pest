@@ -653,7 +653,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
     }
 }
 
-/// Restore on error
+/// Restore on error.
 pub struct Restorable<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Matched content
     pub content: Option<T>,
@@ -664,32 +664,23 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Restorable<'i, R
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        Ok(Self::new(input, stack))
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for Restorable<'i, R, T> {
-    fn new(input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
         stack.snapshot();
-        let (input, content) = match T::try_new(input, stack) {
+        match T::try_new(input, stack) {
             Ok((input, res)) => {
                 stack.clear_snapshot();
-                (input, Some(res))
+                Ok((
+                    input,
+                    Self {
+                        content: Some(res),
+                        _phantom: PhantomData,
+                    },
+                ))
             }
-            Err(_err) => {
-                if DEBUG_LOG {
-                    eprintln!("Restored on following error:\n{}", _err);
-                }
+            Err(err) => {
                 stack.restore();
-                (input, None)
+                Err(err)
             }
-        };
-        (
-            input,
-            Self {
-                content,
-                _phantom: PhantomData,
-            },
-        )
+        }
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Restorable<'i, R, T> {
