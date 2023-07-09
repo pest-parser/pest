@@ -26,7 +26,7 @@ pub trait NeverFailedTypedNode<'i, R: RuleType>: TypedNode<'i, R>
 where
     Self: Sized + Debug,
 {
-    /// Create typed node
+    /// Create typed node.
     fn new(input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self);
 }
 
@@ -35,7 +35,7 @@ pub trait TypedNode<'i, R: RuleType>
 where
     Self: Sized + Debug,
 {
-    /// Create typed node
+    /// Create typed node.
     fn try_new(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
