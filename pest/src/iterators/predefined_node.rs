@@ -253,13 +253,20 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, 
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        let (_input, _res) = N::try_new(input, stack)?;
-        Ok((
-            input,
-            Self {
-                _phantom: PhantomData,
-            },
-        ))
+        match N::try_new(input, stack) {
+            Ok((_input, _res)) => Ok((
+                input,
+                Self {
+                    _phantom: PhantomData,
+                },
+            )),
+            Err(err) => Err(Error::<R>::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: format!("Positive predicate failed:\n{}", stack_error(err)),
+                },
+                input,
+            )),
+        }
     }
 }
 impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Positive<'i, R, N> {
@@ -627,7 +634,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
     }
 }
 
-fn stack_error<R: RuleType>(error: Error<R>) -> String {
+/// Stack an error into a string
+pub fn stack_error<R: RuleType>(error: Error<R>) -> String {
     let s = format!("{}", error);
     s.split_terminator('\n')
         .map(|line| format!("    {}", line))

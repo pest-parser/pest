@@ -376,7 +376,17 @@ fn generate_graph_node(
                     (
                         quote! {
                             // eprintln!("Matching {}.", core::any::type_name::<#name>());
-                            let (remained, #field) = #name::try_new(input, stack)?;
+                            let (remained, #field) = match #name::try_new(input, stack) {
+                                Ok(res) => res,
+                                Err(err) => {
+                                    let message = ::pest::iterators::predefined_node::stack_error(err);
+                                    return Err(::pest::error::Error::new_from_pos(
+                                        ::pest::error::ErrorVariant::CustomError {
+                                            message: format!("Sequence failed in {}-th elements: \n{}", #i, message)
+                                        }, input
+                                    ))
+                                }
+                            };
                             input = remained;
                             // eprintln!("Matched {}.", core::any::type_name::<#name>());
                         },
@@ -392,6 +402,7 @@ fn generate_graph_node(
                 inits.push(init);
             }
             let def = quote! {
+                #[doc = "Sequence."]
                 #attr
                 #vis struct #name<'i> {
                     pub span: ::pest::Span::<'i>,
@@ -433,6 +444,7 @@ fn generate_graph_node(
                 }
             });
             let def = quote! {
+                #[doc = "Choices."]
                 #attr
                 #vis enum #name<'i> {
                     #( #vars(#names) ),*
