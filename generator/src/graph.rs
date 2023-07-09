@@ -215,7 +215,7 @@ fn generate_graph_node(
     // Still some compile-time information not taken
     match expr {
         OptimizedExpr::Str(content) => {
-            let wrapper = format_ident!("__pest__string_wrapper_{}", candidate_name);
+            let wrapper = format_ident!("r#{}", candidate_name);
             map.insert_wrapper(quote! {
                 pub struct #wrapper();
                 impl ::pest::iterators::predefined_node::StringWrapper for #wrapper {
@@ -283,7 +283,7 @@ fn generate_graph_node(
                     let content = ();
                     stack.push(span);
                 },
-                "Matches an expression and pushes it to the stack",
+                "Matches an expression and pushes it to the stack.",
                 silent,
             )
         }
@@ -421,10 +421,7 @@ fn generate_graph_node(
                 }
                 inits.push(init);
             }
-            let doc = format!(
-                "Sequence. Inner spaces {}permitted",
-                if inner_spaces { "" } else { "not " }
-            );
+            let doc = format!("Sequence.",);
             let def = quote! {
                 #[doc = #doc]
                 #attr

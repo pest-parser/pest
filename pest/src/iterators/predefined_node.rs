@@ -201,7 +201,7 @@ pub fn skip_until<'i, R: RuleType>(
 /// Match a character in the range `[min, max]`.
 /// Inclusively both below and above.
 pub struct Range<'i, R: RuleType, const MIN: char, const MAX: char> {
-    /// Matched character
+    /// Matched character.
     pub content: char,
     _phantom: PhantomData<&'i R>,
 }
@@ -321,7 +321,7 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Positive<'i, R, N> {
     }
 }
 
-/// Negative predicate
+/// Negative predicate.
 pub struct Negative<'i, R: RuleType, N: TypedNode<'i, R>> {
     _phantom: PhantomData<(&'i R, &'i N)>,
 }
@@ -352,12 +352,12 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Negative<'i, R, N> {
     }
 }
 
-/// Match any character
+/// Match any character.
 #[derive(Debug)]
 pub struct ANY<'i> {
-    /// Pair span
+    /// Pair span.
     pub span: Span<'i>,
-    /// Matched character
+    /// Matched character.
     pub content: char,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
@@ -371,7 +371,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
     }
 }
 
-/// Match start of input
+/// Match start of input.
 pub struct SOI<'i> {
     _phantom: PhantomData<&'i str>,
 }
@@ -396,7 +396,7 @@ impl<'i> Debug for SOI<'i> {
     }
 }
 
-/// Match end of input
+/// Match end of input.
 pub struct EOI<'i> {
     _phantom: PhantomData<&'i str>,
 }
@@ -421,10 +421,10 @@ impl<'i> Debug for EOI<'i> {
     }
 }
 
-/// Match a new line
+/// Match a new line.
 #[derive(Debug)]
 pub struct NEWLINE<'i> {
-    /// Pair span
+    /// Pair span.
     pub span: Span<'i>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
@@ -438,11 +438,11 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
     }
 }
 
-/// Peek all in stack
+/// Peek all in stack.
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
 pub struct PEEK_ALL<'i> {
-    /// Pair span
+    /// Pair span.
     pub span: Span<'i>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
@@ -549,7 +549,7 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> D
     }
 }
 
-/// Repeatably match `T`
+/// Repeatably match `T`.
 pub struct Rep<
     'i,
     R: RuleType,
@@ -557,7 +557,7 @@ pub struct Rep<
     const INNER_SPACES: bool,
     IGNORED: NeverFailedTypedNode<'i, R>,
 > {
-    /// Matched pairs
+    /// Matched pairs.
     pub content: Vec<T>,
     _phantom: PhantomData<(&'i R, &'i IGNORED)>,
 }
@@ -635,7 +635,7 @@ impl<
     }
 }
 
-/// Drops the top of the stack
+/// Drops the top of the stack.
 pub struct DROP<'i> {
     _phantom: PhantomData<&'i str>,
 }
@@ -668,9 +668,9 @@ impl<'i> Debug for DROP<'i> {
     }
 }
 
-/// Boxed node for `T`
+/// Boxed node for `T`.
 pub struct Box<'i, R: RuleType, T: TypedNode<'i, R>> {
-    /// Boxed content
+    /// Boxed content.
     pub content: ::alloc::boxed::Box<T>,
     _phantom: PhantomData<&'i R>,
 }
@@ -698,7 +698,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
 
 /// Restore on error.
 pub struct Restorable<'i, R: RuleType, T: TypedNode<'i, R>> {
-    /// Matched content
+    /// Matched content.
     pub content: Option<T>,
     _phantom: PhantomData<&'i R>,
 }
@@ -732,7 +732,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Restorable<'i, R, T> {
     }
 }
 
-/// Stack an error into a string
+/// Stack an error into a string.
 pub fn stack_error<R: RuleType>(error: Error<R>) -> String {
     let s = format!("{}", error);
     s.split_terminator('\n')
@@ -741,7 +741,7 @@ pub fn stack_error<R: RuleType>(error: Error<R>) -> String {
         .join("\n")
 }
 
-/// Stack errors into a string
+/// Stack errors into a string.
 pub fn stack_errors<R: RuleType>(errors: Vec<Error<R>>) -> String {
     let messages: Vec<_> = errors.into_iter().map(stack_error).collect();
     let message = messages.join("\n    --------------------\n");
