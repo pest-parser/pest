@@ -42,6 +42,7 @@ fn process_single(
     candidate_name: String,
     type_name: TokenStream,
     fimpl: TokenStream,
+    doc: &str,
     silent: bool,
 ) -> TokenStream {
     let f = fn_decl();
@@ -90,6 +91,7 @@ fn process_single(
         }
     };
     let def = quote! {
+        #[doc = #doc]
         pub struct #name<'i> {
             #fields
         }
@@ -192,6 +194,7 @@ fn generate_graph_node(
                 let (input, span) = ::pest::iterators::predefined_node::string::<super::Rule>(input, #content)?;
                 let content = span.as_str();
             },
+            &format!("Match exact string \"{}\".", content),
             silent,
         ),
         OptimizedExpr::Insens(content) => process_single(
@@ -202,6 +205,7 @@ fn generate_graph_node(
                 let (input, span) = ::pest::iterators::predefined_node::insensitive::<super::Rule>(input, #content)?;
                 let content = span.as_str();
             },
+            &format!("Match exact string \"{}\" insensitively.", content),
             silent,
         ),
         OptimizedExpr::PeekSlice(start, end) => process_single(
@@ -211,6 +215,10 @@ fn generate_graph_node(
             quote! {
                 let (input, span) = ::pest::iterators::predefined_node::peek_stack_slice::<super::Rule>(input, #start, #end, stack)?;
                 let content = ();
+            },
+            &match end {
+                Some(end) => format!("Match {}..{} of the stack", start, end),
+                None => format!("Match {}.. of the stack", start),
             },
             silent,
         ),
@@ -235,6 +243,7 @@ fn generate_graph_node(
                     let content = ();
                     stack.push(span);
                 },
+                "Matches an expression and pushes it to the stack",
                 silent,
             )
         }
@@ -245,6 +254,10 @@ fn generate_graph_node(
             quote!(
                 let (input, span) = ::pest::iterators::predefined_node::skip_until::<super::Rule>(input, &[#(#strings),*])?;
                 let content = ();
+            ),
+            &format!(
+                "Continues to match expressions until one of the strings in {:?} is found.",
+                strings
             ),
             silent,
         ),
@@ -405,8 +418,9 @@ fn generate_graph_node(
                     }
                 }
             });
+            let doc = format! {"Choices."};
             let def = quote! {
-                #[doc = "Choices."]
+                #[doc = #doc]
                 #attr
                 pub enum #name<'i> {
                     #( #vars(#names) ),*
