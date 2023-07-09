@@ -394,7 +394,10 @@ fn generate_graph_node(
             )
         }
         OptimizedExpr::Seq(_lhs, _rhs) => {
-            let (_nodes, names, res) = walk_tree!(Seq, Sequence);
+            let (nodes, names, res) = walk_tree!(Seq, Sequence);
+            let docs = nodes
+                .iter()
+                .map(|node| format!("Corresponds to:\n```ignored\n{:#?}\n", node));
             let name = ident(&candidate_name);
             // eprintln!("{} contains {:?}", candidate_name, names);
             let (init, fields): (Vec<_>, Vec<_>) = names
@@ -435,13 +438,16 @@ fn generate_graph_node(
                 }
                 inits.push(init);
             }
-            let doc = format!("Sequence.",);
+            let doc = format!("Sequence.\nCorresponds to:\n```ignored\n{:#?}\n", expr);
             let def = quote! {
                 #[doc = #doc]
                 #attr
                 pub struct #name<'i> {
                     pub span: ::pest::Span::<'i>,
-                    #(pub #fields: #names),*
+                    #(
+                        #[doc = #docs]
+                        pub #fields: #names
+                    ),*
                 }
                 impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
@@ -459,7 +465,10 @@ fn generate_graph_node(
             res
         }
         OptimizedExpr::Choice(_lhs, _rhs) => {
-            let (_nodes, names, res) = walk_tree!(Choice, Variant);
+            let (nodes, names, res) = walk_tree!(Choice, Variant);
+            let docs = nodes
+                .iter()
+                .map(|node| format!("Corresponds to:\n```ignored\n{:#?}\n```", node));
             let name = ident(&candidate_name);
             let vars = names
                 .iter()
@@ -478,12 +487,15 @@ fn generate_graph_node(
                     }
                 }
             });
-            let doc = format! {"Choices."};
+            let doc = format! {"Choices.\nCorresponds to:\n```ignored\n{:?}\n```", expr};
             let def = quote! {
                 #[doc = #doc]
                 #attr
                 pub enum #name<'i> {
-                    #( #vars(#names) ),*
+                    #(
+                        #[doc = #docs]
+                        #vars(#names)
+                    ),*
                 }
                 impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
