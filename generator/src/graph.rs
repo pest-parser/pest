@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use crate::types::{option_type, result_type};
+use crate::types::result_type;
 use pest_meta::{ast::RuleType, optimizer::OptimizedRule};
 use proc_macro2::{Ident, TokenStream};
 pub use std::collections::BTreeMap as Map;
@@ -321,7 +321,7 @@ fn generate_graph_node(
                 map,
                 candidate_name,
                 quote! {
-                    ::pest::iterators::predefined_node::Restore::<'i, super::Rule, #inner>
+                    ::pest::iterators::predefined_node::Restorable::<'i, super::Rule, #inner>
                 },
                 explicit,
             )
