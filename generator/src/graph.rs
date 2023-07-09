@@ -37,8 +37,37 @@ fn attributes() -> TokenStream {
     }
 }
 
+struct Output {
+    content: Vec<TokenStream>,
+    wrappers: Vec<TokenStream>,
+}
+impl Output {
+    fn new() -> Self {
+        Self {
+            content: Vec::new(),
+            wrappers: Vec::new(),
+        }
+    }
+    fn insert(&mut self, tokens: TokenStream) {
+        self.content.push(tokens);
+    }
+    fn insert_wrapper(&mut self, tokens: TokenStream) {
+        self.wrappers.push(tokens);
+    }
+    fn collect(&self) -> TokenStream {
+        let content = &self.content;
+        let wrappers = &self.wrappers;
+        quote! {
+            #(#content)*
+            pub mod __pest_string_wrapper {
+                #(#wrappers)*
+            }
+        }
+    }
+}
+
 fn process_single(
-    map: &mut Map<String, TokenStream>,
+    map: &mut Output,
     candidate_name: String,
     type_name: TokenStream,
     fimpl: TokenStream,
@@ -102,7 +131,7 @@ fn process_single(
         }
         #debug
     };
-    map.insert(candidate_name.clone(), def);
+    map.insert(def);
     quote! {
         #name::<'i>
     }
@@ -110,7 +139,7 @@ fn process_single(
 
 /// Returns flle name.
 fn process_single_alias(
-    map: &mut Map<String, TokenStream>,
+    map: &mut Output,
     candidate_name: String,
     type_name: TokenStream,
     explicit: bool,
@@ -118,7 +147,7 @@ fn process_single_alias(
     let name = ident(&candidate_name);
     if explicit {
         let def = quote! {pub type #name<'i> = #type_name;};
-        map.insert(candidate_name, def);
+        map.insert(def);
         quote! {#name::<'i>}
     } else {
         type_name
@@ -130,7 +159,7 @@ fn generate_graph_node(
     expr: &OptimizedExpr,
     candidate_name: String,
     // From node name to type definition and implementation
-    map: &mut Map<String, TokenStream>,
+    map: &mut Output,
     explicit: bool,
     inner_spaces: bool,
     inner_tokens: bool,
@@ -173,7 +202,6 @@ fn generate_graph_node(
 
     let f = fn_decl();
     let attr = attributes();
-    let s = quote!(&'i ::std::primitive::str);
 
     let spaces = if inner_spaces {
         quote! {
@@ -186,28 +214,40 @@ fn generate_graph_node(
 
     // Still some compile-time information not taken
     match expr {
-        OptimizedExpr::Str(content) => process_single(
-            map,
-            candidate_name,
-            s.clone(),
-            quote! {
-                let (input, span) = ::pest::iterators::predefined_node::string::<super::Rule>(input, #content)?;
-                let content = span.as_str();
-            },
-            &format!("Match exact string \"{}\".", content),
-            silent,
-        ),
-        OptimizedExpr::Insens(content) => process_single(
-            map,
-            candidate_name,
-            s.clone(),
-            quote! {
-                let (input, span) = ::pest::iterators::predefined_node::insensitive::<super::Rule>(input, #content)?;
-                let content = span.as_str();
-            },
-            &format!("Match exact string \"{}\" insensitively.", content),
-            silent,
-        ),
+        OptimizedExpr::Str(content) => {
+            let wrapper = format_ident!("__pest__string_wrapper_{}", candidate_name);
+            map.insert_wrapper(quote! {
+                pub struct #wrapper();
+                impl ::pest::iterators::predefined_node::StringWrapper for #wrapper {
+                    const CONTENT: &'static str = #content;
+                }
+            });
+            process_single_alias(
+                map,
+                candidate_name,
+                quote! {
+                    ::pest::iterators::predefined_node::Str::<'i, super::Rule, __pest_string_wrapper::#wrapper>
+                },
+                explicit,
+            )
+        }
+        OptimizedExpr::Insens(content) => {
+            let wrapper = format_ident!("__pest__string_wrapper_{}", candidate_name);
+            map.insert_wrapper(quote! {
+                pub struct #wrapper();
+                impl ::pest::iterators::predefined_node::StringWrapper for #wrapper {
+                    const CONTENT: &'static str = #content;
+                }
+            });
+            process_single_alias(
+                map,
+                candidate_name,
+                quote! {
+                    ::pest::iterators::predefined_node::Insens::<'i, super::Rule, __pest_string_wrapper::#wrapper>
+                },
+                explicit,
+            )
+        }
         OptimizedExpr::PeekSlice(start, end) => process_single(
             map,
             candidate_name,
@@ -360,7 +400,7 @@ fn generate_graph_node(
                                             message: format!(
                                                 "Sequence {} failed in {}-th elements: \n{}",
                                                 ::core::any::type_name::<Self>(),
-                                                #i, 
+                                                #i,
                                                 message,
                                             )
                                         }, input
@@ -381,8 +421,12 @@ fn generate_graph_node(
                 }
                 inits.push(init);
             }
+            let doc = format!(
+                "Sequence. Inner spaces {}permitted",
+                if inner_spaces { "" } else { "not " }
+            );
             let def = quote! {
-                #[doc = "Sequence."]
+                #[doc = #doc]
                 #attr
                 pub struct #name<'i> {
                     pub span: ::pest::Span::<'i>,
@@ -399,7 +443,7 @@ fn generate_graph_node(
                 }
             };
             // println!("{}", def);
-            map.entry(candidate_name.clone()).or_insert(def);
+            map.insert(def);
 
             res
         }
@@ -447,7 +491,7 @@ fn generate_graph_node(
                     }
                 }
             };
-            map.entry(candidate_name.clone()).or_insert(def);
+            map.insert(def);
             res
         }
         OptimizedExpr::Opt(inner) => {
@@ -492,7 +536,7 @@ fn generate_graph_node(
                     >
                 >;
             };
-            map.entry(candidate_name.clone()).or_insert(def);
+            map.insert(def);
             quote! {#name::<'i>}
         }
         #[cfg(feature = "grammar-extras")]
@@ -511,9 +555,9 @@ fn generate_graph_node(
     }
 }
 
-pub fn generate_graph(rules: &[OptimizedRule]) -> Map<String, TokenStream> {
+fn generate_graph(rules: &[OptimizedRule]) -> Output {
     // println!("{:#?}", rules);
-    let mut res = Map::<String, TokenStream>::new();
+    let mut res = Output::new();
     for rule in rules.iter() {
         match rule.ty {
             RuleType::Normal => {
@@ -581,7 +625,7 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
     // let names: Vec<_> = rules.iter().map(|rule| &rule.name).collect();
     // eprintln!("{:#?}", names);
     let graph = generate_graph(rules);
-    let pairs = graph.iter().map(|(_name, rule)| rule);
+    let pairs = graph.collect();
     let builtin = generate_builtin();
     // let names = rules.iter().map(|rule| format_ident!("r#{}", rule.name));
     let res = quote! {
@@ -589,7 +633,7 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
             use pest::iterators::NeverFailedTypedNode as _;
             #builtin
 
-            #( #pairs )*
+            #pairs
         }
     };
     // println!("{}", res);

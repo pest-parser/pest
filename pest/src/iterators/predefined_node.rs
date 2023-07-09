@@ -100,41 +100,84 @@ fn new_line<'i, R: RuleType>(
     }
 }
 
-/// Match given string.
-pub fn string<'i, R: RuleType>(
-    mut input: Position<'i>,
-    content: &'static str,
-) -> Result<(Position<'i>, Span<'i>), Error<R>> {
-    let start = input.clone();
-    if input.match_string(content) {
-        let span = start.span(&input);
-        Ok((input, span))
-    } else {
-        Err(Error::new_from_pos(
-            ErrorVariant::CustomError {
-                message: format!("Expected exact \"{}\"", content),
-            },
-            input,
-        ))
-    }
+/// A wrapper for string as a generics argument.
+pub trait StringWrapper {
+    /// Wrapped string.
+    const CONTENT: &'static str;
 }
 
 /// Match given string.
-pub fn insensitive<'i, R: RuleType>(
-    mut input: Position<'i>,
-    content: &'static str,
-) -> Result<(Position<'i>, Span<'i>), Error<R>> {
-    let start = input.clone();
-    if input.match_insensitive(content) {
-        let span = start.span(&input);
-        Ok((input, span))
-    } else {
-        Err(Error::new_from_pos(
-            ErrorVariant::CustomError {
-                message: format!("Expected insensitive \"{}\"", content),
-            },
-            input,
-        ))
+pub struct Str<'i, R: RuleType, T: StringWrapper> {
+    _phantom: PhantomData<(&'i R, &'i T)>,
+}
+impl<'i, R: RuleType, T: StringWrapper> StringWrapper for Str<'i, R, T> {
+    const CONTENT: &'static str = T::CONTENT;
+}
+impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<'i, R, T> {
+    fn try_new(
+        mut input: Position<'i>,
+        _stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        if input.match_string(Self::CONTENT) {
+            Ok((
+                input,
+                Self {
+                    _phantom: PhantomData,
+                },
+            ))
+        } else {
+            Err(Error::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: format!("Expected exact \"{}\"", Self::CONTENT),
+                },
+                input,
+            ))
+        }
+    }
+}
+impl<'i, R: RuleType, T: StringWrapper> Debug for Str<'i, R, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Str").finish()
+    }
+}
+
+/// Match given string case insensitively.
+pub struct Insens<'i, R: RuleType, T: StringWrapper> {
+    /// Matched content.
+    pub content: &'i str,
+    _phantom: PhantomData<(&'i R, &'i T)>,
+}
+impl<'i, R: RuleType, T: StringWrapper> StringWrapper for Insens<'i, R, T> {
+    const CONTENT: &'static str = T::CONTENT;
+}
+impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
+    fn try_new(
+        mut input: Position<'i>,
+        _stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let start = input.clone();
+        if input.match_insensitive(Self::CONTENT) {
+            let span = start.span(&input);
+            Ok((
+                input,
+                Self {
+                    content: span.as_str(),
+                    _phantom: PhantomData,
+                },
+            ))
+        } else {
+            Err(Error::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: format!("Expected insensitive \"{}\"", Self::CONTENT),
+                },
+                input,
+            ))
+        }
+    }
+}
+impl<'i, R: RuleType, T: StringWrapper> Debug for Insens<'i, R, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Insens").finish()
     }
 }
 
