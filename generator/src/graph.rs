@@ -140,13 +140,18 @@ fn process_single(
 /// Returns flle name.
 fn process_single_alias(
     map: &mut Output,
+    expr: &OptimizedExpr,
     candidate_name: String,
     type_name: TokenStream,
     explicit: bool,
 ) -> TokenStream {
     let name = ident(&candidate_name);
     if explicit {
-        let def = quote! {pub type #name<'i> = #type_name;};
+        let doc = format!("Represents expression:\n```ignored\n{:#?}\n```", expr);
+        let def = quote! {
+            #[doc = #doc]
+            pub type #name<'i> = #type_name;
+        };
         map.insert(def);
         quote! {#name::<'i>}
     } else {
@@ -216,7 +221,9 @@ fn generate_graph_node(
     match expr {
         OptimizedExpr::Str(content) => {
             let wrapper = format_ident!("r#{}", candidate_name);
+            let doc = format!("A wrapper for `\"{}\"`.", content);
             map.insert_wrapper(quote! {
+                #[doc = #doc]
                 pub struct #wrapper();
                 impl ::pest::iterators::predefined_node::StringWrapper for #wrapper {
                     const CONTENT: &'static str = #content;
@@ -224,6 +231,7 @@ fn generate_graph_node(
             });
             process_single_alias(
                 map,
+                expr,
                 candidate_name,
                 quote! {
                     ::pest::iterators::predefined_node::Str::<'i, super::Rule, __pest_string_wrapper::#wrapper>
@@ -241,6 +249,7 @@ fn generate_graph_node(
             });
             process_single_alias(
                 map,
+                expr,
                 candidate_name,
                 quote! {
                     ::pest::iterators::predefined_node::Insens::<'i, super::Rule, __pest_string_wrapper::#wrapper>
@@ -306,6 +315,7 @@ fn generate_graph_node(
             let end = end.chars().next().unwrap();
             process_single_alias(
                 map,
+                expr,
                 candidate_name,
                 quote! {
                     ::pest::iterators::predefined_node::Range::<'i, super::Rule, #start, #end>
@@ -317,6 +327,7 @@ fn generate_graph_node(
             let inner = ident(id);
             process_single_alias(
                 map,
+                expr,
                 candidate_name,
                 quote! {::pest::iterators::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
                 explicit,
@@ -334,6 +345,7 @@ fn generate_graph_node(
             );
             process_single_alias(
                 map,
+                expr,
                 candidate_name,
                 quote! {
                     ::pest::iterators::predefined_node::Positive::<'i, super::Rule, #inner>
@@ -353,6 +365,7 @@ fn generate_graph_node(
             );
             process_single_alias(
                 map,
+                expr,
                 candidate_name,
                 quote! {
                     ::pest::iterators::predefined_node::Negative::<'i, super::Rule, #inner>
@@ -372,6 +385,7 @@ fn generate_graph_node(
             );
             process_single_alias(
                 map,
+                expr,
                 candidate_name,
                 quote! {
                     ::pest::iterators::predefined_node::Restorable::<'i, super::Rule, #inner>
@@ -503,6 +517,7 @@ fn generate_graph_node(
             );
             process_single_alias(
                 map,
+                expr,
                 candidate_name,
                 quote! {::pest::iterators::predefined_node::Opt::<'i, super::Rule, #inner_name>},
                 explicit,
