@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use crate::types::{box_type, option_type, result_type};
+use crate::types::{option_type, result_type};
 use pest_meta::{ast::RuleType, optimizer::OptimizedRule};
 use proc_macro2::{Ident, TokenStream};
 pub use std::collections::BTreeMap as Map;
@@ -37,16 +37,11 @@ fn attributes() -> TokenStream {
     }
 }
 
-fn visibility(_explicit: bool) -> TokenStream {
-    quote! {pub}
-}
-
 fn process_single(
     map: &mut Map<String, TokenStream>,
     candidate_name: String,
     type_name: TokenStream,
     fimpl: TokenStream,
-    explicit: bool,
     silent: bool,
 ) -> TokenStream {
     let f = fn_decl();
@@ -73,7 +68,6 @@ fn process_single(
             pub content: #inner,
         }
     };
-    let vis = visibility(explicit);
     let debug = if silent {
         quote! {
             impl<'i> ::core::fmt::Debug for #name<'i> {
@@ -96,7 +90,7 @@ fn process_single(
         }
     };
     let def = quote! {
-        #vis struct #name<'i> {
+        pub struct #name<'i> {
             #fields
         }
         impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
@@ -112,7 +106,7 @@ fn process_single(
     }
 }
 
-/// Returns flle name
+/// Returns flle name.
 fn process_single_alias(
     map: &mut Map<String, TokenStream>,
     candidate_name: String,
@@ -175,11 +169,8 @@ fn generate_graph_node(
         }};
     }
 
-    let vis = visibility(explicit);
     let f = fn_decl();
     let attr = attributes();
-    let option = option_type();
-    let boxed = box_type();
     let s = quote!(&'i ::std::primitive::str);
 
     let spaces = if inner_spaces {
@@ -201,7 +192,6 @@ fn generate_graph_node(
                 let (input, span) = ::pest::iterators::predefined_node::string::<super::Rule>(input, #content)?;
                 let content = span.as_str();
             },
-            explicit,
             silent,
         ),
         OptimizedExpr::Insens(content) => process_single(
@@ -212,7 +202,6 @@ fn generate_graph_node(
                 let (input, span) = ::pest::iterators::predefined_node::insensitive::<super::Rule>(input, #content)?;
                 let content = span.as_str();
             },
-            explicit,
             silent,
         ),
         OptimizedExpr::PeekSlice(start, end) => process_single(
@@ -223,7 +212,6 @@ fn generate_graph_node(
                 let (input, span) = ::pest::iterators::predefined_node::peek_stack_slice::<super::Rule>(input, #start, #end, stack)?;
                 let content = ();
             },
-            explicit,
             silent,
         ),
         OptimizedExpr::Push(expr) => {
@@ -247,7 +235,6 @@ fn generate_graph_node(
                     let content = ();
                     stack.push(span);
                 },
-                explicit,
                 silent,
             )
         }
@@ -259,7 +246,6 @@ fn generate_graph_node(
                 let (input, span) = ::pest::iterators::predefined_node::skip_until::<super::Rule>(input, &[#(#strings),*])?;
                 let content = ();
             ),
-            explicit,
             silent,
         ),
         OptimizedExpr::Range(start, end) => {
@@ -275,24 +261,13 @@ fn generate_graph_node(
             )
         }
         OptimizedExpr::Ident(id) => {
-            let name = ident(id);
-            if explicit {
-                process_single(
-                    map,
-                    candidate_name,
-                    quote! {#boxed::<#name::<'i>>},
-                    quote! {
-                        let start = input.clone();
-                        let (input, content) = #name::<'i>::try_new(input, stack)?;
-                        let content = #boxed::<#name::<'i>>::new(content);
-                        let span = start.span(&input);
-                    },
-                    explicit,
-                    silent,
-                )
-            } else {
-                quote! {::pest::iterators::predefined_node::Box::<'i, super::Rule, #name::<'i>>}
-            }
+            let inner = ident(id);
+            process_single_alias(
+                map,
+                candidate_name,
+                quote! {::pest::iterators::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
+                explicit,
+            )
         }
         OptimizedExpr::PosPred(expr) => {
             let inner = generate_graph_node(
@@ -342,26 +317,13 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
-            process_single(
+            process_single_alias(
                 map,
                 candidate_name,
-                quote! {#option::<#inner>},
                 quote! {
-                    stack.snapshot();
-                    let (input, content) = match #inner::try_new(input, stack) {
-                        Ok((input, res)) => {
-                            stack.clear_snapshot();
-                            (input, Some(res))
-                        }
-                        Err(_) => {
-                            stack.restore();
-                            (input, None)
-                        }
-                    };
-                    let span = input.span(&input);
+                    ::pest::iterators::predefined_node::Restore::<'i, super::Rule, #inner>
                 },
                 explicit,
-                silent,
             )
         }
         OptimizedExpr::Seq(_lhs, _rhs) => {
@@ -404,7 +366,7 @@ fn generate_graph_node(
             let def = quote! {
                 #[doc = "Sequence."]
                 #attr
-                #vis struct #name<'i> {
+                pub struct #name<'i> {
                     pub span: ::pest::Span::<'i>,
                     #(pub #fields: #names),*
                 }
@@ -446,7 +408,7 @@ fn generate_graph_node(
             let def = quote! {
                 #[doc = "Choices."]
                 #attr
-                #vis enum #name<'i> {
+                pub enum #name<'i> {
                     #( #vars(#names) ),*
                 }
                 impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {

@@ -634,6 +634,42 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
     }
 }
 
+/// Restore on error
+pub struct Restore<'i, R: RuleType, T: TypedNode<'i, R>> {
+    pub content: Option<T>,
+    _phantom: PhantomData<&'i R>,
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Restore<'i, R, T> {
+    fn try_new(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        stack.snapshot();
+        let (input, content) = match T::try_new(input, stack) {
+            Ok((input, res)) => {
+                stack.clear_snapshot();
+                (input, Some(res))
+            }
+            Err(_) => {
+                stack.restore();
+                (input, None)
+            }
+        };
+        Ok((
+            input,
+            Self {
+                content,
+                _phantom: PhantomData,
+            },
+        ))
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Restore<'i, R, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.content.fmt(f)
+    }
+}
+
 /// Stack an error into a string
 pub fn stack_error<R: RuleType>(error: Error<R>) -> String {
     let s = format!("{}", error);
