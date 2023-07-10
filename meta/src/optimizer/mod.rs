@@ -251,6 +251,71 @@ impl OptimizedExpr {
     }
 }
 
+impl core::fmt::Display for OptimizedExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OptimizedExpr::Str(s) => write!(f, "\"{}\"", s),
+            OptimizedExpr::Insens(s) => write!(f, "^\"{}\"", s),
+            OptimizedExpr::Range(start, end) => write!(f, "('{}'..'{}')", start, end),
+            OptimizedExpr::Ident(id) => write!(f, "{}", id),
+            OptimizedExpr::PeekSlice(start, end) => match end {
+                Some(end) => write!(f, "PEEK[{}..{}]", start, end),
+                None => write!(f, "PEEK[{}..]", start),
+            },
+            OptimizedExpr::PosPred(expr) => write!(f, "&{}", expr.as_ref()),
+            OptimizedExpr::NegPred(expr) => write!(f, "!{}", expr.as_ref()),
+            OptimizedExpr::Seq(lhs, rhs) => {
+                let mut nodes = Vec::new();
+                nodes.push(lhs);
+                let mut current = rhs;
+                while let OptimizedExpr::Seq(lhs, rhs) = current.as_ref() {
+                    nodes.push(lhs);
+                    current = rhs;
+                }
+                nodes.push(current);
+                let sequence = nodes
+                    .iter()
+                    .map(|node| format!("{}", node))
+                    .collect::<Vec<_>>()
+                    .join(" ~ ");
+                write!(f, "({})", sequence)
+            }
+            OptimizedExpr::Choice(lhs, rhs) => {
+                let mut nodes = Vec::new();
+                nodes.push(lhs);
+                let mut current = rhs;
+                while let OptimizedExpr::Choice(lhs, rhs) = current.as_ref() {
+                    nodes.push(lhs);
+                    current = rhs;
+                }
+                nodes.push(current);
+                let sequence = nodes
+                    .iter()
+                    .map(|node| format!("{}", node))
+                    .collect::<Vec<_>>()
+                    .join(" | ");
+                write!(f, "({})", sequence)
+            }
+            OptimizedExpr::Opt(expr) => write!(f, "{}?", expr),
+            OptimizedExpr::Rep(expr) => write!(f, "{}*", expr),
+            OptimizedExpr::Skip(strings) => {
+                let strings = strings
+                    .iter()
+                    .map(|s| format!("\"{}\"", s))
+                    .collect::<Vec<_>>()
+                    .join(" | ");
+                write!(f, "(!({}) ~ ANY)*", strings)
+            }
+            OptimizedExpr::Push(expr) => write!(f, "PUSH[{}]", expr),
+            #[cfg(feature = "grammar-extras")]
+            OptimizedExpr::NodeTag(expr, tag) => {
+                write!(f, "(#{} = {})", tag, expr)
+            }
+            OptimizedExpr::RestoreOnErr(expr) => core::fmt::Display::fmt(expr.as_ref(), f),
+        }
+    }
+}
+
 /// A top-down iterator over an `OptimizedExpr`.
 pub struct OptimizedExprTopDownIterator {
     current: Option<OptimizedExpr>,

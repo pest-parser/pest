@@ -147,7 +147,7 @@ fn process_single_alias(
 ) -> TokenStream {
     let name = ident(&candidate_name);
     if explicit {
-        let doc = format!("Represents expression:\n```ignored\n{:#?}\n```", expr);
+        let doc = format!("Represents expression:\n```ignored\n{}\n```", expr);
         let def = quote! {
             #[doc = #doc]
             pub type #name<'i> = #type_name;
@@ -397,7 +397,7 @@ fn generate_graph_node(
             let (nodes, names, res) = walk_tree!(Seq, Sequence);
             let docs = nodes
                 .iter()
-                .map(|node| format!("Corresponds to:\n```ignored\n{:#?}\n", node));
+                .map(|node| format!("Corresponds to:\n```ignored\n{}\n", node));
             let name = ident(&candidate_name);
             // eprintln!("{} contains {:?}", candidate_name, names);
             let (init, fields): (Vec<_>, Vec<_>) = names
@@ -438,7 +438,7 @@ fn generate_graph_node(
                 }
                 inits.push(init);
             }
-            let doc = format!("Sequence.\nCorresponds to:\n```ignored\n{:#?}\n", expr);
+            let doc = format!("Sequence.\nCorresponds to:\n```ignored\n{}\n", expr);
             let def = quote! {
                 #[doc = #doc]
                 #attr
@@ -468,7 +468,7 @@ fn generate_graph_node(
             let (nodes, names, res) = walk_tree!(Choice, Variant);
             let docs = nodes
                 .iter()
-                .map(|node| format!("Corresponds to:\n```ignored\n{:#?}\n```", node));
+                .map(|node| format!("Corresponds to:\n```ignored\n{}\n```", node));
             let name = ident(&candidate_name);
             let vars = names
                 .iter()
@@ -487,7 +487,7 @@ fn generate_graph_node(
                     }
                 }
             });
-            let doc = format! {"Choices.\nCorresponds to:\n```ignored\n{:?}\n```", expr};
+            let doc = format! {"Choices.\nCorresponds to:\n```ignored\n{}\n```", expr};
             let def = quote! {
                 #[doc = #doc]
                 #attr
