@@ -200,6 +200,7 @@ You can find more projects and ecosystem tools in the [awesome-pest](https://git
 * [caith](https://github.com/Geobert/caith) (a dice roller crate)
 * [Melody](https://github.com/yoav-lavi/melody)
 * [json5-nodes](https://github.com/jlyonsmith/json5-nodes)
+* [prisma](https://github.com/prisma/prisma)
 
 ## Minimum Supported Rust Version (MSRV)
 

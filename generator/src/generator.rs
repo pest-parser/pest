@@ -537,6 +537,26 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
                 })
             }
         }
+        #[cfg(feature = "grammar-extras")]
+        OptimizedExpr::RepOnce(expr) => {
+            let expr = generate_expr(*expr);
+
+            quote! {
+                state.sequence(|state| {
+                    #expr.and_then(|state| {
+                        state.repeat(|state| {
+                            state.sequence(|state| {
+                                super::hidden::skip(
+                                    state
+                                ).and_then(|state| {
+                                    #expr
+                                })
+                            })
+                        })
+                    })
+                })
+            }
+        }
         OptimizedExpr::Skip(strings) => {
             quote! {
                 let strings = [#(#strings),*];
@@ -674,6 +694,22 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
             quote! {
                 state.repeat(|state| {
                     #expr
+                })
+            }
+        }
+        #[cfg(feature = "grammar-extras")]
+        OptimizedExpr::RepOnce(expr) => {
+            let expr = generate_expr_atomic(*expr);
+
+            quote! {
+                state.sequence(|state| {
+                    #expr.and_then(|state| {
+                        state.repeat(|state| {
+                            state.sequence(|state| {
+                                #expr
+                            })
+                        })
+                    })
                 })
             }
         }
