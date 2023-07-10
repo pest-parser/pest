@@ -23,7 +23,7 @@ fn fn_decl() -> TokenStream {
     quote! {
         #[inline]
         #[allow(unused_variables)]
-        fn try_new(
+        fn try_parse_with(
             input: ::pest::Position<'i>,
             stack: &mut ::pest::Stack<::pest::Span<'i>>
         ) -> #result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>>
@@ -210,7 +210,7 @@ fn generate_graph_node(
 
     let spaces = if inner_spaces {
         quote! {
-            let (next, _) = ::pest::iterators::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::new(input, stack);
+            let (next, _) = ::pest::iterators::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with(input, stack);
             input = next;
         }
     } else {
@@ -287,7 +287,7 @@ fn generate_graph_node(
                 quote! {()},
                 quote! {
                     let start = input.clone();
-                    let (input, res) = #inner::try_new(input, stack)?;
+                    let (input, res) = #inner::try_parse_with(input, stack)?;
                     let span = start.span(&input);
                     let content = ();
                     stack.push(span);
@@ -408,7 +408,7 @@ fn generate_graph_node(
                     (
                         quote! {
                             // eprintln!("Matching {}.", core::any::type_name::<#name>());
-                            let (remained, #field) = match #name::try_new(input, stack) {
+                            let (remained, #field) = match #name::try_parse_with(input, stack) {
                                 Ok(res) => res,
                                 Err(err) => {
                                     let message = ::pest::iterators::predefined_node::stack_error(err);
@@ -477,7 +477,7 @@ fn generate_graph_node(
             let init = names.iter().enumerate().map(|(i, var)| {
                 let var_name = format_ident!("var_{}", i);
                 quote! {
-                    match #var::try_new(input, stack) {
+                    match #var::try_parse_with(input, stack) {
                         Ok((input, res)) => {
                             return Ok((input, #name::#var_name(res)));
                         }

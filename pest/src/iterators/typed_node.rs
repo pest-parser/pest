@@ -27,7 +27,7 @@ where
     Self: Sized + Debug,
 {
     /// Create typed node.
-    fn new(input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self);
+    fn parse_with(input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self);
 }
 
 /// Node of concrete syntax tree.
@@ -36,7 +36,7 @@ where
     Self: Sized + Debug,
 {
     /// Create typed node.
-    fn try_new(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>>;
@@ -55,8 +55,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> ParsableTypedNode<'i, R> for T {
     #[inline]
     fn parse(input: &'i str) -> Result<Self, Error<R>> {
         let mut stack = Stack::new();
-        let (input, res) = T::try_new(Position::from_start(input), &mut stack)?;
-        let (_, _) = EOI::try_new(input, &mut stack)?;
+        let (input, res) = T::try_parse_with(Position::from_start(input), &mut stack)?;
+        let (_, _) = EOI::try_parse_with(input, &mut stack)?;
         Ok(res)
     }
 }
