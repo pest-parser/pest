@@ -730,3 +730,23 @@ pub fn stack_errors<R: RuleType>(errors: Vec<Error<R>>) -> String {
     let message = messages.join("\n    --------------------\n");
     message
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::iterators::ParsableTypedNode;
+
+    use super::*;
+
+    struct Foo;
+    impl StringWrapper for Foo {
+        const CONTENT: &'static str = "foo";
+    }
+    #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    enum Rule {}
+    #[test]
+    fn string() {
+        assert_eq!(Str::<'_, Rule, Foo>::CONTENT, Foo::CONTENT);
+        let s = Str::<'_, Rule, Foo>::parse("foo").unwrap();
+        assert_eq!(s.get_content(), "foo");
+    }
+}
