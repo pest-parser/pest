@@ -30,6 +30,18 @@ pub trait StringWrapper {
     const CONTENT: &'static str;
 }
 
+/// An object containing a string.
+pub trait StringStorage {
+    /// Get contained string.
+    fn get_content(&self) -> &str;
+}
+
+impl<T: StringWrapper> StringStorage for T {
+    fn get_content(&self) -> &str {
+        Self::CONTENT
+    }
+}
+
 /// Match given string.
 pub struct Str<'i, R: RuleType, T: StringWrapper> {
     _phantom: PhantomData<(&'i R, &'i T)>,
