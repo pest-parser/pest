@@ -22,7 +22,7 @@ use crate::{
 
 use super::{typed_node::NeverFailedTypedNode, TypedNode};
 
-const DEBUG_LOG: bool = true;
+const DEBUG_LOG: bool = false;
 
 /// A wrapper for string as a generics argument.
 pub trait StringWrapper {
