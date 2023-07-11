@@ -42,7 +42,16 @@ use pest_meta::{optimizer, unwrap_or_report, validator};
 /// Processes the derive/proc macro input and generates the corresponding parser based
 /// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
 /// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
-pub fn derive_parser<const TYPED: bool>(input: TokenStream, include_grammar: bool) -> TokenStream {
+pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
+    derive_parser_impl::<false>(input, include_grammar)
+}
+/// Processes the derive/proc macro input and generates the corresponding typed parser based
+/// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
+/// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
+pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
+    derive_parser_impl::<true>(input, include_grammar)
+}
+fn derive_parser_impl<const TYPED: bool>(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
     let (name, generics, contents) = parse_derive(ast);
 
