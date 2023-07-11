@@ -257,7 +257,7 @@ mod tests {
             pub struct TestParser;
         };
 
-        let token = super::derive_parser::<false>(input, true);
+        let token = super::derive_parser(input, true);
 
         let expected = quote! {
             #[doc = "A parser for JSON file.\nAnd this is a example for JSON parser.\n\n    indent-4-space\n"]
