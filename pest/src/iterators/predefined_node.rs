@@ -792,6 +792,10 @@ mod tests {
     impl StringWrapper for Foo {
         const CONTENT: &'static str = "foo";
     }
+
+    type WHITESPACE<'i> = Range<'i, Rule, ' ', ' '>;
+    type COMMENT<'i> = Range<'i, Rule, '\t', '\t'>;
+
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     enum Rule {}
     #[test]
@@ -799,5 +803,23 @@ mod tests {
         assert_eq!(Str::<'_, Rule, Foo>::CONTENT, Foo::CONTENT);
         let s = Str::<'_, Rule, Foo>::parse("foo").unwrap();
         assert_eq!(s.get_content(), "foo");
+    }
+    #[test]
+    fn range() {
+        WHITESPACE::parse(" ").unwrap();
+        COMMENT::parse("\t").unwrap();
+    }
+    type Ignore<'i> = Ign<'i, Rule, COMMENT<'i>, WHITESPACE<'i>>;
+    #[test]
+    fn ignore() {
+        Ignore::parse(" \t  ").unwrap();
+    }
+
+    type R<'i> = Rep<'i, Rule, Str<'i, Rule, Foo>, Ignore<'i>>;
+    #[test]
+    fn repetition() {
+        R::parse("foofoofoo").unwrap();
+        R::parse("foo foo foo").unwrap();
+        R::parse("foo foo\tfoo").unwrap();
     }
 }
