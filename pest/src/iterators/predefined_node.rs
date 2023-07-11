@@ -528,11 +528,11 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> T
     for Ign<'i, R, COMMENT, WHITESPACE>
 {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        Ok(Self::parse_with::<true>(input, stack))
+        Ok(Self::parse_with::<ATOMIC>(input, stack))
     }
 }
 impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> Debug
@@ -563,7 +563,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>>
             let mut i: usize = 0;
             loop {
                 if !ATOMIC && i != 0 {
-                    let (next, _) = IGNORED::parse_with::<true>(input, stack);
+                    let (next, _) = IGNORED::parse_with::<false>(input, stack);
                     input = next;
                 }
                 match T::try_parse_with::<ATOMIC>(input, stack) {
