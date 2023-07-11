@@ -678,7 +678,7 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
             #pairs
         }
     };
-    println!("{}", res);
+    // println!("{}", res);
     res
 }
 
