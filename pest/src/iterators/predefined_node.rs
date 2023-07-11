@@ -50,7 +50,7 @@ impl<'i, R: RuleType, T: StringWrapper> StringWrapper for Str<'i, R, T> {
     const CONTENT: &'static str = T::CONTENT;
 }
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<'i, R, T> {
-    fn try_parse_with(
+    fn try_parse_with<const _A: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -87,7 +87,7 @@ impl<'i, R: RuleType, T: StringWrapper> StringWrapper for Insens<'i, R, T> {
     const CONTENT: &'static str = T::CONTENT;
 }
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
-    fn try_parse_with(
+    fn try_parse_with<const _A: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -145,7 +145,7 @@ pub struct Range<'i, R: RuleType, const MIN: char, const MAX: char> {
 impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
     for Range<'i, R, MIN, MAX>
 {
-    fn try_parse_with(
+    fn try_parse_with<const _A: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -231,11 +231,11 @@ pub struct Positive<'i, R: RuleType, N: TypedNode<'i, R>> {
     _phantom: PhantomData<(&'i R, &'i N)>,
 }
 impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, N> {
-    fn try_parse_with(
+    fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        match N::try_parse_with(input, stack) {
+        match N::try_parse_with::<ATOMIC>(input, stack) {
             Ok((_input, _res)) => Ok((
                 input,
                 Self {
@@ -262,11 +262,11 @@ pub struct Negative<'i, R: RuleType, N: TypedNode<'i, R>> {
     _phantom: PhantomData<(&'i R, &'i N)>,
 }
 impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Negative<'i, R, N> {
-    fn try_parse_with(
+    fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        match N::try_parse_with(input, stack) {
+        match N::try_parse_with::<ATOMIC>(input, stack) {
             Ok(_) => Err(Error::new_from_pos(
                 ErrorVariant::CustomError {
                     message: format!("Unexpected {}.", type_name::<N>()),
@@ -298,7 +298,7 @@ pub struct ANY<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_with<const _A: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -328,7 +328,7 @@ pub struct SOI<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_with<const _A: bool>(
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -361,7 +361,7 @@ pub struct EOI<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_with<const _A: bool>(
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -396,7 +396,7 @@ pub struct NEWLINE<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_with<const _A: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -430,7 +430,7 @@ pub struct PEEK_ALL<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_with<const _A: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -447,11 +447,11 @@ pub struct Opt<'i, R: RuleType, T: TypedNode<'i, R>> {
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Opt<'i, R, T> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        match T::try_parse_with(input, stack) {
+        match T::try_parse_with::<ATOMIC>(input, stack) {
             Ok((input, inner)) => Ok((
                 input,
                 Self {
@@ -492,15 +492,26 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>>
     NeverFailedTypedNode<'i, R> for Ign<'i, R, COMMENT, WHITESPACE>
 {
     #[inline]
-    fn parse_with(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
+    fn parse_with<const ATOMIC: bool>(
+        mut input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> (Position<'i>, Self) {
+        if ATOMIC {
+            return (
+                input,
+                Self {
+                    _phantom: PhantomData,
+                },
+            );
+        }
         let mut flag = false;
         while flag {
             flag = false;
-            while let Ok((remained, _)) = WHITESPACE::try_parse_with(input, stack) {
+            while let Ok((remained, _)) = WHITESPACE::try_parse_with::<true>(input, stack) {
                 input = remained;
                 flag = true;
             }
-            while let Ok((remained, _)) = COMMENT::try_parse_with(input, stack) {
+            while let Ok((remained, _)) = COMMENT::try_parse_with::<true>(input, stack) {
                 input = remained;
                 flag = true;
             }
@@ -517,11 +528,11 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> T
     for Ign<'i, R, COMMENT, WHITESPACE>
 {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_with<const _A: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        Ok(Self::parse_with(input, stack))
+        Ok(Self::parse_with::<true>(input, stack))
     }
 }
 impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> Debug
@@ -533,27 +544,16 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> D
 }
 
 /// Repeatably match `T`.
-pub struct Rep<
-    'i,
-    R: RuleType,
-    T: TypedNode<'i, R>,
-    const INNER_SPACES: bool,
-    IGNORED: NeverFailedTypedNode<'i, R>,
-> {
+pub struct Rep<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> {
     /// Matched pairs.
     pub content: Vec<T>,
     _phantom: PhantomData<(&'i R, &'i IGNORED)>,
 }
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        const INNER_SPACES: bool,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-    > TypedNode<'i, R> for Rep<'i, R, T, INNER_SPACES, IGNORED>
+impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> TypedNode<'i, R>
+    for Rep<'i, R, T, IGNORED>
 {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_with<const ATOMIC: bool>(
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -562,11 +562,11 @@ impl<
         {
             let mut i: usize = 0;
             loop {
-                if INNER_SPACES && i != 0 {
-                    let (next, _) = IGNORED::parse_with(input, stack);
+                if !ATOMIC && i != 0 {
+                    let (next, _) = IGNORED::parse_with::<true>(input, stack);
                     input = next;
                 }
-                match T::try_parse_with(input, stack) {
+                match T::try_parse_with::<ATOMIC>(input, stack) {
                     Ok((next, elem)) => {
                         input = next;
                         vec.push(elem);
@@ -603,13 +603,8 @@ impl<
         ))
     }
 }
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        const INNER_SPACES: bool,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-    > Debug for Rep<'i, R, T, INNER_SPACES, IGNORED>
+impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> Debug
+    for Rep<'i, R, T, IGNORED>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Rep")
@@ -625,7 +620,7 @@ pub struct DROP<'i> {
 
 impl<'i, R: RuleType> TypedNode<'i, R> for DROP<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_with<const _A: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -659,11 +654,11 @@ pub struct Box<'i, R: RuleType, T: TypedNode<'i, R>> {
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Box<'i, R, T> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        let (input, res) = T::try_parse_with(input, stack)?;
+        let (input, res) = T::try_parse_with::<ATOMIC>(input, stack)?;
         Ok((
             input,
             Self {
@@ -686,12 +681,12 @@ pub struct Restorable<'i, R: RuleType, T: TypedNode<'i, R>> {
     _phantom: PhantomData<&'i R>,
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Restorable<'i, R, T> {
-    fn try_parse_with(
+    fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
         stack.snapshot();
-        match T::try_parse_with(input, stack) {
+        match T::try_parse_with::<ATOMIC>(input, stack) {
             Ok((input, res)) => {
                 stack.clear_snapshot();
                 Ok((
@@ -710,6 +705,62 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Restorable<'i, R
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Restorable<'i, R, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.content.fmt(f)
+    }
+}
+
+/// Force inner token to be atomic
+pub struct Atomic<'i, R: RuleType, T: TypedNode<'i, R>> {
+    /// Matched content.
+    pub content: T,
+    _phantom: PhantomData<&'i R>,
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Atomic<'i, R, T> {
+    #[inline]
+    fn try_parse_with<const ATOMIC: bool>(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let (input, res) = T::try_parse_with::<true>(input, stack)?;
+        Ok((
+            input,
+            Self {
+                content: res,
+                _phantom: PhantomData,
+            },
+        ))
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Atomic<'i, R, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.content.fmt(f)
+    }
+}
+
+/// Force inner token to be atomic
+pub struct NonAtomic<'i, R: RuleType, T: TypedNode<'i, R>> {
+    /// Matched content.
+    pub content: T,
+    _phantom: PhantomData<(&'i R, &'i T)>,
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for NonAtomic<'i, R, T> {
+    #[inline]
+    fn try_parse_with<const ATOMIC: bool>(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let (input, res) = T::try_parse_with::<false>(input, stack)?;
+        Ok((
+            input,
+            Self {
+                content: res,
+                _phantom: PhantomData,
+            },
+        ))
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for NonAtomic<'i, R, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.content.fmt(f)
     }

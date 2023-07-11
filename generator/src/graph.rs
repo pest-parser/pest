@@ -23,7 +23,7 @@ fn fn_decl() -> TokenStream {
     quote! {
         #[inline]
         #[allow(unused_variables)]
-        fn try_parse_with(
+        fn try_parse_with<const ATOMIC: bool>(
             input: ::pest::Position<'i>,
             stack: &mut ::pest::Stack<::pest::Span<'i>>
         ) -> #result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>>
@@ -137,15 +137,25 @@ fn process_single(
     }
 }
 
-/// Returns flle name.
+/// Returns type name.
 fn process_single_alias(
     map: &mut Output,
     expr: &OptimizedExpr,
     candidate_name: String,
     type_name: TokenStream,
+    inner_spaces: Option<bool>,
     explicit: bool,
 ) -> TokenStream {
     let name = ident(&candidate_name);
+    let type_name = match inner_spaces {
+        Some(true) => {
+            quote! {::pest::iterators::predefined_node::NonAtomic<'i, super::Rule, #type_name>}
+        }
+        Some(false) => {
+            quote! {::pest::iterators::predefined_node::Atomic<'i, super::Rule, #type_name>}
+        }
+        None => type_name,
+    };
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
         let def = quote! {
@@ -159,14 +169,14 @@ fn process_single_alias(
     }
 }
 
-/// Returns type name
+/// Returns type name.
 fn generate_graph_node(
     expr: &OptimizedExpr,
     candidate_name: String,
     // From node name to type definition and implementation
     map: &mut Output,
     explicit: bool,
-    inner_spaces: bool,
+    inner_spaces: Option<bool>,
     inner_tokens: bool,
     silent: bool,
 ) -> TokenStream {
@@ -176,30 +186,26 @@ fn generate_graph_node(
             let mut names: Vec<TokenStream> = Vec::new();
             let mut i = 0usize;
             let mut current = expr;
-            while let OptimizedExpr::$ivar(lhs, rhs) = current {
-                nodes.push(lhs);
-                names.push(generate_graph_node(
-                    lhs,
+            let mut gen = |node: &OptimizedExpr| {
+                let res = generate_graph_node(
+                    node,
                     format!("{}_{}", candidate_name, i),
                     map,
                     false,
-                    inner_spaces,
+                    None,
                     inner_tokens,
                     silent,
-                ));
-                current = rhs;
+                );
                 i += 1;
+                res
+            };
+            while let OptimizedExpr::$ivar(lhs, rhs) = current {
+                nodes.push(lhs);
+                names.push(gen(lhs));
+                current = rhs;
             }
             nodes.push(current);
-            names.push(generate_graph_node(
-                current,
-                format!("{}_{}", candidate_name, i),
-                map,
-                false,
-                inner_spaces,
-                inner_tokens,
-                silent,
-            ));
+            names.push(gen(current));
             let name = ident(&candidate_name);
             (nodes, names, quote! {#name::<'i>})
         }};
@@ -208,13 +214,21 @@ fn generate_graph_node(
     let f = fn_decl();
     let attr = attributes();
 
-    let spaces = if inner_spaces {
-        quote! {
-            let (next, _) = ::pest::iterators::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with(input, stack);
+    let spaces = match inner_spaces {
+        Some(true) => quote! {
+            let (next, _) = ::pest::iterators::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<false>(input, stack);
             input = next;
-        }
-    } else {
-        quote! {}
+        },
+        Some(false) => quote! {},
+        None => quote! {
+            let (next, _) = ::pest::iterators::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<ATOMIC>(input, stack);
+            input = next;
+        },
+    };
+    let ispaces = match inner_spaces {
+        Some(true) => quote! {false},
+        Some(false) => quote! {true},
+        None => quote! {ATOMIC},
     };
 
     // Still some compile-time information not taken
@@ -236,6 +250,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::iterators::predefined_node::Str::<'i, super::Rule, __pest_string_wrapper::#wrapper>
                 },
+                inner_spaces,
                 explicit,
             )
         }
@@ -254,6 +269,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::iterators::predefined_node::Insens::<'i, super::Rule, __pest_string_wrapper::#wrapper>
                 },
+                inner_spaces,
                 explicit,
             )
         }
@@ -287,7 +303,7 @@ fn generate_graph_node(
                 quote! {()},
                 quote! {
                     let start = input.clone();
-                    let (input, res) = #inner::try_parse_with(input, stack)?;
+                    let (input, res) = #inner::try_parse_with::<#ispaces>(input, stack)?;
                     let span = start.span(&input);
                     let content = ();
                     stack.push(span);
@@ -320,6 +336,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::iterators::predefined_node::Range::<'i, super::Rule, #start, #end>
                 },
+                inner_spaces,
                 explicit,
             )
         }
@@ -330,6 +347,7 @@ fn generate_graph_node(
                 expr,
                 candidate_name,
                 quote! {::pest::iterators::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
+                inner_spaces,
                 explicit,
             )
         }
@@ -350,6 +368,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::iterators::predefined_node::Positive::<'i, super::Rule, #inner>
                 },
+                inner_spaces,
                 explicit,
             )
         }
@@ -370,6 +389,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::iterators::predefined_node::Negative::<'i, super::Rule, #inner>
                 },
+                inner_spaces,
                 explicit,
             )
         }
@@ -390,6 +410,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::iterators::predefined_node::Restorable::<'i, super::Rule, #inner>
                 },
+                inner_spaces,
                 explicit,
             )
         }
@@ -408,7 +429,7 @@ fn generate_graph_node(
                     (
                         quote! {
                             // eprintln!("Matching {}.", core::any::type_name::<#name>());
-                            let (remained, #field) = match #name::try_parse_with(input, stack) {
+                            let (remained, #field) = match #name::try_parse_with::<#ispaces>(input, stack) {
                                 Ok(res) => res,
                                 Err(err) => {
                                     let message = ::pest::iterators::predefined_node::stack_error(err);
@@ -477,7 +498,7 @@ fn generate_graph_node(
             let init = names.iter().enumerate().map(|(i, var)| {
                 let var_name = format_ident!("var_{}", i);
                 quote! {
-                    match #var::try_parse_with(input, stack) {
+                    match #var::try_parse_with::<#ispaces>(input, stack) {
                         Ok((input, res)) => {
                             return Ok((input, #name::#var_name(res)));
                         }
@@ -532,6 +553,7 @@ fn generate_graph_node(
                 expr,
                 candidate_name,
                 quote! {::pest::iterators::predefined_node::Opt::<'i, super::Rule, #inner_name>},
+                inner_spaces,
                 explicit,
             )
         }
@@ -554,7 +576,6 @@ fn generate_graph_node(
                         'i,
                         super::Rule,
                         #inner_name,
-                        #inner_spaces,
                         ::pest::iterators::predefined_node::Ign::<
                             'i,
                             super::Rule,
@@ -563,6 +584,7 @@ fn generate_graph_node(
                         >
                     >
                 },
+                inner_spaces,
                 explicit,
             )
         }
@@ -586,37 +608,29 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
     // println!("{:#?}", rules);
     let mut res = Output::new();
     for rule in rules.iter() {
+        let candidate_name = rule.name.clone();
         match rule.ty {
             RuleType::Normal => {
                 generate_graph_node(
                     &rule.expr,
-                    rule.name.clone(),
+                    candidate_name,
                     &mut res,
                     true,
-                    true,
+                    None,
                     true,
                     false,
                 );
             }
             RuleType::Silent => {
-                generate_graph_node(
-                    &rule.expr,
-                    rule.name.clone(),
-                    &mut res,
-                    true,
-                    true,
-                    true,
-                    true,
-                );
+                generate_graph_node(&rule.expr, candidate_name, &mut res, true, None, true, true);
             }
             RuleType::NonAtomic => {
-                todo!();
                 generate_graph_node(
                     &rule.expr,
-                    rule.name.clone(),
+                    candidate_name,
                     &mut res,
                     true,
-                    true,
+                    Some(true),
                     true,
                     true,
                 );
@@ -624,10 +638,10 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
             RuleType::CompoundAtomic => {
                 generate_graph_node(
                     &rule.expr,
-                    rule.name.clone(),
+                    candidate_name,
                     &mut res,
                     true,
-                    false,
+                    Some(false),
                     true,
                     false,
                 );
@@ -635,10 +649,10 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
             RuleType::Atomic => {
                 generate_graph_node(
                     &rule.expr,
-                    rule.name.clone(),
+                    candidate_name,
                     &mut res,
                     true,
-                    false,
+                    Some(false),
                     false,
                     false,
                 );
@@ -664,7 +678,7 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
             #pairs
         }
     };
-    // println!("{}", res);
+    println!("{}", res);
     res
 }
 

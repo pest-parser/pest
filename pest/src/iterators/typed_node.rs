@@ -27,7 +27,11 @@ where
     Self: Sized + Debug,
 {
     /// Create typed node.
-    fn parse_with(input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self);
+    /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
+    fn parse_with<const ATOMIC: bool>(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> (Position<'i>, Self);
 }
 
 /// Node of concrete syntax tree.
@@ -36,7 +40,8 @@ where
     Self: Sized + Debug,
 {
     /// Create typed node.
-    fn try_parse_with(
+    /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
+    fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>>;
@@ -48,6 +53,7 @@ where
     Self: Sized,
 {
     /// Parse the whole input into given typed node.
+    /// A rule is not atomic by default.
     fn parse(input: &'i str) -> Result<Self, Error<R>>;
 }
 
@@ -55,8 +61,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> ParsableTypedNode<'i, R> for T {
     #[inline]
     fn parse(input: &'i str) -> Result<Self, Error<R>> {
         let mut stack = Stack::new();
-        let (input, res) = T::try_parse_with(Position::from_start(input), &mut stack)?;
-        let (_, _) = EOI::try_parse_with(input, &mut stack)?;
+        let (input, res) = T::try_parse_with::<false>(Position::from_start(input), &mut stack)?;
+        let (_, _) = EOI::try_parse_with::<false>(input, &mut stack)?;
         Ok(res)
     }
 }
