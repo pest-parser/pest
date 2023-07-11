@@ -504,7 +504,7 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>>
                 },
             );
         }
-        let mut flag = false;
+        let mut flag = true;
         while flag {
             flag = false;
             while let Ok((remained, _)) = WHITESPACE::try_parse_with::<true>(input, stack) {
