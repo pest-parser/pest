@@ -10,17 +10,14 @@
 //! Types and iterators for parser output.
 
 mod flat_pairs;
-pub mod line_index;
+mod line_index;
 mod pair;
 pub(crate) mod pairs;
-pub mod predefined_node;
 mod queueable_token;
 mod tokens;
-mod typed_node;
 
 pub use self::flat_pairs::FlatPairs;
 pub use self::pair::Pair;
 pub use self::pairs::Pairs;
 pub(crate) use self::queueable_token::QueueableToken;
 pub use self::tokens::Tokens;
-pub use self::typed_node::{NeverFailedTypedNode, Option, ParsableTypedNode, Rc, TypedNode};

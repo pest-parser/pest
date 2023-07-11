@@ -7,13 +7,11 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use crate::error::Error;
-use crate::iterators::Pairs;
-use crate::RuleType;
+//! Types for typed parser.
 
-/// A trait with a single method that parses strings.
-pub trait Parser<R: RuleType> {
-    /// Parses a `&str` starting from `rule`.
+/// A trait with a single method that parses strings into typed concrete syntax tree.
+pub trait TypedParser<R: RuleType> {
+    /// Parses a `&str` into a tree starting from T.
     #[allow(clippy::perf)]
-    fn parse(rule: R, input: &str) -> Result<Pairs<'_, R>, Error<R>>;
+    fn parse<'i, T: TypedNode<'i, R>>(input: &'i str) -> Result<T, Error<R>>;
 }
