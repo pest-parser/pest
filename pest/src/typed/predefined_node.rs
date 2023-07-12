@@ -20,27 +20,9 @@ use crate::{
     Debug, Position, RuleType, Span, Stack,
 };
 
-use super::{typed_node::NeverFailedTypedNode, TypedNode};
+use super::{typed_node::NeverFailedTypedNode, wrapper::StringWrapper, TypedNode};
 
 const DEBUG_LOG: bool = false;
-
-/// A wrapper for string as a generics argument.
-pub trait StringWrapper {
-    /// Wrapped string.
-    const CONTENT: &'static str;
-}
-
-/// An object containing a string.
-pub trait StringStorage {
-    /// Get contained string.
-    fn get_content(&self) -> &str;
-}
-
-impl<T: StringWrapper> StringStorage for T {
-    fn get_content(&self) -> &str {
-        Self::CONTENT
-    }
-}
 
 /// Match given string.
 pub struct Str<'i, R: RuleType, T: StringWrapper> {
@@ -784,7 +766,7 @@ pub fn stack_errors<R: RuleType>(errors: Vec<Error<R>>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::typed::ParsableTypedNode;
+    use super::super::{ParsableTypedNode, StringStorage};
 
     use super::*;
 

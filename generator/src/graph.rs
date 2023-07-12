@@ -239,7 +239,7 @@ fn generate_graph_node(
             map.insert_wrapper(quote! {
                 #[doc = #doc]
                 pub struct #wrapper();
-                impl ::pest::typed::predefined_node::StringWrapper for #wrapper {
+                impl ::pest::typed::StringWrapper for #wrapper {
                     const CONTENT: &'static str = #content;
                 }
             });
@@ -258,7 +258,7 @@ fn generate_graph_node(
             let wrapper = format_ident!("__pest__string_wrapper_{}", candidate_name);
             map.insert_wrapper(quote! {
                 pub struct #wrapper();
-                impl ::pest::typed::predefined_node::StringWrapper for #wrapper {
+                impl ::pest::typed::StringWrapper for #wrapper {
                     const CONTENT: &'static str = #content;
                 }
             });

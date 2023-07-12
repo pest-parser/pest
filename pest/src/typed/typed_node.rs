@@ -14,13 +14,6 @@ pub use alloc::rc::Rc;
 
 use super::predefined_node::EOI;
 
-/// Wrapper for std::option::Option
-#[cfg(feature = "std")]
-pub type Option<T> = ::std::option::Option<T>;
-/// Wrapper for std::option::Option
-#[cfg(not(feature = "std"))]
-pub type Option<T> = ::core::option::Option<T>;
-
 /// Node of concrete syntax tree that never fails.
 pub trait NeverFailedTypedNode<'i, R: RuleType>: TypedNode<'i, R>
 where

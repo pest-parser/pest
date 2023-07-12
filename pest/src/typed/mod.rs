@@ -11,9 +11,11 @@
 
 pub mod predefined_node;
 mod typed_node;
-pub use typed_node::*;
+mod wrapper;
+pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, TypedNode};
+pub use wrapper::{StringStorage, StringWrapper};
 
-use crate::{RuleType, error::Error};
+use crate::{error::Error, RuleType};
 
 /// A trait with a single method that parses strings into typed concrete syntax tree.
 pub trait TypedParser<R: RuleType> {
