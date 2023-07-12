@@ -97,8 +97,8 @@ pub(crate) fn generate<const TYPED: bool>(
 
     let typed_parser_impl = if TYPED {
         quote! {
-            impl #impl_generics ::pest::TypedParser<Rule> for #name #ty_generics #where_clause {
-                fn parse<'i, N : ::pest::iterators::ParsableTypedNode<'i, Rule>>(
+            impl #impl_generics ::pest::typed::TypedParser<Rule> for #name #ty_generics #where_clause {
+                fn parse<'i, N : ::pest::typed::ParsableTypedNode<'i, Rule>>(
                     input: &'i str
                 ) -> #result<
                     N,

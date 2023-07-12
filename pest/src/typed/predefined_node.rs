@@ -784,7 +784,7 @@ pub fn stack_errors<R: RuleType>(errors: Vec<Error<R>>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::iterators::ParsableTypedNode;
+    use crate::typed::ParsableTypedNode;
 
     use super::*;
 

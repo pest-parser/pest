@@ -124,7 +124,7 @@ fn process_single(
         pub struct #name<'i> {
             #fields
         }
-        impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
+        impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
             #f {
                 #fn_def
             }
@@ -149,10 +149,10 @@ fn process_single_alias(
     let name = ident(&candidate_name);
     let type_name = match inner_spaces {
         Some(true) => {
-            quote! {::pest::iterators::predefined_node::NonAtomic<'i, super::Rule, #type_name>}
+            quote! {::pest::typed::predefined_node::NonAtomic<'i, super::Rule, #type_name>}
         }
         Some(false) => {
-            quote! {::pest::iterators::predefined_node::Atomic<'i, super::Rule, #type_name>}
+            quote! {::pest::typed::predefined_node::Atomic<'i, super::Rule, #type_name>}
         }
         None => type_name,
     };
@@ -216,12 +216,12 @@ fn generate_graph_node(
 
     let spaces = match inner_spaces {
         Some(true) => quote! {
-            let (next, _) = ::pest::iterators::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<false>(input, stack);
+            let (next, _) = ::pest::typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<false>(input, stack);
             input = next;
         },
         Some(false) => quote! {},
         None => quote! {
-            let (next, _) = ::pest::iterators::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<ATOMIC>(input, stack);
+            let (next, _) = ::pest::typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<ATOMIC>(input, stack);
             input = next;
         },
     };
@@ -239,7 +239,7 @@ fn generate_graph_node(
             map.insert_wrapper(quote! {
                 #[doc = #doc]
                 pub struct #wrapper();
-                impl ::pest::iterators::predefined_node::StringWrapper for #wrapper {
+                impl ::pest::typed::predefined_node::StringWrapper for #wrapper {
                     const CONTENT: &'static str = #content;
                 }
             });
@@ -248,7 +248,7 @@ fn generate_graph_node(
                 expr,
                 candidate_name,
                 quote! {
-                    ::pest::iterators::predefined_node::Str::<'i, super::Rule, __pest_string_wrapper::#wrapper>
+                    ::pest::typed::predefined_node::Str::<'i, super::Rule, __pest_string_wrapper::#wrapper>
                 },
                 inner_spaces,
                 explicit,
@@ -258,7 +258,7 @@ fn generate_graph_node(
             let wrapper = format_ident!("__pest__string_wrapper_{}", candidate_name);
             map.insert_wrapper(quote! {
                 pub struct #wrapper();
-                impl ::pest::iterators::predefined_node::StringWrapper for #wrapper {
+                impl ::pest::typed::predefined_node::StringWrapper for #wrapper {
                     const CONTENT: &'static str = #content;
                 }
             });
@@ -267,7 +267,7 @@ fn generate_graph_node(
                 expr,
                 candidate_name,
                 quote! {
-                    ::pest::iterators::predefined_node::Insens::<'i, super::Rule, __pest_string_wrapper::#wrapper>
+                    ::pest::typed::predefined_node::Insens::<'i, super::Rule, __pest_string_wrapper::#wrapper>
                 },
                 inner_spaces,
                 explicit,
@@ -278,7 +278,7 @@ fn generate_graph_node(
             candidate_name,
             quote! {()},
             quote! {
-                let (input, span) = ::pest::iterators::predefined_node::peek_stack_slice::<super::Rule>(input, #start, #end, stack)?;
+                let (input, span) = ::pest::typed::predefined_node::peek_stack_slice::<super::Rule>(input, #start, #end, stack)?;
                 let content = ();
             },
             &match end {
@@ -317,7 +317,7 @@ fn generate_graph_node(
             candidate_name,
             quote! {()},
             quote!(
-                let (input, span) = ::pest::iterators::predefined_node::skip_until::<super::Rule>(input, &[#(#strings),*])?;
+                let (input, span) = ::pest::typed::predefined_node::skip_until::<super::Rule>(input, &[#(#strings),*])?;
                 let content = ();
             ),
             &format!(
@@ -334,7 +334,7 @@ fn generate_graph_node(
                 expr,
                 candidate_name,
                 quote! {
-                    ::pest::iterators::predefined_node::Range::<'i, super::Rule, #start, #end>
+                    ::pest::typed::predefined_node::Range::<'i, super::Rule, #start, #end>
                 },
                 inner_spaces,
                 explicit,
@@ -346,7 +346,7 @@ fn generate_graph_node(
                 map,
                 expr,
                 candidate_name,
-                quote! {::pest::iterators::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
+                quote! {::pest::typed::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
                 inner_spaces,
                 explicit,
             )
@@ -366,7 +366,7 @@ fn generate_graph_node(
                 expr,
                 candidate_name,
                 quote! {
-                    ::pest::iterators::predefined_node::Positive::<'i, super::Rule, #inner>
+                    ::pest::typed::predefined_node::Positive::<'i, super::Rule, #inner>
                 },
                 inner_spaces,
                 explicit,
@@ -387,7 +387,7 @@ fn generate_graph_node(
                 expr,
                 candidate_name,
                 quote! {
-                    ::pest::iterators::predefined_node::Negative::<'i, super::Rule, #inner>
+                    ::pest::typed::predefined_node::Negative::<'i, super::Rule, #inner>
                 },
                 inner_spaces,
                 explicit,
@@ -408,7 +408,7 @@ fn generate_graph_node(
                 expr,
                 candidate_name,
                 quote! {
-                    ::pest::iterators::predefined_node::Restorable::<'i, super::Rule, #inner>
+                    ::pest::typed::predefined_node::Restorable::<'i, super::Rule, #inner>
                 },
                 inner_spaces,
                 explicit,
@@ -432,7 +432,7 @@ fn generate_graph_node(
                             let (remained, #field) = match #name::try_parse_with::<#ispaces>(input, stack) {
                                 Ok(res) => res,
                                 Err(err) => {
-                                    let message = ::pest::iterators::predefined_node::stack_error(err);
+                                    let message = ::pest::typed::predefined_node::stack_error(err);
                                     return Err(::pest::error::Error::new_from_pos(
                                         ::pest::error::ErrorVariant::CustomError {
                                             message: format!(
@@ -470,7 +470,7 @@ fn generate_graph_node(
                         pub #fields: #names
                     ),*
                 }
-                impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
+                impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
                         let start = input.clone();
                         let mut input = input;
@@ -518,11 +518,11 @@ fn generate_graph_node(
                         #vars(#names)
                     ),*
                 }
-                impl<'i> ::pest::iterators::TypedNode<'i, super::Rule> for #name<'i> {
+                impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
                         let mut errors = vec![];
                         #(#init)*
-                        let message = ::pest::iterators::predefined_node::stack_errors(errors);
+                        let message = ::pest::typed::predefined_node::stack_errors(errors);
                         return Err(::pest::error::Error::new_from_pos(
                             ::pest::error::ErrorVariant::CustomError {
                                 message: format!(
@@ -552,7 +552,7 @@ fn generate_graph_node(
                 map,
                 expr,
                 candidate_name,
-                quote! {::pest::iterators::predefined_node::Opt::<'i, super::Rule, #inner_name>},
+                quote! {::pest::typed::predefined_node::Opt::<'i, super::Rule, #inner_name>},
                 inner_spaces,
                 explicit,
             )
@@ -572,11 +572,11 @@ fn generate_graph_node(
                 expr,
                 candidate_name,
                 quote! {
-                    ::pest::iterators::predefined_node::Rep::<
+                    ::pest::typed::predefined_node::Rep::<
                         'i,
                         super::Rule,
                         #inner_name,
-                        ::pest::iterators::predefined_node::Ign::<
+                        ::pest::typed::predefined_node::Ign::<
                             'i,
                             super::Rule,
                             COMMENT::<'i>,
@@ -672,7 +672,7 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
     let res = quote! {
         #[doc = "Definitions of statically typed nodes generated by pest-generator."]
         pub mod pairs {
-            use pest::iterators::NeverFailedTypedNode as _;
+            use pest::typed::NeverFailedTypedNode as _;
             #builtin
 
             #pairs
@@ -684,6 +684,6 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
 
 pub fn generate_builtin() -> TokenStream {
     quote! {
-        use ::pest::iterators::predefined_node::{ANY, SOI, EOI, NEWLINE, PEEK_ALL, DROP};
+        use ::pest::typed::predefined_node::{ANY, SOI, EOI, NEWLINE, PEEK_ALL, DROP};
     }
 }
