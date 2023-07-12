@@ -10,7 +10,7 @@
 //! A parser for JSON file.
 //!
 //! And this is a example for JSON parser.
-json = { SOI ~ (object | array) ~ EOI }
+json = { SOI ~ value ~ EOI }
 
 /// Matches object, e.g.: `{ "foo": "bar" }`
 /// Foobar
