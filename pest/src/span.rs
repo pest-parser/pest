@@ -224,8 +224,7 @@ impl<'i> Span<'i> {
     /// # use pest;
     /// # use pest::Span;
     /// 
-    /// # Example: Get input string from a span
-    /// 
+    /// // Example: Get input string from a span
     /// let input = "abc\ndef\nghi";
     /// let span = Span::new(input, 1, 7).unwrap();
     /// assert_eq!(span.get_input(), input);
@@ -328,30 +327,30 @@ impl<'i> Hash for Span<'i> {
 /// ```
 /// # use pest;
 /// # use pest::Span;
-/// # use pest::Span::merge;
+/// # use pest::merge_spans;
 ///
-/// # Example 1: Contiguous spans
+/// // Example 1: Contiguous spans
 /// let input = "abc\ndef\nghi";
 /// let span1 = Span::new(input, 1, 7).unwrap();
 /// let span2 = Span::new(input, 7, 11).unwrap();
-/// let merged = merge(&span1, &span2).unwrap();
+/// let merged = merge_spans(&span1, &span2).unwrap();
 /// assert_eq!(merged, Span::new(input, 1, 11).unwrap());
 /// 
-/// # Example 2: Overlapping spans
+/// // Example 2: Overlapping spans
 /// let input = "abc\ndef\nghi";
 /// let span1 = Span::new(input, 1, 7).unwrap();
 /// let span2 = Span::new(input, 5, 11).unwrap();
-/// let merged = merge(&span1, &span2).unwrap();
+/// let merged = merge_spans(&span1, &span2).unwrap();
 /// assert_eq!(merged, Span::new(input, 1, 11).unwrap());
 /// 
-/// # Example 3: Non-contiguous spans
+/// // Example 3: Non-contiguous spans
 /// let input = "abc\ndef\nghi";
 /// let span1 = Span::new(input, 1, 7).unwrap();
 /// let span2 = Span::new(input, 8, 11).unwrap();
-/// let merged = merge(&span1, &span2);
+/// let merged = merge_spans(&span1, &span2);
 /// assert!(merged.is_none());
 /// ```
-pub fn merge<'i>(a: &Span<'i>, b: &Span<'i>) -> Option<Span<'i>> {
+pub fn merge_spans<'i>(a: &Span<'i>, b: &Span<'i>) -> Option<Span<'i>> {
     if a.end() >= b.start() && a.start() <= b.end() {
         // The spans overlap or are contiguous, so they can be merged.
         Span::new(a.get_input(), std::cmp::min(a.start(), b.start()), std::cmp::max(a.end(), b.end()))
@@ -533,7 +532,7 @@ mod tests {
         let input = "abc\ndef\nghi";
         let span1 = Span::new(input, 1, 7).unwrap();
         let span2 = Span::new(input, 7, 11).unwrap();
-        let merged = merge(&span1, &span2).unwrap();
+        let merged = merge_spans(&span1, &span2).unwrap();
         assert_eq!(merged, Span::new(input, 1, 11).unwrap());
     }
 
@@ -542,7 +541,7 @@ mod tests {
         let input = "abc\ndef\nghi";
         let span1 = Span::new(input, 1, 7).unwrap();
         let span2 = Span::new(input, 5, 11).unwrap();
-        let merged = merge(&span1, &span2).unwrap();
+        let merged = merge_spans(&span1, &span2).unwrap();
         assert_eq!(merged, Span::new(input, 1, 11).unwrap());
     }
 
@@ -551,7 +550,7 @@ mod tests {
         let input = "abc\ndef\nghi";
         let span1 = Span::new(input, 1, 7).unwrap();
         let span2 = Span::new(input, 8, 11).unwrap();
-        let merged = merge(&span1, &span2);
+        let merged = merge_spans(&span1, &span2);
         assert!(merged.is_none());
     }
 }
