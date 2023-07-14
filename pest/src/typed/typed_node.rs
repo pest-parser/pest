@@ -14,8 +14,14 @@ pub use alloc::rc::Rc;
 
 use super::predefined_node::EOI;
 
+/// A node derived from a rule.
+pub trait SubRule<R: RuleType> {
+    /// The rule that the node belongs to.
+    const RULE: R;
+}
+
 /// Node of concrete syntax tree that never fails.
-pub trait NeverFailedTypedNode<'i, R: RuleType>: TypedNode<'i, R>
+pub trait NeverFailedTypedNode<'i>
 where
     Self: Sized + Debug,
 {
@@ -43,14 +49,14 @@ where
 /// Node of concrete syntax tree.
 pub trait ParsableTypedNode<'i, R: RuleType>
 where
-    Self: Sized,
+    Self: Sized + Debug + SubRule<R>,
 {
     /// Parse the whole input into given typed node.
     /// A rule is not atomic by default.
     fn parse(input: &'i str) -> Result<Self, Error<R>>;
 }
 
-impl<'i, R: RuleType, T: TypedNode<'i, R>> ParsableTypedNode<'i, R> for T {
+impl<'i, R: RuleType, T: TypedNode<'i, R> + SubRule<R>> ParsableTypedNode<'i, R> for T {
     #[inline]
     fn parse(input: &'i str) -> Result<Self, Error<R>> {
         let mut stack = Stack::new();

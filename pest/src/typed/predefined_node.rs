@@ -12,7 +12,7 @@
 use core::{any::type_name, fmt, marker::PhantomData};
 use std::eprintln;
 
-use alloc::{borrow::ToOwned, format, string::String, vec::Vec};
+use alloc::{borrow::ToOwned, format, string::String, vec, vec::Vec};
 
 use crate::{
     error::{Error, ErrorVariant},
@@ -20,7 +20,9 @@ use crate::{
     Debug, Position, RuleType, Span, Stack,
 };
 
-use super::{typed_node::NeverFailedTypedNode, wrapper::StringWrapper, TypedNode};
+use super::{
+    typed_node::NeverFailedTypedNode, wrapper::StringWrapper, ParsableTypedNode, SubRule, TypedNode,
+};
 
 const DEBUG_LOG: bool = false;
 
@@ -471,7 +473,7 @@ pub struct Ign<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode
 }
 
 impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>>
-    NeverFailedTypedNode<'i, R> for Ign<'i, R, COMMENT, WHITESPACE>
+    NeverFailedTypedNode<'i> for Ign<'i, R, COMMENT, WHITESPACE>
 {
     #[inline]
     fn parse_with<const ATOMIC: bool>(
@@ -526,12 +528,12 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> D
 }
 
 /// Repeatably match `T`.
-pub struct Rep<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> {
+pub struct Rep<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i>> {
     /// Matched pairs.
     pub content: Vec<T>,
     _phantom: PhantomData<(&'i R, &'i IGNORED)>,
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> TypedNode<'i, R>
+impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i>> TypedNode<'i, R>
     for Rep<'i, R, T, IGNORED>
 {
     #[inline]
@@ -585,7 +587,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>>
         ))
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> Debug
+impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i>> Debug
     for Rep<'i, R, T, IGNORED>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -655,6 +657,9 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
         self.content.fmt(f)
     }
 }
+impl<'i, R: RuleType, T: SubRule<R> + TypedNode<'i, R>> SubRule<R> for Box<'i, R, T> {
+    const RULE: R = T::RULE;
+}
 
 /// Restore on error.
 pub struct Restorable<'i, R: RuleType, T: TypedNode<'i, R>> {
@@ -689,6 +694,34 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Restorable<'i, R
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Restorable<'i, R, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.content.fmt(f)
+    }
+}
+
+/// Always fail.
+pub struct AlwaysFail<'i> {
+    _phantom: PhantomData<&'i ()>,
+}
+/// A trait that only `AlwaysFail` implements.
+pub trait AlwaysFailed: Debug {}
+impl<'i> AlwaysFailed for AlwaysFail<'i> {}
+impl<'i, R: RuleType, T: AlwaysFailed + SubRule<R>> TypedNode<'i, R> for T {
+    #[inline]
+    fn try_parse_with<const ATOMIC: bool>(
+        input: Position<'i>,
+        _stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        Err(Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![],
+                negatives: vec![T::RULE],
+            },
+            input,
+        ))
+    }
+}
+impl<'i> Debug for AlwaysFail<'i> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AlwaysFail").finish()
     }
 }
 
@@ -766,24 +799,43 @@ pub fn stack_errors<R: RuleType>(errors: Vec<Error<R>>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{ParsableTypedNode, StringStorage};
+
+    use super::super::{typed_node::SubRule, ParsableTypedNode, StringStorage};
 
     use super::*;
+
+    #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    enum Rule {
+        Foo,
+        RepFoo,
+        WHITESPACE,
+        COMMENT,
+    }
 
     struct Foo;
     impl StringWrapper for Foo {
         const CONTENT: &'static str = "foo";
     }
+    impl SubRule<Rule> for Foo {
+        const RULE: Rule = Rule::Foo;
+    }
 
     type WHITESPACE<'i> = Range<'i, Rule, ' ', ' '>;
+    impl<'i> SubRule<Rule> for WHITESPACE<'i> {
+        const RULE: Rule = Rule::WHITESPACE;
+    }
     type COMMENT<'i> = Range<'i, Rule, '\t', '\t'>;
-
-    #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    enum Rule {}
+    impl<'i> SubRule<Rule> for COMMENT<'i> {
+        const RULE: Rule = Rule::COMMENT;
+    }
+    type StrFoo<'i> = Str<'i, Rule, Foo>;
+    impl<'i> SubRule<Rule> for StrFoo<'i> {
+        const RULE: Rule = Rule::Foo;
+    }
     #[test]
     fn string() {
-        assert_eq!(Str::<'_, Rule, Foo>::CONTENT, Foo::CONTENT);
-        let s = Str::<'_, Rule, Foo>::parse("foo").unwrap();
+        assert_eq!(StrFoo::CONTENT, Foo::CONTENT);
+        let s = StrFoo::parse("foo").unwrap();
         assert_eq!(s.get_content(), "foo");
     }
     #[test]
@@ -792,12 +844,18 @@ mod tests {
         COMMENT::parse("\t").unwrap();
     }
     type Ignore<'i> = Ign<'i, Rule, COMMENT<'i>, WHITESPACE<'i>>;
+    impl<'i> SubRule<Rule> for Ignore<'i> {
+        const RULE: Rule = Rule::RepFoo;
+    }
     #[test]
     fn ignore() {
         Ignore::parse(" \t  ").unwrap();
     }
 
     type R<'i> = Rep<'i, Rule, Str<'i, Rule, Foo>, Ignore<'i>>;
+    impl<'i> SubRule<Rule> for R<'i> {
+        const RULE: Rule = Rule::RepFoo;
+    }
     #[test]
     fn repetition() {
         R::parse("foofoofoo").unwrap();

@@ -11,6 +11,7 @@ use crate::types::result_type;
 use pest_meta::{ast::RuleType, optimizer::OptimizedRule};
 use proc_macro2::{Ident, TokenStream};
 pub use std::collections::BTreeMap as Map;
+use std::collections::BTreeSet;
 
 use crate::optimizer::OptimizedExpr;
 
@@ -68,6 +69,7 @@ impl Output {
 
 fn process_single(
     map: &mut Output,
+    rule_name: &str,
     candidate_name: String,
     type_name: TokenStream,
     fimpl: TokenStream,
@@ -75,6 +77,7 @@ fn process_single(
     silent: bool,
 ) -> TokenStream {
     let f = fn_decl();
+    let rule_name = ident(rule_name);
     let name = ident(&candidate_name);
     let inner = type_name.clone();
     let fn_def = if silent {
@@ -129,6 +132,9 @@ fn process_single(
                 #fn_def
             }
         }
+        impl<'i> ::pest::typed::SubRule<super::Rule> for #name<'i> {
+            const RULE: super::Rule = super::Rule::#rule_name;
+        }
         #debug
     };
     map.insert(def);
@@ -141,11 +147,13 @@ fn process_single(
 fn process_single_alias(
     map: &mut Output,
     expr: &OptimizedExpr,
+    rule_name: &str,
     candidate_name: String,
     type_name: TokenStream,
     inner_spaces: Option<bool>,
     explicit: bool,
 ) -> TokenStream {
+    let rule_name = ident(rule_name);
     let name = ident(&candidate_name);
     let type_name = match inner_spaces {
         Some(true) => {
@@ -156,11 +164,20 @@ fn process_single_alias(
         }
         None => type_name,
     };
+    let sup = match expr {
+        OptimizedExpr::Ident(_) => quote!{},
+        _ => quote!{
+            impl<'i> ::pest::typed::SubRule<super::Rule> for #name<'i> {
+                const RULE: super::Rule = super::Rule::#rule_name;
+            }
+        }
+    };
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
         let def = quote! {
             #[doc = #doc]
             pub type #name<'i> = #type_name;
+            #sup
         };
         map.insert(def);
         quote! {#name::<'i>}
@@ -172,6 +189,7 @@ fn process_single_alias(
 /// Returns type name.
 fn generate_graph_node(
     expr: &OptimizedExpr,
+    rule_name: &str,
     candidate_name: String,
     // From node name to type definition and implementation
     map: &mut Output,
@@ -189,6 +207,7 @@ fn generate_graph_node(
             let mut gen = |node: &OptimizedExpr| {
                 let res = generate_graph_node(
                     node,
+                    rule_name,
                     format!("{}_{}", candidate_name, i),
                     map,
                     false,
@@ -246,6 +265,7 @@ fn generate_graph_node(
             process_single_alias(
                 map,
                 expr,
+                rule_name,
                 candidate_name,
                 quote! {
                     ::pest::typed::predefined_node::Str::<'i, super::Rule, __pest_string_wrapper::#wrapper>
@@ -265,6 +285,7 @@ fn generate_graph_node(
             process_single_alias(
                 map,
                 expr,
+                rule_name,
                 candidate_name,
                 quote! {
                     ::pest::typed::predefined_node::Insens::<'i, super::Rule, __pest_string_wrapper::#wrapper>
@@ -275,6 +296,7 @@ fn generate_graph_node(
         }
         OptimizedExpr::PeekSlice(start, end) => process_single(
             map,
+            rule_name,
             candidate_name,
             quote! {()},
             quote! {
@@ -290,6 +312,7 @@ fn generate_graph_node(
         OptimizedExpr::Push(expr) => {
             let inner = generate_graph_node(
                 expr,
+                rule_name,
                 format! {"{}_p", candidate_name},
                 map,
                 false,
@@ -299,7 +322,8 @@ fn generate_graph_node(
             );
             process_single(
                 map,
-                candidate_name,
+            rule_name,
+            candidate_name,
                 quote! {()},
                 quote! {
                     let start = input.clone();
@@ -314,6 +338,7 @@ fn generate_graph_node(
         }
         OptimizedExpr::Skip(strings) => process_single(
             map,
+            rule_name,
             candidate_name,
             quote! {()},
             quote!(
@@ -332,6 +357,7 @@ fn generate_graph_node(
             process_single_alias(
                 map,
                 expr,
+                rule_name,
                 candidate_name,
                 quote! {
                     ::pest::typed::predefined_node::Range::<'i, super::Rule, #start, #end>
@@ -345,6 +371,7 @@ fn generate_graph_node(
             process_single_alias(
                 map,
                 expr,
+                rule_name,
                 candidate_name,
                 quote! {::pest::typed::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
                 inner_spaces,
@@ -354,6 +381,7 @@ fn generate_graph_node(
         OptimizedExpr::PosPred(expr) => {
             let inner = generate_graph_node(
                 expr,
+                rule_name,
                 format! {"{}_P", candidate_name},
                 map,
                 false,
@@ -364,6 +392,7 @@ fn generate_graph_node(
             process_single_alias(
                 map,
                 expr,
+                rule_name,
                 candidate_name,
                 quote! {
                     ::pest::typed::predefined_node::Positive::<'i, super::Rule, #inner>
@@ -375,6 +404,7 @@ fn generate_graph_node(
         OptimizedExpr::NegPred(expr) => {
             let inner = generate_graph_node(
                 expr,
+                rule_name,
                 format! {"{}_N", candidate_name},
                 map,
                 false,
@@ -385,6 +415,7 @@ fn generate_graph_node(
             process_single_alias(
                 map,
                 expr,
+                rule_name,
                 candidate_name,
                 quote! {
                     ::pest::typed::predefined_node::Negative::<'i, super::Rule, #inner>
@@ -396,6 +427,7 @@ fn generate_graph_node(
         OptimizedExpr::RestoreOnErr(expr) => {
             let inner = generate_graph_node(
                 expr,
+                rule_name,
                 format! {"{}_E", candidate_name},
                 map,
                 false,
@@ -406,6 +438,7 @@ fn generate_graph_node(
             process_single_alias(
                 map,
                 expr,
+                rule_name,
                 candidate_name,
                 quote! {
                     ::pest::typed::predefined_node::Restorable::<'i, super::Rule, #inner>
@@ -541,6 +574,7 @@ fn generate_graph_node(
         OptimizedExpr::Opt(inner) => {
             let inner_name = generate_graph_node(
                 inner,
+                rule_name,
                 format!("{}_o", candidate_name),
                 map,
                 false,
@@ -551,6 +585,7 @@ fn generate_graph_node(
             process_single_alias(
                 map,
                 expr,
+                rule_name,
                 candidate_name,
                 quote! {::pest::typed::predefined_node::Opt::<'i, super::Rule, #inner_name>},
                 inner_spaces,
@@ -560,6 +595,7 @@ fn generate_graph_node(
         OptimizedExpr::Rep(inner) => {
             let inner_name = generate_graph_node(
                 inner,
+                rule_name,
                 format!("{}_r", candidate_name),
                 map,
                 false,
@@ -570,6 +606,7 @@ fn generate_graph_node(
             process_single_alias(
                 map,
                 expr,
+                rule_name,
                 candidate_name,
                 quote! {
                     ::pest::typed::predefined_node::Rep::<
@@ -592,6 +629,7 @@ fn generate_graph_node(
         OptimizedExpr::NodeTag(inner_expr, _tag) => {
             generate_graph_node(
                 inner_expr,
+                rule_name,
                 format!("{}_0", candidate_name),
                 map,
                 explicit,
@@ -608,11 +646,13 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
     // println!("{:#?}", rules);
     let mut res = Output::new();
     for rule in rules.iter() {
+        let rule_name = rule.name.as_str();
         let candidate_name = rule.name.clone();
         match rule.ty {
             RuleType::Normal => {
                 generate_graph_node(
                     &rule.expr,
+                    rule_name,
                     candidate_name,
                     &mut res,
                     true,
@@ -622,11 +662,21 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
                 );
             }
             RuleType::Silent => {
-                generate_graph_node(&rule.expr, candidate_name, &mut res, true, None, true, true);
+                generate_graph_node(
+                    &rule.expr,
+                    rule_name,
+                    candidate_name,
+                    &mut res,
+                    true,
+                    None,
+                    true,
+                    true,
+                );
             }
             RuleType::NonAtomic => {
                 generate_graph_node(
                     &rule.expr,
+                    rule_name,
                     candidate_name,
                     &mut res,
                     true,
@@ -638,6 +688,7 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
             RuleType::CompoundAtomic => {
                 generate_graph_node(
                     &rule.expr,
+                    rule_name,
                     candidate_name,
                     &mut res,
                     true,
@@ -649,6 +700,7 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
             RuleType::Atomic => {
                 generate_graph_node(
                     &rule.expr,
+                    rule_name,
                     candidate_name,
                     &mut res,
                     true,
@@ -666,24 +718,63 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
     // let names: Vec<_> = rules.iter().map(|rule| &rule.name).collect();
     // eprintln!("{:#?}", names);
     let graph = generate_graph(rules);
+    let rule_wrappers = rules.iter().map(|rule|{
+        let name = ident(rule.name.as_str());
+        quote!{
+            struct #name();
+            impl ::pest::typed::SubRule<super::Rule> for #name {
+                const RULE: super::Rule = super::Rule::#name;
+            }
+        }
+    });
     let pairs = graph.collect();
-    let builtin = generate_builtin();
+    let rule_names: BTreeSet<&str> = rules.iter().map(|rule| rule.name.as_str()).collect();
+    let builtin = generate_builtin(&rule_names);
     // let names = rules.iter().map(|rule| format_ident!("r#{}", rule.name));
     let res = quote! {
         #[doc = "Definitions of statically typed nodes generated by pest-generator."]
         pub mod pairs {
-            use pest::typed::NeverFailedTypedNode as _;
-            #builtin
-
-            #pairs
+            use super::Rule;
+            mod rule_wrappers {
+                #(#rule_wrappers)*
+            }
+            mod pairs {
+                use pest::typed::NeverFailedTypedNode as _;
+                #builtin
+    
+                #pairs
+            }
+            pub use pairs::*;
         }
     };
     // println!("{}", res);
     res
 }
 
-pub fn generate_builtin() -> TokenStream {
-    quote! {
+pub fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
+    let mut result = vec![quote! {
         use ::pest::typed::predefined_node::{ANY, SOI, EOI, NEWLINE, PEEK_ALL, DROP};
+    }];
+    macro_rules! insert_builtin {
+        ($name:literal, $def:expr) => {
+            if !rule_names.contains($name) {
+                result.push($def);
+            }
+        };
+    }
+    insert_builtin!(
+        "WHITESPACE",
+        quote! {
+            type WHITESPACE<'i> = ::pest::typed::predefined_node::AlwaysFail<'i>;
+        }
+    );
+    insert_builtin!(
+        "COMMENT",
+        quote! {
+            type COMMENT<'i> = ::pest::typed::predefined_node::AlwaysFail<'i>;
+        }
+    );
+    quote! {
+        #(#result)*
     }
 }
