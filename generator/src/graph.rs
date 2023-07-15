@@ -161,6 +161,9 @@ fn process_single_alias(
         }
         None => type_name,
     };
+    let type_name = quote! {
+        ::pest::typed::Rule<'i, super::Rule, super::Rule::#rule_name, super::Rule::EOI, #type_name>
+    };
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
         let def = quote! {
