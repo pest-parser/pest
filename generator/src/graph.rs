@@ -24,7 +24,7 @@ fn fn_decl() -> TokenStream {
     quote! {
         #[inline]
         #[allow(unused_variables)]
-        fn try_parse_with<const ATOMIC: bool>(
+        fn try_parse_with<const ATOMIC: bool, Rule: ::pest::typed::RuleWrapper<super::Rule>>(
             input: ::pest::Position<'i>,
             stack: &mut ::pest::Stack<::pest::Span<'i>>
         ) -> #result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>>
@@ -132,9 +132,6 @@ fn process_single(
                 #fn_def
             }
         }
-        impl<'i> ::pest::typed::SubRule<super::Rule> for #name<'i> {
-            const RULE: super::Rule = super::Rule::#rule_name;
-        }
         #debug
     };
     map.insert(def);
@@ -164,20 +161,11 @@ fn process_single_alias(
         }
         None => type_name,
     };
-    let sup = match expr {
-        OptimizedExpr::Ident(_) => quote!{},
-        _ => quote!{
-            impl<'i> ::pest::typed::SubRule<super::Rule> for #name<'i> {
-                const RULE: super::Rule = super::Rule::#rule_name;
-            }
-        }
-    };
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
         let def = quote! {
             #[doc = #doc]
             pub type #name<'i> = #type_name;
-            #sup
         };
         map.insert(def);
         quote! {#name::<'i>}
@@ -235,12 +223,12 @@ fn generate_graph_node(
 
     let spaces = match inner_spaces {
         Some(true) => quote! {
-            let (next, _) = ::pest::typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<false>(input, stack);
+            let (next, _) = ::pest::typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<false, Rule>(input, stack);
             input = next;
         },
         Some(false) => quote! {},
         None => quote! {
-            let (next, _) = ::pest::typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<ATOMIC>(input, stack);
+            let (next, _) = ::pest::typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<ATOMIC, Rule>(input, stack);
             input = next;
         },
     };
@@ -322,12 +310,12 @@ fn generate_graph_node(
             );
             process_single(
                 map,
-            rule_name,
-            candidate_name,
+                rule_name,
+                candidate_name,
                 quote! {()},
                 quote! {
                     let start = input.clone();
-                    let (input, res) = #inner::try_parse_with::<#ispaces>(input, stack)?;
+                    let (input, res) = #inner::try_parse_with::<#ispaces, Rule>(input, stack)?;
                     let span = start.span(&input);
                     let content = ();
                     stack.push(span);
@@ -462,7 +450,7 @@ fn generate_graph_node(
                     (
                         quote! {
                             // eprintln!("Matching {}.", core::any::type_name::<#name>());
-                            let (remained, #field) = match #name::try_parse_with::<#ispaces>(input, stack) {
+                            let (remained, #field) = match #name::try_parse_with::<#ispaces, Rule>(input, stack) {
                                 Ok(res) => res,
                                 Err(err) => {
                                     let message = ::pest::typed::predefined_node::stack_error(err);
@@ -531,7 +519,7 @@ fn generate_graph_node(
             let init = names.iter().enumerate().map(|(i, var)| {
                 let var_name = format_ident!("var_{}", i);
                 quote! {
-                    match #var::try_parse_with::<#ispaces>(input, stack) {
+                    match #var::try_parse_with::<#ispaces, Rule>(input, stack) {
                         Ok((input, res)) => {
                             return Ok((input, #name::#var_name(res)));
                         }
@@ -718,11 +706,11 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
     // let names: Vec<_> = rules.iter().map(|rule| &rule.name).collect();
     // eprintln!("{:#?}", names);
     let graph = generate_graph(rules);
-    let rule_wrappers = rules.iter().map(|rule|{
+    let rule_wrappers = rules.iter().map(|rule| {
         let name = ident(rule.name.as_str());
-        quote!{
+        quote! {
             struct #name();
-            impl ::pest::typed::SubRule<super::Rule> for #name {
+            impl ::pest::typed::RuleWrapper<super::Rule> for #name {
                 const RULE: super::Rule = super::Rule::#name;
             }
         }
@@ -741,7 +729,7 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
             mod pairs {
                 use pest::typed::NeverFailedTypedNode as _;
                 #builtin
-    
+
                 #pairs
             }
             pub use pairs::*;

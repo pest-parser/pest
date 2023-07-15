@@ -95,44 +95,11 @@ pub(crate) fn generate<const TYPED: bool>(
         }
     };
 
-    let typed_parser_impl = if TYPED {
-        quote! {
-            impl #impl_generics ::pest::typed::TypedParser<Rule> for #name #ty_generics #where_clause {
-                fn parse<'i, N : ::pest::typed::ParsableTypedNode<'i, Rule>>(
-                    input: &'i str
-                ) -> #result<
-                    N,
-                    ::pest::error::Error<Rule>
-                > {
-                    mod rules {
-                        #![allow(clippy::upper_case_acronyms)]
-                        pub mod hidden {
-                            use super::super::Rule;
-                            #skip
-                        }
-
-                        pub mod visible {
-                            use super::super::Rule;
-                            #( #rules )*
-                        }
-
-                        pub use self::visible::*;
-                    }
-
-                    N :: parse (input)
-                }
-            }
-        }
-    } else {
-        TokenStream::new()
-    };
-
     let res = quote! {
         #include_fix
         #rule_enum
         #pairs
         #parser_impl
-        #typed_parser_impl
     };
     res
 }

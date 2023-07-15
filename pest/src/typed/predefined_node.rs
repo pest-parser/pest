@@ -7,9 +7,9 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! Predefined tree nodes
+//! Predefined tree nodes.
 
-use core::{any::type_name, fmt, marker::PhantomData};
+use core::{any::type_name, fmt, marker::PhantomData, ops::Deref};
 use std::eprintln;
 
 use alloc::{borrow::ToOwned, format, string::String, vec, vec::Vec};
@@ -21,7 +21,9 @@ use crate::{
 };
 
 use super::{
-    typed_node::NeverFailedTypedNode, wrapper::StringWrapper, ParsableTypedNode, SubRule, TypedNode,
+    typed_node::{NeverFailedTypedNode, ParsableTypedNode},
+    wrapper::{RuleWrapper, StringWrapper, TypeWrapper},
+    TypedNode,
 };
 
 const DEBUG_LOG: bool = false;
@@ -34,7 +36,7 @@ impl<'i, R: RuleType, T: StringWrapper> StringWrapper for Str<'i, R, T> {
     const CONTENT: &'static str = T::CONTENT;
 }
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<'i, R, T> {
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -71,7 +73,7 @@ impl<'i, R: RuleType, T: StringWrapper> StringWrapper for Insens<'i, R, T> {
     const CONTENT: &'static str = T::CONTENT;
 }
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -129,7 +131,7 @@ pub struct Range<'i, R: RuleType, const MIN: char, const MAX: char> {
 impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
     for Range<'i, R, MIN, MAX>
 {
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -215,11 +217,11 @@ pub struct Positive<'i, R: RuleType, N: TypedNode<'i, R>> {
     _phantom: PhantomData<(&'i R, &'i N)>,
 }
 impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, N> {
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        match N::try_parse_with::<ATOMIC>(input, stack) {
+        match N::try_parse_with::<ATOMIC, Rule>(input, stack) {
             Ok((_input, _res)) => Ok((
                 input,
                 Self {
@@ -246,11 +248,11 @@ pub struct Negative<'i, R: RuleType, N: TypedNode<'i, R>> {
     _phantom: PhantomData<(&'i R, &'i N)>,
 }
 impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Negative<'i, R, N> {
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        match N::try_parse_with::<ATOMIC>(input, stack) {
+        match N::try_parse_with::<ATOMIC, Rule>(input, stack) {
             Ok(_) => Err(Error::new_from_pos(
                 ErrorVariant::CustomError {
                     message: format!("Unexpected {}.", type_name::<N>()),
@@ -282,7 +284,7 @@ pub struct ANY<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -312,7 +314,7 @@ pub struct SOI<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -345,7 +347,7 @@ pub struct EOI<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -380,7 +382,7 @@ pub struct NEWLINE<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -414,7 +416,7 @@ pub struct PEEK_ALL<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -431,11 +433,11 @@ pub struct Opt<'i, R: RuleType, T: TypedNode<'i, R>> {
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Opt<'i, R, T> {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        match T::try_parse_with::<ATOMIC>(input, stack) {
+        match T::try_parse_with::<ATOMIC, Rule>(input, stack) {
             Ok((input, inner)) => Ok((
                 input,
                 Self {
@@ -473,10 +475,10 @@ pub struct Ign<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode
 }
 
 impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>>
-    NeverFailedTypedNode<'i> for Ign<'i, R, COMMENT, WHITESPACE>
+    NeverFailedTypedNode<'i, R> for Ign<'i, R, COMMENT, WHITESPACE>
 {
     #[inline]
-    fn parse_with<const ATOMIC: bool>(
+    fn parse_with<const ATOMIC: bool, RULE: RuleWrapper<R>>(
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> (Position<'i>, Self) {
@@ -491,11 +493,11 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>>
         let mut flag = true;
         while flag {
             flag = false;
-            while let Ok((remained, _)) = WHITESPACE::try_parse_with::<true>(input, stack) {
+            while let Ok((remained, _)) = WHITESPACE::try_parse_with::<true, RULE>(input, stack) {
                 input = remained;
                 flag = true;
             }
-            while let Ok((remained, _)) = COMMENT::try_parse_with::<true>(input, stack) {
+            while let Ok((remained, _)) = COMMENT::try_parse_with::<true, RULE>(input, stack) {
                 input = remained;
                 flag = true;
             }
@@ -512,11 +514,11 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> T
     for Ign<'i, R, COMMENT, WHITESPACE>
 {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with<const ATOMIC: bool, RULE: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        Ok(Self::parse_with::<ATOMIC>(input, stack))
+        Ok(Self::parse_with::<ATOMIC, RULE>(input, stack))
     }
 }
 impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> Debug
@@ -528,16 +530,16 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> D
 }
 
 /// Repeatably match `T`.
-pub struct Rep<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i>> {
+pub struct Rep<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> {
     /// Matched pairs.
     pub content: Vec<T>,
     _phantom: PhantomData<(&'i R, &'i IGNORED)>,
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i>> TypedNode<'i, R>
+impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> TypedNode<'i, R>
     for Rep<'i, R, T, IGNORED>
 {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -547,10 +549,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i>> Ty
             let mut i: usize = 0;
             loop {
                 if !ATOMIC && i != 0 {
-                    let (next, _) = IGNORED::parse_with::<false>(input, stack);
+                    let (next, _) = IGNORED::parse_with::<false, Rule>(input, stack);
                     input = next;
                 }
-                match T::try_parse_with::<ATOMIC>(input, stack) {
+                match T::try_parse_with::<ATOMIC, Rule>(input, stack) {
                     Ok((next, elem)) => {
                         input = next;
                         vec.push(elem);
@@ -587,7 +589,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i>> Ty
         ))
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i>> Debug
+impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> Debug
     for Rep<'i, R, T, IGNORED>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -604,7 +606,7 @@ pub struct DROP<'i> {
 
 impl<'i, R: RuleType> TypedNode<'i, R> for DROP<'i> {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
@@ -636,13 +638,20 @@ pub struct Box<'i, R: RuleType, T: TypedNode<'i, R>> {
     pub content: ::alloc::boxed::Box<T>,
     _phantom: PhantomData<&'i R>,
 }
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Box<'i, R, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.content.deref()
+    }
+}
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Box<'i, R, T> {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        let (input, res) = T::try_parse_with::<ATOMIC>(input, stack)?;
+        let (input, res) = T::try_parse_with::<ATOMIC, Rule>(input, stack)?;
         Ok((
             input,
             Self {
@@ -657,9 +666,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
         self.content.fmt(f)
     }
 }
-impl<'i, R: RuleType, T: SubRule<R> + TypedNode<'i, R>> SubRule<R> for Box<'i, R, T> {
-    const RULE: R = T::RULE;
-}
 
 /// Restore on error.
 pub struct Restorable<'i, R: RuleType, T: TypedNode<'i, R>> {
@@ -668,12 +674,12 @@ pub struct Restorable<'i, R: RuleType, T: TypedNode<'i, R>> {
     _phantom: PhantomData<&'i R>,
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Restorable<'i, R, T> {
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
         stack.snapshot();
-        match T::try_parse_with::<ATOMIC>(input, stack) {
+        match T::try_parse_with::<ATOMIC, Rule>(input, stack) {
             Ok((input, res)) => {
                 stack.clear_snapshot();
                 Ok((
@@ -704,16 +710,16 @@ pub struct AlwaysFail<'i> {
 /// A trait that only `AlwaysFail` implements.
 pub trait AlwaysFailed: Debug {}
 impl<'i> AlwaysFailed for AlwaysFail<'i> {}
-impl<'i, R: RuleType, T: AlwaysFailed + SubRule<R>> TypedNode<'i, R> for T {
+impl<'i, R: RuleType, T: AlwaysFailed> TypedNode<'i, R> for T {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
         Err(Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![],
-                negatives: vec![T::RULE],
+                negatives: vec![Rule::RULE],
             },
             input,
         ))
@@ -725,7 +731,7 @@ impl<'i> Debug for AlwaysFail<'i> {
     }
 }
 
-/// Force inner token to be atomic
+/// Force inner token to be atomic.
 pub struct Atomic<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Matched content.
     pub content: T,
@@ -733,11 +739,11 @@ pub struct Atomic<'i, R: RuleType, T: TypedNode<'i, R>> {
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Atomic<'i, R, T> {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        let (input, res) = T::try_parse_with::<true>(input, stack)?;
+        let (input, res) = T::try_parse_with::<true, Rule>(input, stack)?;
         Ok((
             input,
             Self {
@@ -753,7 +759,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Atomic<'i, R, T> {
     }
 }
 
-/// Force inner token to be atomic
+/// Force inner token to be atomic.
 pub struct NonAtomic<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Matched content.
     pub content: T,
@@ -761,11 +767,11 @@ pub struct NonAtomic<'i, R: RuleType, T: TypedNode<'i, R>> {
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for NonAtomic<'i, R, T> {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
-        let (input, res) = T::try_parse_with::<false>(input, stack)?;
+        let (input, res) = T::try_parse_with::<false, Rule>(input, stack)?;
         Ok((
             input,
             Self {
@@ -778,6 +784,67 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for NonAtomic<'i, R,
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for NonAtomic<'i, R, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.content.fmt(f)
+    }
+}
+
+/// Start point of a rule.
+pub struct Rule<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> {
+    /// Matched content.
+    pub content: T,
+    _phantom: PhantomData<(&'i R, &'i RULE, &'i _EOI)>,
+}
+impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> Deref
+    for Rule<'i, R, RULE, _EOI, T>
+{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> TypeWrapper
+    for Rule<'i, R, RULE, _EOI, T>
+{
+    type Inner = T;
+}
+impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>>
+    TypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T>
+{
+    #[inline]
+    fn try_parse_with<const ATOMIC: bool, _Rule: RuleWrapper<R>>(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Error<R>> {
+        let (input, res) = T::try_parse_with::<false, RULE>(input, stack)?;
+        Ok((
+            input,
+            Self {
+                content: res,
+                _phantom: PhantomData,
+            },
+        ))
+    }
+}
+
+impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>>
+    ParsableTypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T>
+{
+    /// Parse the whole input into given typed node.
+    /// A rule is not atomic by default.
+    #[inline]
+    fn parse(input: &'i str) -> Result<Self, Error<R>> {
+        let mut stack = Stack::new();
+        let (input, res) =
+            Self::try_parse_with::<false, RULE>(Position::from_start(input), &mut stack)?;
+        let (_, _) = EOI::try_parse_with::<false, _EOI>(input, &mut stack)?;
+        Ok(res)
+    }
+}
+impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> Debug
+    for Rule<'i, R, RULE, _EOI, T>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Rule").finish()
     }
 }
 
@@ -800,41 +867,62 @@ pub fn stack_errors<R: RuleType>(errors: Vec<Error<R>>) -> String {
 #[cfg(test)]
 mod tests {
 
-    use super::super::{typed_node::SubRule, ParsableTypedNode, StringStorage};
+    use super::super::StringStorage;
 
     use super::*;
 
-    #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    enum Rule {
+    macro_rules! make_rules {
+        ($($ids:ident,)*) => {
+            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+            enum Rule {
+                $($ids),*
+            }
+            mod rule_wrappers {
+                $(
+                    pub struct $ids {}
+                    impl super::RuleWrapper<super::Rule> for $ids {
+                        const RULE:super::Rule = super::Rule::$ids;
+                    }
+                )*
+            }
+        };
+    }
+
+    make_rules! {
         Foo,
         RepFoo,
         WHITESPACE,
         COMMENT,
+        EOI,
     }
 
     struct Foo;
     impl StringWrapper for Foo {
         const CONTENT: &'static str = "foo";
     }
-    impl SubRule<Rule> for Foo {
+    impl RuleWrapper<Rule> for Foo {
         const RULE: Rule = Rule::Foo;
     }
 
-    type WHITESPACE<'i> = Range<'i, Rule, ' ', ' '>;
-    impl<'i> SubRule<Rule> for WHITESPACE<'i> {
-        const RULE: Rule = Rule::WHITESPACE;
-    }
-    type COMMENT<'i> = Range<'i, Rule, '\t', '\t'>;
-    impl<'i> SubRule<Rule> for COMMENT<'i> {
-        const RULE: Rule = Rule::COMMENT;
-    }
-    type StrFoo<'i> = Str<'i, Rule, Foo>;
-    impl<'i> SubRule<Rule> for StrFoo<'i> {
-        const RULE: Rule = Rule::Foo;
-    }
+    type WHITESPACE<'i> = super::Rule<
+        'i,
+        Rule,
+        rule_wrappers::WHITESPACE,
+        rule_wrappers::EOI,
+        Range<'i, Rule, ' ', ' '>,
+    >;
+    type COMMENT<'i> = super::Rule<
+        'i,
+        R,
+        rule_wrappers::WHITESPACE,
+        rule_wrappers::EOI,
+        Range<'i, Rule, '\t', '\t'>,
+    >;
+    type StrFoo<'i> =
+        super::Rule<'i, Rule, rule_wrappers::Foo, rule_wrappers::EOI, Str<'i, Rule, Foo>>;
     #[test]
     fn string() {
-        assert_eq!(StrFoo::CONTENT, Foo::CONTENT);
+        assert_eq!(<StrFoo<'_> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
         let s = StrFoo::parse("foo").unwrap();
         assert_eq!(s.get_content(), "foo");
     }
@@ -844,7 +932,7 @@ mod tests {
         COMMENT::parse("\t").unwrap();
     }
     type Ignore<'i> = Ign<'i, Rule, COMMENT<'i>, WHITESPACE<'i>>;
-    impl<'i> SubRule<Rule> for Ignore<'i> {
+    impl<'i> RuleWrapper<Rule> for Ignore<'i> {
         const RULE: Rule = Rule::RepFoo;
     }
     #[test]
@@ -853,7 +941,7 @@ mod tests {
     }
 
     type R<'i> = Rep<'i, Rule, Str<'i, Rule, Foo>, Ignore<'i>>;
-    impl<'i> SubRule<Rule> for R<'i> {
+    impl<'i> RuleWrapper<Rule> for R<'i> {
         const RULE: Rule = Rule::RepFoo;
     }
     #[test]
