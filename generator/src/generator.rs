@@ -18,7 +18,6 @@ use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
 use crate::docs::DocComment;
-use crate::graph::generate_typed_pair_from_rule;
 use crate::types::{box_type, option_type, result_type};
 
 /// Generate codes for Parser.
@@ -40,11 +39,6 @@ pub(crate) fn generate<const TYPED: bool>(
         quote!()
     };
     let rule_enum = generate_enum(&rules, doc_comment, uses_eoi);
-    let pairs = if TYPED {
-        generate_typed_pair_from_rule(&rules)
-    } else {
-        quote! {}
-    };
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
 
@@ -98,7 +92,6 @@ pub(crate) fn generate<const TYPED: bool>(
     let res = quote! {
         #include_fix
         #rule_enum
-        #pairs
         #parser_impl
     };
     res

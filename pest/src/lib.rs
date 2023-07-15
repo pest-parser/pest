@@ -347,7 +347,6 @@ use core::hash::Hash;
 
 pub mod error;
 pub mod iterators;
-pub mod typed;
 mod macros;
 mod parser;
 mod parser_state;
