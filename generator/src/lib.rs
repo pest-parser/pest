@@ -33,6 +33,7 @@ use syn::{Attribute, DeriveInput, Expr, ExprLit, Generics, Ident, Lit, Meta};
 mod macros;
 mod docs;
 mod generator;
+mod graph;
 mod types;
 
 use pest_meta::parser::{self, rename_meta_rule, Rule};
