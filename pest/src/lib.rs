@@ -339,7 +339,7 @@ pub use crate::parser_state::{
     set_call_limit, state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState,
 };
 pub use crate::position::Position;
-pub use crate::span::{Lines, LinesSpan, Span};
+pub use crate::span::{merge_spans, Lines, LinesSpan, Span};
 pub use crate::token::Token;
 use core::fmt::Debug;
 use core::hash::Hash;
