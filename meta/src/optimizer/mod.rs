@@ -303,6 +303,8 @@ impl core::fmt::Display for OptimizedExpr {
             }
             OptimizedExpr::Opt(expr) => write!(f, "{}?", expr),
             OptimizedExpr::Rep(expr) => write!(f, "{}*", expr),
+            #[cfg(feature = "grammar-extras")]
+            OptimizedExpr::RepOnce(expr) => write!(f, "{}+", expr),
             OptimizedExpr::Skip(strings) => {
                 let strings = strings
                     .iter()
