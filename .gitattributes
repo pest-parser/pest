@@ -1,2 +1,1 @@
-*.rs   text eol=lf autocrlf=true
-*.pest text eol=lf autocrlf=true
+*   text eol=lf autocrlf=true
