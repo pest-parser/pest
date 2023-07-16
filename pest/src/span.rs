@@ -528,7 +528,7 @@ mod tests {
     fn get_input_of_span() {
         let input = "abc\ndef\nghi";
         let span = Span::new(input, 1, 7).unwrap();
-        
+
         assert_eq!(span.get_input(), input);
     }
 
@@ -538,7 +538,7 @@ mod tests {
         let span1 = Span::new(input, 1, 7).unwrap();
         let span2 = Span::new(input, 7, 11).unwrap();
         let merged = merge_spans(&span1, &span2).unwrap();
-        
+
         assert_eq!(merged, Span::new(input, 1, 11).unwrap());
     }
 
@@ -548,7 +548,7 @@ mod tests {
         let span1 = Span::new(input, 1, 7).unwrap();
         let span2 = Span::new(input, 5, 11).unwrap();
         let merged = merge_spans(&span1, &span2).unwrap();
-        
+
         assert_eq!(merged, Span::new(input, 1, 11).unwrap());
     }
 
@@ -558,7 +558,7 @@ mod tests {
         let span1 = Span::new(input, 1, 7).unwrap();
         let span2 = Span::new(input, 8, 11).unwrap();
         let merged = merge_spans(&span1, &span2);
-        
+
         assert!(merged.is_none());
     }
 }

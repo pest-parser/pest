@@ -463,7 +463,7 @@ mod tests {
     fn get_input_of_pair() {
         let input = "abcde";
         let pair = AbcParser::parse(Rule::a, input).unwrap().next().unwrap();
-        
+
         assert_eq!(input, pair.get_input());
     }
 }
