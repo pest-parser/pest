@@ -38,68 +38,61 @@ fn attributes() -> TokenStream {
     }
 }
 
-fn rule(name: &Ident, type_name: &TokenStream, rule_name: &Ident) -> TokenStream {
+fn rule_wrappers() -> TokenStream {
     quote! {
-        /// Start point of a rule.
-        pub struct Rule<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> {
-            /// Matched content.
-            pub content: T,
-            _phantom: PhantomData<(&'i R, &'i RULE, &'i _EOI)>,
+        super::rule_wrappers
+    }
+}
+
+fn rule(name: &Ident, type_name: &TokenStream, rule_name: &Ident, doc: &String) -> TokenStream {
+    let rule_wrappers = rule_wrappers();
+    quote! {
+        #[doc = #doc]
+        #[derive(Debug)]
+        pub struct #name<'i> {
+            #[doc = "Matched content."]
+            pub content: #type_name,
         }
-        impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> Deref
-            for Rule<'i, R, RULE, _EOI, T>
-        {
-            type Target = T;
+        impl<'i> ::pest::typed::RuleWrapper<super::Rule> for #name<'i> {
+            const RULE: super::Rule = super::Rule::#rule_name;
+        }
+        impl<'i> ::core::ops::Deref for #name<'i> {
+            type Target = #type_name;
 
             fn deref(&self) -> &Self::Target {
                 &self.content
             }
         }
-        impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> TypeWrapper
-            for Rule<'i, R, RULE, _EOI, T>
-        {
-            type Inner = T;
+        impl<'i> ::pest::typed::TypeWrapper for #name<'i> {
+            type Inner = #type_name;
         }
-        impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>>
-            TypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T>
+        impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i>
         {
             #[inline]
-            fn try_parse_with<const ATOMIC: bool, _Rule: RuleWrapper<R>>(
-                input: Position<'i>,
-                stack: &mut Stack<Span<'i>>,
-            ) -> Result<(Position<'i>, Self), Error<R>> {
-                let (input, res) = T::try_parse_with::<ATOMIC, RULE>(input, stack)?;
+            fn try_parse_with<const ATOMIC: bool, _Rule: ::pest::typed::RuleWrapper<super::Rule>>(
+                input: ::pest::Position<'i>,
+                stack: &mut ::pest::Stack<::pest::Span<'i>>,
+            ) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>> {
+                let (input, content) = #type_name::try_parse_with::<ATOMIC, #rule_wrappers::#rule_name>(input, stack)?;
                 Ok((
                     input,
                     Self {
-                        content: res,
-                        _phantom: PhantomData,
+                        content,
                     },
                 ))
             }
         }
-        impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>>
-            ParsableTypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T>
+        impl<'i> ::pest::typed::ParsableTypedNode<'i, super::Rule> for #name<'i>
         {
-            /// Parse the whole input into given typed node.
-            /// A rule is not atomic by default.
             #[inline]
-            fn parse(input: &'i str) -> Result<Self, Error<R>> {
-                let mut stack = Stack::new();
+            fn parse(input: &'i str) -> Result<Self, ::pest::error::Error<super::Rule>> {
+                let mut stack = ::pest::Stack::new();
                 let (input, res) =
-                    Self::try_parse_with::<false, RULE>(Position::from_start(input), &mut stack)?;
-                let (_, _) = EOI::try_parse_with::<false, _EOI>(input, &mut stack)?;
+                    Self::try_parse_with::<false, #rule_wrappers::#rule_name>(::pest::Position::from_start(input), &mut stack)?;
+                let (_, _) = ::pest::typed::predefined_node::EOI::try_parse_with::<false, #rule_wrappers::EOI>(input, &mut stack)?;
                 Ok(res)
             }
         }
-        impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> Debug
-            for Rule<'i, R, RULE, _EOI, T>
-        {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.debug_struct("Rule").finish()
-            }
-        }
-
     }
 }
 
@@ -149,19 +142,16 @@ fn process_single_alias(
     let name = ident(&candidate_name);
     let type_name = match inner_spaces {
         Some(true) => {
-            quote! {::pest::typed::predefined_node::NonAtomic<'i, super::Rule, #type_name>}
+            quote! {::pest::typed::predefined_node::NonAtomic::<'i, super::Rule, #type_name>}
         }
         Some(false) => {
-            quote! {::pest::typed::predefined_node::Atomic<'i, super::Rule, #type_name>}
+            quote! {::pest::typed::predefined_node::Atomic::<'i, super::Rule, #type_name>}
         }
         None => type_name,
     };
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
-        let type_name = quote! {
-            ::pest::typed::predefined_node::Rule<'i, super::Rule, super::rule_wrappers::#rule_name, super::rule_wrappers::EOI, #type_name>
-        };
-        let def = rule(name, type_name, rule_name);
+        let def = rule(&name, &type_name, &rule_name, &doc);
         map.insert(def);
         quote! {#name::<'i>}
     } else {
@@ -273,7 +263,7 @@ fn generate_graph_node(
                 #[doc = #doc]
                 pub struct #wrapper();
                 impl ::pest::typed::StringArrayWrapper for #wrapper {
-                    const CONTENT: &'static[&'static str] = [ #(#strings),* ];
+                    const CONTENT: &'static[&'static str] = &[ #(#strings),* ];
                 }
             });
             process_single_alias(
@@ -411,9 +401,9 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Seq<
+                    ::pest::typed::predefined_node::Seq::<
                         'i,
-                        R,
+                        super::Rule,
                         #first,
                         #second,
                         ::pest::typed::predefined_node::Ign::<
@@ -455,9 +445,9 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Choice<
+                    ::pest::typed::predefined_node::Choice::<
                         'i,
-                        R,
+                        super::Rule,
                         #first,
                         #second,
                     >
@@ -613,42 +603,45 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
     // let names: Vec<_> = rules.iter().map(|rule| &rule.name).collect();
     // eprintln!("{:#?}", names);
     let graph = generate_graph(rules);
-    let rule_wrappers = rules.iter().map(|rule| {
-        let name = ident(rule.name.as_str());
+    let as_wrapper = |name: &Ident| {
         quote! {
-            struct #name();
+            pub struct #name;
             impl ::pest::typed::RuleWrapper<super::Rule> for #name {
                 const RULE: super::Rule = super::Rule::#name;
             }
         }
+    };
+    let rule_wrappers = rules.iter().map(|rule| {
+        let name = ident(rule.name.as_str());
+        as_wrapper(&name)
     });
+    let eoi = as_wrapper(&ident("EOI"));
     let pairs = graph.collect();
     let rule_names: BTreeSet<&str> = rules.iter().map(|rule| rule.name.as_str()).collect();
     let builtin = generate_builtin(&rule_names);
     // let names = rules.iter().map(|rule| format_ident!("r#{}", rule.name));
     let res = quote! {
+        #[doc(hidden)]
+        mod rule_wrappers {
+            #(#rule_wrappers)*
+            #eoi
+        }
         #[doc = "Definitions of statically typed nodes generated by pest-generator."]
         pub mod pairs {
-            use super::Rule;
-            mod rule_wrappers {
-                #(#rule_wrappers)*
-            }
-            mod pairs {
-                use pest::typed::NeverFailedTypedNode as _;
-                #builtin
+            use ::pest::typed::NeverFailedTypedNode as _;
+            #builtin
 
-                #pairs
-            }
-            pub use pairs::*;
+            #pairs
         }
     };
-    println!("{}", res);
+    // println!("{}", res);
     res
 }
 
 pub fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
     let mut result = vec![quote! {
         use ::pest::typed::predefined_node::{ANY, SOI, EOI, NEWLINE, PEEK_ALL, DROP};
+        use ::pest::typed::TypedNode as _;
     }];
     macro_rules! insert_builtin {
         ($name:literal, $def:expr) => {
@@ -660,13 +653,13 @@ pub fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
     insert_builtin!(
         "WHITESPACE",
         quote! {
-            type WHITESPACE<'i> = ::pest::typed::predefined_node::AlwaysFail<'i>;
+            pub type WHITESPACE<'i> = ::pest::typed::predefined_node::AlwaysFail::<'i>;
         }
     );
     insert_builtin!(
         "COMMENT",
         quote! {
-            type COMMENT<'i> = ::pest::typed::predefined_node::AlwaysFail<'i>;
+            pub type COMMENT<'i> = ::pest::typed::predefined_node::AlwaysFail::<'i>;
         }
     );
     quote! {
