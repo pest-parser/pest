@@ -877,6 +877,117 @@ impl<'i, R: RuleType, const START: i32> Debug for PeekSlice1<'i, R, START> {
     }
 }
 
+/// Start point of a rule.
+pub struct Rule<
+    'i,
+    R: RuleType,
+    RULE: RuleWrapper<R>,
+    _EOI: RuleWrapper<R>,
+    T: TypedNode<'i, R>,
+    IGNORED: NeverFailedTypedNode<'i, R>,
+> {
+    /// Matched content.
+    pub content: T,
+    _phantom: PhantomData<(&'i R, &'i RULE, &'i _EOI, &'i IGNORED)>,
+}
+impl<
+        'i,
+        R: RuleType,
+        RULE: RuleWrapper<R>,
+        _EOI: RuleWrapper<R>,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > Deref for Rule<'i, R, RULE, _EOI, T, IGNORED>
+{
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        RULE: RuleWrapper<R>,
+        _EOI: RuleWrapper<R>,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > TypeWrapper for Rule<'i, R, RULE, _EOI, T, IGNORED>
+{
+    type Inner = T;
+}
+impl<
+        'i,
+        R: RuleType,
+        RULE: RuleWrapper<R>,
+        _EOI: RuleWrapper<R>,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > TypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T, IGNORED>
+{
+    #[inline]
+    fn try_parse_with<const ATOMIC: bool, _Rule: RuleWrapper<R>>(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
+        let (input, res) = T::try_parse_with::<ATOMIC, RULE>(input, stack)?;
+        Ok((
+            input,
+            Self {
+                content: res,
+                _phantom: PhantomData,
+            },
+        ))
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        RULE: RuleWrapper<R>,
+        _EOI: RuleWrapper<R>,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > ParsableTypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T, IGNORED>
+{
+    /// Parse the whole input into given typed node.
+    /// A rule is not atomic by default.
+    #[inline]
+    fn parse(input: &'i str) -> Result<Self, Error<R>> {
+        let mut stack = Stack::new();
+        let (input, res) =
+            match Self::try_parse_with::<false, RULE>(Position::from_start(input), &mut stack) {
+                Ok((input, res)) => (input, res),
+                Err(e) => return Err(e.collect()),
+            };
+        let (input, _) = IGNORED::parse_with::<false, _EOI>(input, &mut stack);
+        let (_, _) = match EOI::try_parse_with::<false, _EOI>(input, &mut stack) {
+            Ok((input, res)) => (input, res),
+            Err(e) => return Err(e.collect()),
+        };
+        Ok(res)
+    }
+
+    fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {
+        let mut stack = Stack::new();
+        match Self::try_parse_with::<false, RULE>(Position::from_start(input), &mut stack) {
+            Ok((input, res)) => Ok((input, res)),
+            Err(e) => return Err(e.collect()),
+        }
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        RULE: RuleWrapper<R>,
+        _EOI: RuleWrapper<R>,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > Debug for Rule<'i, R, RULE, _EOI, T, IGNORED>
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Rule").finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
