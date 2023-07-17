@@ -38,6 +38,71 @@ fn attributes() -> TokenStream {
     }
 }
 
+fn rule(name: &Ident, type_name: &TokenStream, rule_name: &Ident) -> TokenStream {
+    quote! {
+        /// Start point of a rule.
+        pub struct Rule<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> {
+            /// Matched content.
+            pub content: T,
+            _phantom: PhantomData<(&'i R, &'i RULE, &'i _EOI)>,
+        }
+        impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> Deref
+            for Rule<'i, R, RULE, _EOI, T>
+        {
+            type Target = T;
+
+            fn deref(&self) -> &Self::Target {
+                &self.content
+            }
+        }
+        impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> TypeWrapper
+            for Rule<'i, R, RULE, _EOI, T>
+        {
+            type Inner = T;
+        }
+        impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>>
+            TypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T>
+        {
+            #[inline]
+            fn try_parse_with<const ATOMIC: bool, _Rule: RuleWrapper<R>>(
+                input: Position<'i>,
+                stack: &mut Stack<Span<'i>>,
+            ) -> Result<(Position<'i>, Self), Error<R>> {
+                let (input, res) = T::try_parse_with::<ATOMIC, RULE>(input, stack)?;
+                Ok((
+                    input,
+                    Self {
+                        content: res,
+                        _phantom: PhantomData,
+                    },
+                ))
+            }
+        }
+        impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>>
+            ParsableTypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T>
+        {
+            /// Parse the whole input into given typed node.
+            /// A rule is not atomic by default.
+            #[inline]
+            fn parse(input: &'i str) -> Result<Self, Error<R>> {
+                let mut stack = Stack::new();
+                let (input, res) =
+                    Self::try_parse_with::<false, RULE>(Position::from_start(input), &mut stack)?;
+                let (_, _) = EOI::try_parse_with::<false, _EOI>(input, &mut stack)?;
+                Ok(res)
+            }
+        }
+        impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>> Debug
+            for Rule<'i, R, RULE, _EOI, T>
+        {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_struct("Rule").finish()
+            }
+        }
+
+    }
+}
+
 struct Output {
     content: Vec<TokenStream>,
     wrappers: Vec<TokenStream>,
@@ -91,15 +156,12 @@ fn process_single_alias(
         }
         None => type_name,
     };
-    let type_name = quote! {
-        ::pest::typed::predefined_node::Rule<'i, super::Rule, super::rule_wrappers::#rule_name, super::rule_wrappers::EOI, #type_name>
-    };
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
-        let def = quote! {
-            #[doc = #doc]
-            pub type #name<'i> = #type_name;
+        let type_name = quote! {
+            ::pest::typed::predefined_node::Rule<'i, super::Rule, super::rule_wrappers::#rule_name, super::rule_wrappers::EOI, #type_name>
         };
+        let def = rule(name, type_name, rule_name);
         map.insert(def);
         quote! {#name::<'i>}
     } else {
