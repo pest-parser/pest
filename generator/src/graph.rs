@@ -162,7 +162,7 @@ fn process_single_alias(
         None => type_name,
     };
     let type_name = quote! {
-        ::pest::typed::Rule<'i, super::Rule, super::Rule::#rule_name, super::Rule::EOI, #type_name>
+        ::pest::typed::predefined_node::Rule<'i, super::Rule, super::rule_wrappers::#rule_name, super::rule_wrappers::EOI, #type_name>
     };
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
@@ -266,9 +266,11 @@ fn generate_graph_node(
             )
         }
         OptimizedExpr::Insens(content) => {
-            let wrapper = format_ident!("__pest__string_wrapper_{}", candidate_name);
+            let wrapper = format_ident!("r#{}", candidate_name);
+            let doc = format!("A wrapper for `\"{}\"`.", content);
             map.insert_wrapper(quote! {
                 pub struct #wrapper();
+                #[doc = #doc]
                 impl ::pest::typed::StringWrapper for #wrapper {
                     const CONTENT: &'static str = #content;
                 }
@@ -285,20 +287,21 @@ fn generate_graph_node(
                 explicit,
             )
         }
-        OptimizedExpr::PeekSlice(start, end) => process_single(
+        OptimizedExpr::PeekSlice(start, end) => process_single_alias(
             map,
+            expr,
             rule_name,
             candidate_name,
-            quote! {()},
-            quote! {
-                let (input, span) = ::pest::typed::predefined_node::peek_stack_slice::<super::Rule>(input, #start, #end, stack)?;
-                let content = ();
+            match end {
+                Some(end) => quote! {
+                    ::pest::typed::predefined_node::PeekSlice2::<'i, super::Rule, #start, #end>
+                },
+                None => quote! {
+                    ::pest::typed::predefined_node::PeekSlice1::<'i, super::Rule, #start>
+                },
             },
-            &match end {
-                Some(end) => format!("Match `{}..{}` of the stack.", start, end),
-                None => format!("Match `{}..` of the stack.", start),
-            },
-            silent,
+            inner_spaces,
+            explicit,
         ),
         OptimizedExpr::Push(expr) => {
             let inner = generate_graph_node(
@@ -311,37 +314,40 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
-            process_single(
+            process_single_alias(
                 map,
+                expr,
                 rule_name,
                 candidate_name,
-                quote! {()},
                 quote! {
-                    let start = input.clone();
-                    let (input, res) = #inner::try_parse_with::<#ispaces, Rule>(input, stack)?;
-                    let span = start.span(&input);
-                    let content = ();
-                    stack.push(span);
+                    ::pest::typed::predefined_node::Push::<'i, super::Rule, #inner>
                 },
-                "Matches an expression and pushes it to the stack.",
-                silent,
+                inner_spaces,
+                explicit,
             )
         }
-        OptimizedExpr::Skip(strings) => process_single(
-            map,
-            rule_name,
-            candidate_name,
-            quote! {()},
-            quote!(
-                let (input, span) = ::pest::typed::predefined_node::skip_until::<super::Rule>(input, &[#(#strings),*])?;
-                let content = ();
-            ),
-            &format!(
-                "Continues to match expressions until one of the strings in `{:?}` is found.",
-                strings
-            ),
-            silent,
-        ),
+        OptimizedExpr::Skip(strings) => {
+            let wrapper = format_ident!("r#{}", candidate_name);
+            let doc = format!("A wrapper for `\"{:?}\"`.", strings);
+            map.insert_wrapper(quote! {
+                #[doc = #doc]
+                pub struct #wrapper();
+                impl ::pest::typed::StringArrayWrapper for #wrapper {
+                    const CONTENT: &'static[&'static str] = [ #(#strings),* ];
+                }
+            });
+            process_single_alias(
+                map,
+                expr,
+                rule_name,
+                candidate_name,
+                quote! {
+                    ::pest::typed::predefined_node::Skip::<'i, super::Rule, __pest_string_wrapper::#wrapper>
+                },
+                inner_spaces,
+                explicit,
+            )
+        }
         OptimizedExpr::Range(start, end) => {
             let start = start.chars().next().unwrap();
             let end = end.chars().next().unwrap();
@@ -438,129 +444,87 @@ fn generate_graph_node(
                 explicit,
             )
         }
-        OptimizedExpr::Seq(_lhs, _rhs) => {
-            let (nodes, names, res) = walk_tree!(Seq, Sequence);
-            let docs = nodes
-                .iter()
-                .map(|node| format!("Corresponds to: `{}`.", node));
-            let name = ident(&candidate_name);
-            // eprintln!("{} contains {:?}", candidate_name, names);
-            let (init, fields): (Vec<_>, Vec<_>) = names
-                .iter()
-                .enumerate()
-                .map(|(i, name)| {
-                    let field = format_ident!("r#field{}", i);
-                    (
-                        quote! {
-                            // eprintln!("Matching {}.", core::any::type_name::<#name>());
-                            let (remained, #field) = match #name::try_parse_with::<#ispaces, Rule>(input, stack) {
-                                Ok(res) => res,
-                                Err(err) => {
-                                    let message = ::pest::typed::predefined_node::stack_error(err);
-                                    return Err(::pest::error::Error::new_from_pos(
-                                        ::pest::error::ErrorVariant::CustomError {
-                                            message: format!(
-                                                "Sequence {} failed in {}-th elements: \n{}",
-                                                ::core::any::type_name::<Self>(),
-                                                #i,
-                                                message,
-                                            )
-                                        }, input
-                                    ))
-                                }
-                            };
-                            input = remained;
-                            // eprintln!("Matched {}.", core::any::type_name::<#name>());
-                        },
-                        field,
-                    )
-                })
-                .unzip();
-            let mut inits = Vec::<TokenStream>::new();
-            for (i, init) in init.into_iter().enumerate() {
-                if i != 0 {
-                    inits.push(spaces.clone());
-                }
-                inits.push(init);
-            }
-            let doc = format!("Sequence. Corresponds to `{}`.", expr);
-            let def = quote! {
-                #[doc = #doc]
-                #attr
-                pub struct #name<'i> {
-                    pub span: ::pest::Span::<'i>,
-                    #(
-                        #[doc = #docs]
-                        pub #fields: #names
-                    ),*
-                }
-                impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
-                    #f {
-                        let start = input.clone();
-                        let mut input = input;
-                        #(#inits)*
-                        let span = start.span(&input);
-                        Ok( (input, Self { span, #(#fields),* }) )
-                    }
-                }
-            };
-            // println!("{}", def);
-            map.insert(def);
-
-            res
-        }
-        OptimizedExpr::Choice(_lhs, _rhs) => {
-            let (nodes, names, res) = walk_tree!(Choice, Variant);
-            let docs = nodes
-                .iter()
-                .map(|node| format!("Corresponds to `{}`.", node));
-            let name = ident(&candidate_name);
-            let vars = names
-                .iter()
-                .enumerate()
-                .map(|(i, _n)| format_ident!("var_{}", i));
-            let init = names.iter().enumerate().map(|(i, var)| {
-                let var_name = format_ident!("var_{}", i);
+        OptimizedExpr::Seq(lhs, rhs) => {
+            let first = generate_graph_node(
+                lhs,
+                rule_name,
+                format! {"{}_0", candidate_name},
+                map,
+                false,
+                inner_spaces,
+                inner_tokens,
+                silent,
+            );
+            let second = generate_graph_node(
+                rhs,
+                rule_name,
+                format! {"{}_1", candidate_name},
+                map,
+                false,
+                inner_spaces,
+                inner_tokens,
+                silent,
+            );
+            process_single_alias(
+                map,
+                expr,
+                rule_name,
+                candidate_name,
                 quote! {
-                    match #var::try_parse_with::<#ispaces, Rule>(input, stack) {
-                        Ok((input, res)) => {
-                            return Ok((input, #name::#var_name(res)));
-                        }
-                        Err(e) => {
-                            errors.push(e);
-                        }
-                    }
-                }
-            });
-            let doc = format! {"Choices. Corresponds to `{}`.", expr};
-            let def = quote! {
-                #[doc = #doc]
-                #attr
-                pub enum #name<'i> {
-                    #(
-                        #[doc = #docs]
-                        #vars(#names)
-                    ),*
-                }
-                impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
-                    #f {
-                        let mut errors = vec![];
-                        #(#init)*
-                        let message = ::pest::typed::predefined_node::stack_errors(errors);
-                        return Err(::pest::error::Error::new_from_pos(
-                            ::pest::error::ErrorVariant::CustomError {
-                                message: format!(
-                                    "Choices {} failed with errors: \n{}",
-                                    ::core::any::type_name::<Self>(),
-                                    message,
-                                )
-                            }, input
-                        ))
-                    }
-                }
-            };
-            map.insert(def);
-            res
+                    ::pest::typed::predefined_node::Seq<
+                        'i,
+                        R,
+                        #first,
+                        #second,
+                        ::pest::typed::predefined_node::Ign::<
+                            'i,
+                            super::Rule,
+                            COMMENT::<'i>,
+                            WHITESPACE::<'i>,
+                        >
+                    >
+                },
+                inner_spaces,
+                explicit,
+            )
+        }
+        OptimizedExpr::Choice(lhs, rhs) => {
+            let first = generate_graph_node(
+                lhs,
+                rule_name,
+                format! {"{}_0", candidate_name},
+                map,
+                false,
+                inner_spaces,
+                inner_tokens,
+                silent,
+            );
+            let second = generate_graph_node(
+                rhs,
+                rule_name,
+                format! {"{}_1", candidate_name},
+                map,
+                false,
+                inner_spaces,
+                inner_tokens,
+                silent,
+            );
+            process_single_alias(
+                map,
+                expr,
+                rule_name,
+                candidate_name,
+                quote! {
+                    ::pest::typed::predefined_node::Choice<
+                        'i,
+                        R,
+                        #first,
+                        #second,
+                    >
+                },
+                inner_spaces,
+                explicit,
+            )
         }
         OptimizedExpr::Opt(inner) => {
             let inner_name = generate_graph_node(
@@ -738,7 +702,7 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
             pub use pairs::*;
         }
     };
-    // println!("{}", res);
+    println!("{}", res);
     res
 }
 

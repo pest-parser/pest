@@ -9,26 +9,36 @@
 
 use crate::RuleType;
 
+/// An object containing a constant.
+pub trait Storage<T> {
+    /// Get contained string.
+    fn get_content(&self) -> T;
+}
+
 /// A wrapper for string as a generics argument.
 pub trait StringWrapper {
     /// Wrapped string.
     const CONTENT: &'static str;
 }
-
-/// An object containing a string.
-pub trait StringStorage {
-    /// Get contained string.
-    fn get_content(&self) -> &str;
+impl<T: StringWrapper> Storage<&'static str> for T {
+    fn get_content(&self) -> &'static str {
+        Self::CONTENT
+    }
 }
 
-impl<T: StringWrapper> StringStorage for T {
-    fn get_content(&self) -> &str {
+/// A wrapper for string array as a generics argument.
+pub trait StringArrayWrapper {
+    const CONTENT: &'static [&'static str];
+}
+impl<T: StringArrayWrapper> Storage<&'static [&'static str]> for T {
+    fn get_content(&self) -> &'static [&'static str] {
         Self::CONTENT
     }
 }
 
 /// Rule wrapper.
 pub trait RuleWrapper<R: RuleType> {
+    /// Wrapped rule.
     const RULE: R;
 }
 
