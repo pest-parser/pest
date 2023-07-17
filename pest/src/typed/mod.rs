@@ -13,7 +13,7 @@ pub mod predefined_node;
 mod typed_node;
 mod wrapper;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, TypedNode};
-pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper};
+pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper};
 
 use crate::{error::Error, RuleType};
 

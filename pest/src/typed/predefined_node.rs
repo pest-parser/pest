@@ -128,7 +128,7 @@ pub struct Skip<'i, R: RuleType, Strings: StringArrayWrapper> {
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i, R, Strings> {
     fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
-        mut input: Position<'i>,
+        input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
         let (input, span) = skip_until(input, Strings::CONTENT)?;
@@ -619,7 +619,7 @@ impl<
     }
 }
 
-// Match either of two expressions
+/// Match either of two expressions
 #[derive(Debug)]
 pub enum Choice<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> {
     /// Matched first expression.
@@ -632,7 +632,7 @@ impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> TypedNode<'i, 
 {
     #[inline]
     fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
-        mut input: Position<'i>,
+        input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Error<R>> {
         match T1::try_parse_with::<ATOMIC, Rule>(input, stack) {
@@ -1024,7 +1024,6 @@ impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'
         ))
     }
 }
-
 impl<'i, R: RuleType, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>, T: TypedNode<'i, R>>
     ParsableTypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T>
 {

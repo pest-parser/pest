@@ -19,25 +19,6 @@ fn ident(s: &str) -> Ident {
     format_ident!("r#{}", s)
 }
 
-fn fn_decl() -> TokenStream {
-    let result = result_type();
-    quote! {
-        #[inline]
-        #[allow(unused_variables)]
-        fn try_parse_with<const ATOMIC: bool, Rule: ::pest::typed::RuleWrapper<super::Rule>>(
-            input: ::pest::Position<'i>,
-            stack: &mut ::pest::Stack<::pest::Span<'i>>
-        ) -> #result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>>
-    }
-}
-
-fn attributes() -> TokenStream {
-    // quote! {#[allow(non_snake_case)]}
-    quote! {
-        #[derive(Debug)]
-    }
-}
-
 fn rule_wrappers() -> TokenStream {
     quote! {
         super::rule_wrappers
@@ -46,6 +27,7 @@ fn rule_wrappers() -> TokenStream {
 
 fn rule(name: &Ident, type_name: &TokenStream, rule_name: &Ident, doc: &String) -> TokenStream {
     let rule_wrappers = rule_wrappers();
+    let result = result_type();
     quote! {
         #[doc = #doc]
         #[derive(Debug)]
@@ -72,7 +54,7 @@ fn rule(name: &Ident, type_name: &TokenStream, rule_name: &Ident, doc: &String) 
             fn try_parse_with<const ATOMIC: bool, _Rule: ::pest::typed::RuleWrapper<super::Rule>>(
                 input: ::pest::Position<'i>,
                 stack: &mut ::pest::Stack<::pest::Span<'i>>,
-            ) -> Result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>> {
+            ) -> #result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>> {
                 let (input, content) = #type_name::try_parse_with::<ATOMIC, #rule_wrappers::#rule_name>(input, stack)?;
                 Ok((
                     input,
@@ -85,7 +67,7 @@ fn rule(name: &Ident, type_name: &TokenStream, rule_name: &Ident, doc: &String) 
         impl<'i> ::pest::typed::ParsableTypedNode<'i, super::Rule> for #name<'i>
         {
             #[inline]
-            fn parse(input: &'i str) -> Result<Self, ::pest::error::Error<super::Rule>> {
+            fn parse(input: &'i str) -> #result<Self, ::pest::error::Error<super::Rule>> {
                 let mut stack = ::pest::Stack::new();
                 let (input, res) =
                     Self::try_parse_with::<false, #rule_wrappers::#rule_name>(::pest::Position::from_start(input), &mut stack)?;

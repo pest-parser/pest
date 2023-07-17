@@ -28,6 +28,7 @@ impl<T: StringWrapper> Storage<&'static str> for T {
 
 /// A wrapper for string array as a generics argument.
 pub trait StringArrayWrapper {
+    /// Wrapped strings.
     const CONTENT: &'static [&'static str];
 }
 impl<T: StringArrayWrapper> Storage<&'static [&'static str]> for T {
@@ -44,5 +45,6 @@ pub trait RuleWrapper<R: RuleType> {
 
 /// Type wrapper
 pub trait TypeWrapper {
+    /// Wrapped type.
     type Inner;
 }
