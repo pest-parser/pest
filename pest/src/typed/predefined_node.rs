@@ -193,6 +193,7 @@ fn peek_stack_slice<'i, R: RuleType, Rule: RuleWrapper<R>>(
 
 /// Positive predicate.
 pub struct Positive<'i, R: RuleType, N: TypedNode<'i, R>> {
+    pub content: N,
     _phantom: PhantomData<(&'i R, &'i N)>,
 }
 impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, N> {
@@ -201,9 +202,10 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, 
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
         match N::try_parse_with::<ATOMIC, Rule>(input, stack) {
-            Ok((_input, _res)) => Ok((
+            Ok((_input, content)) => Ok((
                 input,
                 Self {
+                    content,
                     _phantom: PhantomData,
                 },
             )),
@@ -540,6 +542,22 @@ pub enum Choice<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> {
     /// Matched second expression.
     Second(T2, PhantomData<&'i R>),
 }
+impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> Choice<'i, R, T1, T2> {
+    #[inline]
+    pub fn get_first(&self) -> Option<&T1> {
+        match self {
+            Self::First(res, _) => Some(res),
+            Self::Second(_, _) => None,
+        }
+    }
+    #[inline]
+    pub fn get_second(&self) -> Option<&T2> {
+        match self {
+            Self::First(_, _) => None,
+            Self::Second(res, _) => Some(res),
+        }
+    }
+}
 impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> TypedNode<'i, R>
     for Choice<'i, R, T1, T2>
 {
@@ -802,6 +820,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for NonAtomic<'i, R, T> {
 
 /// Match an expression and push it.
 pub struct Push<'i, R: RuleType, T: TypedNode<'i, R>> {
+    /// Matched content.
+    pub content: T,
     _phantom: PhantomData<(&'i R, &'i T)>,
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<'i, R, T> {
@@ -810,10 +830,11 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<'i, R, T> {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
-        let (input, _) = T::try_parse_with::<ATOMIC, Rule>(input, stack)?;
+        let (input, content) = T::try_parse_with::<ATOMIC, Rule>(input, stack)?;
         Ok((
             input,
             Self {
+                content,
                 _phantom: PhantomData,
             },
         ))

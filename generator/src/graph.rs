@@ -8,9 +8,10 @@
 // modified, or distributed except according to those terms.
 
 use crate::optimizer::OptimizedExpr;
-use crate::types::{error_type, result_type};
+use crate::types::{option_type, result_type, vec_type};
 use pest_meta::{ast::RuleType, optimizer::OptimizedRule};
 use proc_macro2::{Ident, TokenStream};
+use std::collections::btree_map;
 pub use std::collections::BTreeMap as Map;
 use std::collections::BTreeSet;
 
@@ -35,19 +36,87 @@ fn ignore() -> TokenStream {
     }
 }
 
-fn rule(name: &Ident, type_name: &TokenStream, rule_name: &Ident, doc: &String) -> TokenStream {
+struct Accesser {
+    /// name -> [([path], type)]
+    accessers: Map<String, Vec<(TokenStream, TokenStream)>>,
+}
+impl Accesser {
+    pub fn new() -> Self {
+        Self {
+            accessers: Map::new(),
+        }
+    }
+    pub fn from_item(name: String, vec: Vec<(TokenStream, TokenStream)>) -> Self {
+        let mut res = Map::new();
+        res.insert(name, vec);
+        Self { accessers: res }
+    }
+    pub fn prepend(
+        mut self,
+        fn_path: impl Fn(TokenStream) -> TokenStream,
+        fn_type: impl Fn(TokenStream) -> TokenStream,
+    ) -> Self {
+        for (name, vec) in self.accessers.iter_mut() {
+            for (path, typed) in vec.iter_mut() {
+                *path = fn_path(path.clone());
+                *typed = fn_type(typed.clone());
+            }
+        }
+        self
+    }
+    pub fn join(mut self, other: Accesser) -> Accesser {
+        other.accessers.into_iter().for_each(|(name, vec)| {
+            match self.accessers.entry(name.clone()) {
+                btree_map::Entry::Vacant(entry) => {
+                    entry.insert(vec);
+                }
+                btree_map::Entry::Occupied(mut entry) => {
+                    let v = entry.get_mut();
+                    v.extend(vec.into_iter());
+                }
+            }
+        });
+        self
+    }
+    pub fn collect(&self) -> TokenStream {
+        let accessers = self.accessers.iter().map(|(name, vec)| {
+            let (paths, types): (Vec<_>, Vec<_>) = vec.clone().into_iter().unzip();
+            let name = ident(name.as_str());
+            quote! {
+                pub fn #name(&self) ->( #(#types),* ) {
+                    ( #( self #paths ),* )
+                }
+            }
+        });
+        quote! {
+            #(#accessers)*
+        }
+    }
+}
+
+fn rule(
+    name: &Ident,
+    type_name: &TokenStream,
+    rule_name: &Ident,
+    doc: &String,
+    accessers: &Accesser,
+) -> TokenStream {
     let rule_wrappers = rule_wrappers();
     let result = result_type();
     let position = quote! {::pest::Position};
     let stack = quote! {::pest::Stack};
     let error = quote! {::pest::error::Error};
     let ignore = ignore();
+    let accessers = accessers.collect();
     quote! {
         #[doc = #doc]
         #[derive(Debug)]
         pub struct #name<'i> {
             #[doc = "Matched content."]
             pub content: #type_name,
+        }
+        impl<'i> #name<'i> {
+            #accessers
         }
         impl<'i> ::pest::typed::RuleWrapper<super::Rule> for #name<'i> {
             const RULE: super::Rule = super::Rule::#rule_name;
@@ -147,9 +216,10 @@ fn process_single_alias(
     rule_name: &str,
     candidate_name: String,
     type_name: TokenStream,
+    accessers: Accesser,
     inner_spaces: Option<bool>,
     explicit: bool,
-) -> TokenStream {
+) -> (TokenStream, Accesser) {
     let rule_name = ident(rule_name);
     let name = ident(&candidate_name);
     let type_name = match inner_spaces {
@@ -163,11 +233,11 @@ fn process_single_alias(
     };
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
-        let def = rule(&name, &type_name, &rule_name, &doc);
+        let def = rule(&name, &type_name, &rule_name, &doc, &accessers);
         map.insert(def);
-        quote! {#name::<'i>}
+        (quote! {#name::<'i>}, accessers)
     } else {
-        type_name
+        (type_name, accessers)
     }
 }
 
@@ -182,7 +252,10 @@ fn generate_graph_node(
     inner_spaces: Option<bool>,
     inner_tokens: bool,
     silent: bool,
-) -> TokenStream {
+) -> (TokenStream, Accesser) {
+    let ignore = ignore();
+    let option = option_type();
+    let vec = vec_type();
     // Still some compile-time information not taken
     match expr {
         OptimizedExpr::Str(content) => {
@@ -203,6 +276,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::typed::predefined_node::Str::<'i, super::Rule, #module::#wrapper>
                 },
+                Accesser::new(),
                 inner_spaces,
                 explicit,
             )
@@ -225,6 +299,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::typed::predefined_node::Insens::<'i, super::Rule, #module::#wrapper>
                 },
+                Accesser::new(),
                 inner_spaces,
                 explicit,
             )
@@ -242,11 +317,12 @@ fn generate_graph_node(
                     ::pest::typed::predefined_node::PeekSlice1::<'i, super::Rule, #start>
                 },
             },
+            Accesser::new(),
             inner_spaces,
             explicit,
         ),
         OptimizedExpr::Push(expr) => {
-            let inner = generate_graph_node(
+            let (inner, accesser) = generate_graph_node(
                 expr,
                 rule_name,
                 format! {"{}_p", candidate_name},
@@ -264,6 +340,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::typed::predefined_node::Push::<'i, super::Rule, #inner>
                 },
+                accesser.prepend(|inner| quote! {.content #inner}, |inner| inner),
                 inner_spaces,
                 explicit,
             )
@@ -286,6 +363,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::typed::predefined_node::Skip::<'i, super::Rule, #module::#wrapper>
                 },
+                Accesser::new(),
                 inner_spaces,
                 explicit,
             )
@@ -301,6 +379,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::typed::predefined_node::Range::<'i, super::Rule, #start, #end>
                 },
+                Accesser::new(),
                 inner_spaces,
                 explicit,
             )
@@ -313,12 +392,16 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {::pest::typed::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
+                Accesser::from_item(
+                    id.clone(),
+                    vec![(quote! {.content.deref()}, quote! {&#inner})],
+                ),
                 inner_spaces,
                 explicit,
             )
         }
         OptimizedExpr::PosPred(expr) => {
-            let inner = generate_graph_node(
+            let (inner, accessers) = generate_graph_node(
                 expr,
                 rule_name,
                 format! {"{}_P", candidate_name},
@@ -336,12 +419,14 @@ fn generate_graph_node(
                 quote! {
                     ::pest::typed::predefined_node::Positive::<'i, super::Rule, #inner>
                 },
+                accessers.prepend(|inner| quote! {.content #inner}, |inner| inner),
                 inner_spaces,
                 explicit,
             )
         }
         OptimizedExpr::NegPred(expr) => {
-            let inner = generate_graph_node(
+            // Impossible to access inner tokens.
+            let (inner, _) = generate_graph_node(
                 expr,
                 rule_name,
                 format! {"{}_N", candidate_name},
@@ -359,12 +444,13 @@ fn generate_graph_node(
                 quote! {
                     ::pest::typed::predefined_node::Negative::<'i, super::Rule, #inner>
                 },
+                Accesser::new(),
                 inner_spaces,
                 explicit,
             )
         }
         OptimizedExpr::RestoreOnErr(expr) => {
-            let inner = generate_graph_node(
+            let (inner, accessers) = generate_graph_node(
                 expr,
                 rule_name,
                 format! {"{}_E", candidate_name},
@@ -382,12 +468,13 @@ fn generate_graph_node(
                 quote! {
                     ::pest::typed::predefined_node::Restorable::<'i, super::Rule, #inner>
                 },
+                accessers.prepend(|inner| quote! {.content #inner}, |inner| inner),
                 inner_spaces,
                 explicit,
             )
         }
         OptimizedExpr::Seq(lhs, rhs) => {
-            let first = generate_graph_node(
+            let (first, acc_first) = generate_graph_node(
                 lhs,
                 rule_name,
                 format! {"{}_0", candidate_name},
@@ -397,7 +484,7 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
-            let second = generate_graph_node(
+            let (second, acc_second) = generate_graph_node(
                 rhs,
                 rule_name,
                 format! {"{}_1", candidate_name},
@@ -407,7 +494,6 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
-            let ignore = ignore();
             process_single_alias(
                 map,
                 expr,
@@ -422,12 +508,15 @@ fn generate_graph_node(
                         #ignore
                     >
                 },
+                acc_first
+                    .prepend(|inner| quote! {.first #inner}, |inner| inner)
+                    .join(acc_second.prepend(|inner| quote! {.second #inner}, |inner| inner)),
                 inner_spaces,
                 explicit,
             )
         }
         OptimizedExpr::Choice(lhs, rhs) => {
-            let first = generate_graph_node(
+            let (first, acc_first) = generate_graph_node(
                 lhs,
                 rule_name,
                 format! {"{}_0", candidate_name},
@@ -437,7 +526,7 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
-            let second = generate_graph_node(
+            let (second, acc_second) = generate_graph_node(
                 rhs,
                 rule_name,
                 format! {"{}_1", candidate_name},
@@ -460,12 +549,21 @@ fn generate_graph_node(
                         #second,
                     >
                 },
+                acc_first
+                    .prepend(
+                        |inner| quote! {.get_first().as_ref().and_then(|e|Some(e #inner))},
+                        |inner| quote! {#option<&#inner>},
+                    )
+                    .join(acc_second.prepend(
+                        |inner| quote! {.get_second().as_ref().and_then(|e|Some(e #inner))},
+                        |inner| quote! {#option<&#inner>},
+                    )),
                 inner_spaces,
                 explicit,
             )
         }
         OptimizedExpr::Opt(inner) => {
-            let inner_name = generate_graph_node(
+            let (inner_name, accessers) = generate_graph_node(
                 inner,
                 rule_name,
                 format!("{}_o", candidate_name),
@@ -481,12 +579,16 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {::pest::typed::predefined_node::Opt::<'i, super::Rule, #inner_name>},
+                accessers.prepend(
+                    |inner| quote! {.content.as_ref().and_then(|e|Some(e #inner))},
+                    |inner| quote! {#option<&#inner>},
+                ),
                 inner_spaces,
                 explicit,
             )
         }
         OptimizedExpr::Rep(inner) => {
-            let inner_name = generate_graph_node(
+            let (inner_name, accessers) = generate_graph_node(
                 inner,
                 rule_name,
                 format!("{}_r", candidate_name),
@@ -506,14 +608,13 @@ fn generate_graph_node(
                         'i,
                         super::Rule,
                         #inner_name,
-                        ::pest::typed::predefined_node::Ign::<
-                            'i,
-                            super::Rule,
-                            COMMENT::<'i>,
-                            WHITESPACE::<'i>,
-                        >
+                        #ignore,
                     >
                 },
+                accessers.prepend(
+                    |inner| quote! {.content.iter().map(|e|e #inner).collect::<#vec<_>>()},
+                    |inner| quote! {#vec<#inner>},
+                ),
                 inner_spaces,
                 explicit,
             )
@@ -650,6 +751,7 @@ pub fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
     let mut result = vec![quote! {
         use ::pest::typed::predefined_node::{ANY, SOI, EOI, NEWLINE, PEEK_ALL, DROP};
         use ::pest::typed::TypedNode as _;
+        use std::ops::Deref as _;
     }];
     macro_rules! insert_builtin {
         ($name:literal, $def:expr) => {
