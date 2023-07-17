@@ -88,8 +88,8 @@ fn rule(name: &Ident, type_name: &TokenStream, rule_name: &Ident, doc: &String) 
                         Ok((input, res)) => (input, res),
                         Err(e) => return Err(e.collect()),
                     };
-                let (input, _) = #ignore::parse_with::<true, #rule_wrappers::EOI>(input, &mut stack);
-                let (_, _) = match EOI::try_parse_with::<true, #rule_wrappers::EOI>(input, &mut stack) {
+                let (input, _) = #ignore::parse_with::<false, #rule_wrappers::EOI>(input, &mut stack);
+                let (_, _) = match EOI::try_parse_with::<false, #rule_wrappers::EOI>(input, &mut stack) {
                     Ok((input, res)) => (input, res),
                     Err(e) => return Err(e.collect()),
                 };
