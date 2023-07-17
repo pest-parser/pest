@@ -620,7 +620,6 @@ impl<
 }
 
 /// Match either of two expressions
-#[derive(Debug)]
 pub enum Choice<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> {
     /// Matched first expression.
     First(T1, PhantomData<&'i R>),
@@ -647,6 +646,14 @@ impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> TypedNode<'i, 
                     input,
                 )),
             },
+        }
+    }
+}
+impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> Debug for Choice<'i, R, T1, T2> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::First(first, _) => f.debug_tuple("First").field(first).finish(),
+            Self::Second(second, _) => f.debug_tuple("Second").field(second).finish(),
         }
     }
 }
