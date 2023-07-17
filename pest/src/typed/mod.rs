@@ -9,6 +9,7 @@
 
 //! Types for typed parser.
 
+pub mod error;
 pub mod predefined_node;
 mod typed_node;
 mod wrapper;

@@ -32,3 +32,10 @@ pub fn option_type() -> TokenStream {
     #[cfg(not(feature = "std"))]
     quote! { ::core::option::Option }
 }
+pub fn error_type() -> TokenStream {
+    #[cfg(feature = "std")]
+    quote! { ::std::result::Result }
+
+    #[cfg(not(feature = "std"))]
+    quote! { ::core::result::Result }
+}

@@ -7,13 +7,12 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use crate::types::result_type;
+use crate::optimizer::OptimizedExpr;
+use crate::types::{error_type, result_type};
 use pest_meta::{ast::RuleType, optimizer::OptimizedRule};
 use proc_macro2::{Ident, TokenStream};
 pub use std::collections::BTreeMap as Map;
 use std::collections::BTreeSet;
-
-use crate::optimizer::OptimizedExpr;
 
 fn ident(s: &str) -> Ident {
     format_ident!("r#{}", s)
@@ -25,9 +24,24 @@ fn rule_wrappers() -> TokenStream {
     }
 }
 
+fn ignore() -> TokenStream {
+    quote! {
+        ::pest::typed::predefined_node::Ign::<
+            'i,
+            super::Rule,
+            COMMENT::<'i>,
+            WHITESPACE::<'i>,
+        >
+    }
+}
+
 fn rule(name: &Ident, type_name: &TokenStream, rule_name: &Ident, doc: &String) -> TokenStream {
     let rule_wrappers = rule_wrappers();
     let result = result_type();
+    let position = quote! {::pest::Position};
+    let stack = quote! {::pest::Stack};
+    let error = quote! {::pest::error::Error};
+    let ignore = ignore();
     quote! {
         #[doc = #doc]
         #[derive(Debug)]
@@ -48,31 +62,47 @@ fn rule(name: &Ident, type_name: &TokenStream, rule_name: &Ident, doc: &String) 
         impl<'i> ::pest::typed::TypeWrapper for #name<'i> {
             type Inner = #type_name;
         }
-        impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i>
-        {
+        impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
             #[inline]
             fn try_parse_with<const ATOMIC: bool, _Rule: ::pest::typed::RuleWrapper<super::Rule>>(
-                input: ::pest::Position<'i>,
-                stack: &mut ::pest::Stack<::pest::Span<'i>>,
-            ) -> #result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>> {
+                input: #position<'i>,
+                stack: &mut #stack<::pest::Span<'i>>,
+            ) -> #result<(#position<'i>, Self), ::pest::typed::error::Tracker<'i, super::Rule>> {
                 let (input, content) = #type_name::try_parse_with::<ATOMIC, #rule_wrappers::#rule_name>(input, stack)?;
-                Ok((
-                    input,
-                    Self {
-                        content,
-                    },
-                ))
+                Ok(
+                    (
+                        input,
+                        Self {
+                            content,
+                        },
+                    )
+                )
             }
         }
-        impl<'i> ::pest::typed::ParsableTypedNode<'i, super::Rule> for #name<'i>
-        {
+        impl<'i> ::pest::typed::ParsableTypedNode<'i, super::Rule> for #name<'i> {
             #[inline]
-            fn parse(input: &'i str) -> #result<Self, ::pest::error::Error<super::Rule>> {
-                let mut stack = ::pest::Stack::new();
+            fn parse(input: &'i str) -> #result<Self, #error<super::Rule>> {
+                let mut stack = #stack::new();
                 let (input, res) =
-                    Self::try_parse_with::<false, #rule_wrappers::#rule_name>(::pest::Position::from_start(input), &mut stack)?;
-                let (_, _) = ::pest::typed::predefined_node::EOI::try_parse_with::<false, #rule_wrappers::EOI>(input, &mut stack)?;
+                    match Self::try_parse_with::<false, #rule_wrappers::#rule_name>(#position::from_start(input), &mut stack) {
+                        Ok((input, res)) => (input, res),
+                        Err(e) => return Err(e.collect()),
+                    };
+                let (input, _) = #ignore::parse_with::<true, #rule_wrappers::EOI>(input, &mut stack);
+                let (_, _) = match EOI::try_parse_with::<true, #rule_wrappers::EOI>(input, &mut stack) {
+                    Ok((input, res)) => (input, res),
+                    Err(e) => return Err(e.collect()),
+                };
                 Ok(res)
+            }
+
+            #[inline]
+            fn parse_partial(input: &'i str) -> #result<(#position<'i>, Self), #error<super::Rule>> {
+                let mut stack = #stack::new();
+                match Self::try_parse_with::<false, #rule_wrappers::#rule_name>(#position::from_start(input), &mut stack) {
+                    Ok((input, res)) => Ok((input, res)),
+                    Err(e) => return Err(e.collect()),
+                }
             }
         }
     }
@@ -377,6 +407,7 @@ fn generate_graph_node(
                 inner_tokens,
                 silent,
             );
+            let ignore = ignore();
             process_single_alias(
                 map,
                 expr,
@@ -388,12 +419,7 @@ fn generate_graph_node(
                         super::Rule,
                         #first,
                         #second,
-                        ::pest::typed::predefined_node::Ign::<
-                            'i,
-                            super::Rule,
-                            COMMENT::<'i>,
-                            WHITESPACE::<'i>,
-                        >
+                        #ignore
                     >
                 },
                 inner_spaces,

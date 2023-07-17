@@ -12,7 +12,7 @@ use core::fmt::Debug;
 use crate::{error::Error, Position, RuleType, Span, Stack};
 pub use alloc::rc::Rc;
 
-use super::wrapper::RuleWrapper;
+use super::{error::Tracker, wrapper::RuleWrapper};
 
 /// Node of concrete syntax tree that never fails.
 pub trait NeverFailedTypedNode<'i, R: RuleType>
@@ -37,7 +37,7 @@ where
     fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
-    ) -> Result<(Position<'i>, Self), Error<R>>;
+    ) -> Result<(Position<'i>, Self), Tracker<'i, R>>;
 }
 
 /// Node of concrete syntax tree.
@@ -45,4 +45,7 @@ pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
     /// Parse the whole input into given typed node.
     /// A rule is not atomic by default.
     fn parse(input: &'i str) -> Result<Self, Error<R>>;
+    /// Parse the whole input into given typed node.
+    /// A rule is not atomic by default.
+    fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>>;
 }
