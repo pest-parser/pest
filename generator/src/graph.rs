@@ -52,8 +52,11 @@ impl Output {
     fn insert(&mut self, tokens: TokenStream) {
         self.content.push(tokens);
     }
-    fn insert_wrapper(&mut self, tokens: TokenStream) {
+    /// Insert to wrapper module.
+    /// Return the module path.
+    fn insert_wrapper(&mut self, tokens: TokenStream) -> TokenStream {
         self.wrappers.push(tokens);
+        quote! { __pest_string_wrapper }
     }
     fn collect(&self) -> TokenStream {
         let content = &self.content;
@@ -64,79 +67,6 @@ impl Output {
                 #(#wrappers)*
             }
         }
-    }
-}
-
-fn process_single(
-    map: &mut Output,
-    rule_name: &str,
-    candidate_name: String,
-    type_name: TokenStream,
-    fimpl: TokenStream,
-    doc: &str,
-    silent: bool,
-) -> TokenStream {
-    let f = fn_decl();
-    let rule_name = ident(rule_name);
-    let name = ident(&candidate_name);
-    let inner = type_name.clone();
-    let fn_def = if silent {
-        quote! {
-            #fimpl;
-            Ok((input, Self { _phantom: ::core::marker::PhantomData }))
-        }
-    } else {
-        quote! {
-            #fimpl;
-            Ok((input, Self { span, content }))
-        }
-    };
-    let fields = if silent {
-        quote! {
-            _phantom: ::core::marker::PhantomData<::pest::Span<'i>>
-        }
-    } else {
-        quote! {
-            pub span: ::pest::Span<'i>,
-            pub content: #inner,
-        }
-    };
-    let debug = if silent {
-        quote! {
-            impl<'i> ::core::fmt::Debug for #name<'i> {
-                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                    f.debug_struct(#candidate_name)
-                        .finish()
-                }
-            }
-        }
-    } else {
-        quote! {
-            impl<'i> ::core::fmt::Debug for #name<'i> {
-                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                    f.debug_struct(#candidate_name)
-                        .field("span", &self.span)
-                        .field("content", &self.content)
-                        .finish()
-                }
-            }
-        }
-    };
-    let def = quote! {
-        #[doc = #doc]
-        pub struct #name<'i> {
-            #fields
-        }
-        impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
-            #f {
-                #fn_def
-            }
-        }
-        #debug
-    };
-    map.insert(def);
-    quote! {
-        #name::<'i>
     }
 }
 
@@ -189,64 +119,12 @@ fn generate_graph_node(
     inner_tokens: bool,
     silent: bool,
 ) -> TokenStream {
-    macro_rules! walk_tree {
-        ($ivar: ident, $ovar: ident) => {{
-            let mut nodes: Vec<&OptimizedExpr> = Vec::new();
-            let mut names: Vec<TokenStream> = Vec::new();
-            let mut i = 0usize;
-            let mut current = expr;
-            let mut gen = |node: &OptimizedExpr| {
-                let res = generate_graph_node(
-                    node,
-                    rule_name,
-                    format!("{}_{}", candidate_name, i),
-                    map,
-                    false,
-                    None,
-                    inner_tokens,
-                    silent,
-                );
-                i += 1;
-                res
-            };
-            while let OptimizedExpr::$ivar(lhs, rhs) = current {
-                nodes.push(lhs);
-                names.push(gen(lhs));
-                current = rhs;
-            }
-            nodes.push(current);
-            names.push(gen(current));
-            let name = ident(&candidate_name);
-            (nodes, names, quote! {#name::<'i>})
-        }};
-    }
-
-    let f = fn_decl();
-    let attr = attributes();
-
-    let spaces = match inner_spaces {
-        Some(true) => quote! {
-            let (next, _) = ::pest::typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<false, Rule>(input, stack);
-            input = next;
-        },
-        Some(false) => quote! {},
-        None => quote! {
-            let (next, _) = ::pest::typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<ATOMIC, Rule>(input, stack);
-            input = next;
-        },
-    };
-    let ispaces = match inner_spaces {
-        Some(true) => quote! {false},
-        Some(false) => quote! {true},
-        None => quote! {ATOMIC},
-    };
-
     // Still some compile-time information not taken
     match expr {
         OptimizedExpr::Str(content) => {
             let wrapper = format_ident!("r#{}", candidate_name);
             let doc = format!("A wrapper for `\"{}\"`.", content);
-            map.insert_wrapper(quote! {
+            let module = map.insert_wrapper(quote! {
                 #[doc = #doc]
                 pub struct #wrapper();
                 impl ::pest::typed::StringWrapper for #wrapper {
@@ -259,7 +137,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Str::<'i, super::Rule, __pest_string_wrapper::#wrapper>
+                    ::pest::typed::predefined_node::Str::<'i, super::Rule, #module::#wrapper>
                 },
                 inner_spaces,
                 explicit,
@@ -268,7 +146,7 @@ fn generate_graph_node(
         OptimizedExpr::Insens(content) => {
             let wrapper = format_ident!("r#{}", candidate_name);
             let doc = format!("A wrapper for `\"{}\"`.", content);
-            map.insert_wrapper(quote! {
+            let module = map.insert_wrapper(quote! {
                 pub struct #wrapper();
                 #[doc = #doc]
                 impl ::pest::typed::StringWrapper for #wrapper {
@@ -281,7 +159,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Insens::<'i, super::Rule, __pest_string_wrapper::#wrapper>
+                    ::pest::typed::predefined_node::Insens::<'i, super::Rule, #module::#wrapper>
                 },
                 inner_spaces,
                 explicit,
@@ -329,7 +207,7 @@ fn generate_graph_node(
         OptimizedExpr::Skip(strings) => {
             let wrapper = format_ident!("r#{}", candidate_name);
             let doc = format!("A wrapper for `\"{:?}\"`.", strings);
-            map.insert_wrapper(quote! {
+            let module = map.insert_wrapper(quote! {
                 #[doc = #doc]
                 pub struct #wrapper();
                 impl ::pest::typed::StringArrayWrapper for #wrapper {
@@ -342,7 +220,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Skip::<'i, super::Rule, __pest_string_wrapper::#wrapper>
+                    ::pest::typed::predefined_node::Skip::<'i, super::Rule, #module::#wrapper>
                 },
                 inner_spaces,
                 explicit,
