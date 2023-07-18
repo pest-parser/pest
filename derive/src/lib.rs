@@ -325,8 +325,16 @@ pub fn derive_parser(input: TokenStream) -> TokenStream {
 }
 
 /// The main method that's called by the proc macro
-/// (a wrapper around `pest_generator::derive_parser`)
-#[proc_macro_derive(TypedParser, attributes(grammar, grammar_inline))]
+/// (a wrapper around `pest_generator::derive_typed_parser`)
+#[proc_macro_derive(
+    TypedParser,
+    attributes(
+        grammar,
+        grammar_inline,
+        emit_rule_reference,
+        emit_tagged_node_reference
+    )
+)]
 pub fn derive_typed_parser(input: TokenStream) -> TokenStream {
     pest_generator::derive_typed_parser(input.into(), true).into()
 }

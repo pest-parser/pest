@@ -81,11 +81,27 @@ impl Accesser {
     pub fn collect(&self) -> TokenStream {
         let accessers = self.accessers.iter().map(|(name, vec)| {
             let (paths, types): (Vec<_>, Vec<_>) = vec.clone().into_iter().unzip();
-            let name = ident(name.as_str());
-            quote! {
-                pub fn #name(&self) ->( #(#types),* ) {
-                    ( #( self #paths ),* )
+            let id = ident(name.as_str());
+            let src = if vec.len() == 1 {
+                quote! {
+                    #[allow(non_snake_case)]
+                    pub fn #id(&self) -> #(#types)* {
+                        #( self.content #paths )*
+                    }
                 }
+            } else {
+                quote! {
+                    #[allow(non_snake_case)]
+                    pub fn #id(&self) -> ( #(#types),* ) {
+                        ( #( self.content #paths ),* )
+                    }
+                }
+            };
+            // We may generate source codes to help debugging here.
+            let doc = format! {"A helper function to access [`struct@{}`].", name};
+            quote! {
+                #[doc = #doc]
+                #src
             }
         });
         quote! {
@@ -110,6 +126,7 @@ fn rule(
     let accessers = accessers.collect();
     quote! {
         #[doc = #doc]
+        #[allow(non_camel_case_types)]
         #[derive(Debug)]
         pub struct #name<'i> {
             #[doc = "Matched content."]
@@ -120,13 +137,6 @@ fn rule(
         }
         impl<'i> ::pest::typed::RuleWrapper<super::Rule> for #name<'i> {
             const RULE: super::Rule = super::Rule::#rule_name;
-        }
-        impl<'i> ::core::ops::Deref for #name<'i> {
-            type Target = #type_name;
-
-            fn deref(&self) -> &Self::Target {
-                &self.content
-            }
         }
         impl<'i> ::pest::typed::TypeWrapper for #name<'i> {
             type Inner = #type_name;
@@ -222,16 +232,20 @@ fn process_single_alias(
 ) -> (TokenStream, Accesser) {
     let rule_name = ident(rule_name);
     let name = ident(&candidate_name);
-    let type_name = match inner_spaces {
-        Some(true) => {
-            accessers = accessers.prepend(|inner| quote! {.content #inner}, |inner| inner);
-            quote! {::pest::typed::predefined_node::NonAtomic::<'i, super::Rule, #type_name>}
+    let type_name = if explicit {
+        match inner_spaces {
+            Some(true) => {
+                accessers = accessers.prepend(|inner| quote! {.content #inner}, |inner| inner);
+                quote! {::pest::typed::predefined_node::NonAtomic::<'i, super::Rule, #type_name>}
+            }
+            Some(false) => {
+                accessers = accessers.prepend(|inner| quote! {.content #inner}, |inner| inner);
+                quote! {::pest::typed::predefined_node::Atomic::<'i, super::Rule, #type_name>}
+            }
+            None => type_name,
         }
-        Some(false) => {
-            accessers = accessers.prepend(|inner| quote! {.content #inner}, |inner| inner);
-            quote! {::pest::typed::predefined_node::Atomic::<'i, super::Rule, #type_name>}
-        }
-        None => type_name,
+    } else {
+        type_name
     };
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
@@ -258,15 +272,29 @@ fn generate_graph_node(
     emit_tagged_node_reference: bool,
 ) -> (TokenStream, Accesser) {
     let ignore = ignore();
-    let option = option_type();
     let vec = vec_type();
-    // Still some compile-time information not taken
+    fn for_option(accessers: Accesser, _inner: &OptimizedExpr, prefix: TokenStream) -> Accesser {
+        let option = option_type();
+        if false {
+            accessers.prepend(
+                |inner| quote! {#prefix.as_ref().and_then(|e|Some(e #inner)).flatten()},
+                |inner| quote! {#inner},
+            )
+        } else {
+            accessers.prepend(
+                |inner| quote! {#prefix.as_ref().and_then(|e|Some(e #inner))},
+                |inner| quote! {#option<#inner>},
+            )
+        }
+    }
+    // Still some compile-time information not taken.
     match expr {
         OptimizedExpr::Str(content) => {
             let wrapper = format_ident!("r#{}", candidate_name);
-            let doc = format!("A wrapper for `\"{}\"`.", content);
+            let doc = format!("A wrapper for `{:?}`.", content);
             let module = map.insert_wrapper(quote! {
                 #[doc = #doc]
+                #[allow(non_camel_case_types)]
                 pub struct #wrapper();
                 impl ::pest::typed::StringWrapper for #wrapper {
                     const CONTENT: &'static str = #content;
@@ -287,10 +315,11 @@ fn generate_graph_node(
         }
         OptimizedExpr::Insens(content) => {
             let wrapper = format_ident!("r#{}", candidate_name);
-            let doc = format!("A wrapper for `\"{}\"`.", content);
+            let doc = format!("A wrapper for `{:?}`.", content);
             let module = map.insert_wrapper(quote! {
-                pub struct #wrapper();
                 #[doc = #doc]
+                #[allow(non_camel_case_types)]
+                pub struct #wrapper();
                 impl ::pest::typed::StringWrapper for #wrapper {
                     const CONTENT: &'static str = #content;
                 }
@@ -353,9 +382,10 @@ fn generate_graph_node(
         }
         OptimizedExpr::Skip(strings) => {
             let wrapper = format_ident!("r#{}", candidate_name);
-            let doc = format!("A wrapper for `\"{:?}\"`.", strings);
+            let doc = format!("A wrapper for `{:?}`.", strings);
             let module = map.insert_wrapper(quote! {
                 #[doc = #doc]
+                #[allow(non_camel_case_types)]
                 pub struct #wrapper();
                 impl ::pest::typed::StringArrayWrapper for #wrapper {
                     const CONTENT: &'static[&'static str] = &[ #(#strings),* ];
@@ -392,16 +422,21 @@ fn generate_graph_node(
         }
         OptimizedExpr::Ident(id) => {
             let inner = ident(id);
+            let accessers = if emit_rule_reference {
+                Accesser::from_item(
+                    id.clone(),
+                    vec![(quote! {.content.deref()}, quote! {&#inner})],
+                )
+            } else {
+                Accesser::new()
+            };
             process_single_alias(
                 map,
                 expr,
                 rule_name,
                 candidate_name,
                 quote! {::pest::typed::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
-                Accesser::from_item(
-                    id.clone(),
-                    vec![(quote! {.content.deref()}, quote! {&#inner})],
-                ),
+                accessers,
                 inner_spaces,
                 explicit,
             )
@@ -472,6 +507,7 @@ fn generate_graph_node(
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
+            let accessers = for_option(accessers, expr, quote! {.content});
             process_single_alias(
                 map,
                 expr,
@@ -480,7 +516,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::typed::predefined_node::Restorable::<'i, super::Rule, #inner>
                 },
-                accessers.prepend(|inner| quote! {.content #inner}, |inner| inner),
+                accessers,
                 inner_spaces,
                 explicit,
             )
@@ -544,6 +580,7 @@ fn generate_graph_node(
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
+            let acc_first = for_option(acc_first, lhs, quote! {.get_first()});
             let (second, acc_second) = generate_graph_node(
                 rhs,
                 rule_name,
@@ -556,6 +593,7 @@ fn generate_graph_node(
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
+            let acc_second = for_option(acc_second, rhs, quote! {.get_second()});
             process_single_alias(
                 map,
                 expr,
@@ -569,15 +607,7 @@ fn generate_graph_node(
                         #second,
                     >
                 },
-                acc_first
-                    .prepend(
-                        |inner| quote! {.get_first().as_ref().and_then(|e|Some(e #inner))},
-                        |inner| quote! {#option<#inner>},
-                    )
-                    .join(acc_second.prepend(
-                        |inner| quote! {.get_second().as_ref().and_then(|e|Some(e #inner))},
-                        |inner| quote! {#option<#inner>},
-                    )),
+                acc_first.join(acc_second),
                 inner_spaces,
                 explicit,
             )
@@ -595,16 +625,14 @@ fn generate_graph_node(
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
+            let accessers = for_option(accessers, inner, quote! {.content});
             process_single_alias(
                 map,
                 expr,
                 rule_name,
                 candidate_name,
                 quote! {::pest::typed::predefined_node::Opt::<'i, super::Rule, #inner_name>},
-                accessers.prepend(
-                    |inner| quote! {.content.as_ref().and_then(|e|Some(e #inner))},
-                    |inner| quote! {#option<#inner>},
-                ),
+                accessers,
                 inner_spaces,
                 explicit,
             )
@@ -758,6 +786,7 @@ pub fn generate_typed_pair_from_rule(
     let graph = generate_graph(rules, emit_rule_reference, emit_tagged_node_reference);
     let as_wrapper = |name: &Ident| {
         quote! {
+            #[allow(non_camel_case_types)]
             pub struct #name;
             impl ::pest::typed::RuleWrapper<super::Rule> for #name {
                 const RULE: super::Rule = super::Rule::#name;

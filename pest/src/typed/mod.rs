@@ -21,5 +21,5 @@ pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeW
 pub trait TypedParser<R: RuleType> {
     /// Parses a `&str` into a tree starting from T.
     #[allow(clippy::perf)]
-    fn parse<'i, T: TypedNode<'i, R>>(input: &'i str) -> Result<T, Error<R>>;
+    fn parse<'i, T: ParsableTypedNode<'i, R>>(input: &'i str) -> Result<T, Error<R>>;
 }

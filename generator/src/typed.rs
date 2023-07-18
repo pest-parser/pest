@@ -25,6 +25,8 @@ use syn::{Attribute, DeriveInput};
 /// Processes the derive/proc macro input and generates the corresponding typed parser based
 /// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
 /// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
+///
+/// Add attributes `emit_rule_reference` and `emit_tagged_node_reference`.
 pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
     let (name, generics, contents, emit_rule_reference, emit_tagged_node_reference) =
