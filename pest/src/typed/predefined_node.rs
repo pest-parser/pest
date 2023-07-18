@@ -950,25 +950,31 @@ pub struct Push<'i, R: RuleType, T: TypedNode<'i, R>> {
     pub content: T,
     _phantom: PhantomData<(&'i R, &'i T)>,
 }
+impl<'i, R: RuleType, T: TypedNode<'i, R>> From<T> for Push<'i, R, T> {
+    fn from(content: T) -> Self {
+        Self {
+            content,
+            _phantom: PhantomData,
+        }
+    }
+}
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<'i, R, T> {
     #[inline]
     fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
+        let start = input.clone();
         let (input, content) = T::try_parse_with::<ATOMIC, Rule>(input, stack)?;
-        Ok((
-            input,
-            Self {
-                content,
-                _phantom: PhantomData,
-            },
-        ))
+        stack.push(start.span(&input));
+        Ok((input, Self::from(content)))
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Push<'i, R, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Push").finish()
+        f.debug_struct("Push")
+            .field("content", &self.content)
+            .finish()
     }
 }
 
