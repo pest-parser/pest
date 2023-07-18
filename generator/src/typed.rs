@@ -9,32 +9,18 @@
 
 //! Adapted from [generator.rs](./generator.rs).
 
-use std::path::PathBuf;
-
-use proc_macro2::TokenStream;
-use quote::{ToTokens, TokenStreamExt};
-use syn::{self, Generics, Ident};
-
-use std::env;
-use std::fs::File;
-use std::io::{self, Read};
-use std::path::Path;
-
-use syn::{Attribute, DeriveInput, Expr, ExprLit, Lit, Meta};
-
+use crate::docs::DocComment;
+use crate::generator::{generate_enum, generate_include};
+use crate::graph::generate_typed_pair_from_rule;
+use crate::types::result_type;
+use crate::{collect_data, get_attribute, GrammarSource};
+use pest_meta::optimizer::OptimizedRule;
 use pest_meta::parser::{self, rename_meta_rule, Rule};
 use pest_meta::{optimizer, unwrap_or_report, validator};
-
-use pest::unicode::unicode_property_names;
-use pest_meta::ast::*;
-use pest_meta::optimizer::*;
-
-use crate::docs::DocComment;
-use crate::types::{box_type, option_type, result_type};
-use crate::{collect_data, get_attribute, GrammarSource};
-use crate::generator::{generate_enum, generate_include};
-
-use crate::graph::generate_typed_pair_from_rule;
+use proc_macro2::TokenStream;
+use std::path::PathBuf;
+use syn::{self, Generics, Ident};
+use syn::{Attribute, DeriveInput};
 
 /// Processes the derive/proc macro input and generates the corresponding typed parser based
 /// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
