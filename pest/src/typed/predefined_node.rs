@@ -200,35 +200,40 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> Debug for Range<'i, R, M
     }
 }
 
-/// Match a part of the stack.
-/// Will match (consume) input.
+/// Normalize stack slice.
 #[inline]
-fn peek_stack_slice<'i, R: RuleType, Rule: RuleWrapper<R>>(
+fn stack_slice<'i, 's, R: RuleType>(
     input: Position<'i>,
     start: i32,
     end: Option<i32>,
-    stack: &Stack<Span<'i>>,
-) -> Result<(Position<'i>, Span<'i>), Tracker<'i, R>> {
+    stack: &'s Stack<Span<'i>>,
+) -> Result<core::slice::Iter<'s, Span<'i>>, Tracker<'i, R>> {
     let range = match constrain_idxs(start, end, stack.len()) {
         Some(range) => range,
         None => return Err(Tracker::SliceOutOfBound(start, end, input)),
     };
     // return true if an empty sequence is requested
     if range.end <= range.start {
-        return Ok((input, input.span(&input)));
+        return Ok(core::slice::Iter::default());
     }
+    Ok(stack[range].iter())
+}
 
+/// Match a part of the stack.
+/// Will match (consume) input.
+#[inline]
+fn peek_spans<'s, 'i: 's, R: RuleType, Rule: RuleWrapper<R>>(
+    input: Position<'i>,
+    iter: impl Iterator<Item = &'s Span<'i>>,
+) -> Result<(Position<'i>, Span<'i>), Tracker<'i, R>> {
     let mut matching_pos = input.clone();
-    let result = {
-        let mut iter_b2t = stack[range].iter().rev();
-        let matcher = |span: &Span<'_>| matching_pos.match_string(span.as_str());
-        iter_b2t.all(matcher)
-    };
-    if result {
-        Ok((matching_pos, input.span(&matching_pos)))
-    } else {
-        Err(Tracker::new_positive(Rule::RULE, input))
+    for span in iter {
+        match matching_pos.match_string(span.as_str()) {
+            true => (),
+            false => return Err(Tracker::new(input)),
+        }
     }
+    Ok((matching_pos, input.span(&matching_pos)))
 }
 
 /// Positive predicate.
@@ -401,7 +406,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
     }
 }
 
-/// Peek all in stack.
+/// Peek all reversely in stack.
 /// Will consume input.
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
@@ -415,7 +420,8 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
-        let (input, span) = peek_stack_slice::<R, Rule>(input, 0, None, stack)?;
+        let spans = stack[0..stack.len()].iter().rev();
+        let (input, span) = peek_spans::<R, Rule>(input, spans)?;
         Ok((input, Self { span }))
     }
 }
@@ -440,7 +446,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
         let start = input.clone();
-        match stack.pop() {
+        match stack.peek() {
             Some(string) => match input.match_string(string.as_str()) {
                 true => Ok((input, Self::from(start.span(&input)))),
                 false => Err(Tracker::new(input)),
@@ -990,7 +996,8 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
-        let (input, _) = peek_stack_slice::<R, Rule>(input, START, Some(END), stack)?;
+        let spans = stack_slice(input, START, Some(END), stack)?;
+        let (input, _) = peek_spans::<R, Rule>(input, spans)?;
         Ok((
             input,
             Self {
@@ -1015,7 +1022,8 @@ impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<'i, R, S
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
-        let (input, _) = peek_stack_slice::<R, Rule>(input, START, None, stack)?;
+        let spans = stack_slice(input, START, None, stack)?;
+        let (input, _) = peek_spans::<R, Rule>(input, spans)?;
         Ok((
             input,
             Self {
