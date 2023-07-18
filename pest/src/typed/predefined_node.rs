@@ -201,6 +201,7 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> Debug for Range<'i, R, M
 }
 
 /// Match a part of the stack.
+/// Will match (consume) input.
 #[inline]
 fn peek_stack_slice<'i, R: RuleType, Rule: RuleWrapper<R>>(
     input: Position<'i>,
@@ -401,6 +402,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
 }
 
 /// Peek all in stack.
+/// Will consume input.
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
 pub struct PEEK_ALL<'i> {
@@ -415,6 +417,36 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
         let (input, span) = peek_stack_slice::<R, Rule>(input, 0, None, stack)?;
         Ok((input, Self { span }))
+    }
+}
+
+/// Peek all in stack.
+/// Will consume input.
+#[allow(non_camel_case_types)]
+#[derive(Debug)]
+pub struct PEEK<'i> {
+    /// Pair span.
+    pub span: Span<'i>,
+}
+impl<'i> From<Span<'i>> for PEEK<'i> {
+    fn from(span: Span<'i>) -> Self {
+        Self { span }
+    }
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
+    #[inline]
+    fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
+        mut input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
+        let start = input.clone();
+        match stack.pop() {
+            Some(string) => match input.match_string(string.as_str()) {
+                true => Ok((input, Self::from(start.span(&input)))),
+                false => Err(Tracker::new(input)),
+            },
+            None => Err(Tracker::EmptyStack(input)),
+        }
     }
 }
 
@@ -709,7 +741,64 @@ impl<'i, R: RuleType> TypedNode<'i, R> for DROP<'i> {
 }
 impl<'i> Debug for DROP<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Drop").finish()
+        f.debug_struct("DROP").finish()
+    }
+}
+
+/// Match and pop the top of the stack.
+pub struct POP<'i> {
+    /// Matched span.
+    pub span: Span<'i>,
+}
+
+impl<'i> From<Span<'i>> for POP<'i> {
+    fn from(span: Span<'i>) -> Self {
+        Self { span }
+    }
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
+    #[inline]
+    fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
+        mut input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
+        match stack.pop() {
+            Some(span) => match input.match_string(span.as_str()) {
+                true => Ok((input, Self::from(span))),
+                false => Err(Tracker::new(input)),
+            },
+            None => Err(Tracker::EmptyStack(input)),
+        }
+    }
+}
+impl<'i> Debug for POP<'i> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("POP").finish()
+    }
+}
+
+/// Match and pop all elements in the stack.
+#[allow(non_camel_case_types)]
+#[derive(Debug)]
+pub struct POP_ALL<'i> {
+    /// Matched span.
+    pub span: Span<'i>,
+}
+
+impl<'i> From<Span<'i>> for POP_ALL<'i> {
+    fn from(span: Span<'i>) -> Self {
+        Self { span }
+    }
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
+    #[inline]
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
+        let (input, res) = PEEK_ALL::try_parse_with::<ATOMIC, Rule>(input, stack)?;
+        while let Some(_) = stack.pop() {}
+        Ok((input, Self::from(res.span)))
     }
 }
 
@@ -1032,6 +1121,64 @@ impl<
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Rule").finish()
     }
+}
+
+/// ASCII Digit. `'0'..'9'`
+#[allow(non_camel_case_types)]
+pub type ASCII_DIGIT<'i, R> = Range<'i, R, '0', '9'>;
+
+/// Non-zero ASCII Digit. `'1'..'9'`
+#[allow(non_camel_case_types)]
+pub type ASCII_NONZERO_DIGIT<'i, R> = Range<'i, R, '1', '9'>;
+
+/// Binary ASCII Digit. `'0'..'1'`
+#[allow(non_camel_case_types)]
+pub type ASCII_BIN_DIGIT<'i, R> = Range<'i, R, '0', '1'>;
+
+/// Octal ASCII Digit. `'0'..'7'`
+#[allow(non_camel_case_types)]
+pub type ASCII_OCT_DIGIT<'i, R> = Range<'i, R, '0', '7'>;
+
+/// Hexadecimal ASCII Digit. `'0'..'9' | 'a'..'f' | 'A'..'F'`
+#[allow(non_camel_case_types)]
+pub type ASCII_HEX_DIGIT<'i, R> = Choice<
+    'i,
+    R,
+    ASCII_DIGIT<'i, R>,
+    Choice<'i, R, Range<'i, R, 'a', 'f'>, Range<'i, R, 'A', 'F'>>,
+>;
+
+/// Lower case ASCII alphabet.
+#[allow(non_camel_case_types)]
+pub type ASCII_ALPHA_LOWER<'i, R> = Range<'i, R, 'a', 'z'>;
+
+/// Upper case ASCII alphabet.
+#[allow(non_camel_case_types)]
+pub type ASCII_ALPHA_UPPER<'i, R> = Range<'i, R, 'A', 'Z'>;
+
+/// ASCII alphabet.
+#[allow(non_camel_case_types)]
+pub type ASCII_ALPHA<'i, R> = Choice<'i, R, ASCII_ALPHA_LOWER<'i, R>, ASCII_ALPHA_UPPER<'i, R>>;
+
+/// ASCII alphabet or digit.
+#[allow(non_camel_case_types)]
+pub type ASCII_ALPHANUMERIC<'i, R> = Choice<'i, R, ASCII_ALPHA<'i, R>, ASCII_DIGIT<'i, R>>;
+
+/// ASCII alphabet.
+#[allow(non_camel_case_types)]
+pub type ASCII<'i, R> = Range<'i, R, '\x00', '\x7f'>;
+
+/// Match char by
+pub fn match_char_by(position: &mut Position<'_>, pred: impl FnOnce(char) -> bool) -> Option<char> {
+    let mut res = None;
+    position.match_char_by(|c| {
+        let matched = pred(c);
+        if matched {
+            res = Some(c);
+        }
+        matched
+    });
+    res
 }
 
 #[cfg(test)]

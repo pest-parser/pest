@@ -9,6 +9,7 @@
 
 use crate::optimizer::OptimizedExpr;
 use crate::types::{option_type, result_type, vec_type};
+use pest::unicode::unicode_property_names;
 use pest_meta::{ast::RuleType, optimizer::OptimizedRule};
 use proc_macro2::{Ident, TokenStream};
 use std::collections::btree_map;
@@ -110,6 +111,25 @@ impl Accesser {
     }
 }
 
+fn position() -> TokenStream {
+    quote! {::pest::Position}
+}
+fn _bool() -> TokenStream {
+    quote!{::core::primitive::bool}
+}
+fn _char() -> TokenStream {
+    quote!{::core::primitive::char}
+}
+fn _str() -> TokenStream {
+    quote!{::core::primitive::str}
+}
+fn stack() -> TokenStream {
+    quote! {::pest::Stack}
+}
+fn _span() -> TokenStream {
+    quote! {::pest::Span}
+}
+
 fn rule(
     name: &Ident,
     type_name: &TokenStream,
@@ -119,11 +139,13 @@ fn rule(
 ) -> TokenStream {
     let rule_wrappers = rule_wrappers();
     let result = result_type();
-    let position = quote! {::pest::Position};
-    let stack = quote! {::pest::Stack};
+    let position = position();
+    let stack = stack();
     let error = quote! {::pest::error::Error};
     let ignore = ignore();
     let accessers = accessers.collect();
+    let _bool = _bool();
+    let str = _str();
     quote! {
         #[doc = #doc]
         #[allow(non_camel_case_types)]
@@ -143,7 +165,7 @@ fn rule(
         }
         impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
             #[inline]
-            fn try_parse_with<const ATOMIC: bool, _Rule: ::pest::typed::RuleWrapper<super::Rule>>(
+            fn try_parse_with<const ATOMIC: #_bool, _Rule: ::pest::typed::RuleWrapper<super::Rule>>(
                 input: #position<'i>,
                 stack: &mut #stack<::pest::Span<'i>>,
             ) -> #result<(#position<'i>, Self), ::pest::typed::error::Tracker<'i, super::Rule>> {
@@ -160,7 +182,7 @@ fn rule(
         }
         impl<'i> ::pest::typed::ParsableTypedNode<'i, super::Rule> for #name<'i> {
             #[inline]
-            fn parse(input: &'i str) -> #result<Self, #error<super::Rule>> {
+            fn parse(input: &'i #str) -> #result<Self, #error<super::Rule>> {
                 let mut stack = #stack::new();
                 let (input, res) =
                     match Self::try_parse_with::<false, #rule_wrappers::#rule_name>(#position::from_start(input), &mut stack) {
@@ -176,7 +198,7 @@ fn rule(
             }
 
             #[inline]
-            fn parse_partial(input: &'i str) -> #result<(#position<'i>, Self), #error<super::Rule>> {
+            fn parse_partial(input: &'i #str) -> #result<(#position<'i>, Self), #error<super::Rule>> {
                 let mut stack = #stack::new();
                 match Self::try_parse_with::<false, #rule_wrappers::#rule_name>(#position::from_start(input), &mut stack) {
                     Ok((input, res)) => Ok((input, res)),
@@ -292,12 +314,13 @@ fn generate_graph_node(
         OptimizedExpr::Str(content) => {
             let wrapper = format_ident!("r#{}", candidate_name);
             let doc = format!("A wrapper for `{:?}`.", content);
+            let str = _str();
             let module = map.insert_wrapper(quote! {
                 #[doc = #doc]
                 #[allow(non_camel_case_types)]
                 pub struct #wrapper();
                 impl ::pest::typed::StringWrapper for #wrapper {
-                    const CONTENT: &'static str = #content;
+                    const CONTENT: &'static #str = #content;
                 }
             });
             process_single_alias(
@@ -316,12 +339,13 @@ fn generate_graph_node(
         OptimizedExpr::Insens(content) => {
             let wrapper = format_ident!("r#{}", candidate_name);
             let doc = format!("A wrapper for `{:?}`.", content);
+            let str = _str();
             let module = map.insert_wrapper(quote! {
                 #[doc = #doc]
                 #[allow(non_camel_case_types)]
                 pub struct #wrapper();
                 impl ::pest::typed::StringWrapper for #wrapper {
-                    const CONTENT: &'static str = #content;
+                    const CONTENT: &'static #str = #content;
                 }
             });
             process_single_alias(
@@ -383,12 +407,13 @@ fn generate_graph_node(
         OptimizedExpr::Skip(strings) => {
             let wrapper = format_ident!("r#{}", candidate_name);
             let doc = format!("A wrapper for `{:?}`.", strings);
+            let str = _str();
             let module = map.insert_wrapper(quote! {
                 #[doc = #doc]
                 #[allow(non_camel_case_types)]
                 pub struct #wrapper();
                 impl ::pest::typed::StringArrayWrapper for #wrapper {
-                    const CONTENT: &'static[&'static str] = &[ #(#strings),* ];
+                    const CONTENT: &'static[&'static #str] = &[ #(#strings),* ];
                 }
             });
             process_single_alias(
@@ -821,31 +846,97 @@ pub fn generate_typed_pair_from_rule(
 }
 
 pub fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
-    let mut result = vec![quote! {
-        use ::pest::typed::predefined_node::{ANY, SOI, EOI, NEWLINE, PEEK_ALL, DROP};
+    let mut results = vec![quote! {
         use ::pest::typed::TypedNode as _;
         use std::ops::Deref as _;
     }];
     macro_rules! insert_builtin {
-        ($name:literal, $def:expr) => {
+        ($name:expr, $def:path) => {
             if !rule_names.contains($name) {
-                result.push($def);
+                let id = ident($name);
+                results.push(quote! {
+                    pub type #id<'i> = ::pest::typed::predefined_node::$def;
+                });
             }
         };
     }
+    insert_builtin!("ANY", ANY::<'i>);
+    insert_builtin!("SOI", SOI::<'i>);
+    insert_builtin!("EOI", EOI::<'i>);
+    insert_builtin!("PEEK", PEEK::<'i>);
+    insert_builtin!("PEEK_ALL", PEEK_ALL::<'i>);
+    insert_builtin!("POP", POP::<'i>);
+    insert_builtin!("POP_ALL", POP_ALL::<'i>);
+    insert_builtin!("DROP", DROP::<'i>);
+    insert_builtin!("ASCII_DIGIT", ASCII_DIGIT::<'i, super::Rule>);
     insert_builtin!(
-        "WHITESPACE",
-        quote! {
-            pub type WHITESPACE<'i> = ::pest::typed::predefined_node::AlwaysFail::<'i>;
-        }
+        "ASCII_NONZERO_DIGIT",
+        ASCII_NONZERO_DIGIT::<'i, super::Rule>
     );
-    insert_builtin!(
-        "COMMENT",
-        quote! {
-            pub type COMMENT<'i> = ::pest::typed::predefined_node::AlwaysFail::<'i>;
+    insert_builtin!("ASCII_BIN_DIGIT", ASCII_BIN_DIGIT::<'i, super::Rule>);
+    insert_builtin!("ASCII_OCT_DIGIT", ASCII_OCT_DIGIT::<'i, super::Rule>);
+    insert_builtin!("ASCII_HEX_DIGIT", ASCII_HEX_DIGIT::<'i, super::Rule>);
+    insert_builtin!("ASCII_ALPHA_LOWER", ASCII_ALPHA_LOWER::<'i, super::Rule>);
+    insert_builtin!("ASCII_ALPHA_UPPER", ASCII_ALPHA_UPPER::<'i, super::Rule>);
+    insert_builtin!("ASCII_ALPHA", ASCII_ALPHA::<'i, super::Rule>);
+    insert_builtin!("ASCII_ALPHANUMERIC", ASCII_ALPHANUMERIC::<'i, super::Rule>);
+    insert_builtin!("ASCII", ASCII::<'i, super::Rule>);
+    insert_builtin!("NEWLINE", NEWLINE::<'i>);
+
+    insert_builtin!("WHITESPACE", AlwaysFail::<'i>);
+    insert_builtin!("COMMENT", AlwaysFail::<'i>);
+
+    let bool = _bool();
+    let result = result_type();
+    let position = position();
+    let stack = stack();
+    let char = _char();
+
+    for property in unicode_property_names() {
+        let property_ident: Ident = syn::parse_str(property).unwrap();
+        // insert manually for #property substitution
+
+        if !rule_names.contains(property) {
+            results.push(quote! {
+                #[allow(non_camel_case_types)]
+                pub struct #property_ident<'i> {
+                    pub content: #char,
+                    _phantom: ::core::marker::PhantomData<&'i #char>
+                }
+                impl<'i> ::core::convert::From<#char> for #property_ident<'i> {
+                    fn from(content: #char) -> Self {
+                        Self {
+                            content, 
+                            _phantom: ::core::marker::PhantomData
+                        }
+                    }
+                }
+                impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #property_ident<'i> {
+                    #[inline]
+                    fn try_parse_with<const ATOMIC: #bool, _Rule: ::pest::typed::RuleWrapper<super::Rule>>(
+                        mut input: #position<'i>,
+                        _stack: &mut #stack<::pest::Span<'i>>,
+                    ) -> #result<(#position<'i>, Self), ::pest::typed::error::Tracker<'i, super::Rule>> {
+                        match ::pest::typed::predefined_node::match_char_by(&mut input, ::pest::unicode::#property_ident) {
+                            Some(content) => {
+                                Ok((input, Self::from(content)))
+                            }
+                            None => Err(::pest::typed::error::Tracker::new(input))
+                        }
+                    }
+                }
+                impl<'i> ::core::fmt::Debug for #property_ident<'i> {
+                    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                        f.debug_struct(#property)
+                            .field("content", &self.content)
+                            .finish()
+                    }
+                }
+            });
         }
-    );
+    }
+
     quote! {
-        #(#result)*
+        #(#results)*
     }
 }
