@@ -25,14 +25,47 @@ macro_rules! parses_to {
         parser: $parser:ident,
         input: $input:literal,
         rule: Rule:: $rule:ident,
-        tokens: $tokens:expr
+        tokens: []
     ) => {
         match pairs::$rule::parse($input) {
             Ok(_) => (),
+            Err(_) => {
+                // Expected.
+                panic!();
+            }
+        }
+    };
+
+    (
+        parser: $parser:ident,
+        input: $input:literal,
+        rule: Rule:: $rule:ident,
+        tokens: [
+            $_rule:ident($start:literal, $end:literal)
+        ]
+    ) => {
+        match pairs::$rule::parse_partial($input) {
+            Ok((input, _)) => assert_eq!(input.pos(), $end),
             Err(err) => {
                 eprintln!("{}", err);
                 panic!();
             }
+        }
+    };
+
+    (
+        parser: $parser:ident,
+        input: $input:literal,
+        rule: Rule:: $rule:ident,
+        tokens: [
+            $_rule:ident($start:literal,$end:literal,$inner:expr)
+        ]
+    ) => {
+        parses_to! {
+            parser: $parser,
+            input: $input,
+            rule: Rule:: $rule,
+            tokens: [$_rule($start,$end)]
         }
     };
 }
