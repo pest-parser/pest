@@ -59,7 +59,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     /// Handle attempts in nested rules.
     /// If the nested rule don't make progress, it will be ignored.
-    /// See [`ParserState`](pest::parser_state::ParserState)
+    /// See [`ParserState`](crate::parser_state::ParserState)
     pub fn nest(self, rule: R, pos: Position<'i>) -> Self {
         if self.ref_position() == &pos {
             Tracker::new_positive(rule, pos)
