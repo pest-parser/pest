@@ -207,7 +207,7 @@ fn peek_stack_slice<'i, R: RuleType, Rule: RuleWrapper<R>>(
     input: Position<'i>,
     start: i32,
     end: Option<i32>,
-    stack: &mut Stack<Span<'i>>,
+    stack: &Stack<Span<'i>>,
 ) -> Result<(Position<'i>, Span<'i>), Tracker<'i, R>> {
     let range = match constrain_idxs(start, end, stack.len()) {
         Some(range) => range,
@@ -220,7 +220,7 @@ fn peek_stack_slice<'i, R: RuleType, Rule: RuleWrapper<R>>(
 
     let mut matching_pos = input.clone();
     let result = {
-        let mut iter_b2t = stack[range].iter();
+        let mut iter_b2t = stack[range].iter().rev();
         let matcher = |span: &Span<'_>| matching_pos.match_string(span.as_str());
         iter_b2t.all(matcher)
     };
