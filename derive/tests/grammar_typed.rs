@@ -27,8 +27,10 @@ macro_rules! parses_to {
         rule: Rule:: $rule:ident,
         tokens: []
     ) => {
-        match pairs::$rule::parse($input) {
-            Ok(_) => (),
+        match pairs::$rule::parse_partial($input) {
+            Ok((input, _)) => {
+                assert_eq!(input.pos(), 0);
+            }
             Err(_) => {
                 // Expected.
                 panic!();
