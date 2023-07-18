@@ -16,7 +16,7 @@ use crate::types::result_type;
 use crate::{collect_data, get_attribute, GrammarSource};
 use pest_meta::optimizer::OptimizedRule;
 use pest_meta::parser::{self, rename_meta_rule, Rule};
-use pest_meta::{optimizer, unwrap_or_report, validator};
+use pest_meta::{optimizer, unwrap_or_report};
 use proc_macro2::TokenStream;
 use std::path::PathBuf;
 use syn::{self, Generics, Ident};
@@ -37,7 +37,6 @@ pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenSt
         Err(error) => panic!("error parsing \n{}", error.renamed_rules(rename_meta_rule)),
     };
 
-    let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
     let doc_comment = crate::docs::consume(pairs.clone());
     let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
@@ -47,7 +46,6 @@ pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenSt
         &generics,
         paths,
         optimized,
-        defaults,
         &doc_comment,
         include_grammar,
         emit_rule_reference,
@@ -103,7 +101,6 @@ fn generate_typed(
     generics: &Generics,
     paths: Vec<PathBuf>,
     rules: Vec<OptimizedRule>,
-    defaults: Vec<&str>,
     doc_comment: &DocComment,
     include_grammar: bool,
     emit_rule_reference: bool,
