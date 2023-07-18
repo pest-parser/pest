@@ -9,7 +9,7 @@
 
 //! Predefined tree nodes.
 
-use core::{fmt, marker::PhantomData, ops::Deref};
+use core::{fmt, marker::PhantomData};
 
 use alloc::vec::Vec;
 
@@ -29,20 +29,22 @@ pub struct Str<'i, R: RuleType, T: StringWrapper> {
 impl<'i, R: RuleType, T: StringWrapper> StringWrapper for Str<'i, R, T> {
     const CONTENT: &'static str = T::CONTENT;
 }
+impl<'i, R: RuleType, T: StringWrapper> From<()> for Str<'i, R, T> {
+    fn from(_value: ()) -> Self {
+        Self {
+            _phantom: PhantomData,
+        }
+    }
+}
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<'i, R, T> {
     fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
         if input.match_string(Self::CONTENT) {
-            Ok((
-                input,
-                Self {
-                    _phantom: PhantomData,
-                },
-            ))
+            Ok((input, Self::from(())))
         } else {
-            Err(Tracker::new_positive(Rule::RULE, input))
+            Err(Tracker::new(input))
         }
     }
 }
@@ -61,6 +63,14 @@ pub struct Insens<'i, R: RuleType, T: StringWrapper> {
 impl<'i, R: RuleType, T: StringWrapper> StringWrapper for Insens<'i, R, T> {
     const CONTENT: &'static str = T::CONTENT;
 }
+impl<'i, R: RuleType, T: StringWrapper> From<&'i str> for Insens<'i, R, T> {
+    fn from(content: &'i str) -> Self {
+        Self {
+            content,
+            _phantom: PhantomData,
+        }
+    }
+}
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
     fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         mut input: Position<'i>,
@@ -69,13 +79,7 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
         let start = input.clone();
         if input.match_insensitive(Self::CONTENT) {
             let span = start.span(&input);
-            Ok((
-                input,
-                Self {
-                    content: span.as_str(),
-                    _phantom: PhantomData,
-                },
-            ))
+            Ok((input, Self::from(span.as_str())))
         } else {
             Err(Tracker::new_positive(Rule::RULE, input))
         }
@@ -84,6 +88,41 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
 impl<'i, R: RuleType, T: StringWrapper> Debug for Insens<'i, R, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Insens").finish()
+    }
+}
+
+/// Inner tokens will be discarded, and only a [`Span`] will be contained.
+///
+/// And inner errors will **not** be tracked.
+pub struct Silent<'i, R: RuleType, T: TypedNode<'i, R>> {
+    /// Span.
+    pub span: Span<'i>,
+    _phantom: PhantomData<(&'i R, &'i T)>,
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Silent<'i, R, T> {
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
+        let start = input.clone();
+        match T::try_parse_with::<ATOMIC, Rule>(input, stack) {
+            Ok((input, _)) => {
+                let span = start.span(&input);
+                Ok((
+                    input,
+                    Self {
+                        span,
+                        _phantom: PhantomData,
+                    },
+                ))
+            }
+            Err(tracker) => Err(Tracker::new_positive(Rule::RULE, tracker.position())),
+        }
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Silent<'i, R, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Silent").finish()
     }
 }
 
@@ -304,6 +343,8 @@ impl<'i> Debug for SOI<'i> {
 }
 
 /// Match end of input.
+///
+/// [`EOI`] will record its rule if not matched.
 pub struct EOI<'i> {
     _phantom: PhantomData<&'i str>,
 }
@@ -461,11 +502,11 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> T
     for Ign<'i, R, COMMENT, WHITESPACE>
 {
     #[inline]
-    fn try_parse_with<const _ATOMIC: bool, RULE: RuleWrapper<R>>(
+    fn try_parse_with<const ATOMIC: bool, RULE: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
-        Ok(Self::parse_with::<true, RULE>(input, stack))
+        Ok(Self::parse_with::<ATOMIC, RULE>(input, stack))
     }
 }
 impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> Debug
@@ -677,13 +718,6 @@ pub struct Box<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Boxed content.
     pub content: ::alloc::boxed::Box<T>,
     _phantom: PhantomData<&'i R>,
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Box<'i, R, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        self.content.deref()
-    }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Box<'i, R, T> {
     #[inline]
@@ -921,20 +955,6 @@ impl<
         _EOI: RuleWrapper<R>,
         T: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
-    > Deref for Rule<'i, R, RULE, _EOI, T, IGNORED>
-{
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        &self.content
-    }
-}
-impl<
-        'i,
-        R: RuleType,
-        RULE: RuleWrapper<R>,
-        _EOI: RuleWrapper<R>,
-        T: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
     > TypeWrapper for Rule<'i, R, RULE, _EOI, T, IGNORED>
 {
     type Inner = T;
@@ -953,14 +973,16 @@ impl<
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
-        let (input, res) = T::try_parse_with::<ATOMIC, RULE>(input, stack)?;
-        Ok((
-            input,
-            Self {
-                content: res,
-                _phantom: PhantomData,
-            },
-        ))
+        match T::try_parse_with::<ATOMIC, RULE>(input, stack) {
+            Ok((input, res)) => Ok((
+                input,
+                Self {
+                    content: res,
+                    _phantom: PhantomData,
+                },
+            )),
+            Err(err) => Err(err.nest(RULE::RULE, input)),
+        }
     }
 }
 impl<

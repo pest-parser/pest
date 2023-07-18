@@ -39,19 +39,52 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     pub fn new_negative(negatives: R, pos: Position<'i>) -> Self {
         Self::Attempts(vec![], vec![negatives], pos)
     }
-    /// Merge attempts in two tracker if points to the same position.
-    /// `other` has higher priority.
-    pub fn merge(self, mut other: Self) -> Self {
+    /// Get position.
+    pub fn position(self) -> Position<'i> {
+        match self {
+            Tracker::Attempts(_, _, pos) => pos,
+            Tracker::SliceOutOfBound(_, _, pos) => pos,
+            Tracker::RepeatTooManyTimes(pos) => pos,
+            Tracker::EmptyStack(pos) => pos,
+        }
+    }
+    /// Get position.
+    pub fn ref_position(&self) -> &Position<'i> {
+        match self {
+            Tracker::Attempts(_, _, pos) => pos,
+            Tracker::SliceOutOfBound(_, _, pos) => pos,
+            Tracker::RepeatTooManyTimes(pos) => pos,
+            Tracker::EmptyStack(pos) => pos,
+        }
+    }
+    /// Handle attempts in nested rules.
+    /// If the nested rule don't make progress, it will be ignored.
+    /// See [`ParserState`](pest::parser_state::ParserState)
+    pub fn nest(self, rule: R, pos: Position<'i>) -> Self {
+        if self.ref_position() == &pos {
+            Tracker::new_positive(rule, pos)
+        } else {
+            self
+        }
+    }
+    /// Merge attempts in two tracker in different choices.
+    /// Only further tracker will be stored if they don't point to the same position.
+    /// `other` has higher priority if we encoutered unexpected errors.
+    pub fn merge(mut self, mut other: Self) -> Self {
         match &mut other {
-            Tracker::Attempts(_positive, _negative, _pos) => match self {
+            Tracker::Attempts(_positive, _negative, _pos) => match &mut self {
                 Tracker::Attempts(positive, negative, pos) => {
-                    if pos == *_pos {
-                        _positive.extend(positive.into_iter());
-                        _negative.extend(negative.into_iter());
+                    if pos == _pos {
+                        _positive.append(positive);
+                        _negative.append(negative);
+                        other
+                    } else if pos < _pos {
+                        other
+                    } else {
+                        self
                     }
-                    other
                 }
-                _ => other,
+                _ => self,
             },
             _ => other,
         }
