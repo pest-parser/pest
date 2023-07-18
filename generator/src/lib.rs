@@ -24,7 +24,7 @@ extern crate quote;
 use std::env;
 use std::fs::File;
 use std::io::{self, Read};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use proc_macro2::TokenStream;
 use syn::{Attribute, DeriveInput, Expr, ExprLit, Generics, Ident, Lit, Meta};
@@ -34,27 +34,13 @@ mod macros;
 mod docs;
 mod generator;
 mod graph;
+mod typed;
 mod types;
 
 use pest_meta::parser::{self, rename_meta_rule, Rule};
 use pest_meta::{optimizer, unwrap_or_report, validator};
 
-/// Processes the derive/proc macro input and generates the corresponding parser based
-/// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
-/// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
-pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
-    derive_parser_impl::<false>(input, include_grammar)
-}
-/// Processes the derive/proc macro input and generates the corresponding typed parser based
-/// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
-/// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
-pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
-    derive_parser_impl::<true>(input, include_grammar)
-}
-fn derive_parser_impl<const TYPED: bool>(input: TokenStream, include_grammar: bool) -> TokenStream {
-    let ast: DeriveInput = syn::parse2(input).unwrap();
-    let (name, generics, contents) = parse_derive(ast);
-
+fn collect_data(contents: Vec<GrammarSource>) -> (String, Vec<PathBuf>) {
     let mut data = String::new();
     let mut paths = vec![];
 
@@ -97,6 +83,18 @@ fn derive_parser_impl<const TYPED: bool>(input: TokenStream, include_grammar: bo
         }
     }
 
+    (data, paths)
+}
+
+/// Processes the derive/proc macro input and generates the corresponding parser based
+/// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
+/// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
+pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
+    let ast: DeriveInput = syn::parse2(input).unwrap();
+    let (name, generics, contents) = parse_derive(ast);
+
+    let (data, paths) = collect_data(contents);
+
     let pairs = match parser::parse(Rule::grammar_rules, &data) {
         Ok(pairs) => pairs,
         Err(error) => panic!("error parsing \n{}", error.renamed_rules(rename_meta_rule)),
@@ -107,7 +105,7 @@ fn derive_parser_impl<const TYPED: bool>(input: TokenStream, include_grammar: bo
     let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
 
-    generator::generate::<TYPED>(
+    generator::generate(
         name,
         &generics,
         paths,
@@ -115,6 +113,39 @@ fn derive_parser_impl<const TYPED: bool>(input: TokenStream, include_grammar: bo
         defaults,
         &doc_comment,
         include_grammar,
+    )
+}
+
+/// Processes the derive/proc macro input and generates the corresponding typed parser based
+/// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
+/// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
+pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
+    let ast: DeriveInput = syn::parse2(input).unwrap();
+    let (name, generics, contents, emit_rule_reference, emit_tagged_node_reference) =
+        parse_typed_derive(ast);
+
+    let (data, paths) = collect_data(contents);
+
+    let pairs = match parser::parse(Rule::grammar_rules, &data) {
+        Ok(pairs) => pairs,
+        Err(error) => panic!("error parsing \n{}", error.renamed_rules(rename_meta_rule)),
+    };
+
+    let defaults = unwrap_or_report(validator::validate_pairs(pairs.clone()));
+    let doc_comment = docs::consume(pairs.clone());
+    let ast = unwrap_or_report(parser::consume_rules(pairs));
+    let optimized = optimizer::optimize(ast);
+
+    typed::generate_typed(
+        name,
+        &generics,
+        paths,
+        optimized,
+        defaults,
+        &doc_comment,
+        include_grammar,
+        emit_rule_reference,
+        emit_tagged_node_reference,
     )
 }
 
@@ -154,6 +185,48 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>) {
     }
 
     (name, generics, grammar_sources)
+}
+
+fn parse_typed_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>, bool, bool) {
+    let name = ast.ident;
+    let generics = ast.generics;
+
+    let grammar: Vec<&Attribute> = ast
+        .attrs
+        .iter()
+        .filter(|attr| {
+            let path = attr.meta.path();
+            path.is_ident("grammar") || path.is_ident("grammar_inline")
+        })
+        .collect();
+
+    if grammar.is_empty() {
+        panic!("a grammar file needs to be provided with the #[grammar = \"PATH\"] or #[grammar_inline = \"GRAMMAR CONTENTS\"] attribute");
+    }
+
+    let mut grammar_sources = Vec::with_capacity(grammar.len());
+    for attr in grammar {
+        grammar_sources.push(get_attribute(attr))
+    }
+
+    let mut emit_rule_reference = false;
+    let mut emit_tagged_node_reference = false;
+    for attr in ast.attrs.iter() {
+        let path = attr.path();
+        if path.is_ident("emit_rule_reference") {
+            emit_rule_reference = true;
+        }
+        if path.is_ident("emit_tagged_node_reference") {
+            emit_tagged_node_reference = true;
+        }
+    }
+    (
+        name,
+        generics,
+        grammar_sources,
+        emit_rule_reference,
+        emit_tagged_node_reference,
+    )
 }
 
 fn get_attribute(attr: &Attribute) -> GrammarSource {

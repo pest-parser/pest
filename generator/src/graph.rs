@@ -56,7 +56,7 @@ impl Accesser {
         fn_path: impl Fn(TokenStream) -> TokenStream,
         fn_type: impl Fn(TokenStream) -> TokenStream,
     ) -> Self {
-        for (name, vec) in self.accessers.iter_mut() {
+        for (_, vec) in self.accessers.iter_mut() {
             for (path, typed) in vec.iter_mut() {
                 *path = fn_path(path.clone());
                 *typed = fn_type(typed.clone());
@@ -216,7 +216,7 @@ fn process_single_alias(
     rule_name: &str,
     candidate_name: String,
     type_name: TokenStream,
-    accessers: Accesser,
+    mut accessers: Accesser,
     inner_spaces: Option<bool>,
     explicit: bool,
 ) -> (TokenStream, Accesser) {
@@ -224,9 +224,11 @@ fn process_single_alias(
     let name = ident(&candidate_name);
     let type_name = match inner_spaces {
         Some(true) => {
+            accessers = accessers.prepend(|inner| quote! {.content #inner}, |inner| inner);
             quote! {::pest::typed::predefined_node::NonAtomic::<'i, super::Rule, #type_name>}
         }
         Some(false) => {
+            accessers = accessers.prepend(|inner| quote! {.content #inner}, |inner| inner);
             quote! {::pest::typed::predefined_node::Atomic::<'i, super::Rule, #type_name>}
         }
         None => type_name,
@@ -252,6 +254,8 @@ fn generate_graph_node(
     inner_spaces: Option<bool>,
     inner_tokens: bool,
     silent: bool,
+    emit_rule_reference: bool,
+    emit_tagged_node_reference: bool,
 ) -> (TokenStream, Accesser) {
     let ignore = ignore();
     let option = option_type();
@@ -331,6 +335,8 @@ fn generate_graph_node(
                 inner_spaces,
                 inner_tokens,
                 silent,
+                emit_rule_reference,
+                emit_tagged_node_reference,
             );
             process_single_alias(
                 map,
@@ -410,6 +416,8 @@ fn generate_graph_node(
                 inner_spaces,
                 inner_tokens,
                 silent,
+                emit_rule_reference,
+                emit_tagged_node_reference,
             );
             process_single_alias(
                 map,
@@ -435,6 +443,8 @@ fn generate_graph_node(
                 inner_spaces,
                 inner_tokens,
                 silent,
+                emit_rule_reference,
+                emit_tagged_node_reference,
             );
             process_single_alias(
                 map,
@@ -459,6 +469,8 @@ fn generate_graph_node(
                 inner_spaces,
                 inner_tokens,
                 silent,
+                emit_rule_reference,
+                emit_tagged_node_reference,
             );
             process_single_alias(
                 map,
@@ -483,6 +495,8 @@ fn generate_graph_node(
                 inner_spaces,
                 inner_tokens,
                 silent,
+                emit_rule_reference,
+                emit_tagged_node_reference,
             );
             let (second, acc_second) = generate_graph_node(
                 rhs,
@@ -493,6 +507,8 @@ fn generate_graph_node(
                 inner_spaces,
                 inner_tokens,
                 silent,
+                emit_rule_reference,
+                emit_tagged_node_reference,
             );
             process_single_alias(
                 map,
@@ -525,6 +541,8 @@ fn generate_graph_node(
                 inner_spaces,
                 inner_tokens,
                 silent,
+                emit_rule_reference,
+                emit_tagged_node_reference,
             );
             let (second, acc_second) = generate_graph_node(
                 rhs,
@@ -535,6 +553,8 @@ fn generate_graph_node(
                 inner_spaces,
                 inner_tokens,
                 silent,
+                emit_rule_reference,
+                emit_tagged_node_reference,
             );
             process_single_alias(
                 map,
@@ -552,11 +572,11 @@ fn generate_graph_node(
                 acc_first
                     .prepend(
                         |inner| quote! {.get_first().as_ref().and_then(|e|Some(e #inner))},
-                        |inner| quote! {#option<&#inner>},
+                        |inner| quote! {#option<#inner>},
                     )
                     .join(acc_second.prepend(
                         |inner| quote! {.get_second().as_ref().and_then(|e|Some(e #inner))},
-                        |inner| quote! {#option<&#inner>},
+                        |inner| quote! {#option<#inner>},
                     )),
                 inner_spaces,
                 explicit,
@@ -572,6 +592,8 @@ fn generate_graph_node(
                 inner_spaces,
                 inner_tokens,
                 silent,
+                emit_rule_reference,
+                emit_tagged_node_reference,
             );
             process_single_alias(
                 map,
@@ -581,7 +603,7 @@ fn generate_graph_node(
                 quote! {::pest::typed::predefined_node::Opt::<'i, super::Rule, #inner_name>},
                 accessers.prepend(
                     |inner| quote! {.content.as_ref().and_then(|e|Some(e #inner))},
-                    |inner| quote! {#option<&#inner>},
+                    |inner| quote! {#option<#inner>},
                 ),
                 inner_spaces,
                 explicit,
@@ -597,6 +619,8 @@ fn generate_graph_node(
                 inner_spaces,
                 inner_tokens,
                 silent,
+                emit_rule_reference,
+                emit_tagged_node_reference,
             );
             process_single_alias(
                 map,
@@ -630,13 +654,19 @@ fn generate_graph_node(
                 inner_spaces,
                 inner_tokens,
                 silent,
+                emit_rule_reference,
+                emit_tagged_node_reference,
             );
             todo!()
         }
     }
 }
 
-fn generate_graph(rules: &[OptimizedRule]) -> Output {
+fn generate_graph(
+    rules: &[OptimizedRule],
+    emit_rule_reference: bool,
+    emit_tagged_node_reference: bool,
+) -> Output {
     // println!("{:#?}", rules);
     let mut res = Output::new();
     for rule in rules.iter() {
@@ -653,6 +683,8 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
                     None,
                     true,
                     false,
+                    emit_rule_reference,
+                    emit_tagged_node_reference,
                 );
             }
             RuleType::Silent => {
@@ -665,6 +697,8 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
                     None,
                     true,
                     true,
+                    emit_rule_reference,
+                    emit_tagged_node_reference,
                 );
             }
             RuleType::NonAtomic => {
@@ -677,6 +711,8 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
                     Some(true),
                     true,
                     true,
+                    emit_rule_reference,
+                    emit_tagged_node_reference,
                 );
             }
             RuleType::CompoundAtomic => {
@@ -689,6 +725,8 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
                     Some(false),
                     true,
                     false,
+                    emit_rule_reference,
+                    emit_tagged_node_reference,
                 );
             }
             RuleType::Atomic => {
@@ -701,6 +739,8 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
                     Some(false),
                     false,
                     false,
+                    emit_rule_reference,
+                    emit_tagged_node_reference,
                 );
             }
         }
@@ -708,10 +748,14 @@ fn generate_graph(rules: &[OptimizedRule]) -> Output {
     res
 }
 
-pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
+pub fn generate_typed_pair_from_rule(
+    rules: &[OptimizedRule],
+    emit_rule_reference: bool,
+    emit_tagged_node_reference: bool,
+) -> TokenStream {
     // let names: Vec<_> = rules.iter().map(|rule| &rule.name).collect();
     // eprintln!("{:#?}", names);
-    let graph = generate_graph(rules);
+    let graph = generate_graph(rules, emit_rule_reference, emit_tagged_node_reference);
     let as_wrapper = |name: &Ident| {
         quote! {
             pub struct #name;

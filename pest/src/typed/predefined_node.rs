@@ -11,7 +11,7 @@
 
 use core::{fmt, marker::PhantomData, ops::Deref};
 
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 
 use crate::{error::Error, parser_state::constrain_idxs, Debug, Position, RuleType, Span, Stack};
 
@@ -193,6 +193,7 @@ fn peek_stack_slice<'i, R: RuleType, Rule: RuleWrapper<R>>(
 
 /// Positive predicate.
 pub struct Positive<'i, R: RuleType, N: TypedNode<'i, R>> {
+    /// Mathed content.
     pub content: N,
     _phantom: PhantomData<(&'i R, &'i N)>,
 }
@@ -543,6 +544,7 @@ pub enum Choice<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> {
     Second(T2, PhantomData<&'i R>),
 }
 impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> Choice<'i, R, T1, T2> {
+    /// Get the first case if exists.
     #[inline]
     pub fn get_first(&self) -> Option<&T1> {
         match self {
@@ -550,6 +552,7 @@ impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> Choice<'i, R, 
             Self::Second(_, _) => None,
         }
     }
+    /// Get the second case if exists.
     #[inline]
     pub fn get_second(&self) -> Option<&T2> {
         match self {

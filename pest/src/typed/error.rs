@@ -19,8 +19,11 @@ use alloc::{borrow::ToOwned, format, vec, vec::Vec};
 pub enum Tracker<'i, R: RuleType> {
     /// Positive attempts, negative attempts, position.
     Attempts(Vec<R>, Vec<R>, Position<'i>),
+    /// Peek slice out of bound.
     SliceOutOfBound(i32, Option<i32>, Position<'i>),
+    /// Repeat too many times.
     RepeatTooManyTimes(Position<'i>),
+    /// Accessing elements in empty stack, such as Drop or Pop.
     EmptyStack(Position<'i>),
 }
 impl<'i, R: RuleType> Tracker<'i, R> {

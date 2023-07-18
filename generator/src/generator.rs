@@ -18,11 +18,10 @@ use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
 use crate::docs::DocComment;
-use crate::graph::generate_typed_pair_from_rule;
 use crate::types::{box_type, option_type, result_type};
 
 /// Generate codes for Parser.
-pub(crate) fn generate<const TYPED: bool>(
+pub(crate) fn generate(
     name: Ident,
     generics: &Generics,
     paths: Vec<PathBuf>,
@@ -40,11 +39,6 @@ pub(crate) fn generate<const TYPED: bool>(
         quote!()
     };
     let rule_enum = generate_enum(&rules, doc_comment, uses_eoi);
-    let pairs = if TYPED {
-        generate_typed_pair_from_rule(&rules)
-    } else {
-        quote! {}
-    };
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
 
@@ -98,7 +92,6 @@ pub(crate) fn generate<const TYPED: bool>(
     let res = quote! {
         #include_fix
         #rule_enum
-        #pairs
         #parser_impl
     };
     res
@@ -178,7 +171,7 @@ fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
 }
 
 /// Generate Rust `include_str!` for grammar files, then Cargo will watch changes in grammars.
-fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream {
+pub(crate) fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream {
     let const_name = format_ident!("_PEST_GRAMMAR_{}", name);
     // Need to make this relative to the current directory since the path to the file
     // is derived from the CARGO_MANIFEST_DIR environment variable
@@ -207,7 +200,11 @@ fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream {
     }
 }
 
-fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bool) -> TokenStream {
+pub(crate) fn generate_enum(
+    rules: &[OptimizedRule],
+    doc_comment: &DocComment,
+    uses_eoi: bool,
+) -> TokenStream {
     let rules = rules.iter().map(|rule| {
         let rule_name = format_ident!("r#{}", rule.name);
 
@@ -1070,7 +1067,7 @@ mod tests {
         let test_path = current_dir.join("test.pest").to_str().unwrap().to_string();
 
         assert_eq!(
-            generate::<false>(name, &generics, vec![PathBuf::from("base.pest"), PathBuf::from("test.pest")], rules, defaults, doc_comment, true).to_string(),
+            generate(name, &generics, vec![PathBuf::from("base.pest"), PathBuf::from("test.pest")], rules, defaults, doc_comment, true).to_string(),
             quote! {
                 #[allow(non_upper_case_globals)]
                 const _PEST_GRAMMAR_MyParser: [&'static str; 2usize] = [include_str!(#base_path), include_str!(#test_path)];
