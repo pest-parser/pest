@@ -52,6 +52,16 @@ impl Accesser {
         res.insert(name, vec);
         Self { accessers: res }
     }
+    pub fn content(self) -> Self {
+        self.prepend(|path| quote! {.content #path}, |_type| _type)
+    }
+    pub fn option(self, prefix: TokenStream) -> Self {
+        let option = option_type();
+        self.prepend(
+            |inner| quote! {#prefix.as_ref().and_then(|e|Some(e #inner))},
+            |inner| quote! {#option<#inner>},
+        )
+    }
     pub fn prepend(
         mut self,
         fn_path: impl Fn(TokenStream) -> TokenStream,
@@ -296,18 +306,7 @@ fn generate_graph_node(
     let ignore = ignore();
     let vec = vec_type();
     fn for_option(accessers: Accesser, _inner: &OptimizedExpr, prefix: TokenStream) -> Accesser {
-        let option = option_type();
-        if false {
-            accessers.prepend(
-                |inner| quote! {#prefix.as_ref().and_then(|e|Some(e #inner)).flatten()},
-                |inner| quote! {#inner},
-            )
-        } else {
-            accessers.prepend(
-                |inner| quote! {#prefix.as_ref().and_then(|e|Some(e #inner))},
-                |inner| quote! {#option<#inner>},
-            )
-        }
+        accessers.option(prefix)
     }
     // Still some compile-time information not taken.
     match expr {
@@ -399,7 +398,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::typed::predefined_node::Push::<'i, super::Rule, #inner>
                 },
-                accesser.prepend(|inner| quote! {.content #inner}, |inner| inner),
+                accesser.content(),
                 inner_spaces,
                 explicit,
             )
@@ -487,7 +486,7 @@ fn generate_graph_node(
                 quote! {
                     ::pest::typed::predefined_node::Positive::<'i, super::Rule, #inner>
                 },
-                accessers.prepend(|inner| quote! {.content #inner}, |inner| inner),
+                accessers.content(),
                 inner_spaces,
                 explicit,
             )
@@ -532,7 +531,7 @@ fn generate_graph_node(
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
-            let accessers = for_option(accessers, expr, quote! {.content});
+            let accessers = accessers.content();
             process_single_alias(
                 map,
                 expr,
@@ -906,7 +905,7 @@ pub fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
                 impl<'i> ::core::convert::From<#char> for #property_ident<'i> {
                     fn from(content: #char) -> Self {
                         Self {
-                            content, 
+                            content,
                             _phantom: ::core::marker::PhantomData
                         }
                     }
