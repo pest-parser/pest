@@ -347,7 +347,6 @@ use core::hash::Hash;
 
 pub mod error;
 pub mod iterators;
-pub mod typed;
 mod macros;
 mod parser;
 mod parser_state;
@@ -362,6 +361,7 @@ pub mod prec_climber;
 mod span;
 mod stack;
 mod token;
+pub mod typed;
 
 #[doc(hidden)]
 pub mod unicode;

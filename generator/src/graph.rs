@@ -125,13 +125,13 @@ fn position() -> TokenStream {
     quote! {::pest::Position}
 }
 fn _bool() -> TokenStream {
-    quote!{::core::primitive::bool}
+    quote! {::core::primitive::bool}
 }
 fn _char() -> TokenStream {
-    quote!{::core::primitive::char}
+    quote! {::core::primitive::char}
 }
 fn _str() -> TokenStream {
-    quote!{::core::primitive::str}
+    quote! {::core::primitive::str}
 }
 fn stack() -> TokenStream {
     quote! {::pest::Stack}
