@@ -266,9 +266,16 @@ pub struct OptimizedExprTopDownIterator {
 impl core::fmt::Display for OptimizedExpr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            OptimizedExpr::Str(s) => write!(f, "\"{}\"", s),
-            OptimizedExpr::Insens(s) => write!(f, "^\"{}\"", s),
-            OptimizedExpr::Range(start, end) => write!(f, "('{}'..'{}')", start, end),
+            OptimizedExpr::Str(s) => write!(f, "{:?}", s),
+            OptimizedExpr::Insens(s) => write!(f, "^{:?}", s),
+            OptimizedExpr::Range(start, end) => {
+                write!(
+                    f,
+                    "{:?}..{:?}",
+                    start.chars().next().expect("Empty range start."),
+                    end.chars().next().expect("Empty range end.")
+                )
+            }
             OptimizedExpr::Ident(id) => write!(f, "{}", id),
             OptimizedExpr::PeekSlice(start, end) => match end {
                 Some(end) => write!(f, "PEEK[{}..{}]", start, end),
@@ -315,12 +322,12 @@ impl core::fmt::Display for OptimizedExpr {
             OptimizedExpr::Skip(strings) => {
                 let strings = strings
                     .iter()
-                    .map(|s| format!("\"{}\"", s))
+                    .map(|s| format!("{:?}", s))
                     .collect::<Vec<_>>()
                     .join(" | ");
                 write!(f, "(!({}) ~ ANY)*", strings)
             }
-            OptimizedExpr::Push(expr) => write!(f, "PUSH[{}]", expr),
+            OptimizedExpr::Push(expr) => write!(f, "PUSH({})", expr),
             #[cfg(feature = "grammar-extras")]
             OptimizedExpr::NodeTag(expr, tag) => {
                 write!(f, "(#{} = {})", tag, expr)
