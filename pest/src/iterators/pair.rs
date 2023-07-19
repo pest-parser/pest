@@ -125,6 +125,38 @@ impl<'i, R: RuleType> Pair<'i, R> {
         &self.input[start..end]
     }
 
+    /// Returns the input string of the `Pair`.
+    ///
+    /// This function returns the input string of the `Pair` as a `&str`. This is the source string
+    /// from which the `Pair` was created. The returned `&str` can be used to examine the contents of
+    /// the `Pair` or to perform further processing on the string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::rc::Rc;
+    /// # use pest;
+    /// # #[allow(non_camel_case_types)]
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     ab
+    /// }
+    ///
+    /// // Example: Get input string from a Pair
+    ///
+    /// let input = "ab";
+    /// let pair = pest::state(input, |state| {
+    ///     // generating Token pair with Rule::ab ...
+    /// #     state.rule(Rule::ab, |s| s.match_string("ab"))
+    /// }).unwrap().next().unwrap();
+    ///
+    /// assert_eq!(pair.as_str(), "ab");
+    /// assert_eq!(input, pair.get_input());
+    /// ```
+    pub fn get_input(&self) -> &'i str {
+        self.input
+    }
+
     /// Returns the `Span` defined by the `Pair`, consuming it.
     ///
     /// # Examples
@@ -425,5 +457,13 @@ mod tests {
         let pairs = pair.into_inner(); // the tokens b()
 
         assert_eq!(2, pairs.tokens().count());
+    }
+
+    #[test]
+    fn get_input_of_pair() {
+        let input = "abcde";
+        let pair = AbcParser::parse(Rule::a, input).unwrap().next().unwrap();
+
+        assert_eq!(input, pair.get_input());
     }
 }
