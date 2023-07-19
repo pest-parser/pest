@@ -247,15 +247,22 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, 
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
+        stack.snapshot();
         match N::try_parse_with::<ATOMIC, Rule>(input, stack) {
-            Ok((_input, content)) => Ok((
-                input,
-                Self {
-                    content,
-                    _phantom: PhantomData,
-                },
-            )),
-            Err(_) => Err(Tracker::new_positive(Rule::RULE, input)),
+            Ok((_input, content)) => {
+                stack.restore();
+                Ok((
+                    input,
+                    Self {
+                        content,
+                        _phantom: PhantomData,
+                    },
+                ))
+            }
+            Err(_) => {
+                stack.restore();
+                Err(Tracker::new_positive(Rule::RULE, input))
+            }
         }
     }
 }
@@ -274,14 +281,21 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Negative<'i, R, 
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
+        stack.snapshot();
         match N::try_parse_with::<ATOMIC, Rule>(input, stack) {
-            Ok(_) => Err(Tracker::new_negative(Rule::RULE, input)),
-            Err(_) => Ok((
-                input,
-                Self {
-                    _phantom: PhantomData,
-                },
-            )),
+            Ok(_) => {
+                stack.restore();
+                Err(Tracker::new_negative(Rule::RULE, input))
+            }
+            Err(_) => {
+                stack.restore();
+                Ok((
+                    input,
+                    Self {
+                        _phantom: PhantomData,
+                    },
+                ))
+            }
         }
     }
 }
@@ -836,11 +850,19 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
     }
 }
 
-/// Restore on error.
+/// Restore stack state on error.
 pub struct Restorable<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Matched content.
-    pub content: Option<T>,
+    pub content: T,
     _phantom: PhantomData<&'i R>,
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> From<T> for Restorable<'i, R, T> {
+    fn from(content: T) -> Self {
+        Self {
+            content,
+            _phantom: PhantomData,
+        }
+    }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Restorable<'i, R, T> {
     fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
