@@ -855,7 +855,7 @@ pub fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
             if !rule_names.contains($name) {
                 let id = ident($name);
                 results.push(quote! {
-                    pub type #id<'i> = ::pest::typed::predefined_node::$def;
+                    type #id<'i> = ::pest::typed::predefined_node::$def;
                 });
             }
         };
@@ -899,7 +899,7 @@ pub fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
         if !rule_names.contains(property) {
             results.push(quote! {
                 #[allow(non_camel_case_types)]
-                pub struct #property_ident<'i> {
+                struct #property_ident<'i> {
                     pub content: #char,
                     _phantom: ::core::marker::PhantomData<&'i #char>
                 }
