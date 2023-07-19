@@ -873,13 +873,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Restorable<'i, R
         match T::try_parse_with::<ATOMIC, Rule>(input, stack) {
             Ok((input, res)) => {
                 stack.clear_snapshot();
-                Ok((
-                    input,
-                    Self {
-                        content: Some(res),
-                        _phantom: PhantomData,
-                    },
-                ))
+                Ok((input, Self::from(res)))
             }
             Err(err) => {
                 stack.restore();
