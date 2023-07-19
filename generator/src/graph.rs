@@ -146,6 +146,7 @@ fn rule(
     rule_name: &Ident,
     doc: &String,
     accessers: &Accesser,
+    inner_spaces: Option<bool>,
 ) -> TokenStream {
     let rule_wrappers = rule_wrappers();
     let result = result_type();
@@ -156,8 +157,21 @@ fn rule(
     let accessers = accessers.collect();
     let _bool = _bool();
     let str = _str();
+    let (atomicity, atomicity_doc) = match inner_spaces {
+        Some(false) => (quote! {true}, "Atomic rule."),
+        Some(true) => (quote! {false}, "Non-atomic rule."),
+        None => (quote! {ATOMIC}, "Normal rule."),
+    };
+    let stmt_ign = if let Some(false) = inner_spaces {
+        quote! {}
+    } else {
+        quote! {
+            let (input, _) = #ignore::parse_with::<false, #rule_wrappers::EOI>(input, &mut stack);
+        }
+    };
     quote! {
         #[doc = #doc]
+        #[doc = #atomicity_doc]
         #[allow(non_camel_case_types)]
         #[derive(Debug)]
         pub struct #name<'i> {
@@ -173,21 +187,19 @@ fn rule(
         impl<'i> ::pest::typed::TypeWrapper for #name<'i> {
             type Inner = #type_name;
         }
+        impl<'i> ::core::convert::From<#type_name> for #name<'i> {
+            fn from(content: #type_name) -> Self {
+                Self { content }
+            }
+        }
         impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
             #[inline]
             fn try_parse_with<const ATOMIC: #_bool, _Rule: ::pest::typed::RuleWrapper<super::Rule>>(
                 input: #position<'i>,
                 stack: &mut #stack<::pest::Span<'i>>,
             ) -> #result<(#position<'i>, Self), ::pest::typed::error::Tracker<'i, super::Rule>> {
-                let (input, content) = #type_name::try_parse_with::<ATOMIC, #rule_wrappers::#rule_name>(input, stack)?;
-                Ok(
-                    (
-                        input,
-                        Self {
-                            content,
-                        },
-                    )
-                )
+                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack)?;
+                Ok((input, Self::from(content)))
             }
         }
         impl<'i> ::pest::typed::ParsableTypedNode<'i, super::Rule> for #name<'i> {
@@ -199,7 +211,7 @@ fn rule(
                         Ok((input, res)) => (input, res),
                         Err(e) => return Err(e.collect()),
                     };
-                let (input, _) = #ignore::parse_with::<false, #rule_wrappers::EOI>(input, &mut stack);
+                #stmt_ign
                 let (_, _) = match EOI::try_parse_with::<false, #rule_wrappers::EOI>(input, &mut stack) {
                     Ok((input, res)) => (input, res),
                     Err(e) => return Err(e.collect()),
@@ -264,24 +276,16 @@ fn process_single_alias(
 ) -> (TokenStream, Accesser) {
     let rule_name = ident(rule_name);
     let name = ident(&candidate_name);
-    let type_name = if explicit {
-        match inner_spaces {
-            Some(true) => {
-                accessers = accessers.prepend(|inner| quote! {.content #inner}, |inner| inner);
-                quote! {::pest::typed::predefined_node::NonAtomic::<'i, super::Rule, #type_name>}
-            }
-            Some(false) => {
-                accessers = accessers.prepend(|inner| quote! {.content #inner}, |inner| inner);
-                quote! {::pest::typed::predefined_node::Atomic::<'i, super::Rule, #type_name>}
-            }
-            None => type_name,
-        }
-    } else {
-        type_name
-    };
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
-        let def = rule(&name, &type_name, &rule_name, &doc, &accessers);
+        let def = rule(
+            &name,
+            &type_name,
+            &rule_name,
+            &doc,
+            &accessers,
+            inner_spaces,
+        );
         map.insert(def);
         (quote! {#name::<'i>}, accessers)
     } else {
