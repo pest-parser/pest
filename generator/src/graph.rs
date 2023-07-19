@@ -49,9 +49,15 @@ fn ignore() -> TokenStream {
     }
 }
 
+#[derive(Clone)]
+enum Accessed {
+    Vec,
+    Option,
+}
+
 struct Accesser {
-    /// name -> [([path], type)]
-    accessers: Map<String, Vec<(TokenStream, TokenStream)>>,
+    /// name -> [(path, type, type)]
+    accessers: Map<String, Vec<(TokenStream, Vec<Accessed>, Ident)>>,
 }
 impl Accesser {
     pub fn new() -> Self {
@@ -59,30 +65,53 @@ impl Accesser {
             accessers: Map::new(),
         }
     }
-    pub fn from_item(name: String, vec: Vec<(TokenStream, TokenStream)>) -> Self {
+    pub fn from_item(name: String, path: TokenStream, id: Ident) -> Self {
         let mut res = Map::new();
-        res.insert(name, vec);
+        res.insert(name, vec![(path, vec![], id)]);
         Self { accessers: res }
     }
     pub fn content(self) -> Self {
-        self.prepend(|path| quote! {.content #path}, |_type| _type)
+        self.prepend(|path| quote! {.content #path}, None)
     }
-    pub fn option(self, prefix: TokenStream) -> Self {
-        let option = option_type();
+    pub fn contents(self) -> Self {
+        let vec = vec_type();
         self.prepend(
-            |inner| quote! {#prefix.as_ref().and_then(|e|Some(e #inner))},
-            |inner| quote! {#option<#inner>},
+            |inner| quote! {.content.iter().map(|e|e #inner).collect::<#vec<_>>()},
+            Some(Accessed::Vec),
         )
     }
-    pub fn prepend(
+    pub fn option(self, prefix: TokenStream) -> Self {
+        self.prepend(
+            |inner| quote! {#prefix.as_ref().and_then(|e|Some(e #inner))},
+            Some(Accessed::Option),
+        )
+    }
+    pub fn first(self) -> Self {
+        self.prepend(|inner| quote! {.first #inner}, None)
+    }
+    pub fn second(self) -> Self {
+        self.prepend(|inner| quote! {.second #inner}, None)
+    }
+    fn prepend(
         mut self,
         fn_path: impl Fn(TokenStream) -> TokenStream,
-        fn_type: impl Fn(TokenStream) -> TokenStream,
+        nesting: Option<Accessed>,
     ) -> Self {
         for (_, vec) in self.accessers.iter_mut() {
-            for (path, typed) in vec.iter_mut() {
+            for (path, accessed, _) in vec.iter_mut() {
                 *path = fn_path(path.clone());
-                *typed = fn_type(typed.clone());
+                if let Some(nesting) = &nesting {
+                    if let Accessed::Option = nesting {
+                        match accessed.last() {
+                            Some(Accessed::Option) => {
+                                *path = quote! {#path.flatten()};
+                                continue;
+                            }
+                            _ => (),
+                        }
+                    }
+                    accessed.push(nesting.clone());
+                }
             }
         }
         self
@@ -101,9 +130,24 @@ impl Accesser {
         });
         self
     }
+    fn expand(accessed: &Vec<Accessed>, inner: &Ident) -> TokenStream {
+        let vec = vec_type();
+        let option = option_type();
+        let mut res = quote! {&#inner};
+        for accessed in accessed.iter() {
+            match accessed {
+                Accessed::Vec => res = quote! {#vec::<#res>},
+                Accessed::Option => res = quote! {#option::<#res>},
+            }
+        }
+        res
+    }
     pub fn collect(&self) -> TokenStream {
         let accessers = self.accessers.iter().map(|(name, vec)| {
-            let (paths, types): (Vec<_>, Vec<_>) = vec.clone().into_iter().unzip();
+            let (paths, types): (Vec<_>, Vec<_>) = vec
+                .iter()
+                .map(|(path, accessed, inner)| (path, Self::expand(accessed, inner)))
+                .unzip();
             let id = ident(name.as_str());
             let src = if vec.len() == 1 {
                 quote! {
@@ -324,7 +368,6 @@ fn generate_graph_node(
     emit_tagged_node_reference: bool,
 ) -> (TokenStream, Accesser) {
     let ignore = ignore();
-    let vec = vec_type();
     fn for_option(accessers: Accesser, _inner: &OptimizedExpr, prefix: TokenStream) -> Accesser {
         accessers.option(prefix)
     }
@@ -467,10 +510,7 @@ fn generate_graph_node(
         OptimizedExpr::Ident(id) => {
             let inner = ident(id);
             let accessers = if emit_rule_reference {
-                Accesser::from_item(
-                    id.clone(),
-                    vec![(quote! {.content.deref()}, quote! {&#inner})],
-                )
+                Accesser::from_item(id.clone(), quote! {.content.deref()}, inner.clone())
             } else {
                 Accesser::new()
             };
@@ -604,9 +644,7 @@ fn generate_graph_node(
                         #ignore
                     >
                 },
-                acc_first
-                    .prepend(|inner| quote! {.first #inner}, |inner| inner)
-                    .join(acc_second.prepend(|inner| quote! {.second #inner}, |inner| inner)),
+                acc_first.first().join(acc_second.second()),
                 inner_spaces,
                 explicit,
             )
@@ -707,10 +745,7 @@ fn generate_graph_node(
                         #ignore,
                     >
                 },
-                accessers.prepend(
-                    |inner| quote! {.content.iter().map(|e|e #inner).collect::<#vec<_>>()},
-                    |inner| quote! {#vec<#inner>},
-                ),
+                accessers.contents(),
                 inner_spaces,
                 explicit,
             )
