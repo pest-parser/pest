@@ -497,6 +497,59 @@ mod tests {
                 .to_string(),
                 "(e1 ~ e2)",
             );
+            assert_eq!(
+                Expr::Seq(
+                    Box::new(Expr::Ident("e1".to_owned())),
+                    Box::new(Expr::Seq(
+                        Box::new(Expr::Ident("e2".to_owned())),
+                        Box::new(Expr::Ident("e3".to_owned())),
+                    )),
+                )
+                .to_string(),
+                "(e1 ~ e2 ~ e3)",
+            );
+            assert_eq!(
+                Expr::Seq(
+                    Box::new(Expr::Ident("e1".to_owned())),
+                    Box::new(Expr::Seq(
+                        Box::new(Expr::Ident("e2".to_owned())),
+                        Box::new(Expr::Seq(
+                            Box::new(Expr::Ident("e3".to_owned())),
+                            Box::new(Expr::Ident("e4".to_owned())),
+                        )),
+                    )),
+                )
+                .to_string(),
+                "(e1 ~ e2 ~ e3 ~ e4)",
+            );
+            assert_eq!(
+                Expr::Seq(
+                    Box::new(Expr::Ident("e1".to_owned())),
+                    Box::new(Expr::Choice(
+                        Box::new(Expr::Ident("e2".to_owned())),
+                        Box::new(Expr::Seq(
+                            Box::new(Expr::Ident("e3".to_owned())),
+                            Box::new(Expr::Ident("e4".to_owned())),
+                        )),
+                    )),
+                )
+                .to_string(),
+                "(e1 ~ (e2 | (e3 ~ e4)))",
+            );
+            assert_eq!(
+                Expr::Seq(
+                    Box::new(Expr::Ident("e1".to_owned())),
+                    Box::new(Expr::Seq(
+                        Box::new(Expr::Ident("e2".to_owned())),
+                        Box::new(Expr::Choice(
+                            Box::new(Expr::Ident("e3".to_owned())),
+                            Box::new(Expr::Ident("e4".to_owned())),
+                        )),
+                    )),
+                )
+                .to_string(),
+                "(e1 ~ e2 ~ (e3 | e4))",
+            );
         }
 
         #[test]
@@ -508,6 +561,45 @@ mod tests {
                 )
                 .to_string(),
                 "(e1 | e2)",
+            );
+            assert_eq!(
+                Expr::Choice(
+                    Box::new(Expr::Ident("e1".to_owned())),
+                    Box::new(Expr::Choice(
+                        Box::new(Expr::Ident("e2".to_owned())),
+                        Box::new(Expr::Ident("e3".to_owned())),
+                    )),
+                )
+                .to_string(),
+                "(e1 | e2 | e3)",
+            );
+            assert_eq!(
+                Expr::Choice(
+                    Box::new(Expr::Ident("e1".to_owned())),
+                    Box::new(Expr::Choice(
+                        Box::new(Expr::Ident("e2".to_owned())),
+                        Box::new(Expr::Choice(
+                            Box::new(Expr::Ident("e3".to_owned())),
+                            Box::new(Expr::Ident("e4".to_owned())),
+                        )),
+                    )),
+                )
+                .to_string(),
+                "(e1 | e2 | e3 | e4)",
+            );
+            assert_eq!(
+                Expr::Choice(
+                    Box::new(Expr::Ident("e1".to_owned())),
+                    Box::new(Expr::Seq(
+                        Box::new(Expr::Ident("e2".to_owned())),
+                        Box::new(Expr::Choice(
+                            Box::new(Expr::Ident("e3".to_owned())),
+                            Box::new(Expr::Ident("e4".to_owned())),
+                        )),
+                    )),
+                )
+                .to_string(),
+                "(e1 | (e2 ~ (e3 | e4)))",
             );
         }
 
