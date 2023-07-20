@@ -435,7 +435,7 @@ mod tests {
             expr.clone()
                 .map_bottom_up(|expr| expr)
                 .map_top_down(|expr| expr),
-            expr
+            expr,
         );
     }
 
@@ -451,7 +451,7 @@ mod tests {
         fn insens() {
             assert_eq!(
                 Expr::Insens("a".to_owned()).to_string(),
-                r#"^"a""#.to_owned()
+                r#"^"a""#.to_owned(),
             );
         }
 
@@ -459,7 +459,7 @@ mod tests {
         fn range() {
             assert_eq!(
                 Expr::Range("a".to_owned(), "z".to_owned()).to_string(),
-                r#"('a'..'z')"#.to_owned()
+                r#"('a'..'z')"#.to_owned(),
             );
         }
 
@@ -478,7 +478,7 @@ mod tests {
         fn pos_pred() {
             assert_eq!(
                 Expr::PosPred(Box::new(Expr::Ident("e".to_owned()))).to_string(),
-                "&e"
+                "&e",
             );
         }
 
@@ -486,7 +486,7 @@ mod tests {
         fn neg_pred() {
             assert_eq!(
                 Expr::NegPred(Box::new(Expr::Ident("e".to_owned()))).to_string(),
-                "!e"
+                "!e",
             );
         }
 
@@ -495,10 +495,10 @@ mod tests {
             assert_eq!(
                 Expr::Seq(
                     Box::new(Expr::Ident("e1".to_owned())),
-                    Box::new(Expr::Ident("e2".to_owned()))
+                    Box::new(Expr::Ident("e2".to_owned())),
                 )
                 .to_string(),
-                "(e1 ~ e2)"
+                "(e1 ~ e2)",
             );
         }
 
@@ -507,10 +507,10 @@ mod tests {
             assert_eq!(
                 Expr::Choice(
                     Box::new(Expr::Ident("e1".to_owned())),
-                    Box::new(Expr::Ident("e2".to_owned()))
+                    Box::new(Expr::Ident("e2".to_owned())),
                 )
                 .to_string(),
-                "(e1 | e2)"
+                "(e1 | e2)",
             );
         }
 
@@ -518,7 +518,7 @@ mod tests {
         fn opt() {
             assert_eq!(
                 Expr::Opt(Box::new(Expr::Ident("e".to_owned()))).to_string(),
-                "e?"
+                "e?",
             );
         }
 
@@ -526,7 +526,7 @@ mod tests {
         fn rep() {
             assert_eq!(
                 Expr::Rep(Box::new(Expr::Ident("e".to_owned()))).to_string(),
-                "e*"
+                "e*",
             );
         }
 
@@ -534,7 +534,7 @@ mod tests {
         fn rep_once() {
             assert_eq!(
                 Expr::RepOnce(Box::new(Expr::Ident("e".to_owned()))).to_string(),
-                "e+"
+                "e+",
             );
         }
 
@@ -542,7 +542,7 @@ mod tests {
         fn rep_exact() {
             assert_eq!(
                 Expr::RepExact(Box::new(Expr::Ident("e".to_owned())), 1).to_string(),
-                "e{1}"
+                "e{1}",
             );
         }
 
@@ -550,7 +550,7 @@ mod tests {
         fn rep_min() {
             assert_eq!(
                 Expr::RepMin(Box::new(Expr::Ident("e".to_owned())), 1).to_string(),
-                "e{1,}"
+                "e{1,}",
             );
         }
 
@@ -558,7 +558,7 @@ mod tests {
         fn rep_max() {
             assert_eq!(
                 Expr::RepMax(Box::new(Expr::Ident("e".to_owned())), 1).to_string(),
-                "e{,1}"
+                "e{,1}",
             );
         }
 
@@ -566,7 +566,7 @@ mod tests {
         fn rep_min_max() {
             assert_eq!(
                 Expr::RepMinMax(Box::new(Expr::Ident("e".to_owned())), 1, 2).to_string(),
-                "e{1, 2}"
+                "e{1, 2}",
             );
         }
 
@@ -577,10 +577,10 @@ mod tests {
                     ["a", "bc"]
                         .into_iter()
                         .map(|s| s.to_owned())
-                        .collect::<Vec<_>>()
+                        .collect::<Vec<_>>(),
                 )
                 .to_string(),
-                r#"(!("a" | "bc") ~ ANY)*"#
+                r#"(!("a" | "bc") ~ ANY)*"#,
             );
         }
 
@@ -588,7 +588,7 @@ mod tests {
         fn push() {
             assert_eq!(
                 Expr::Push(Box::new(Expr::Ident("e".to_owned()))).to_string(),
-                "PUSH(e)"
+                "PUSH(e)",
             );
         }
 
@@ -598,7 +598,7 @@ mod tests {
             assert_eq!(
                 Expr::NodeTag(Box::new(Expr::Ident("expr".to_owned())), "label".to_owned())
                     .to_string(),
-                "(#label = expr)"
+                "(#label = expr)",
             );
         }
     }
