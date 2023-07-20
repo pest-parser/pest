@@ -24,7 +24,7 @@ extern crate quote;
 use std::env;
 use std::fs::File;
 use std::io::{self, Read};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use proc_macro2::TokenStream;
 use syn::{Attribute, DeriveInput, Expr, ExprLit, Generics, Ident, Lit, Meta};
@@ -33,17 +33,12 @@ use syn::{Attribute, DeriveInput, Expr, ExprLit, Generics, Ident, Lit, Meta};
 mod macros;
 mod docs;
 mod generator;
+mod types;
 
 use pest_meta::parser::{self, rename_meta_rule, Rule};
 use pest_meta::{optimizer, unwrap_or_report, validator};
 
-/// Processes the derive/proc macro input and generates the corresponding parser based
-/// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
-/// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
-pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
-    let ast: DeriveInput = syn::parse2(input).unwrap();
-    let (name, generics, contents) = parse_derive(ast);
-
+pub(crate) fn collect_data(contents: Vec<GrammarSource>) -> (String, Vec<PathBuf>) {
     let mut data = String::new();
     let mut paths = vec![];
 
@@ -85,6 +80,18 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
             paths.push(path);
         }
     }
+
+    (data, paths)
+}
+
+/// Processes the derive/proc macro input and generates the corresponding parser based
+/// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
+/// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
+pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
+    let ast: DeriveInput = syn::parse2(input).unwrap();
+    let (name, generics, contents) = parse_derive(ast);
+
+    let (data, paths) = collect_data(contents);
 
     let pairs = match parser::parse(Rule::grammar_rules, &data) {
         Ok(pairs) => pairs,

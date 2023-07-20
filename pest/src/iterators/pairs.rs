@@ -42,6 +42,7 @@ pub struct Pairs<'i, R> {
     line_index: Rc<LineIndex>,
 }
 
+/// Create a `Pairs` from token queue.
 pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,

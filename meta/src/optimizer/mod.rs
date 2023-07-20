@@ -256,13 +256,6 @@ impl OptimizedExpr {
     }
 }
 
-/// A top-down iterator over an `OptimizedExpr`.
-pub struct OptimizedExprTopDownIterator {
-    current: Option<OptimizedExpr>,
-    next: Option<OptimizedExpr>,
-    right_branches: Vec<OptimizedExpr>,
-}
-
 impl core::fmt::Display for OptimizedExpr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -335,6 +328,13 @@ impl core::fmt::Display for OptimizedExpr {
             OptimizedExpr::RestoreOnErr(expr) => core::fmt::Display::fmt(expr.as_ref(), f),
         }
     }
+}
+
+/// A top-down iterator over an `OptimizedExpr`.
+pub struct OptimizedExprTopDownIterator {
+    current: Option<OptimizedExpr>,
+    next: Option<OptimizedExpr>,
+    right_branches: Vec<OptimizedExpr>,
 }
 
 impl OptimizedExprTopDownIterator {

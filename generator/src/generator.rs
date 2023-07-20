@@ -18,7 +18,9 @@ use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
 use crate::docs::DocComment;
+use crate::types::{box_type, option_type, result_type};
 
+/// Generate codes for Parser.
 pub(crate) fn generate(
     name: Ident,
     generics: &Generics,
@@ -87,11 +89,12 @@ pub(crate) fn generate(
         }
     };
 
-    quote! {
+    let res = quote! {
         #include_fix
         #rule_enum
         #parser_impl
-    }
+    };
+    res
 }
 
 // Note: All builtin rules should be validated as pest builtins in meta/src/validator.rs.
@@ -168,7 +171,7 @@ fn generate_builtin_rules() -> Vec<(&'static str, TokenStream)> {
 }
 
 /// Generate Rust `include_str!` for grammar files, then Cargo will watch changes in grammars.
-fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream {
+pub(crate) fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream {
     let const_name = format_ident!("_PEST_GRAMMAR_{}", name);
     // Need to make this relative to the current directory since the path to the file
     // is derived from the CARGO_MANIFEST_DIR environment variable
@@ -197,7 +200,11 @@ fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream {
     }
 }
 
-fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bool) -> TokenStream {
+pub(crate) fn generate_enum(
+    rules: &[OptimizedRule],
+    doc_comment: &DocComment,
+    uses_eoi: bool,
+) -> TokenStream {
     let rules = rules.iter().map(|rule| {
         let rule_name = format_ident!("r#{}", rule.name);
 
@@ -213,24 +220,20 @@ fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bo
     });
 
     let grammar_doc = &doc_comment.grammar_doc;
-    if uses_eoi {
+    let eoi_def = if uses_eoi {
         quote! {
-            #[doc = #grammar_doc]
-            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
-            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-            pub enum Rule {
-                EOI,
-                #( #rules ),*
-            }
+            EOI,
         }
     } else {
-        quote! {
-            #[doc = #grammar_doc]
-            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
-            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-            pub enum Rule {
-                #( #rules ),*
-            }
+        quote! {}
+    };
+    quote! {
+        #[doc = #grammar_doc]
+        #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+        pub enum Rule {
+            #eoi_def
+            #( #rules ),*
         }
     }
 }
@@ -329,6 +332,7 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
     }
 }
 
+/// Generate rules for automatic skipping, such as WHITESPACE and COMMENT.
 fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
     let whitespace = rules.iter().any(|rule| rule.name == "WHITESPACE");
     let comment = rules.iter().any(|rule| rule.name == "COMMENT");
@@ -374,6 +378,7 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
     }
 }
 
+/// Generate actions from parsing expressions
 fn generate_expr(expr: OptimizedExpr) -> TokenStream {
     match expr {
         OptimizedExpr::Str(string) => {
@@ -547,6 +552,7 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
     }
 }
 
+/// Generate actions from atomic parsing expressions
 fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
     match expr {
         OptimizedExpr::Str(string) => {
@@ -712,30 +718,6 @@ impl<T: ToTokens> ToTokens for QuoteOption<T> {
             None => quote! { #option::None },
         });
     }
-}
-
-fn box_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::boxed::Box }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::alloc::boxed::Box }
-}
-
-fn result_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::result::Result }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::core::result::Result }
-}
-
-fn option_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::option::Option }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::core::option::Option }
 }
 
 #[cfg(test)]

@@ -8,13 +8,15 @@
 //! <https://github.com/rust-lang/rust/blob/1.67.0/src/tools/rust-analyzer/crates/ide-db/src/line_index.rs>
 use alloc::vec::Vec;
 
+/// Bytes index of current position in line
 #[derive(Clone)]
 pub struct LineIndex {
-    /// Offset (bytes) the the beginning of each line, zero-based
+    /// Offset (bytes) from the beginning of each line, zero-based
     line_offsets: Vec<usize>,
 }
 
 impl LineIndex {
+    /// Create a `LineIndex` from the text
     pub fn new(text: &str) -> LineIndex {
         let mut line_offsets: Vec<usize> = alloc::vec![0];
 
