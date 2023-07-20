@@ -744,64 +744,51 @@ mod tests {
         }
 
         #[test]
-        #[cfg(feature = "grammar-extras")]
-        fn node_tag() {
+        fn str() {
+            assert_eq!(OptimizedExpr::Str("a".to_owned()).to_string(), r#""a""#);
+        }
+
+        #[test]
+        fn insens() {
+            assert_eq!(OptimizedExpr::Insens("a".to_owned()).to_string(), r#"^"a""#);
+        }
+
+        #[test]
+        fn range() {
             assert_eq!(
-                OptimizedExpr::NodeTag(
-                    Box::new(OptimizedExpr::Ident("x".to_owned())),
-                    "X".to_owned()
-                )
-                .to_string(),
-                r#"(#X = x)"#
-            );
-            assert_eq!(
-                OptimizedExpr::NodeTag(
-                    Box::new(OptimizedExpr::Seq(
-                        Box::new(OptimizedExpr::Ident("x".to_owned())),
-                        Box::new(OptimizedExpr::Str("y".to_owned()))
-                    )),
-                    "X".to_owned()
-                )
-                .to_string(),
-                r#"(#X = (x ~ "y"))"#
+                OptimizedExpr::Range("a".to_owned(), "z".to_owned()).to_string(),
+                r#"('a'..'z')"#
             );
         }
 
         #[test]
-        fn repetition() {
+        fn ident() {
+            assert_eq!(OptimizedExpr::Ident("a".to_owned()).to_string(), r#"a"#);
+        }
+
+        #[test]
+        fn peek_slice() {
+            assert_eq!(OptimizedExpr::PeekSlice(0, None).to_string(), "PEEK[0..]");
             assert_eq!(
-                OptimizedExpr::Rep(Box::new(OptimizedExpr::Ident("x".to_owned()))).to_string(),
-                "x*"
+                OptimizedExpr::PeekSlice(0, Some(-1)).to_string(),
+                "PEEK[0..-1]"
             );
             assert_eq!(
-                OptimizedExpr::Rep(Box::new(OptimizedExpr::Range(
-                    "0".to_owned(),
-                    "9".to_owned()
-                )))
-                .to_string(),
-                "('0'..'9')*"
+                OptimizedExpr::PeekSlice(2, Some(3)).to_string(),
+                "PEEK[2..3]".to_owned()
+            );
+            assert_eq!(
+                OptimizedExpr::PeekSlice(2, Some(-1)).to_string(),
+                "PEEK[2..-1]".to_owned()
+            );
+            assert_eq!(
+                OptimizedExpr::PeekSlice(0, None).to_string(),
+                "PEEK[0..]".to_owned()
             );
         }
 
         #[test]
-        #[cfg(feature = "grammar-extras")]
-        fn one_or_more_repetition() {
-            assert_eq!(
-                OptimizedExpr::RepOnce(Box::new(OptimizedExpr::Ident("x".to_owned()))).to_string(),
-                "x+"
-            );
-            assert_eq!(
-                OptimizedExpr::RepOnce(Box::new(OptimizedExpr::Range(
-                    "0".to_owned(),
-                    "9".to_owned()
-                )))
-                .to_string(),
-                "('0'..'9')+"
-            );
-        }
-
-        #[test]
-        fn predicate() {
+        fn pos_pred() {
             assert_eq!(
                 OptimizedExpr::PosPred(Box::new(OptimizedExpr::NegPred(Box::new(
                     OptimizedExpr::Ident("a".to_owned())
@@ -820,16 +807,6 @@ mod tests {
                 r#"&(a* | "a")"#
             );
             assert_eq!(
-                OptimizedExpr::NegPred(Box::new(OptimizedExpr::Choice(
-                    Box::new(OptimizedExpr::Push(Box::new(OptimizedExpr::Ident(
-                        "a".to_owned()
-                    )))),
-                    Box::new(OptimizedExpr::Str("a".to_owned()))
-                )))
-                .to_string(),
-                r#"!(PUSH(a) | "a")"#
-            );
-            assert_eq!(
                 OptimizedExpr::PosPred(Box::new(OptimizedExpr::RestoreOnErr(Box::new(
                     OptimizedExpr::NegPred(Box::new(OptimizedExpr::Ident("a".to_owned())))
                 ))))
@@ -839,7 +816,33 @@ mod tests {
         }
 
         #[test]
-        fn sequence() {
+        fn neg_pred() {
+            assert_eq!(
+                OptimizedExpr::NegPred(Box::new(OptimizedExpr::Ident("e".to_owned()))).to_string(),
+                r#"!e"#
+            );
+            assert_eq!(
+                OptimizedExpr::NegPred(Box::new(OptimizedExpr::Choice(
+                    Box::new(OptimizedExpr::Push(Box::new(OptimizedExpr::Ident(
+                        "a".to_owned()
+                    )))),
+                    Box::new(OptimizedExpr::Str("a".to_owned()))
+                )))
+                .to_string(),
+                r#"!(PUSH(a) | "a")"#
+            );
+        }
+
+        #[test]
+        fn seq() {
+            assert_eq!(
+                OptimizedExpr::Seq(
+                    Box::new(OptimizedExpr::Ident("e1".to_owned())),
+                    Box::new(OptimizedExpr::Ident("e2".to_owned())),
+                )
+                .to_string(),
+                r#"(e1 ~ e2)"#,
+            );
             assert_eq!(
                 OptimizedExpr::Seq(
                     Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Str(
@@ -869,7 +872,15 @@ mod tests {
         }
 
         #[test]
-        fn choices() {
+        fn choice() {
+            assert_eq!(
+                OptimizedExpr::Choice(
+                    Box::new(OptimizedExpr::Ident("e1".to_owned())),
+                    Box::new(OptimizedExpr::Ident("e2".to_owned())),
+                )
+                .to_string(),
+                r#"(e1 | e2)"#,
+            );
             assert_eq!(
                 OptimizedExpr::Choice(
                     Box::new(OptimizedExpr::Str("a".to_owned())),
@@ -886,18 +897,106 @@ mod tests {
         }
 
         #[test]
-        fn peek_slice() {
+        fn opt() {
             assert_eq!(
-                OptimizedExpr::PeekSlice(2, Some(3)).to_string(),
-                "PEEK[2..3]".to_owned()
+                OptimizedExpr::Opt(Box::new(OptimizedExpr::Ident("e".to_owned()))).to_string(),
+                "e?"
+            );
+        }
+
+        #[test]
+        fn rep() {
+            assert_eq!(
+                OptimizedExpr::Rep(Box::new(OptimizedExpr::Ident("x".to_owned()))).to_string(),
+                "x*"
             );
             assert_eq!(
-                OptimizedExpr::PeekSlice(2, Some(-1)).to_string(),
-                "PEEK[2..-1]".to_owned()
+                OptimizedExpr::Rep(Box::new(OptimizedExpr::Range(
+                    "0".to_owned(),
+                    "9".to_owned()
+                )))
+                .to_string(),
+                "('0'..'9')*"
+            );
+        }
+
+        #[test]
+        #[cfg(feature = "grammar-extras")]
+        fn rep_once() {
+            assert_eq!(
+                OptimizedExpr::RepOnce(Box::new(OptimizedExpr::Ident("e".to_owned()))).to_string(),
+                "e+"
             );
             assert_eq!(
-                OptimizedExpr::PeekSlice(0, None).to_string(),
-                "PEEK[0..]".to_owned()
+                OptimizedExpr::RepOnce(Box::new(OptimizedExpr::Range(
+                    "0".to_owned(),
+                    "9".to_owned()
+                )))
+                .to_string(),
+                "('0'..'9')+"
+            );
+        }
+
+        #[test]
+        fn skip() {
+            assert_eq!(
+                OptimizedExpr::Skip(
+                    ["a", "bc"]
+                        .into_iter()
+                        .map(|s| s.to_owned())
+                        .collect::<Vec<_>>()
+                )
+                .to_string(),
+                r#"(!("a" | "bc") ~ ANY)*"#
+            );
+        }
+
+        #[test]
+        fn push() {
+            assert_eq!(
+                OptimizedExpr::Push(Box::new(OptimizedExpr::Ident("e".to_owned()))).to_string(),
+                "PUSH(e)"
+            );
+        }
+
+        #[test]
+        #[cfg(feature = "grammar-extras")]
+        fn node_tag() {
+            assert_eq!(
+                OptimizedExpr::NodeTag(
+                    Box::new(OptimizedExpr::Ident("expr".to_owned())),
+                    "label".to_owned()
+                )
+                .to_string(),
+                r#"(#label = expr)"#
+            );
+            assert_eq!(
+                OptimizedExpr::NodeTag(
+                    Box::new(OptimizedExpr::Ident("x".to_owned())),
+                    "X".to_owned()
+                )
+                .to_string(),
+                r#"(#X = x)"#
+            );
+            assert_eq!(
+                OptimizedExpr::NodeTag(
+                    Box::new(OptimizedExpr::Seq(
+                        Box::new(OptimizedExpr::Ident("x".to_owned())),
+                        Box::new(OptimizedExpr::Str("y".to_owned()))
+                    )),
+                    "X".to_owned()
+                )
+                .to_string(),
+                r#"(#X = (x ~ "y"))"#
+            );
+        }
+
+        #[test]
+        fn restore_on_err() {
+            assert_eq!(
+                OptimizedExpr::RestoreOnErr(Box::new(OptimizedExpr::Ident("e".to_owned())))
+                    .to_string(),
+                "e"
             );
         }
     }
