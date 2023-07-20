@@ -444,22 +444,19 @@ mod tests {
 
         #[test]
         fn string() {
-            assert_eq!(Expr::Str("a".to_owned()).to_string(), r#""a""#.to_owned());
+            assert_eq!(Expr::Str("a".to_owned()).to_string(), r#""a""#);
         }
 
         #[test]
         fn insens() {
-            assert_eq!(
-                Expr::Insens("a".to_owned()).to_string(),
-                r#"^"a""#.to_owned(),
-            );
+            assert_eq!(Expr::Insens("a".to_owned()).to_string(), r#"^"a""#);
         }
 
         #[test]
         fn range() {
             assert_eq!(
                 Expr::Range("a".to_owned(), "z".to_owned()).to_string(),
-                r#"('a'..'z')"#.to_owned(),
+                r#"('a'..'z')"#,
             );
         }
 

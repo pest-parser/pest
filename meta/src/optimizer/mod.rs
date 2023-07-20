@@ -775,16 +775,13 @@ mod tests {
             );
             assert_eq!(
                 OptimizedExpr::PeekSlice(2, Some(3)).to_string(),
-                "PEEK[2..3]".to_owned(),
+                "PEEK[2..3]",
             );
             assert_eq!(
                 OptimizedExpr::PeekSlice(2, Some(-1)).to_string(),
-                "PEEK[2..-1]".to_owned(),
+                "PEEK[2..-1]",
             );
-            assert_eq!(
-                OptimizedExpr::PeekSlice(0, None).to_string(),
-                "PEEK[0..]".to_owned(),
-            );
+            assert_eq!(OptimizedExpr::PeekSlice(0, None).to_string(), "PEEK[0..]");
         }
 
         #[test]
@@ -794,7 +791,7 @@ mod tests {
                     OptimizedExpr::Ident("a".to_owned()),
                 ))))
                 .to_string(),
-                "&!a".to_owned(),
+                "&!a",
             );
             assert_eq!(
                 OptimizedExpr::PosPred(Box::new(OptimizedExpr::Choice(
@@ -811,7 +808,7 @@ mod tests {
                     OptimizedExpr::NegPred(Box::new(OptimizedExpr::Ident("a".to_owned()))),
                 ))))
                 .to_string(),
-                "&!a".to_owned(),
+                "&!a",
             );
         }
 
