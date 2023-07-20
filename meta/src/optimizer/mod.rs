@@ -701,201 +701,204 @@ mod tests {
         assert_eq!(optimize(rules), optimized);
     }
 
-    /// In previous implementation of Display for OptimizedExpr
-    /// in commit 48e0a8bd3d43a17c1c78f099610b745d18ec0c5f (actually committed by me),
-    /// Str("\n") will be displayed as
-    /// "
-    /// "
-    ///
-    /// It will not break the compilation in normal use.
-    ///
-    /// But when I use it in automatically generating documents,
-    /// it will quite confusing and we'll be unable to distinguish \n and \r.
-    ///
-    /// And `cargo expand` will emit codes that can't be compiled,
-    /// for it expand `#[doc("...")]` to `/// ...`,
-    /// and when the document comment breaks the line,
-    /// it will be expanded into wrong codes.
-    #[test]
-    fn display_control_character() {
-        assert_eq!(OptimizedExpr::Str("\n".to_owned()).to_string(), "\"\\n\"");
-        assert_eq!(
-            OptimizedExpr::Insens("\n".to_owned()).to_string(),
-            "^\"\\n\""
-        );
-        assert_eq!(
-            OptimizedExpr::Range("\n".to_owned(), "\r".to_owned()).to_string(),
-            "('\\n'..'\\r')"
-        );
-        assert_eq!(
-            OptimizedExpr::Skip(vec![
-                "\n".to_owned(),
-                "\r".to_owned(),
-                "\n\r".to_owned(),
-                "\0".to_owned()
-            ])
-            .to_string(),
-            r#"(!("\n" | "\r" | "\n\r" | "\0") ~ ANY)*"#
-        );
+    mod display {
+        use super::super::*;
+        /// In previous implementation of Display for OptimizedExpr
+        /// in commit 48e0a8bd3d43a17c1c78f099610b745d18ec0c5f (actually committed by me),
+        /// Str("\n") will be displayed as
+        /// "
+        /// "
+        ///
+        /// It will not break the compilation in normal use.
+        ///
+        /// But when I use it in automatically generating documents,
+        /// it will quite confusing and we'll be unable to distinguish \n and \r.
+        ///
+        /// And `cargo expand` will emit codes that can't be compiled,
+        /// for it expand `#[doc("...")]` to `/// ...`,
+        /// and when the document comment breaks the line,
+        /// it will be expanded into wrong codes.
+        #[test]
+        fn control_character() {
+            assert_eq!(OptimizedExpr::Str("\n".to_owned()).to_string(), "\"\\n\"");
+            assert_eq!(
+                OptimizedExpr::Insens("\n".to_owned()).to_string(),
+                "^\"\\n\""
+            );
+            assert_eq!(
+                OptimizedExpr::Range("\n".to_owned(), "\r".to_owned()).to_string(),
+                "('\\n'..'\\r')"
+            );
+            assert_eq!(
+                OptimizedExpr::Skip(vec![
+                    "\n".to_owned(),
+                    "\r".to_owned(),
+                    "\n\r".to_owned(),
+                    "\0".to_owned()
+                ])
+                .to_string(),
+                r#"(!("\n" | "\r" | "\n\r" | "\0") ~ ANY)*"#
+            );
 
-        assert_ne!(OptimizedExpr::Str("\n".to_owned()).to_string(), "\"\n\"");
-    }
+            assert_ne!(OptimizedExpr::Str("\n".to_owned()).to_string(), "\"\n\"");
+        }
 
-    #[test]
-    #[cfg(feature = "grammar-extras")]
-    fn display_node_tag() {
-        assert_eq!(
-            OptimizedExpr::NodeTag(
-                Box::new(OptimizedExpr::Ident("x".to_owned())),
-                "X".to_owned()
-            )
-            .to_string(),
-            r#"(#X = x)"#
-        );
-        assert_eq!(
-            OptimizedExpr::NodeTag(
-                Box::new(OptimizedExpr::Seq(
+        #[test]
+        #[cfg(feature = "grammar-extras")]
+        fn node_tag() {
+            assert_eq!(
+                OptimizedExpr::NodeTag(
                     Box::new(OptimizedExpr::Ident("x".to_owned())),
-                    Box::new(OptimizedExpr::Str("y".to_owned()))
-                )),
-                "X".to_owned()
-            )
-            .to_string(),
-            r#"(#X = (x ~ "y"))"#
-        );
-    }
+                    "X".to_owned()
+                )
+                .to_string(),
+                r#"(#X = x)"#
+            );
+            assert_eq!(
+                OptimizedExpr::NodeTag(
+                    Box::new(OptimizedExpr::Seq(
+                        Box::new(OptimizedExpr::Ident("x".to_owned())),
+                        Box::new(OptimizedExpr::Str("y".to_owned()))
+                    )),
+                    "X".to_owned()
+                )
+                .to_string(),
+                r#"(#X = (x ~ "y"))"#
+            );
+        }
 
-    #[test]
-    fn display_repetition() {
-        assert_eq!(
-            OptimizedExpr::Rep(Box::new(OptimizedExpr::Ident("x".to_owned()))).to_string(),
-            "x*"
-        );
-        assert_eq!(
-            OptimizedExpr::Rep(Box::new(OptimizedExpr::Range(
-                "0".to_owned(),
-                "9".to_owned()
-            )))
-            .to_string(),
-            "('0'..'9')*"
-        );
-    }
+        #[test]
+        fn repetition() {
+            assert_eq!(
+                OptimizedExpr::Rep(Box::new(OptimizedExpr::Ident("x".to_owned()))).to_string(),
+                "x*"
+            );
+            assert_eq!(
+                OptimizedExpr::Rep(Box::new(OptimizedExpr::Range(
+                    "0".to_owned(),
+                    "9".to_owned()
+                )))
+                .to_string(),
+                "('0'..'9')*"
+            );
+        }
 
-    #[test]
-    #[cfg(feature = "grammar-extras")]
-    fn display_one_or_more_repetition() {
-        assert_eq!(
-            OptimizedExpr::RepOnce(Box::new(OptimizedExpr::Ident("x".to_owned()))).to_string(),
-            "x+"
-        );
-        assert_eq!(
-            OptimizedExpr::RepOnce(Box::new(OptimizedExpr::Range(
-                "0".to_owned(),
-                "9".to_owned()
-            )))
-            .to_string(),
-            "('0'..'9')+"
-        );
-    }
+        #[test]
+        #[cfg(feature = "grammar-extras")]
+        fn one_or_more_repetition() {
+            assert_eq!(
+                OptimizedExpr::RepOnce(Box::new(OptimizedExpr::Ident("x".to_owned()))).to_string(),
+                "x+"
+            );
+            assert_eq!(
+                OptimizedExpr::RepOnce(Box::new(OptimizedExpr::Range(
+                    "0".to_owned(),
+                    "9".to_owned()
+                )))
+                .to_string(),
+                "('0'..'9')+"
+            );
+        }
 
-    #[test]
-    fn display_predicate() {
-        assert_eq!(
-            OptimizedExpr::PosPred(Box::new(OptimizedExpr::NegPred(Box::new(
-                OptimizedExpr::Ident("a".to_owned())
-            ))))
-            .to_string(),
-            "&!a".to_owned()
-        );
-        assert_eq!(
-            OptimizedExpr::PosPred(Box::new(OptimizedExpr::Choice(
-                Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Ident(
-                    "a".to_owned()
-                )))),
-                Box::new(OptimizedExpr::Str("a".to_owned()))
-            )))
-            .to_string(),
-            r#"&(a* | "a")"#
-        );
-        assert_eq!(
-            OptimizedExpr::NegPred(Box::new(OptimizedExpr::Choice(
-                Box::new(OptimizedExpr::Push(Box::new(OptimizedExpr::Ident(
-                    "a".to_owned()
-                )))),
-                Box::new(OptimizedExpr::Str("a".to_owned()))
-            )))
-            .to_string(),
-            r#"!(PUSH(a) | "a")"#
-        );
-        assert_eq!(
-            OptimizedExpr::PosPred(Box::new(OptimizedExpr::RestoreOnErr(Box::new(
-                OptimizedExpr::NegPred(Box::new(OptimizedExpr::Ident("a".to_owned())))
-            ))))
-            .to_string(),
-            "&!a".to_owned()
-        );
-    }
-
-    #[test]
-    fn display_sequence() {
-        assert_eq!(
-            OptimizedExpr::Seq(
-                Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Str(
-                    "a".to_owned()
-                )),)),
-                Box::new(OptimizedExpr::Seq(
-                    Box::new(OptimizedExpr::Ident("b".to_owned())),
-                    Box::new(OptimizedExpr::Insens("c".to_owned())),
-                )),
-            )
-            .to_string(),
-            r#"("a"* ~ b ~ ^"c")"#,
-        );
-        assert_eq!(
-            OptimizedExpr::Seq(
-                Box::new(OptimizedExpr::PosPred(Box::new(OptimizedExpr::Range(
-                    "a".to_owned(),
-                    "z".to_owned()
-                )))),
-                Box::new(OptimizedExpr::NegPred(Box::new(OptimizedExpr::Opt(
-                    Box::new(OptimizedExpr::Range("A".to_owned(), "Z".to_owned()))
+        #[test]
+        fn predicate() {
+            assert_eq!(
+                OptimizedExpr::PosPred(Box::new(OptimizedExpr::NegPred(Box::new(
+                    OptimizedExpr::Ident("a".to_owned())
                 ))))
-            )
-            .to_string(),
-            "(&('a'..'z') ~ !('A'..'Z')?)"
-        );
-    }
-
-    #[test]
-    fn display_choices() {
-        assert_eq!(
-            OptimizedExpr::Choice(
-                Box::new(OptimizedExpr::Str("a".to_owned())),
-                Box::new(OptimizedExpr::Choice(
-                    Box::new(OptimizedExpr::Push(Box::new(OptimizedExpr::Ident(
-                        "b".to_owned()
+                .to_string(),
+                "&!a".to_owned()
+            );
+            assert_eq!(
+                OptimizedExpr::PosPred(Box::new(OptimizedExpr::Choice(
+                    Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Ident(
+                        "a".to_owned()
                     )))),
-                    Box::new(OptimizedExpr::Insens("c".to_owned())),
-                )),
-            )
-            .to_string(),
-            r#"("a" | PUSH(b) | ^"c")"#,
-        );
-    }
+                    Box::new(OptimizedExpr::Str("a".to_owned()))
+                )))
+                .to_string(),
+                r#"&(a* | "a")"#
+            );
+            assert_eq!(
+                OptimizedExpr::NegPred(Box::new(OptimizedExpr::Choice(
+                    Box::new(OptimizedExpr::Push(Box::new(OptimizedExpr::Ident(
+                        "a".to_owned()
+                    )))),
+                    Box::new(OptimizedExpr::Str("a".to_owned()))
+                )))
+                .to_string(),
+                r#"!(PUSH(a) | "a")"#
+            );
+            assert_eq!(
+                OptimizedExpr::PosPred(Box::new(OptimizedExpr::RestoreOnErr(Box::new(
+                    OptimizedExpr::NegPred(Box::new(OptimizedExpr::Ident("a".to_owned())))
+                ))))
+                .to_string(),
+                "&!a".to_owned()
+            );
+        }
 
-    #[test]
-    fn display_peek_slice() {
-        assert_eq!(
-            OptimizedExpr::PeekSlice(2, Some(3)).to_string(),
-            "PEEK[2..3]".to_owned()
-        );
-        assert_eq!(
-            OptimizedExpr::PeekSlice(2, Some(-1)).to_string(),
-            "PEEK[2..-1]".to_owned()
-        );
-        assert_eq!(
-            OptimizedExpr::PeekSlice(0, None).to_string(),
-            "PEEK[0..]".to_owned()
-        );
+        #[test]
+        fn sequence() {
+            assert_eq!(
+                OptimizedExpr::Seq(
+                    Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Str(
+                        "a".to_owned()
+                    )),)),
+                    Box::new(OptimizedExpr::Seq(
+                        Box::new(OptimizedExpr::Ident("b".to_owned())),
+                        Box::new(OptimizedExpr::Insens("c".to_owned())),
+                    )),
+                )
+                .to_string(),
+                r#"("a"* ~ b ~ ^"c")"#,
+            );
+            assert_eq!(
+                OptimizedExpr::Seq(
+                    Box::new(OptimizedExpr::PosPred(Box::new(OptimizedExpr::Range(
+                        "a".to_owned(),
+                        "z".to_owned()
+                    )))),
+                    Box::new(OptimizedExpr::NegPred(Box::new(OptimizedExpr::Opt(
+                        Box::new(OptimizedExpr::Range("A".to_owned(), "Z".to_owned()))
+                    ))))
+                )
+                .to_string(),
+                "(&('a'..'z') ~ !('A'..'Z')?)"
+            );
+        }
+
+        #[test]
+        fn choices() {
+            assert_eq!(
+                OptimizedExpr::Choice(
+                    Box::new(OptimizedExpr::Str("a".to_owned())),
+                    Box::new(OptimizedExpr::Choice(
+                        Box::new(OptimizedExpr::Push(Box::new(OptimizedExpr::Ident(
+                            "b".to_owned()
+                        )))),
+                        Box::new(OptimizedExpr::Insens("c".to_owned())),
+                    )),
+                )
+                .to_string(),
+                r#"("a" | PUSH(b) | ^"c")"#,
+            );
+        }
+
+        #[test]
+        fn peek_slice() {
+            assert_eq!(
+                OptimizedExpr::PeekSlice(2, Some(3)).to_string(),
+                "PEEK[2..3]".to_owned()
+            );
+            assert_eq!(
+                OptimizedExpr::PeekSlice(2, Some(-1)).to_string(),
+                "PEEK[2..-1]".to_owned()
+            );
+            assert_eq!(
+                OptimizedExpr::PeekSlice(0, None).to_string(),
+                "PEEK[0..]".to_owned()
+            );
+        }
     }
 }
