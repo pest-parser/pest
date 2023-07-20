@@ -262,12 +262,9 @@ impl core::fmt::Display for OptimizedExpr {
             OptimizedExpr::Str(s) => write!(f, "{:?}", s),
             OptimizedExpr::Insens(s) => write!(f, "^{:?}", s),
             OptimizedExpr::Range(start, end) => {
-                write!(
-                    f,
-                    "{:?}..{:?}",
-                    start.chars().next().expect("Empty range start."),
-                    end.chars().next().expect("Empty range end.")
-                )
+                let start = start.chars().next().expect("Empty range start.");
+                let end = end.chars().next().expect("Empty range end.");
+                write!(f, "({:?}..{:?})", start, end)
             }
             OptimizedExpr::Ident(id) => write!(f, "{}", id),
             OptimizedExpr::PeekSlice(start, end) => match end {
