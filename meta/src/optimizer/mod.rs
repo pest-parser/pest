@@ -725,7 +725,7 @@ mod tests {
         );
         assert_eq!(
             OptimizedExpr::Range("\n".to_owned(), "\r".to_owned()).to_string(),
-            "'\\n'..'\\r'"
+            "('\\n'..'\\r')"
         );
         assert_eq!(
             OptimizedExpr::Skip(vec![
@@ -742,6 +742,101 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "grammar-extras")]
+    fn display_node_tag() {
+        assert_eq!(
+            OptimizedExpr::NodeTag(
+                Box::new(OptimizedExpr::Ident("x".to_owned())),
+                "X".to_owned()
+            )
+            .to_string(),
+            r#"(#X = x)"#
+        );
+        assert_eq!(
+            OptimizedExpr::NodeTag(
+                Box::new(OptimizedExpr::Seq(
+                    Box::new(OptimizedExpr::Ident("x".to_owned())),
+                    Box::new(OptimizedExpr::Str("y".to_owned()))
+                )),
+                "X".to_owned()
+            )
+            .to_string(),
+            r#"(#X = (x ~ "y"))"#
+        );
+    }
+
+    #[test]
+    fn display_repetition() {
+        assert_eq!(
+            OptimizedExpr::Rep(Box::new(OptimizedExpr::Ident("x".to_owned()))).to_string(),
+            "x*"
+        );
+        assert_eq!(
+            OptimizedExpr::Rep(Box::new(OptimizedExpr::Range(
+                "0".to_owned(),
+                "9".to_owned()
+            )))
+            .to_string(),
+            "('0'..'9')*"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "grammar-extras")]
+    fn display_one_or_more_repetition() {
+        assert_eq!(
+            OptimizedExpr::RepOnce(Box::new(OptimizedExpr::Ident("x".to_owned()))).to_string(),
+            "x+"
+        );
+        assert_eq!(
+            OptimizedExpr::RepOnce(Box::new(OptimizedExpr::Range(
+                "0".to_owned(),
+                "9".to_owned()
+            )))
+            .to_string(),
+            "('0'..'9')+"
+        );
+    }
+
+    #[test]
+    fn display_predicate() {
+        assert_eq!(
+            OptimizedExpr::PosPred(Box::new(OptimizedExpr::NegPred(Box::new(
+                OptimizedExpr::Ident("a".to_owned())
+            ))))
+            .to_string(),
+            "&!a".to_owned()
+        );
+        assert_eq!(
+            OptimizedExpr::PosPred(Box::new(OptimizedExpr::Choice(
+                Box::new(OptimizedExpr::Rep(Box::new(OptimizedExpr::Ident(
+                    "a".to_owned()
+                )))),
+                Box::new(OptimizedExpr::Str("a".to_owned()))
+            )))
+            .to_string(),
+            r#"&(a* | "a")"#
+        );
+        assert_eq!(
+            OptimizedExpr::NegPred(Box::new(OptimizedExpr::Choice(
+                Box::new(OptimizedExpr::Push(Box::new(OptimizedExpr::Ident(
+                    "a".to_owned()
+                )))),
+                Box::new(OptimizedExpr::Str("a".to_owned()))
+            )))
+            .to_string(),
+            r#"!(PUSH(a) | "a")"#
+        );
+        assert_eq!(
+            OptimizedExpr::PosPred(Box::new(OptimizedExpr::RestoreOnErr(Box::new(
+                OptimizedExpr::NegPred(Box::new(OptimizedExpr::Ident("a".to_owned())))
+            ))))
+            .to_string(),
+            "&!a".to_owned()
+        );
+    }
+
+    #[test]
     fn display_sequence() {
         assert_eq!(
             OptimizedExpr::Seq(
@@ -755,6 +850,19 @@ mod tests {
             )
             .to_string(),
             r#"("a"* ~ b ~ ^"c")"#,
+        );
+        assert_eq!(
+            OptimizedExpr::Seq(
+                Box::new(OptimizedExpr::PosPred(Box::new(OptimizedExpr::Range(
+                    "a".to_owned(),
+                    "z".to_owned()
+                )))),
+                Box::new(OptimizedExpr::NegPred(Box::new(OptimizedExpr::Opt(
+                    Box::new(OptimizedExpr::Range("A".to_owned(), "Z".to_owned()))
+                ))))
+            )
+            .to_string(),
+            "(&('a'..'z') ~ !('A'..'Z')?)"
         );
     }
 
