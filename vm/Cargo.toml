@@ -9,7 +9,7 @@ repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
 keywords = ["pest", "vm"]
 categories = ["parsing"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 readme = "_README.md"
 rust-version = "1.60"
 
