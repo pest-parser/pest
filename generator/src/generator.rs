@@ -540,8 +540,14 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
         #[cfg(feature = "grammar-extras")]
         OptimizedExpr::NodeTag(expr, tag) => {
             let expr = generate_expr(*expr);
+            let tag_cow = {
+                #[cfg(feature = "std")]
+                quote! { ::std::borrow::Cow::Borrowed(#tag) }
+                #[cfg(not(feature = "std"))]
+                quote! { ::alloc::borrow::Cow::Borrowed(#tag) }
+            };
             quote! {
-                #expr.and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed(#tag)))
+                #expr.and_then(|state| state.tag_node(#tag_cow))
             }
         }
     }
@@ -695,8 +701,14 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
         #[cfg(feature = "grammar-extras")]
         OptimizedExpr::NodeTag(expr, tag) => {
             let expr = generate_expr_atomic(*expr);
+            let tag_cow = {
+                #[cfg(feature = "std")]
+                quote! { ::std::borrow::Cow::Borrowed(#tag) }
+                #[cfg(not(feature = "std"))]
+                quote! { ::alloc::borrow::Cow::Borrowed(#tag) }
+            };
             quote! {
-                #expr.and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed(#tag)))
+                #expr.and_then(|state| state.tag_node(#tag_cow))
             }
         }
     }
