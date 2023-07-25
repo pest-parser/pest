@@ -42,7 +42,7 @@ use pest_meta::{optimizer, unwrap_or_report, validator};
 /// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
 pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
-    let (name, generics, contents) = parse_derive(ast);
+    let (parsed_derive, contents) = parse_derive(ast);
 
     let mut data = String::new();
     let mut paths = vec![];
@@ -97,8 +97,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let optimized = optimizer::optimize(ast);
 
     generator::generate(
-        name,
-        &generics,
+        parsed_derive,
         paths,
         optimized,
         defaults,
@@ -120,7 +119,13 @@ enum GrammarSource {
     Inline(String),
 }
 
-fn parse_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>) {
+struct ParsedDerive {
+    pub(crate) name: Ident,
+    pub(crate) generics: Generics,
+    pub(crate) non_exhaustive: bool,
+}
+
+fn parse_derive(ast: DeriveInput) -> (ParsedDerive, Vec<GrammarSource>) {
     let name = ast.ident;
     let generics = ast.generics;
 
@@ -142,7 +147,19 @@ fn parse_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>) {
         grammar_sources.push(get_attribute(attr))
     }
 
-    (name, generics, grammar_sources)
+    let non_exhaustive = ast
+        .attrs
+        .iter()
+        .any(|attr| attr.meta.path().is_ident("non_exhaustive"));
+
+    (
+        ParsedDerive {
+            name,
+            generics,
+            non_exhaustive,
+        },
+        grammar_sources,
+    )
 }
 
 fn get_attribute(attr: &Attribute) -> GrammarSource {
@@ -177,7 +194,7 @@ mod tests {
             pub struct MyParser<'a, T>;
         ";
         let ast = syn::parse_str(definition).unwrap();
-        let (_, _, filenames) = parse_derive(ast);
+        let (_, filenames) = parse_derive(ast);
         assert_eq!(filenames, [GrammarSource::Inline("GRAMMAR".to_string())]);
     }
 
@@ -189,8 +206,9 @@ mod tests {
             pub struct MyParser<'a, T>;
         ";
         let ast = syn::parse_str(definition).unwrap();
-        let (_, _, filenames) = parse_derive(ast);
+        let (parsed_derive, filenames) = parse_derive(ast);
         assert_eq!(filenames, [GrammarSource::File("myfile.pest".to_string())]);
+        assert!(!parsed_derive.non_exhaustive);
     }
 
     #[test]
@@ -202,7 +220,7 @@ mod tests {
             pub struct MyParser<'a, T>;
         ";
         let ast = syn::parse_str(definition).unwrap();
-        let (_, _, filenames) = parse_derive(ast);
+        let (_, filenames) = parse_derive(ast);
         assert_eq!(
             filenames,
             [
@@ -210,6 +228,19 @@ mod tests {
                 GrammarSource::File("myfile2.pest".to_string())
             ]
         );
+    }
+
+    #[test]
+    fn derive_nonexhaustive() {
+        let definition = "
+            #[non_exhaustive]
+            #[grammar = \"myfile.pest\"]
+            pub struct MyParser<'a, T>;
+        ";
+        let ast = syn::parse_str(definition).unwrap();
+        let (parsed_derive, filenames) = parse_derive(ast);
+        assert_eq!(filenames, [GrammarSource::File("myfile.pest".to_string())]);
+        assert!(parsed_derive.non_exhaustive);
     }
 
     #[test]
@@ -242,6 +273,7 @@ mod tests {
     fn test_generate_doc() {
         let input = quote! {
             #[derive(Parser)]
+            #[non_exhaustive]
             #[grammar = "../tests/test.pest"]
             pub struct TestParser;
         };
@@ -252,7 +284,7 @@ mod tests {
             #[doc = "A parser for JSON file.\nAnd this is a example for JSON parser.\n\n    indent-4-space\n"]
             #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
             #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-
+            #[non_exhaustive]
             pub enum Rule {
                 #[doc = "Matches foo str, e.g.: `foo`"]
                 r#foo,
