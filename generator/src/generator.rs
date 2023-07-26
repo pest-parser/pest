@@ -11,17 +11,17 @@ use std::path::PathBuf;
 
 use proc_macro2::TokenStream;
 use quote::{ToTokens, TokenStreamExt};
-use syn::{self, Generics, Ident};
+use syn::{self, Ident};
 
 use pest::unicode::unicode_property_names;
 use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
 use crate::docs::DocComment;
+use crate::ParsedDerive;
 
 pub(crate) fn generate(
-    name: Ident,
-    generics: &Generics,
+    parsed_derive: ParsedDerive,
     paths: Vec<PathBuf>,
     rules: Vec<OptimizedRule>,
     defaults: Vec<&str>,
@@ -29,14 +29,14 @@ pub(crate) fn generate(
     include_grammar: bool,
 ) -> TokenStream {
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
-
+    let name = parsed_derive.name;
     let builtins = generate_builtin_rules();
     let include_fix = if include_grammar {
         generate_include(&name, paths)
     } else {
         quote!()
     };
-    let rule_enum = generate_enum(&rules, doc_comment, uses_eoi);
+    let rule_enum = generate_enum(&rules, doc_comment, uses_eoi, parsed_derive.non_exhaustive);
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
 
@@ -49,7 +49,7 @@ pub(crate) fn generate(
         }
     }));
 
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = parsed_derive.generics.split_for_impl();
 
     let result = result_type();
 
@@ -197,7 +197,12 @@ fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream {
     }
 }
 
-fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bool) -> TokenStream {
+fn generate_enum(
+    rules: &[OptimizedRule],
+    doc_comment: &DocComment,
+    uses_eoi: bool,
+    non_exhaustive: bool,
+) -> TokenStream {
     let rules = rules.iter().map(|rule| {
         let rule_name = format_ident!("r#{}", rule.name);
 
@@ -213,26 +218,34 @@ fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment, uses_eoi: bo
     });
 
     let grammar_doc = &doc_comment.grammar_doc;
+    let mut result = quote! {
+        #[doc = #grammar_doc]
+        #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
+        #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    };
+    if non_exhaustive {
+        result.append_all(quote! {
+            #[non_exhaustive]
+        });
+    }
+    result.append_all(quote! {
+        pub enum Rule
+    });
     if uses_eoi {
-        quote! {
-            #[doc = #grammar_doc]
-            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
-            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-            pub enum Rule {
+        result.append_all(quote! {
+            {
                 EOI,
                 #( #rules ),*
             }
-        }
+        });
     } else {
-        quote! {
-            #[doc = #grammar_doc]
-            #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
-            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-            pub enum Rule {
+        result.append_all(quote! {
+            {
                 #( #rules ),*
             }
-        }
-    }
+        })
+    };
+    result
 }
 
 fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
@@ -756,6 +769,7 @@ mod tests {
 
     use proc_macro2::Span;
     use std::collections::HashMap;
+    use syn::Generics;
 
     #[test]
     fn rule_enum_simple() {
@@ -774,7 +788,7 @@ mod tests {
         };
 
         assert_eq!(
-            generate_enum(&rules, doc_comment, false).to_string(),
+            generate_enum(&rules, doc_comment, false, false).to_string(),
             quote! {
                 #[doc = "Rule doc\nhello"]
                 #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
@@ -1095,9 +1109,13 @@ mod tests {
 
         let base_path = current_dir.join("base.pest").to_str().unwrap().to_string();
         let test_path = current_dir.join("test.pest").to_str().unwrap().to_string();
-
+        let parsed_derive = ParsedDerive {
+            name,
+            generics,
+            non_exhaustive: false,
+        };
         assert_eq!(
-            generate(name, &generics, vec![PathBuf::from("base.pest"), PathBuf::from("test.pest")], rules, defaults, doc_comment, true).to_string(),
+            generate(parsed_derive, vec![PathBuf::from("base.pest"), PathBuf::from("test.pest")], rules, defaults, doc_comment, true).to_string(),
             quote! {
                 #[allow(non_upper_case_globals)]
                 const _PEST_GRAMMAR_MyParser: [&'static str; 2usize] = [include_str!(#base_path), include_str!(#test_path)];

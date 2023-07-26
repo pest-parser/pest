@@ -1,7 +1,7 @@
 [package]
 name = "pest_meta"
 description = "pest meta language parser and validator"
-version = "2.7.1"
+version = "2.7.2"
 edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest.rs/"
@@ -16,7 +16,7 @@ include = ["Cargo.toml", "src/**/*", "src/grammar.rs", "_README.md", "LICENSE-*"
 rust-version = "1.60"
 
 [dependencies]
-pest = { path = "../pest", version = "2.7.1" }
+pest = { path = "../pest", version = "2.7.2" }
 once_cell = "1.8.0"
 
 [build-dependencies]
