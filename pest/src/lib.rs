@@ -358,7 +358,7 @@ While prec_climber is going to be kept in 2.x minor and patch releases, it may b
 )]
 pub mod prec_climber;
 mod span;
-mod stack;
+pub mod stack;
 mod token;
 
 #[doc(hidden)]
