@@ -8,7 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use pest::stack::Stack;
+use pest::Stack;
 
 fn snapshot_push_restore<'i, T: Clone>(
     elements: impl Iterator<Item = T> + Clone,

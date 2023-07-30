@@ -340,6 +340,7 @@ pub use crate::parser_state::{
 };
 pub use crate::position::Position;
 pub use crate::span::{merge_spans, Lines, LinesSpan, Span};
+pub use crate::stack::Stack;
 pub use crate::token::Token;
 use core::fmt::Debug;
 use core::hash::Hash;
@@ -358,7 +359,7 @@ While prec_climber is going to be kept in 2.x minor and patch releases, it may b
 )]
 pub mod prec_climber;
 mod span;
-pub mod stack;
+mod stack;
 mod token;
 
 #[doc(hidden)]
