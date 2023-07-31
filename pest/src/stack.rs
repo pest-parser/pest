@@ -40,6 +40,12 @@ pub struct Stack<T: Clone> {
     lengths: Vec<(usize, usize)>,
 }
 
+impl<T: Clone> Default for Stack<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: Clone> Stack<T> {
     /// Creates a new `Stack`.
     pub fn new() -> Self {
