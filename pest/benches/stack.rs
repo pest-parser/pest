@@ -12,7 +12,7 @@ use pest::Stack;
 
 fn snapshot_push_restore<T: Clone>(elements: impl Iterator<Item = T> + Clone) {
     let mut stack = Stack::<T>::new();
-    for elem in elements.clone() {
+    for elem in elements {
         stack.snapshot();
         stack.push(elem.clone());
         stack.restore();
@@ -22,7 +22,7 @@ fn snapshot_push_restore<T: Clone>(elements: impl Iterator<Item = T> + Clone) {
 
 fn snapshot_push_clear_snapshot<T: Clone>(elements: impl Iterator<Item = T> + Clone) {
     let mut stack = Stack::<T>::new();
-    for elem in elements.clone() {
+    for elem in elements {
         stack.snapshot();
         stack.push(elem);
         stack.clear_snapshot();
