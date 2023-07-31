@@ -340,6 +340,7 @@ pub use crate::parser_state::{
 };
 pub use crate::position::Position;
 pub use crate::span::{merge_spans, Lines, LinesSpan, Span};
+pub use crate::stack::Stack;
 pub use crate::token::Token;
 use core::fmt::Debug;
 use core::hash::Hash;

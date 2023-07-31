@@ -146,6 +146,79 @@ mod test {
 
         assert_eq!(stack[0..stack.len()], [0]);
     }
+    #[test]
+    fn restore_without_snapshot() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+        stack.restore();
+
+        assert_eq!(stack[0..stack.len()], [0; 0]);
+    }
+
+    #[test]
+    fn snapshot_pop_restore() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+        stack.snapshot();
+        stack.pop();
+        stack.restore();
+
+        assert_eq!(stack[0..stack.len()], [0]);
+    }
+
+    #[test]
+    fn snapshot_pop_push_restore() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+        stack.snapshot();
+        stack.pop();
+        stack.push(1);
+        stack.restore();
+
+        assert_eq!(stack[0..stack.len()], [0]);
+    }
+
+    #[test]
+    fn snapshot_push_pop_restore() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+        stack.snapshot();
+        stack.push(1);
+        stack.push(2);
+        stack.pop();
+        stack.restore();
+
+        assert_eq!(stack[0..stack.len()], [0]);
+    }
+
+    #[test]
+    fn snapshot_push_clear() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+        stack.snapshot();
+        stack.push(1);
+        stack.clear_snapshot();
+
+        assert_eq!(stack[0..stack.len()], [0, 1]);
+    }
+
+    #[test]
+    fn snapshot_pop_clear() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+        stack.push(1);
+        stack.snapshot();
+        stack.pop();
+        stack.clear_snapshot();
+
+        assert_eq!(stack[0..stack.len()], [0]);
+    }
 
     #[test]
     fn stack_ops() {
