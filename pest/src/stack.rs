@@ -173,7 +173,7 @@ mod test {
         stack.push(0);
         stack.restore();
 
-        assert_eq!(stack[0..stack.len()], []);
+        assert_eq!(stack[0..stack.len()], [0; 0]);
     }
 
     #[test]
