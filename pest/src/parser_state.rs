@@ -701,7 +701,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// `Box<ParserState>` if successful, or `Err` with the updated `Box<ParserState>` otherwise.
     ///
     /// # Caution
-    /// The provided `range` is intepreted as inclusive.
+    /// The provided `range` is interpreted as inclusive.
     ///
     /// # Examples
     ///
