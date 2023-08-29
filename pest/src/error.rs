@@ -570,13 +570,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> 2:2",
                 "  |",
                 "2 | cd",
                 "  |  ^---",
                 "  |",
-                "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
+                "  = unexpected 4, 5, or 6; expected 1, 2, or 3"
             ]
             .join("\n")
         );
@@ -596,13 +596,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> 2:2",
                 "  |",
                 "2 | cd",
                 "  |  ^---",
                 "  |",
-                "  = expected 1 or 2",
+                "  = expected 1 or 2"
             ]
             .join("\n")
         );
@@ -622,13 +622,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> 2:2",
                 "  |",
                 "2 | cd",
                 "  |  ^---",
                 "  |",
-                "  = unexpected 4, 5, or 6",
+                "  = unexpected 4, 5, or 6"
             ]
             .join("\n")
         );
@@ -648,13 +648,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> 2:2",
                 "  |",
                 "2 | cd",
                 "  |  ^---",
                 "  |",
-                "  = unknown parsing error",
+                "  = unknown parsing error"
             ]
             .join("\n")
         );
@@ -673,13 +673,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> 2:2",
                 "  |",
                 "2 | cd",
                 "  |  ^---",
                 "  |",
-                "  = error: big one",
+                "  = error: big one"
             ]
             .join("\n")
         );
@@ -699,14 +699,14 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> 2:2",
                 "  |",
                 "2 | cd",
                 "3 | efgh",
                 "  |  ^^",
                 "  |",
-                "  = error: big one",
+                "  = error: big one"
             ]
             .join("\n")
         );
@@ -726,7 +726,7 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> 1:2",
                 "  |",
                 "1 | ab",
@@ -734,7 +734,7 @@ mod tests {
                 "3 | efgh",
                 "  |  ^^",
                 "  |",
-                "  = error: big one",
+                "  = error: big one"
             ]
             .join("\n")
         );
@@ -754,14 +754,14 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> 1:6",
                 "  |",
                 "1 | abcdef",
                 "2 | gh",
                 "  | ^----^",
                 "  |",
-                "  = error: big one",
+                "  = error: big one"
             ]
             .join("\n")
         );
@@ -784,13 +784,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> 1:1",
                 "  |",
                 "1 | abcdef␊",
                 "  | ^-----^",
                 "  |",
-                "  = error: big one",
+                "  = error: big one"
             ]
             .join("\n")
         );
@@ -813,13 +813,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> 1:1",
                 "  |",
                 "1 | ",
                 "  | ^",
                 "  |",
-                "  = error: empty",
+                "  = error: empty"
             ]
             .join("\n")
         );
@@ -840,13 +840,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> 2:2",
                 "  |",
                 "2 | cd",
                 "  |  ^---",
                 "  |",
-                "  = unexpected 5, 6, or 7; expected 2, 3, or 4",
+                "  = unexpected 5, 6, or 7; expected 2, 3, or 4"
             ]
             .join("\n")
         );
@@ -867,13 +867,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> file.rs:2:2",
                 "  |",
                 "2 | cd",
                 "  |  ^---",
                 "  |",
-                "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
+                "  = unexpected 4, 5, or 6; expected 1, 2, or 3"
             ]
             .join("\n")
         );
@@ -894,13 +894,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", error),
-            vec![
+            [
                 " --> file.rs:1:3",
                 "  |",
                 "1 | a	xbc",
                 "  |  	^---",
                 "  |",
-                "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
+                "  = unexpected 4, 5, or 6; expected 1, 2, or 3"
             ]
             .join("\n")
         );
