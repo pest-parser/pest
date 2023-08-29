@@ -38,6 +38,8 @@ enum Rule {
 struct JsonParser;
 
 impl Parser<Rule> for JsonParser {
+    // false positive: pest uses `..` as a complete range (historically)
+    #[allow(clippy::almost_complete_range)]
     fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
         fn json(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             value(state)

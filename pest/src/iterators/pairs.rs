@@ -661,6 +661,8 @@ mod tests {
     }
 
     #[test]
+    // false positive: pest uses `..` as a complete range (historically)
+    #[allow(clippy::almost_complete_range)]
     fn test_tag_node_branch() {
         use crate::{state, ParseResult, ParserState};
         #[allow(non_camel_case_types)]
