@@ -220,7 +220,7 @@ fn generate_enum(
     let grammar_doc = &doc_comment.grammar_doc;
     let mut result = quote! {
         #[doc = #grammar_doc]
-        #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
+        #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms, missing_docs)]
         #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     };
     if non_exhaustive {
