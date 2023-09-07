@@ -209,7 +209,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     }
 
     /// Finds the first pair that has its node or branch tagged with the provided
-    /// label.
+    /// label. Searches in the flattened [`Pairs`] iterator
     ///
     /// # Examples
     ///
@@ -260,7 +260,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     }
 
     /// Returns the iterator over pairs that have their node or branch tagged
-    /// with the provided label.
+    /// with the provided label. The iterator is built from a flattened [`Pairs`] iterator
     ///
     /// # Examples
     ///
