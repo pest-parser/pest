@@ -11,7 +11,7 @@
 
 [![pest Continuous Integration](https://github.com/pest-parser/pest/actions/workflows/ci.yml/badge.svg)](https://github.com/pest-parser/pest/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/pest-parser/pest/branch/master/graph/badge.svg)](https://codecov.io/gh/pest-parser/pest)
-<a href="https://blog.rust-lang.org/2021/11/01/Rust-1.60.0.html"><img alt="Rustc Version 1.60.0+" src="https://img.shields.io/badge/rustc-1.60.0%2B-lightgrey.svg"/></a>
+<a href="https://blog.rust-lang.org/2021/11/01/Rust-1.61.0.html"><img alt="Rustc Version 1.61.0+" src="https://img.shields.io/badge/rustc-1.61.0%2B-lightgrey.svg"/></a>
 
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
 [![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
@@ -204,8 +204,7 @@ You can find more projects and ecosystem tools in the [awesome-pest](https://git
 
 ## Minimum Supported Rust Version (MSRV)
 
-This library should always compile with default features on **Rust 1.60.0**
-or **Rust 1.61** with `const_prec_climber`.
+This library should always compile with default features on **Rust 1.61.0**.
 
 ## no_std support
 

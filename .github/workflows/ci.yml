@@ -79,7 +79,7 @@ jobs:
         with:
           kind: msrv
           tools: cargo-msrv
-          toolchain: 1.60.0
+          toolchain: 1.61.0
       - name: Check msrv
         shell: sh
         run: for crate in "derive" "generator" "grammars" "meta" "pest" "vm"; do cd "$crate" && cargo msrv verify && cd ..; done
