@@ -234,6 +234,7 @@ fn generate_enum(
     if uses_eoi {
         result.append_all(quote! {
             {
+                /// End of input
                 EOI,
                 #( #rules ),*
             }
