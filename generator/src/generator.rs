@@ -811,9 +811,9 @@ mod tests {
                     #[doc = "This is rule comment"]
                     r#f
                 }
-                impl Rule { 
+                impl Rule {
                     pub fn all_rules() -> &'static [Rule] {
-                        &[Rule::r#f] 
+                        &[Rule::r#f]
                     }
                 }
             }
