@@ -203,7 +203,7 @@ fn generate_enum(
     uses_eoi: bool,
     non_exhaustive: bool,
 ) -> TokenStream {
-    let rules = rules.iter().map(|rule| {
+    let rule_variants = rules.iter().map(|rule| {
         let rule_name = format_ident!("r#{}", rule.name);
 
         match doc_comment.line_docs.get(&rule.name) {
@@ -235,16 +235,30 @@ fn generate_enum(
         result.append_all(quote! {
             {
                 EOI,
-                #( #rules ),*
+                #( #rule_variants ),*
             }
         });
     } else {
         result.append_all(quote! {
             {
-                #( #rules ),*
+                #( #rule_variants ),*
             }
         })
     };
+
+    let rules = rules.iter().map(|rule| {
+        let rule_name = format_ident!("r#{}", rule.name);
+        quote! { #rule_name }
+    });
+
+    result.append_all(quote! {
+        impl Rule {
+            pub fn all_rules() -> &'static[Rule] {
+                &[ #(Rule::#rules), * ]
+            }
+        }
+    });
+
     result
 }
 
@@ -797,6 +811,11 @@ mod tests {
                     #[doc = "This is rule comment"]
                     r#f
                 }
+                impl Rule { 
+                    pub fn all_rules() -> &'static [Rule] {
+                        &[Rule::r#f] 
+                    }
+                }
             }
             .to_string()
         );
@@ -1127,6 +1146,11 @@ mod tests {
                     r#a,
                     #[doc = "If statement"]
                     r#if
+                }
+                impl Rule {
+                    pub fn all_rules() -> &'static [Rule] {
+                        &[Rule::r#a, Rule::r#if]
+                    }
                 }
 
                 #[allow(clippy::all)]
