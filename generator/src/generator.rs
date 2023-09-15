@@ -234,6 +234,7 @@ fn generate_enum(
     if uses_eoi {
         result.append_all(quote! {
             {
+                #[doc = "End-of-input"]
                 EOI,
                 #( #rule_variants ),*
             }
