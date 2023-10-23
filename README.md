@@ -93,10 +93,7 @@ The grammar can be used to derive a `Parser` implementation automatically.
 Parsing returns an iterator of nested token pairs:
 
 ```rust
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
-
+use pest_derive::Parser;
 use pest::Parser;
 
 #[derive(Parser)]
@@ -104,7 +101,7 @@ use pest::Parser;
 struct IdentParser;
 
 fn main() {
-    let pairs = IdentParser::parse(Rule::ident_list, "a1 b2").unwrap_or_else(|e| panic!("{}", e));
+    let pairs = IdentParser::parse(Rule::ident_list, "a1 b2").unwrap_or_else(|e| panic!("{}", e));
 
     // Because ident_list is silent, the iterator will contain idents
     for pair in pairs {
