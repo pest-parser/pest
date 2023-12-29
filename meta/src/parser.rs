@@ -20,6 +20,10 @@ use pest::{Parser, Position, Span};
 use crate::ast::{Expr, Rule as AstRule, RuleType};
 use crate::validator;
 
+/// Note: `include!` adds here a code generated from build.rs file.
+/// In case feature `not-bootstrap-in-src` is:
+/// * OFF  -> include generated `grammar.rs` file from meta/src
+/// * ON   -> include generated `__pest_grammar.rs` file from target/build/...
 #[allow(missing_docs, unused_qualifications)]
 mod grammar {
     #[cfg(not(feature = "not-bootstrap-in-src"))]
@@ -29,6 +33,7 @@ mod grammar {
     include!(concat!(env!("OUT_DIR"), "/__pest_grammar.rs"));
 }
 
+/// Import included grammar (`PestParser` class globally for current module).
 pub use self::grammar::*;
 
 /// A helper that will parse using the pest grammar
