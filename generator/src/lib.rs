@@ -59,6 +59,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
     let (parsed_derive, contents) = parse_derive(ast);
 
+    // Grammar presented in a view of a string.
     let mut data = String::new();
     let mut paths = vec![];
 
@@ -101,6 +102,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
         }
     }
 
+    // `Rule::grammar_rules` is taken from meta/srd/parser.rs.
     let pairs = match parser::parse(Rule::grammar_rules, &data) {
         Ok(pairs) => pairs,
         Err(error) => panic!("error parsing \n{}", error.renamed_rules(rename_meta_rule)),
