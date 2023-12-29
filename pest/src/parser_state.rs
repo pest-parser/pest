@@ -7,7 +7,10 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use alloc::borrow::ToOwned;
+//! The core functionality of parsing grammar.
+//! State of parser during the process of rules handling.
+
+use alloc::borrow::{ToOwned};
 use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::vec;
@@ -127,14 +130,33 @@ impl CallLimitTracker {
 /// [`Parser`]: trait.Parser.html
 #[derive(Debug)]
 pub struct ParserState<'i, R: RuleType> {
+    /// Current position from which we try to apply some parser function.
+    /// Initially is 0.
+    /// E.g., we are parsing `create user 'Bobby'` query, we parsed "create" via `match_insensitive`
+    /// and switched our `position` from 0 to the length of "create".
+    ///
+    /// E.g., see `match_string` -> `self.position.match_string(string)` which updates `self.pos`.
     position: Position<'i>,
+    /// Queue representing rules partially (`QueueableToken::Start`) and
+    /// totally (`QueueableToken::End`) parsed. When entering rule we put it in the queue in a state
+    /// of `Start` and after all it's sublogic (subrules or strings) are parsed, we change it to
+    /// `End` state.
     queue: Vec<QueueableToken<'i, R>>,
+    /// Status set in case specific lookahead logic is used in grammar.
+    /// See `Lookahead` for more information.
     lookahead: Lookahead,
+    /// Rules that we HAVE expected, tried to parse, but failed.
     pos_attempts: Vec<R>,
+    /// Rules that we have NOT expected, tried to parse, but failed.
     neg_attempts: Vec<R>,
+    /// Max position in the query from which we've tried to parse some rule but failed.
     attempt_pos: usize,
+    /// Current atomicity status. For more information see `Atomicity`.
     atomicity: Atomicity,
+    /// Helper structure tracking `Stack` status (used in case grammar contains stack PUSH/POP
+    /// invocations).
     stack: Stack<Span<'i>>,
+    /// Used for setting max parser calls limit.
     call_tracker: CallLimitTracker,
 }
 
@@ -292,7 +314,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
         self = self.inc_call_check_limit()?;
+        // Position from which this `rule` starts parsing.
         let actual_pos = self.position.pos();
+        // Remember index of the `self.queue` element that will be associated with this `rule`.
         let index = self.queue.len();
 
         let (pos_attempts_index, neg_attempts_index) = if actual_pos == self.attempt_pos {
@@ -310,6 +334,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             });
         }
 
+        // Remember attempts number before `f` call.
+        // In `track` using this variable we can say, how many attempts were added
+        // during children rules traversal.
         let attempts = self.attempts_at(actual_pos);
 
         let result = f(self);
@@ -329,8 +356,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 if new_state.lookahead == Lookahead::None
                     && new_state.atomicity != Atomicity::Atomic
                 {
-                    // Storing the pair's index in the first token that was added before the closure was
-                    // run.
+                    // Index of `QueueableToken::End` token added below
+                    // that corresponds to previously added `QueueableToken::Start` token.
                     let new_index = new_state.queue.len();
                     match new_state.queue[index] {
                         QueueableToken::Start {
@@ -414,6 +441,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         Ok(self)
     }
 
+    /// Get number of allowed rules attempts + prohibited rules attempts.
     fn attempts_at(&self, pos: usize) -> usize {
         if self.attempt_pos == pos {
             self.pos_attempts.len() + self.neg_attempts.len()
@@ -917,6 +945,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     /// Transformation which stops `Token`s from being generated according to `is_atomic`.
+    /// Used as wrapper over `rule` (or even another `atomic`) call.
     ///
     /// # Examples
     ///
@@ -943,9 +972,15 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
         self = self.inc_call_check_limit()?;
+        // In case child parsing call is another `atomic` it will have it's own atomicity status.
         let initial_atomicity = self.atomicity;
+        // In case child atomicity is the same as we've demanded, we shouldn't do nothing.
+        // E.g. we have the following rules:
+        // * RootRule = @{ InnerRule }
+        // * InnerRule = @{ ... }
         let should_toggle = self.atomicity != atomicity;
 
+        // Note that we take atomicity of the top rule and not of the leaf (inner).
         if should_toggle {
             self.atomicity = atomicity;
         }
@@ -1266,12 +1301,14 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 }
 
+/// Helper function used only in case stack operations (PUSH/POP) are used in grammar.
 fn constrain_idxs(start: i32, end: Option<i32>, len: usize) -> Option<Range<usize>> {
     let start_norm = normalize_index(start, len)?;
     let end_norm = end.map_or(Some(len), |e| normalize_index(e, len))?;
     Some(start_norm..end_norm)
 }
 
+/// `constrain_idxs` helper function.
 /// Normalizes the index using its sequence’s length.
 /// Returns `None` if the normalized index is OOB.
 fn normalize_index(i: i32, len: usize) -> Option<usize> {
