@@ -245,7 +245,7 @@ impl Vm {
             #[cfg(feature = "grammar-extras")]
             OptimizedExpr::NodeTag(ref expr, ref tag) => self
                 .parse_expr(expr, state)
-                .and_then(|state| state.tag_node(std::borrow::Cow::Owned(tag.clone()))),
+                .and_then(|state| state.tag_node(tag)),
             OptimizedExpr::RestoreOnErr(ref expr) => {
                 state.restore_on_err(|state| self.parse_expr(expr, state))
             }

@@ -227,9 +227,9 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     ///     state: Box<ParserState<'_, Rule>>,
     /// ) -> ParseResult<Box<ParserState<'_, Rule>>> {
     ///     expr(state, Rule::mul, "*")
-    ///         .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("mul")))
+    ///         .and_then(|state| state.tag_node("mul"))
     ///         .or_else(|state| expr(state, Rule::add, "+"))
-    ///         .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("add")))
+    ///         .and_then(|state| state.tag_node("add"))
     /// }
     /// fn expr<'a>(
     ///     state: Box<ParserState<'a, Rule>>,
@@ -239,10 +239,10 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     ///     state.rule(r, |state| {
     ///         state.sequence(|state| {
     ///             number(state)
-    ///                 .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("lhs")))
+    ///                 .and_then(|state| state.tag_node("lhs"))
     ///                 .and_then(|state| state.match_string(o))
     ///                 .and_then(number)
-    ///                 .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("rhs")))
+    ///                 .and_then(|state| state.tag_node("rhs"))
     ///         })
     ///     })
     /// }
@@ -278,9 +278,9 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     ///     state: Box<ParserState<'_, Rule>>,
     /// ) -> ParseResult<Box<ParserState<'_, Rule>>> {
     ///     expr(state, Rule::mul, "*")
-    ///         .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("mul")))
+    ///         .and_then(|state| state.tag_node("mul"))
     ///         .or_else(|state| expr(state, Rule::add, "+"))
-    ///         .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("add")))
+    ///         .and_then(|state| state.tag_node("add"))
     /// }
     /// fn expr<'a>(
     ///     state: Box<ParserState<'a, Rule>>,
@@ -290,10 +290,10 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     ///     state.rule(r, |state| {
     ///         state.sequence(|state| {
     ///             number(state)
-    ///                 .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("lhs")))
+    ///                 .and_then(|state| state.tag_node("lhs"))
     ///                 .and_then(|state| state.match_string(o))
     ///                 .and_then(number)
-    ///                 .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("rhs")))
+    ///                 .and_then(|state| state.tag_node("rhs"))
     ///         })
     ///     })
     /// }
@@ -676,9 +676,9 @@ mod tests {
             state: Box<ParserState<'_, Rule>>,
         ) -> ParseResult<Box<ParserState<'_, Rule>>> {
             expr(state, Rule::mul, "*")
-                .and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed("mul")))
+                .and_then(|state| state.tag_node("mul"))
                 .or_else(|state| expr(state, Rule::add, "+"))
-                .and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed("add")))
+                .and_then(|state| state.tag_node("add"))
         }
         fn expr<'a>(
             state: Box<ParserState<'a, Rule>>,
@@ -688,10 +688,10 @@ mod tests {
             state.rule(r, |state| {
                 state.sequence(|state| {
                     number(state)
-                        .and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed("lhs")))
+                        .and_then(|state| state.tag_node("lhs"))
                         .and_then(|state| state.match_string(o))
                         .and_then(number)
-                        .and_then(|state| state.tag_node(alloc::borrow::Cow::Borrowed("rhs")))
+                        .and_then(|state| state.tag_node("rhs"))
                 })
             })
         }
