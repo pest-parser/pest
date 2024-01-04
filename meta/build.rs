@@ -17,7 +17,11 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn display_digest(digest: &[u8]) -> String {
-    digest.iter().map(|byte| format!("{:02x}", byte)).collect()
+    use std::fmt::Write;
+    digest.iter().fold(String::new(), |mut output, b| {
+        let _ = write!(output, "{b:02x}");
+        output
+    })
 }
 
 fn main() {
