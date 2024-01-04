@@ -457,7 +457,7 @@ fn ast() {
         let vals: Vec<&Json> = pairs.values().collect();
 
         assert_eq!(
-            **vals.get(0).unwrap(),
+            **vals.first().unwrap(),
             Json::Array(vec![Json::Null, Json::Bool(true), Json::Number(3.4)])
         );
     }
