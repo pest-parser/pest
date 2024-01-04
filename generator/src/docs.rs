@@ -1,9 +1,13 @@
+//! Type and helper to collect the gramamr and rule documentation.
+
 use pest::iterators::Pairs;
 use pest_meta::parser::Rule;
 use std::collections::HashMap;
 
+/// Abstraction for the grammer and rule doc.
 #[derive(Debug)]
-pub(crate) struct DocComment {
+pub struct DocComment {
+    /// The grammar documentation is defined at the beginning of a file with //!.
     pub grammar_doc: String,
 
     /// HashMap for store all doc_comments for rules.
@@ -33,7 +37,7 @@ pub(crate) struct DocComment {
 /// grammar_doc = "This is a grammar doc"
 /// line_docs = { "foo": "line doc 1\nline doc 2", "bar": "line doc 3" }
 /// ```
-pub(crate) fn consume(pairs: Pairs<'_, Rule>) -> DocComment {
+pub fn consume(pairs: Pairs<'_, Rule>) -> DocComment {
     let mut grammar_doc = String::new();
 
     let mut line_docs: HashMap<String, String> = HashMap::new();

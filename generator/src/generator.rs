@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Helpers to generate the code for the Parser `derive``.
+
 use std::path::PathBuf;
 
 use proc_macro2::TokenStream;
@@ -20,7 +22,10 @@ use pest_meta::optimizer::*;
 use crate::docs::DocComment;
 use crate::ParsedDerive;
 
-pub(crate) fn generate(
+/// Generates the corresponding parser based based on the processed macro input. If `include_grammar`
+/// is set to true, it'll generate an explicit "include_str" statement (done in pest_derive, but
+/// turned off in the local bootstrap).
+pub fn generate(
     parsed_derive: ParsedDerive,
     paths: Vec<PathBuf>,
     rules: Vec<OptimizedRule>,

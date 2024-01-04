@@ -26,13 +26,14 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
 
+use generator::generate;
 use proc_macro2::TokenStream;
 use syn::{Attribute, DeriveInput, Expr, ExprLit, Generics, Ident, Lit, Meta};
 
 #[macro_use]
 mod macros;
-mod docs;
-mod generator;
+pub mod docs;
+pub mod generator;
 
 use pest_meta::parser::{self, rename_meta_rule, Rule};
 use pest_meta::{optimizer, unwrap_or_report, validator};
@@ -96,7 +97,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast = unwrap_or_report(parser::consume_rules(pairs));
     let optimized = optimizer::optimize(ast);
 
-    generator::generate(
+    generate(
         parsed_derive,
         paths,
         optimized,
@@ -119,10 +120,14 @@ enum GrammarSource {
     Inline(String),
 }
 
-struct ParsedDerive {
-    pub(crate) name: Ident,
-    pub(crate) generics: Generics,
-    pub(crate) non_exhaustive: bool,
+/// Parsed information of the derive and the attributes.
+pub struct ParsedDerive {
+    /// The identifier of the deriving struct, union, or enum.
+    pub name: Ident,
+    /// The generics of the deriving struct, union, or enum.
+    pub generics: Generics,
+    /// Indicates whether the 'non_exhaustive' attribute is added to the 'Rule' enum.
+    pub non_exhaustive: bool,
 }
 
 fn parse_derive(ast: DeriveInput) -> (ParsedDerive, Vec<GrammarSource>) {
