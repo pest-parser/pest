@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use alloc::borrow::{Cow, ToOwned};
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::vec;
@@ -392,7 +392,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     ///         character(state)
     ///             .and_then(|state| character(state))
     ///             .and_then(|state| character(state))
-    ///             .and_then(|state| state.tag_node(std::borrow::Cow::Borrowed("c")))
+    ///             .and_then(|state| state.tag_node("c"))
     ///             .and_then(|state| character(state))
     ///     })
     /// }
@@ -407,7 +407,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(find[0].as_str(), "c")
     /// ```
     #[inline]
-    pub fn tag_node(mut self: Box<Self>, tag: Cow<'i, str>) -> ParseResult<Box<Self>> {
+    pub fn tag_node(mut self: Box<Self>, tag: &'i str) -> ParseResult<Box<Self>> {
         if let Some(QueueableToken::End { tag: old, .. }) = self.queue.last_mut() {
             *old = Some(tag)
         }

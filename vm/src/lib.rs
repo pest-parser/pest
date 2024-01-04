@@ -64,20 +64,20 @@ impl Vm {
 
     /// Runs a parser rule on an input
     #[allow(clippy::perf)]
-    pub fn parse<'a, 'i>(
+    pub fn parse<'a>(
         &'a self,
         rule: &'a str,
-        input: &'i str,
-    ) -> Result<Pairs<'i, &str>, Error<&str>> {
+        input: &'a str,
+    ) -> Result<Pairs<'a, &str>, Error<&str>> {
         pest::state(input, |state| self.parse_rule(rule, state))
     }
 
     #[allow(clippy::suspicious)]
-    fn parse_rule<'a, 'i>(
+    fn parse_rule<'a>(
         &'a self,
         rule: &'a str,
-        state: Box<ParserState<'i, &'a str>>,
-    ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
+        state: Box<ParserState<'a, &'a str>>,
+    ) -> ParseResult<Box<ParserState<'a, &'a str>>> {
         if let Some(ref listener) = self.listener {
             if listener(rule.to_owned(), state.position()) {
                 return Err(ParserState::new(state.position().line_of()));
@@ -179,11 +179,11 @@ impl Vm {
         }
     }
 
-    fn parse_expr<'a, 'i>(
+    fn parse_expr<'a>(
         &'a self,
         expr: &'a OptimizedExpr,
-        state: Box<ParserState<'i, &'a str>>,
-    ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
+        state: Box<ParserState<'a, &'a str>>,
+    ) -> ParseResult<Box<ParserState<'a, &'a str>>> {
         match *expr {
             OptimizedExpr::Str(ref string) => state.match_string(string),
             OptimizedExpr::Insens(ref string) => state.match_insensitive(string),
@@ -245,17 +245,17 @@ impl Vm {
             #[cfg(feature = "grammar-extras")]
             OptimizedExpr::NodeTag(ref expr, ref tag) => self
                 .parse_expr(expr, state)
-                .and_then(|state| state.tag_node(std::borrow::Cow::Owned(tag.clone()))),
+                .and_then(|state| state.tag_node(tag)),
             OptimizedExpr::RestoreOnErr(ref expr) => {
                 state.restore_on_err(|state| self.parse_expr(expr, state))
             }
         }
     }
 
-    fn skip<'a, 'i>(
+    fn skip<'a>(
         &'a self,
-        state: Box<ParserState<'i, &'a str>>,
-    ) -> ParseResult<Box<ParserState<'i, &'a str>>> {
+        state: Box<ParserState<'a, &'a str>>,
+    ) -> ParseResult<Box<ParserState<'a, &'a str>>> {
         match (
             self.rules.contains_key("WHITESPACE"),
             self.rules.contains_key("COMMENT"),
