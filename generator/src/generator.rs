@@ -20,7 +20,7 @@ use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
 use crate::docs::DocComment;
-use crate::ParsedDerive;
+use crate::parse_derive::ParsedDerive;
 
 /// Generates the corresponding parser based based on the processed macro input. If `include_grammar`
 /// is set to true, it'll generate an explicit "include_str" statement (done in pest_derive, but
