@@ -18,6 +18,8 @@ default = ["std"]
 std = ["pest/std"]
 not-bootstrap-in-src = ["pest_meta/not-bootstrap-in-src"]
 grammar-extras = ["pest_meta/grammar-extras"]
+# Export internal API that is not intended to be stable
+export-internal = []
 
 [dependencies]
 pest = { path = "../pest", version = "2.7.6", default-features = false }
