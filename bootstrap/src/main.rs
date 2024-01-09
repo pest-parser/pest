@@ -15,6 +15,10 @@ fn main() {
         env!("CARGO_MANIFEST_DIR"),
         "/../meta/src/grammar.pest"
     ));
+    // Path on which we should write generated grammar file.
+    // In case `not-bootstrap-in-src` is:
+    // * OFF -> in `grammar.rs` next to `grammar.pest`
+    // * ON  -> in `target/build/.../__pest_grammar.rs` directory as specified in `meta/build.rs`
     let rs: PathBuf = if should_bootstrap_in_src() {
         Path::new(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -33,6 +37,8 @@ fn main() {
             #[grammar = #path]
             pub struct PestParser;
         };
+        // Passing value to `derive_parser` as if there was a derive annotation
+        // next to the struct above.
         derive_parser(pest, false)
     };
 
