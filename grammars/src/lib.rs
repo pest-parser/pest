@@ -276,4 +276,96 @@ mod tests {
         };
         assert_eq!(expected_expr, actual_expr);
     }
+
+    #[test]
+    fn sql_parse_attempts_error() {
+        fn is_whitespace(string: String) -> bool {
+            string == "\r\n"
+                || (string.len() == 1 && string.chars().next().unwrap().is_whitespace())
+        }
+
+        fn rule_to_message(r: &sql::Rule) -> Option<String> {
+            match r {
+                sql::Rule::CreateTable => Some(String::from("Expected table creation.")),
+                sql::Rule::PrimaryKey => Some(String::from(
+                    "Add primary key consisting of non nullable table columns.",
+                )),
+                sql::Rule::CreateUser => Some(String::from("Expected user creation.")),
+                sql::Rule::SingleQuotedString => {
+                    Some(String::from("Add a string in single qoutes."))
+                }
+                sql::Rule::Query => Some(String::from("DML query expected.")),
+                sql::Rule::Expr => Some(String::from("Expected expression.")),
+                _ => None,
+            }
+        }
+
+        type RuleToMessageBoxed = Box<dyn Fn(&sql::Rule) -> Option<String>>;
+        type IsWhiteSpaceBoxed = Box<dyn Fn(String) -> bool>;
+
+        let rule_to_message_boxed: RuleToMessageBoxed = Box::new(rule_to_message);
+        let is_whitespace_boxed: IsWhiteSpaceBoxed = Box::new(is_whitespace);
+
+        let retrieve_parse_attempts_error_string = |input| {
+            let e = sql::SqlParser::parse(sql::Rule::Command, input).unwrap_err();
+            let parse_attempt_error = e
+                .parse_attempts_error(input, &rule_to_message_boxed, &is_whitespace_boxed)
+                .unwrap();
+            format!("{parse_attempt_error}")
+        };
+
+        let table_creation_without_primary_key =
+            r#"create table t(col_1 int,) distributed by (col_1)"#;
+        assert_eq!(
+            retrieve_parse_attempts_error_string(table_creation_without_primary_key),
+            [
+                " --> 1:26",
+                "  |",
+                "1 | create table t(col_1 int,) distributed by (col_1)",
+                "  |                          ^---",
+                "  |",
+                "  = error: parsing error occurred.",
+                r#"    note: expected one of tokens: WHITESPACE, `"`, `-`, `A..Z`, `PRIMARY`, `_`, `a..z`, `А..Я`, `а..я`"#,
+                "    help: Expected table creation.",
+                "          - Add primary key consisting of non nullable table columns.",
+            ]
+            .join("\n")
+        );
+
+        let user_creation_password_without_single_qoutes = r#"create user
+                                                                   Bob password "wrong""#;
+        assert_eq!(
+            retrieve_parse_attempts_error_string(user_creation_password_without_single_qoutes),
+            [
+                " --> 2:81",
+                "  |",
+                r#"2 |                                                                    Bob password "wrong""#,
+                "  |                                                                                 ^---",
+                "  |",
+                "  = error: parsing error occurred.",
+                "    note: expected one of tokens: WHITESPACE, `''`, `'`",
+                "    help: Expected user creation.",
+                "          - Add a string in single qoutes.",
+            ]
+                .join("\n")
+        );
+
+        let invalid_expression_in_projection = r#"select 1 + from t"#;
+        assert_eq!(
+            retrieve_parse_attempts_error_string(invalid_expression_in_projection),
+            [
+                " --> 1:12",
+                "  |",
+                "1 | select 1 + from t",
+                "  |            ^---",
+                "  |",
+                "  = error: parsing error occurred.",
+                r#"    note: expected one of tokens: WHITESPACE, `"`, `$`, `''`, `'`, `(`, `+`, `-`, `0..9`, `?`, `CAST`, `EXISTS`, `FALSE`, `NOT`, `NULL`, `TRUE`"#,
+                "    note: unexpected token: `FROM`",
+                "    help: DML query expected.",
+                "          - Expected expression.",
+            ]
+                .join("\n")
+        );
+    }
 }
