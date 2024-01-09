@@ -10,7 +10,7 @@
 //! The core functionality of parsing grammar.
 //! State of parser during the process of rules handling.
 
-use alloc::borrow::{ToOwned};
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::vec;
