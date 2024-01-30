@@ -1,0 +1,2 @@
+COMMENT = { SingleLineComment }
+SingleLineComment = { "//" ~ (!"\n" ~ ANY) }

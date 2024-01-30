@@ -1,7 +1,7 @@
 [package]
 name = "pest_vm"
 description = "pest grammar virtual machine"
-version = "2.7.6"
+version = "2.7.7"
 edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest.rs/"
@@ -14,8 +14,10 @@ readme = "_README.md"
 rust-version = "1.61"
 
 [dependencies]
-pest = { path = "../pest", version = "2.7.6" }
-pest_meta = { path = "../meta", version = "2.7.6" }
+pest = { path = "../pest", version = "2.7.7" }
+pest_meta = { path = "../meta", version = "2.7.7" }
 
 [features]
 grammar-extras = ["pest_meta/grammar-extras"]
+# Makes WHITESPACE and COMMENT rules compound atomic instead of atomic
+inner-trivia = []

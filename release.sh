@@ -22,7 +22,13 @@ publish() {
     cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty --all-features
   else
     # cannot publish with the `not-bootstrap-in-src` feature enabled
-    cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty --features grammar-extras
+    if [ "${1}" = "pest_derive" ] || [ "${1}" = "pest_vm" ]; then
+        cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty --features grammar-extras,inner-trivia
+    elif [ "${1}" = "pest_generator" ]; then
+        cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty --features grammar-extras,export-internal,inner-trivia
+    else
+        cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty --features grammar-extras
+    fi
   fi
   echo ""
 }

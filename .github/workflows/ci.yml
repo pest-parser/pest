@@ -46,7 +46,7 @@ jobs:
       - name: cargo clippy
         run: cargo clippy --all --features pretty-print,const_prec_climber,memchr,grammar-extras --all-targets -- -Dwarnings
       - name: cargo test
-        run: cargo test --all --features pretty-print,const_prec_climber,memchr,grammar-extras --release
+        run: cargo test --all --features pretty-print,const_prec_climber,memchr,grammar-extras,inner-trivia --release
       - name: cargo test (ignored)
         run: cargo test -p pest_grammars --lib --verbose --release -- --ignored tests::toml_handles_deep_nesting_unstable
 

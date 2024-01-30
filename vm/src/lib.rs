@@ -129,9 +129,11 @@ impl Vm {
             if rule.name == "WHITESPACE" || rule.name == "COMMENT" {
                 match rule.ty {
                     RuleType::Normal => state.rule(&rule.name, |state| {
-                        state.atomic(Atomicity::Atomic, |state| {
-                            self.parse_expr(&rule.expr, state)
-                        })
+                        #[cfg(feature = "inner-trivia")]
+                        let atomicity = Atomicity::CompoundAtomic;
+                        #[cfg(not(feature = "inner-trivia"))]
+                        let atomicity = Atomicity::Atomic;
+                        state.atomic(atomicity, |state| self.parse_expr(&rule.expr, state))
                     }),
                     RuleType::Silent => state.atomic(Atomicity::Atomic, |state| {
                         self.parse_expr(&rule.expr, state)

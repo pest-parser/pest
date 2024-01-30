@@ -297,9 +297,15 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
         generate_expr_atomic(rule.expr)
     } else if rule.name == "WHITESPACE" || rule.name == "COMMENT" {
         let atomic = generate_expr_atomic(rule.expr);
-
+        #[cfg(not(feature = "inner-trivia"))]
         quote! {
             state.atomic(::pest::Atomicity::Atomic, |state| {
+                #atomic
+            })
+        }
+        #[cfg(feature = "inner-trivia")]
+        quote! {
+            state.atomic(::pest::Atomicity::CompoundAtomic, |state| {
                 #atomic
             })
         }
