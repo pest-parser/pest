@@ -23,6 +23,7 @@ pub fn skip(rule: Rule, map: &HashMap<String, Expr>) -> Rule {
                     choices.push(string);
                     populate_choices(*rhs, map, choices)
                 } else if let Expr::Ident(name) = *lhs {
+                    // Try inlining rule in choices
                     if let Some(Expr::Skip(mut inlined_choices)) = map
                         .get(&name)
                         .and_then(|expr| populate_choices(expr.clone(), map, vec![]))
@@ -40,6 +41,7 @@ pub fn skip(rule: Rule, map: &HashMap<String, Expr>) -> Rule {
                 choices.push(string);
                 Some(Expr::Skip(choices))
             }
+            // Try inlining single rule
             Expr::Ident(name) => map
                 .get(&name)
                 .and_then(|expr| populate_choices(expr.clone(), map, choices)),
