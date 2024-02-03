@@ -1060,7 +1060,10 @@ mod tests {
                     name: "skip".to_owned(),
                     ty: RuleType::Atomic,
                     expr: box_tree!(Rep(Seq(
-                        NegPred(Choice(Ident(String::from("inline")), Str(String::from("b")))),
+                        NegPred(Choice(
+                            Ident(String::from("inline")),
+                            Str(String::from("b"))
+                        )),
                         Ident("ANY".to_owned())
                     ))),
                 },
