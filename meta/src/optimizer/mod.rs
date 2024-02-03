@@ -1048,6 +1048,34 @@ mod tests {
         }
 
         #[test]
+        fn inline_skip() {
+            use crate::ast::Expr::*;
+            let rules = vec![
+                Rule {
+                    name: "inline".to_owned(),
+                    ty: RuleType::Atomic,
+                    expr: Str("a".to_owned()),
+                },
+                Rule {
+                    name: "skip".to_owned(),
+                    ty: RuleType::Atomic,
+                    expr: box_tree!(Rep(Seq(
+                        NegPred(Choice(Ident(String::from("inline")), Str(String::from("b")))),
+                        Ident("ANY".to_owned())
+                    ))),
+                },
+            ];
+            let map = to_hash_map(&rules);
+            let rule = skipper::skip(rules[1].clone(), &map);
+            assert!(matches!(rule, Rule { expr: Skip(..), .. }));
+            let choices = match rule.expr {
+                Skip(choices) => choices,
+                _ => unreachable!(),
+            };
+            assert_eq!(choices, vec!["a".to_owned(), "b".to_owned()]);
+        }
+
+        #[test]
         fn push() {
             assert_eq!(
                 OptimizedExpr::Push(Box::new(OptimizedExpr::Ident("e".to_owned()))).to_string(),

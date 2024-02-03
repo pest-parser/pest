@@ -22,6 +22,16 @@ pub fn skip(rule: Rule, map: &HashMap<String, Expr>) -> Rule {
                 if let Expr::Str(string) = *lhs {
                     choices.push(string);
                     populate_choices(*rhs, map, choices)
+                } else if let Expr::Ident(name) = *lhs {
+                    if let Some(Expr::Skip(mut inlined_choices)) = map
+                        .get(&name)
+                        .and_then(|expr| populate_choices(expr.clone(), map, vec![]))
+                    {
+                        choices.append(&mut inlined_choices);
+                        populate_choices(*rhs, map, choices)
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
