@@ -7,15 +7,21 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use std::collections::HashMap;
+
 use crate::ast::*;
 
-pub fn skip(rule: Rule) -> Rule {
-    fn populate_choices(expr: Expr, mut choices: Vec<String>) -> Option<Expr> {
+pub fn skip(rule: Rule, map: &HashMap<String, Expr>) -> Rule {
+    fn populate_choices(
+        expr: Expr,
+        map: &HashMap<String, Expr>,
+        mut choices: Vec<String>,
+    ) -> Option<Expr> {
         match expr {
             Expr::Choice(lhs, rhs) => {
                 if let Expr::Str(string) = *lhs {
                     choices.push(string);
-                    populate_choices(*rhs, choices)
+                    populate_choices(*rhs, map, choices)
                 } else {
                     None
                 }
@@ -24,6 +30,9 @@ pub fn skip(rule: Rule) -> Rule {
                 choices.push(string);
                 Some(Expr::Skip(choices))
             }
+            Expr::Ident(name) => map
+                .get(&name)
+                .and_then(|expr| populate_choices(expr.clone(), map, choices)),
             _ => None,
         }
     }
@@ -38,7 +47,7 @@ pub fn skip(rule: Rule) -> Rule {
                     if let Expr::Seq(lhs, rhs) = *expr {
                         if let (Expr::NegPred(expr), Expr::Ident(ident)) = (*lhs, *rhs) {
                             if ident == "ANY" {
-                                if let Some(expr) = populate_choices(*expr, vec![]) {
+                                if let Some(expr) = populate_choices(*expr, map, vec![]) {
                                     return expr;
                                 }
                             }
