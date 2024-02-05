@@ -30,10 +30,11 @@ mod unroller;
 
 /// Takes pest's ASTs and optimizes them
 pub fn optimize(rules: Vec<Rule>) -> Vec<OptimizedRule> {
+    let map = to_hash_map(&rules);
     let optimized: Vec<OptimizedRule> = rules
         .into_iter()
         .map(rotater::rotate)
-        .map(skipper::skip)
+        .map(|rule| skipper::skip(rule, &map))
         .map(unroller::unroll)
         .map(concatenator::concatenate)
         .map(factorizer::factor)
@@ -41,10 +42,10 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<OptimizedRule> {
         .map(rule_to_optimized_rule)
         .collect();
 
-    let rules = to_hash_map(&optimized);
+    let optimized_map = to_optimized_hash_map(&optimized);
     optimized
         .into_iter()
-        .map(|rule| restorer::restore_on_err(rule, &rules))
+        .map(|rule| restorer::restore_on_err(rule, &optimized_map))
         .collect()
 }
 
@@ -87,12 +88,18 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
     }
 }
 
-fn to_hash_map(rules: &[OptimizedRule]) -> HashMap<String, OptimizedExpr> {
-    rules
-        .iter()
-        .map(|r| (r.name.clone(), r.expr.clone()))
-        .collect()
+macro_rules! to_hash_map {
+    ($func_name:ident, $rule:ty, $expr:ty) => {
+        fn $func_name(rules: &[$rule]) -> HashMap<String, $expr> {
+            rules
+                .iter()
+                .map(|r| (r.name.clone(), r.expr.clone()))
+                .collect()
+        }
+    };
 }
+to_hash_map!(to_hash_map, Rule, Expr);
+to_hash_map!(to_optimized_hash_map, OptimizedRule, OptimizedExpr);
 
 /// The optimized version of the pest AST's `Rule`.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -1038,6 +1045,37 @@ mod tests {
                 .to_string(),
                 r#"(!("a" | "bc") ~ ANY)*"#,
             );
+        }
+
+        #[test]
+        fn inline_skip() {
+            use crate::ast::Expr::*;
+            let rules = vec![
+                Rule {
+                    name: "inline".to_owned(),
+                    ty: RuleType::Atomic,
+                    expr: Str("a".to_owned()),
+                },
+                Rule {
+                    name: "skip".to_owned(),
+                    ty: RuleType::Atomic,
+                    expr: box_tree!(Rep(Seq(
+                        NegPred(Choice(
+                            Ident(String::from("inline")),
+                            Str(String::from("b"))
+                        )),
+                        Ident("ANY".to_owned())
+                    ))),
+                },
+            ];
+            let map = to_hash_map(&rules);
+            let rule = skipper::skip(rules[1].clone(), &map);
+            assert!(matches!(rule, Rule { expr: Skip(..), .. }));
+            let choices = match rule.expr {
+                Skip(choices) => choices,
+                _ => unreachable!(),
+            };
+            assert_eq!(choices, vec!["a".to_owned(), "b".to_owned()]);
         }
 
         #[test]
