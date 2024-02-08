@@ -61,7 +61,7 @@ use std::{
     collections::HashSet,
     fs::File,
     io::{self, Read},
-    path::PathBuf,
+    path::Path,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::SyncSender as Sender,
@@ -139,7 +139,7 @@ const POISONED_LOCK_PANIC: &str = "poisoned lock";
 const CHANNEL_CLOSED_PANIC: &str = "channel closed";
 
 impl DebuggerContext {
-    fn file_to_string(path: &PathBuf) -> Result<String, DebuggerError> {
+    fn file_to_string(path: impl AsRef<Path>) -> Result<String, DebuggerError> {
         let mut file = File::open(path)?;
 
         let mut string = String::new();
@@ -149,10 +149,11 @@ impl DebuggerContext {
     }
 
     /// Loads a grammar from a file.
-    pub fn load_grammar(&mut self, path: &PathBuf) -> Result<(), DebuggerError> {
-        let grammar = DebuggerContext::file_to_string(path)?;
+    pub fn load_grammar(&mut self, path: impl AsRef<Path>) -> Result<(), DebuggerError> {
+        let grammar = DebuggerContext::file_to_string(&path)?;
 
         let file_name = path
+            .as_ref()
             .file_name()
             .map(|string| string.to_string_lossy().into_owned())
             .ok_or(DebuggerError::MissingFilename)?;
@@ -174,7 +175,7 @@ impl DebuggerContext {
     }
 
     /// Loads a parsing input from a file.
-    pub fn load_input(&mut self, path: &PathBuf) -> Result<(), DebuggerError> {
+    pub fn load_input(&mut self, path: impl AsRef<Path>) -> Result<(), DebuggerError> {
         let input = DebuggerContext::file_to_string(path)?;
 
         self.input = Some(input);
@@ -448,24 +449,21 @@ mod test {
     pub fn test_errors() {
         let mut context = DebuggerContext::default();
 
-        assert!(context.load_input(&PathBuf::from(".")).is_err());
-        let pest_readme = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../README.md"));
-        let pest_grammar = PathBuf::from(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../meta/src/grammar.pest"
-        ));
+        assert!(context.load_input(".").is_err());
+        let pest_readme = concat!(env!("CARGO_MANIFEST_DIR"), "/../README.md");
+        let pest_grammar = concat!(env!("CARGO_MANIFEST_DIR"), "/../meta/src/grammar.pest");
 
-        assert!(context.load_grammar(&pest_readme).is_err());
+        assert!(context.load_grammar(pest_readme).is_err());
         assert!(context.add_all_rules_breakpoints().is_err());
         assert!(context.cont().is_err());
         assert!(context.run("rule", sync_channel(1).0).is_err());
-        assert!(context.load_grammar(&pest_grammar).is_ok());
+        assert!(context.load_grammar(pest_grammar).is_ok());
         assert!(context.run("rule", sync_channel(1).0).is_err());
         assert!(context.get_position(0).is_err());
         context.load_input_direct("".to_owned());
         assert!(context.get_position(0).is_ok());
         assert!(context.get_position(1).is_err());
-        assert!(context.load_input(&pest_grammar).is_ok());
+        assert!(context.load_input(pest_grammar).is_ok());
         let (sender, _receiver) = sync_channel(1);
         assert!(context.run("ANY", sender).is_ok());
         while context.cont().is_ok() {}
