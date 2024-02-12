@@ -463,6 +463,7 @@ impl<'i> PartialEq for Position<'i> {
 
 impl<'i> Eq for Position<'i> {}
 
+#[allow(clippy::non_canonical_partial_ord_impl)]
 impl<'i> PartialOrd for Position<'i> {
     fn partial_cmp(&self, other: &Position<'i>) -> Option<Ordering> {
         if ptr::eq(self.input, other.input) {
