@@ -23,7 +23,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           kind: check
-          toolchain: 1.70.0
+          toolchain: 1.74.0 # needed for `clap` in pest_debugger
       - name: cargo check
         run: cargo check --all --features pretty-print,const_prec_climber,memchr,grammar-extras --all-targets
 
