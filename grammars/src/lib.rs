@@ -50,13 +50,29 @@ pub mod toml {
     pub struct TomlParser;
 }
 
+/// Grammar rules of an SQL parser
+#[allow(missing_docs)]
+pub mod sql {
+    /// SQL parser.
+    /// Grammar is a tinkered version of the one used in distributed SQL executor module named
+    /// [sbroad](https://git.picodata.io/picodata/picodata/sbroad/-/blob/main/sbroad-core/src/frontend/sql/query.pest).
+    /// Being a submodule of [Picodata](https://git.picodata.io/picodata/picodata/picodata) (that
+    /// operates with Tarantool database) it tries to simulate SQLite flavour (Tarantool uses
+    /// SQLite to execute SQL queries).
+    #[derive(Parser)]
+    #[grammar = "grammars/sql.pest"]
+    pub struct SqlParser;
+}
+
 #[cfg(test)]
 mod tests {
+    use pest::iterators::Pairs;
     use std::convert::TryInto;
 
+    use pest::pratt_parser::PrattParser;
     use pest::Parser;
 
-    use crate::{json, toml};
+    use crate::{json, sql, toml};
 
     fn test_toml_deep_nesting(input: &str) {
         const ERROR: &str = "call limit reached";
@@ -103,5 +119,161 @@ mod tests {
         let s2 = json::JsonParser::parse(json::Rule::json, sample2);
         assert!(s2.is_err());
         assert_eq!(s2.unwrap_err().variant.message(), ERROR);
+    }
+
+    #[test]
+    fn sql_check_expressions_priorities() {
+        lazy_static::lazy_static! {
+            static ref PRATT_PARSER: PrattParser<sql::Rule> = {
+                use pest::pratt_parser::{Assoc::{Left, Right}, Op};
+                use sql::Rule::{Add, And, Between, ConcatInfixOp, Divide, Eq, Gt, GtEq, In,
+                                IsNullPostfix, Lt, LtEq, Multiply, NotEq, Or, Subtract, UnaryNot};
+
+                // Precedence is defined lowest to highest.
+                PrattParser::new()
+                    .op(Op::infix(Or, Left))
+                    .op(Op::infix(Between, Left))
+                    .op(Op::infix(And, Left))
+                    .op(Op::prefix(UnaryNot))
+                    .op(
+                        Op::infix(Eq, Right) | Op::infix(NotEq, Right) | Op::infix(NotEq, Right)
+                            | Op::infix(Gt, Right) | Op::infix(GtEq, Right) | Op::infix(Lt, Right)
+                            | Op::infix(LtEq, Right) | Op::infix(In, Right)
+                    )
+                    .op(Op::infix(Add, Left) | Op::infix(Subtract, Left))
+                    .op(Op::infix(Multiply, Left) | Op::infix(Divide, Left) | Op::infix(ConcatInfixOp, Left))
+                    .op(Op::postfix(IsNullPostfix))
+            };
+        }
+
+        #[derive(Debug, PartialEq, Eq)]
+        enum ArithOp {
+            Add,
+            Mult,
+        }
+
+        #[derive(Debug, PartialEq, Eq)]
+        enum BoolOp {
+            And,
+            Or,
+            Eq,
+            In,
+        }
+
+        #[derive(Debug, PartialEq, Eq)]
+        enum InfixOp {
+            ArithInfix(ArithOp),
+            BoolInfix(BoolOp),
+        }
+
+        #[derive(Debug, PartialEq, Eq)]
+        enum Expr {
+            SubQuery,
+            Infix {
+                left: Box<Expr>,
+                op: InfixOp,
+                right: Box<Expr>,
+            },
+            ArithValue(u64),
+            BoolConst(bool),
+            Not {
+                child: Box<Expr>,
+            },
+            IsNull {
+                child: Box<Expr>,
+            },
+        }
+
+        // Example of SQL expression containing many operators with different priorities.
+        // Should be interpreted as
+        // `(not ((1 + 1 * 2) = 3)) or ((false is null) and (1 in (select * from t where true)))`
+        let input = r#"not 1 + 1 * 2 = 3
+                            or false is null
+                            and 1 in (
+                                select "name", avg("grade") from students
+                                where "age" > 14
+                                group by "class"
+                            )"#;
+
+        let res_pairs = sql::SqlParser::parse(sql::Rule::Expr, input).unwrap();
+        fn parse_expr(expression_pairs: Pairs<'_, sql::Rule>) -> Expr {
+            PRATT_PARSER
+                .map_primary(|primary| match primary.as_rule() {
+                    sql::Rule::Expr => parse_expr(primary.into_inner()),
+                    sql::Rule::SubQuery => Expr::SubQuery,
+                    sql::Rule::Unsigned => {
+                        let u64_value = primary.as_str().parse::<u64>().unwrap();
+                        Expr::ArithValue(u64_value)
+                    }
+                    sql::Rule::True | sql::Rule::False => {
+                        let bool_value = primary.as_str().parse::<bool>().unwrap();
+                        Expr::BoolConst(bool_value)
+                    }
+                    rule => unreachable!("Expr::parse expected atomic rule, found {:?}", rule),
+                })
+                .map_infix(|lhs, op, rhs| {
+                    let op = match op.as_rule() {
+                        sql::Rule::And => InfixOp::BoolInfix(BoolOp::And),
+                        sql::Rule::Or => InfixOp::BoolInfix(BoolOp::Or),
+                        sql::Rule::Eq => InfixOp::BoolInfix(BoolOp::Eq),
+                        sql::Rule::In => InfixOp::BoolInfix(BoolOp::In),
+                        sql::Rule::Multiply => InfixOp::ArithInfix(ArithOp::Mult),
+                        sql::Rule::Add => InfixOp::ArithInfix(ArithOp::Add),
+                        rule => {
+                            unreachable!("Expr::parse expected infix operation, found {:?}", rule)
+                        }
+                    };
+                    Expr::Infix {
+                        left: Box::new(lhs),
+                        op,
+                        right: Box::new(rhs),
+                    }
+                })
+                .map_prefix(|op, child| match op.as_rule() {
+                    sql::Rule::UnaryNot => Expr::Not {
+                        child: Box::new(child),
+                    },
+                    rule => unreachable!("Expr::parse expected prefix operator, found {:?}", rule),
+                })
+                .map_postfix(|child, op| match op.as_rule() {
+                    sql::Rule::IsNullPostfix => Expr::IsNull {
+                        child: Box::new(child),
+                    },
+                    rule => unreachable!("Expr::parse expected postfix operator, found {:?}", rule),
+                })
+                .parse(expression_pairs)
+        }
+
+        let actual_expr = parse_expr(res_pairs);
+        let expected_expr = Expr::Infix {
+            op: InfixOp::BoolInfix(BoolOp::Or),
+            left: Box::new(Expr::Not {
+                child: Box::new(Expr::Infix {
+                    left: Box::new(Expr::Infix {
+                        left: Box::new(Expr::ArithValue(1)),
+                        op: InfixOp::ArithInfix(ArithOp::Add),
+                        right: Box::new(Expr::Infix {
+                            left: Box::new(Expr::ArithValue(1)),
+                            op: InfixOp::ArithInfix(ArithOp::Mult),
+                            right: Box::new(Expr::ArithValue(2)),
+                        }),
+                    }),
+                    op: InfixOp::BoolInfix(BoolOp::Eq),
+                    right: Box::new(Expr::ArithValue(3)),
+                }),
+            }),
+            right: Box::new(Expr::Infix {
+                left: Box::new(Expr::IsNull {
+                    child: Box::new(Expr::BoolConst(false)),
+                }),
+                op: InfixOp::BoolInfix(BoolOp::And),
+                right: Box::new(Expr::Infix {
+                    left: Box::new(Expr::ArithValue(1)),
+                    op: InfixOp::BoolInfix(BoolOp::In),
+                    right: Box::new(Expr::SubQuery),
+                }),
+            }),
+        };
+        assert_eq!(expected_expr, actual_expr);
     }
 }
