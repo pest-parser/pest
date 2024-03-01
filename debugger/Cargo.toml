@@ -1,9 +1,12 @@
 [package]
 name = "pest_debugger"
 description = "pest grammar debugger"
-version = "2.7.7"
+version = "2.7.8"
 edition = "2021"
-authors = ["Dragoș Tiselice <dragostiselice@gmail.com>", "Tomas Tauber <me@tomtau.be>"]
+authors = [
+    "Dragoș Tiselice <dragostiselice@gmail.com>",
+    "Tomas Tauber <me@tomtau.be>",
+]
 homepage = "https://pest.rs/"
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
@@ -14,10 +17,14 @@ readme = "_README.md"
 rust-version = "1.61"
 
 [dependencies]
-pest = { path = "../pest", version = "2.7.7" }
-pest_meta = { path = "../meta", version = "2.7.7" }
-pest_vm = { path = "../vm", version = "2.7.7" }
-reqwest = { version = "= 0.11.13", default-features = false, features = ["blocking", "json", "default-tls"] }
+pest = { path = "../pest", version = "2.7.8" }
+pest_meta = { path = "../meta", version = "2.7.8" }
+pest_vm = { path = "../vm", version = "2.7.8" }
+reqwest = { version = "= 0.11.13", default-features = false, features = [
+    "blocking",
+    "json",
+    "default-tls",
+] }
 rustyline = "10"
 serde_json = "1"
 thiserror = "1"
