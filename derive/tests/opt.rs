@@ -22,7 +22,6 @@ struct TestOptParser;
 fn test_opt_tag() {
     let successful_parse = TestOptParser::parse(Rule::expr, "*");
     assert!(successful_parse.is_ok());
-    dbg!(&successful_parse);
     let pairs = successful_parse.unwrap();
     assert!(pairs.find_first_tagged("prefix").is_some());
     assert!(pairs.find_first_tagged("suffix").is_none());

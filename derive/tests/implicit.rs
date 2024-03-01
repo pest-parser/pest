@@ -41,7 +41,6 @@ fn test_implicit_whitespace() {
 fn test_implicit_whitespace_multitag() {
     let successful_parse = TestImplicitParser::parse(Rule::program, "a a a");
     assert!(successful_parse.is_ok());
-    dbg!(&successful_parse);
     let pairs = successful_parse.unwrap();
     assert_eq!(pairs.clone().find_tagged("tail").count(), 2);
 }
