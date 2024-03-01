@@ -25,4 +25,18 @@ fn test_opt_tag() {
     let pairs = successful_parse.unwrap();
     assert!(pairs.find_first_tagged("prefix").is_some());
     assert!(pairs.find_first_tagged("suffix").is_none());
+
+    // Test with no STAR or DOT
+    let parse_no_components = TestOptParser::parse(Rule::expr, "");
+    assert!(parse_no_components.is_ok());
+    let pairs_no_components = parse_no_components.unwrap();
+    assert!(pairs_no_components.find_first_tagged("prefix").is_none());
+    assert!(pairs_no_components.find_first_tagged("suffix").is_none());
+
+    // Test with only DOT
+    let parse_only_dot = TestOptParser::parse(Rule::expr, ".");
+    assert!(parse_only_dot.is_ok());
+    let pairs_only_dot = parse_only_dot.unwrap();
+    assert!(pairs_only_dot.find_first_tagged("prefix").is_none());
+    assert!(pairs_only_dot.find_first_tagged("suffix").is_some());
 }
