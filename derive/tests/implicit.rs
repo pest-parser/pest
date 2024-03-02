@@ -35,3 +35,12 @@ fn test_implicit_whitespace() {
     assert_eq!(pairs.clone().find_tagged("one_comp").count(), 2);
     assert_eq!(pairs.find_tagged("one_array").count(), 2);
 }
+
+#[test]
+#[cfg(feature = "grammar-extras")]
+fn test_implicit_whitespace_multitag() {
+    let successful_parse = TestImplicitParser::parse(Rule::program, "a a a");
+    assert!(successful_parse.is_ok());
+    let pairs = successful_parse.unwrap();
+    assert_eq!(pairs.clone().find_tagged("tail").count(), 2);
+}

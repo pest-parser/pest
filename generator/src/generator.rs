@@ -571,12 +571,42 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
             }
         }
         #[cfg(feature = "grammar-extras")]
-        OptimizedExpr::NodeTag(expr, tag) => {
-            let expr = generate_expr(*expr);
-            quote! {
-                #expr.and_then(|state| state.tag_node(#tag))
+        OptimizedExpr::NodeTag(expr, tag) => match *expr {
+            OptimizedExpr::Opt(expr) => {
+                let expr = generate_expr(*expr);
+                quote! {
+                    state.optional(|state| {
+                        #expr.and_then(|state| state.tag_node(#tag))
+                    })
+                }
             }
-        }
+            OptimizedExpr::Rep(expr) => {
+                let expr = generate_expr(*expr);
+                quote! {
+                    state.sequence(|state| {
+                        state.optional(|state| {
+                            #expr.and_then(|state| {
+                                state.repeat(|state| {
+                                    state.sequence(|state| {
+                                        super::hidden::skip(
+                                            state
+                                        ).and_then(|state| {
+                                            #expr.and_then(|state| state.tag_node(#tag))
+                                        })
+                                    })
+                                })
+                            }).and_then(|state| state.tag_node(#tag))
+                        })
+                    })
+                }
+            }
+            expr => {
+                let expr = generate_expr(expr);
+                quote! {
+                    #expr.and_then(|state| state.tag_node(#tag))
+                }
+            }
+        },
     }
 }
 
@@ -726,12 +756,32 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
             }
         }
         #[cfg(feature = "grammar-extras")]
-        OptimizedExpr::NodeTag(expr, tag) => {
-            let expr = generate_expr_atomic(*expr);
-            quote! {
-                #expr.and_then(|state| state.tag_node(#tag))
+        OptimizedExpr::NodeTag(expr, tag) => match *expr {
+            OptimizedExpr::Opt(expr) => {
+                let expr = generate_expr_atomic(*expr);
+
+                quote! {
+                    state.optional(|state| {
+                        #expr.and_then(|state| state.tag_node(#tag))
+                    })
+                }
             }
-        }
+            OptimizedExpr::Rep(expr) => {
+                let expr = generate_expr_atomic(*expr);
+
+                quote! {
+                    state.repeat(|state| {
+                        #expr.and_then(|state| state.tag_node(#tag))
+                    })
+                }
+            }
+            expr => {
+                let expr = generate_expr_atomic(expr);
+                quote! {
+                    #expr.and_then(|state| state.tag_node(#tag))
+                }
+            }
+        },
     }
 }
 
