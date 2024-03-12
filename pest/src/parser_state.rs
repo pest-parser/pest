@@ -12,16 +12,20 @@
 
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
+use alloc::collections::BTreeSet;
 use alloc::rc::Rc;
+use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::fmt::{Debug, Display, Formatter};
 use core::num::NonZeroUsize;
 use core::ops::Range;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::error::{Error, ErrorVariant};
+use crate::iterators::pairs::new;
 use crate::iterators::{pairs, QueueableToken};
-use crate::position::{self, Position};
+use crate::position::Position;
 use crate::span::Span;
 use crate::stack::Stack;
 use crate::RuleType;
@@ -125,6 +129,251 @@ impl CallLimitTracker {
     }
 }
 
+/// Number of call stacks that may result from a sequence of rules parsing.
+const CALL_STACK_INITIAL_CAPACITY: usize = 20;
+/// Max (un)expected number of tokens that we may see on the parsing error position.
+const EXPECTED_TOKENS_INITIAL_CAPACITY: usize = 30;
+/// Max rule children number for which we'll extend calls stacks.
+///
+/// In case rule we're working with has too many children rules that failed in parsing,
+/// we don't want to store long stacks for all of them. If rule has more than this number
+/// of failed children, they all will be collapsed in a parent rule.
+const CALL_STACK_CHILDREN_THRESHOLD: usize = 4;
+
+/// Structure tracking errored parsing call (associated with specific `ParserState` function).
+#[derive(Debug, Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
+pub enum ParseAttempt<R> {
+    /// Call of `rule` errored.
+    Rule(R),
+    /// Call of token element (e.g., `match_string` or `match_insensitive`) errored.
+    /// Works as indicator of that leaf node is not a rule. In order to get the token value we
+    /// can address `ParseAttempts` `(un)expected_tokens`.
+    Token,
+}
+
+impl<R> ParseAttempt<R> {
+    pub fn get_rule(&self) -> Option<&R> {
+        match self {
+            ParseAttempt::Rule(r) => Some(r),
+            ParseAttempt::Token => None,
+        }
+    }
+}
+
+/// Rules call stack.
+/// Contains sequence of rule calls that resulted in new parsing attempt.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct RulesCallStack<R> {
+    /// Deepest rule caused a parsing error (ParseAttempt::Token transformed into a rule).
+    pub deepest: ParseAttempt<R>,
+    /// Most top rule covering `deepest`.
+    pub parent: Option<R>,
+}
+
+impl<R> RulesCallStack<R> {
+    fn new(deepest: ParseAttempt<R>) -> RulesCallStack<R> {
+        RulesCallStack {
+            deepest,
+            parent: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum ParsingToken {
+    Sensitive { token: String },
+    Insensitive { token: String },
+    Range { start: char, end: char },
+    BuiltInRule,
+}
+
+impl Display for ParsingToken {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ParsingToken::Sensitive { token } => write!(f, "{token}"),
+            ParsingToken::Insensitive { token } => write!(f, "{}", token.to_uppercase()),
+            ParsingToken::Range { start, end } => write!(f, "{start}..{end}"),
+            ParsingToken::BuiltInRule => write!(f, "BUILTIN_RULE"),
+        }
+    }
+}
+
+/// Structure that tracks all the parsing attempts made on the max position.
+/// We want to give an error hint about parsing rules that succeeded
+/// at the farthest input position.
+/// The intuition is such rules will be most likely the query user initially wanted to write.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ParseAttempts<R> {
+    /// Vec of rule calls sequences awaiting tokens at the same `max_position`.
+    /// If there are several stacks in vec, it means all those rule stacks are "equal"
+    /// because their attempts occurred on the same position.
+    pub call_stacks: Vec<RulesCallStack<R>>,
+    /// Tokens that could be putted at `max_position`
+    /// in order to get a valid grammar query.
+    expected_tokens: Vec<ParsingToken>,
+    /// Tokens that we've prohibited to be putted at `max_position`
+    /// in order to get a valid grammar query.
+    unexpected_tokens: Vec<ParsingToken>,
+    /// Max position at which we were expecting to see one of `expected_tokens`.
+    pub max_position: usize,
+}
+
+impl<R: RuleType> ParseAttempts<R> {
+    /// Create new `ParseAttempts` instance with `call_stacks` and `expected_tokens`
+    /// initialized with capacity.
+    pub fn new() -> Self {
+        Self {
+            call_stacks: Vec::with_capacity(CALL_STACK_INITIAL_CAPACITY),
+            expected_tokens: Vec::with_capacity(EXPECTED_TOKENS_INITIAL_CAPACITY),
+            unexpected_tokens: Vec::with_capacity(EXPECTED_TOKENS_INITIAL_CAPACITY),
+            max_position: 0,
+        }
+    }
+
+    /// Get number of currently present call stacks.
+    fn call_stacks_number(&self) -> usize {
+        self.call_stacks.len()
+    }
+
+    pub fn expected_tokens(&self) -> Vec<ParsingToken> {
+        self.expected_tokens
+            .iter()
+            .cloned()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect()
+    }
+
+    pub fn unexpected_tokens(&self) -> Vec<ParsingToken> {
+        self.unexpected_tokens
+            .iter()
+            .cloned()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect()
+    }
+
+    /// Retrieve call stacks.
+    pub fn call_stacks(&self) -> Vec<RulesCallStack<R>> {
+        self.call_stacks
+            .iter()
+            .cloned()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect()
+    }
+
+    /// In case we've tried to parse a rule, which start position is bigger than previous
+    /// `max_position` it means that we've advanced in our parsing and found better candidate.
+    ///
+    /// `start_index` is:
+    /// * Number of call stacks present in state at the moment current `rule` was called. The idea
+    ///   is that we'd like to update only those stacks that originated from the current `rule` and
+    ///   not from those that were called previously.
+    /// * 0 in case we've successfully parsed some token since the moment `rule` was called.
+    fn try_add_new_stack_rule(&mut self, rule: R, start_index: usize) {
+        let mut non_token_call_stacks = Vec::new();
+        let mut token_call_stack_met = false;
+        for call_stack in self.call_stacks.iter().skip(start_index) {
+            if matches!(call_stack.deepest, ParseAttempt::Token) {
+                token_call_stack_met = true;
+            } else {
+                non_token_call_stacks.push(call_stack.clone())
+            }
+        }
+        if token_call_stack_met && non_token_call_stacks.is_empty() {
+            // If `non_token_call_stacks` is not empty we wouldn't like to add a new standalone
+            // `RulesCallStack::new(ParseAttempt::Token)` (that will later be transformed into a
+            // rule) as soon as it doesn't give us any useful additional info.
+            non_token_call_stacks.push(RulesCallStack::new(ParseAttempt::Token));
+        }
+        self.call_stacks
+            .splice(start_index.., non_token_call_stacks);
+
+        let children_number_over_threshold =
+            self.call_stacks_number() - start_index >= CALL_STACK_CHILDREN_THRESHOLD;
+        if children_number_over_threshold {
+            self.call_stacks.truncate(start_index);
+            self.call_stacks
+                .push(RulesCallStack::new(ParseAttempt::Rule(rule)));
+        } else {
+            for call_stack in self.call_stacks.iter_mut().skip(start_index) {
+                if matches!(call_stack.deepest, ParseAttempt::Token) {
+                    call_stack.deepest = ParseAttempt::Rule(rule);
+                } else {
+                    call_stack.parent = Some(rule);
+                }
+            }
+        }
+    }
+
+    /// If `expected` flag is set to false, it means we've successfully parsed token being in the
+    /// state of negative lookahead and want to track `token` in the `unexpected_tokens`. Otherwise,
+    /// we want to track it the `expected_tokens`. Let's call chosen vec a `target_vec`.
+    ///
+    /// In case `position` is:
+    /// * Equal to `max_position`, add `token` to `target_vec`,
+    /// * Bigger than `max_position`, set `token` as the only new element of `target_vec`.
+    #[allow(clippy::comparison_chain)]
+    fn try_add_new_token(
+        &mut self,
+        token: ParsingToken,
+        start_position: usize,
+        position: usize,
+        negative_lookahead: bool,
+    ) {
+        let target_vec_push_token = |attempts: &mut ParseAttempts<R>| {
+            let target_vec = if negative_lookahead {
+                &mut attempts.unexpected_tokens
+            } else {
+                &mut attempts.expected_tokens
+            };
+            target_vec.push(token);
+        };
+
+        if position > self.max_position {
+            if negative_lookahead && start_position > self.max_position {
+                // We encountered a sequence under negative lookahead.
+                // We would like to track only first failed token in this sequence (which
+                // `start_position` should be equal to `self.max_position`).
+                return;
+            }
+            target_vec_push_token(self);
+
+            if negative_lookahead {
+                // In case of successful parsing of token under negative lookahead the only
+                // thing we'd like to do is to track the token in the `unexpected_tokens`.
+                return;
+            }
+            self.max_position = position;
+            self.expected_tokens.clear();
+            self.unexpected_tokens.clear();
+            self.call_stacks.clear();
+            self.call_stacks
+                .push(RulesCallStack::new(ParseAttempt::Token));
+        } else if position == self.max_position {
+            target_vec_push_token(self);
+            self.call_stacks
+                .push(RulesCallStack::new(ParseAttempt::Token));
+        }
+    }
+
+    /// Reset state in case we've successfully parsed some token in
+    /// `match_string` or `match_insensetive`.
+    fn nullify_expected_tokens(&mut self, new_max_position: usize) {
+        self.call_stacks.clear();
+        self.expected_tokens.clear();
+        self.unexpected_tokens.clear();
+        self.max_position = new_max_position;
+    }
+}
+
+impl<R: RuleType> Default for ParseAttempts<R> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// The complete state of a [`Parser`].
 ///
 /// [`Parser`]: trait.Parser.html
@@ -158,6 +407,21 @@ pub struct ParserState<'i, R: RuleType> {
     stack: Stack<Span<'i>>,
     /// Used for setting max parser calls limit.
     call_tracker: CallLimitTracker,
+    /// Together with tracking of `pos_attempts` and `attempt_pos`
+    /// as a pair of (list of rules that we've tried to parse but failed, max parsed position)
+    /// we track those rules (which we've tried to parse at the same max pos) at this helper struct.
+    ///
+    /// Note, that we may try to parse several rules on different positions. We want to track only
+    /// those rules, which attempt position is bigger, because we consider that it's nearer to the
+    /// query that user really wanted to pass.
+    ///
+    /// E.g. we have a query `create user "Bobby"` and two root rules:
+    /// * CreateUser  = { "create" ~ "user"  ~ Name }
+    /// * CreateTable = { "create" ~ "table" ~ Name }
+    /// * Name = { SOME_DEFINITION }
+    /// While parsing the query we'll update tracker position to the start of "Bobby", because we'd
+    /// successfully parse "create" + "user" (and not "table").
+    parse_attempts: ParseAttempts<R>,
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -179,7 +443,7 @@ where
     match f(state) {
         Ok(state) => {
             let len = state.queue.len();
-            Ok(pairs::new(Rc::new(state.queue), input, None, 0, len))
+            Ok(new(Rc::new(state.queue), input, None, 0, len))
         }
         Err(mut state) => {
             let variant = if state.reached_call_limit() {
@@ -197,10 +461,11 @@ where
                 }
             };
 
-            Err(Error::new_from_pos(
+            Err(Error::new_from_pos_with_parsing_attempts(
                 variant,
                 // TODO(performance): Guarantee state.attempt_pos is a valid position
-                position::Position::new(input, state.attempt_pos).unwrap(),
+                Position::new(input, state.attempt_pos).unwrap(),
+                state.parse_attempts.clone(),
             ))
         }
     }
@@ -228,7 +493,13 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             atomicity: Atomicity::NonAtomic,
             stack: Stack::new(),
             call_tracker: Default::default(),
+            parse_attempts: ParseAttempts::new(),
         })
+    }
+
+    /// Get all parse attempts after process of parsing is finished.
+    pub fn get_parse_attempts(&self) -> &ParseAttempts<R> {
+        &self.parse_attempts
     }
 
     /// Returns a reference to the current `Position` of the `ParserState`.
@@ -338,8 +609,33 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         // In `track` using this variable we can say, how many attempts were added
         // during children rules traversal.
         let attempts = self.attempts_at(actual_pos);
+        // Number of call stacks present in `self.parse_attempts` before `f` call.
+        // We need to remember this number only in case there wasn't found any farther attempt.
+        // E.g. we are handling rule, on start position of which may be tested two
+        // children rules. At the moment we'll return from `f` call below,
+        // there will be two more children rules in `self.parse_attempts` that we'll
+        // consider to be the children of current `rule`.
+        let mut remember_call_stacks_number = self.parse_attempts.call_stacks_number();
+        // Max parsing attempt position at the moment of `rule` handling.
+        // It case it's raised during children rules handling, it means
+        // we've made a parsing progress.
+        let remember_max_position = self.parse_attempts.max_position;
 
         let result = f(self);
+
+        let mut try_add_rule_to_stack = |new_state: &mut Box<ParserState<'_, R>>| {
+            if new_state.parse_attempts.max_position > remember_max_position {
+                // It means that one of `match_string` or e.g. `match_insensetive` function calls
+                // have already erased `self.parse_attempts.call_stacks` and that previously
+                // remembered values are not valid anymore.
+                remember_call_stacks_number = 0;
+            }
+            if !matches!(new_state.atomicity, Atomicity::Atomic) {
+                new_state
+                    .parse_attempts
+                    .try_add_new_stack_rule(rule, remember_call_stacks_number);
+            }
+        };
 
         match result {
             Ok(mut new_state) => {
@@ -377,6 +673,10 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     });
                 }
 
+                // Note, that we need to count positive parsing results too, because we can fail in
+                // optional rule call inside which may lie the farthest
+                // parsed token.
+                try_add_rule_to_stack(&mut new_state);
                 Ok(new_state)
             }
             Err(mut new_state) => {
@@ -388,6 +688,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                         neg_attempts_index,
                         attempts,
                     );
+                    try_add_rule_to_stack(&mut new_state);
                 }
 
                 if new_state.lookahead == Lookahead::None
@@ -627,6 +928,31 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Generic function to handle result of char/string/range parsing
+    /// in order to track (un)expected tokens.
+    fn handle_token_parse_result(
+        &mut self,
+        start_position: usize,
+        token: ParsingToken,
+        parse_succeeded: bool,
+    ) {
+        // New position after tracked parsed element for case of `parse_succeded` is true.
+        // Position of parsing failure otherwise.
+        let current_pos = self.position.pos();
+
+        if parse_succeeded {
+            if self.lookahead == Lookahead::Negative {
+                self.parse_attempts
+                    .try_add_new_token(token, start_position, current_pos, true);
+            } else if current_pos > self.parse_attempts.max_position {
+                self.parse_attempts.nullify_expected_tokens(current_pos);
+            }
+        } else if self.lookahead != Lookahead::Negative {
+            self.parse_attempts
+                .try_add_new_token(token, start_position, current_pos, false);
+        }
+    }
+
     /// Attempts to match a single character based on a filter function. Returns `Ok` with the
     /// updated `Box<ParserState>` if successful, or `Err` with the updated `Box<ParserState>`
     /// otherwise.
@@ -656,9 +982,13 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(char) -> bool,
     {
+        let token = ParsingToken::BuiltInRule;
+        let start_position = self.position.pos();
         if self.position.match_char_by(f) {
+            self.handle_token_parse_result(start_position, token, true);
             Ok(self)
         } else {
+            self.handle_token_parse_result(start_position, token, false);
             Err(self)
         }
     }
@@ -687,9 +1017,15 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn match_string(mut self: Box<Self>, string: &str) -> ParseResult<Box<Self>> {
+        let token = ParsingToken::Sensitive {
+            token: String::from(string),
+        };
+        let start_position = self.position.pos();
         if self.position.match_string(string) {
+            self.handle_token_parse_result(start_position, token, true);
             Ok(self)
         } else {
+            self.handle_token_parse_result(start_position, token, false);
             Err(self)
         }
     }
@@ -718,9 +1054,15 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn match_insensitive(mut self: Box<Self>, string: &str) -> ParseResult<Box<Self>> {
+        let token = ParsingToken::Insensitive {
+            token: String::from(string),
+        };
+        let start_position = self.position().pos();
         if self.position.match_insensitive(string) {
+            self.handle_token_parse_result(start_position, token, true);
             Ok(self)
         } else {
+            self.handle_token_parse_result(start_position, token, false);
             Err(self)
         }
     }
@@ -752,9 +1094,16 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn match_range(mut self: Box<Self>, range: Range<char>) -> ParseResult<Box<Self>> {
+        let token = ParsingToken::Range {
+            start: range.start,
+            end: range.end,
+        };
+        let start_position = self.position().pos();
         if self.position.match_range(range) {
+            self.handle_token_parse_result(start_position, token, true);
             Ok(self)
         } else {
+            self.handle_token_parse_result(start_position, token, false);
             Err(self)
         }
     }
