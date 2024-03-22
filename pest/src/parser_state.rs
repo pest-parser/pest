@@ -463,8 +463,7 @@ where
 
             Err(Error::new_from_pos_with_parsing_attempts(
                 variant,
-                // TODO(performance): Guarantee state.attempt_pos is a valid position
-                Position::new(input, state.attempt_pos).unwrap(),
+                Position::new_internal(input, state.attempt_pos),
                 state.parse_attempts.clone(),
             ))
         }

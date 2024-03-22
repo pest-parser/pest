@@ -22,23 +22,13 @@ use crate::position;
 #[derive(Clone, Copy)]
 pub struct Span<'i> {
     input: &'i str,
-    /// # Safety
-    ///
-    /// Must be a valid character boundary index into `input`.
     start: usize,
-    /// # Safety
-    ///
-    /// Must be a valid character boundary index into `input`.
     end: usize,
 }
 
 impl<'i> Span<'i> {
     /// Create a new `Span` without checking invariants. (Checked with `debug_assertions`.)
-    ///
-    /// # Safety
-    ///
-    /// `input[start..end]` must be a valid subslice; that is, said indexing should not panic.
-    pub(crate) unsafe fn new_unchecked(input: &str, start: usize, end: usize) -> Span<'_> {
+    pub(crate) fn new_internal(input: &str, start: usize, end: usize) -> Span<'_> {
         debug_assert!(input.get(start..end).is_some());
         Span { input, start, end }
     }
@@ -144,8 +134,7 @@ impl<'i> Span<'i> {
     /// ```
     #[inline]
     pub fn start_pos(&self) -> position::Position<'i> {
-        // Span's start position is always a UTF-8 border.
-        unsafe { position::Position::new_unchecked(self.input, self.start) }
+        position::Position::new_internal(self.input, self.start)
     }
 
     /// Returns the `Span`'s end `Position`.
@@ -163,8 +152,7 @@ impl<'i> Span<'i> {
     /// ```
     #[inline]
     pub fn end_pos(&self) -> position::Position<'i> {
-        // Span's end position is always a UTF-8 border.
-        unsafe { position::Position::new_unchecked(self.input, self.end) }
+        position::Position::new_internal(self.input, self.end)
     }
 
     /// Splits the `Span` into a pair of `Position`s.
@@ -182,9 +170,8 @@ impl<'i> Span<'i> {
     /// ```
     #[inline]
     pub fn split(self) -> (position::Position<'i>, position::Position<'i>) {
-        // Span's start and end positions are always a UTF-8 borders.
-        let pos1 = unsafe { position::Position::new_unchecked(self.input, self.start) };
-        let pos2 = unsafe { position::Position::new_unchecked(self.input, self.end) };
+        let pos1 = position::Position::new_internal(self.input, self.start);
+        let pos2 = position::Position::new_internal(self.input, self.end);
 
         (pos1, pos2)
     }

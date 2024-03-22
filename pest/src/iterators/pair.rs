@@ -38,9 +38,6 @@ use crate::RuleType;
 /// [`Token`]: ../enum.Token.html
 #[derive(Clone)]
 pub struct Pair<'i, R> {
-    /// # Safety
-    ///
-    /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
     queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
     /// Token index into `queue`.
@@ -48,10 +45,7 @@ pub struct Pair<'i, R> {
     line_index: Rc<LineIndex>,
 }
 
-/// # Safety
-///
-/// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
-pub unsafe fn new<'i, R: RuleType>(
+pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
     line_index: Rc<LineIndex>,
@@ -210,8 +204,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
         let start = self.pos(self.start);
         let end = self.pos(self.pair());
 
-        // Generated positions always come from Positions and are UTF-8 borders.
-        unsafe { span::Span::new_unchecked(self.input, start, end) }
+        span::Span::new_internal(self.input, start, end)
     }
 
     /// Get current node tag
