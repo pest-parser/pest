@@ -24,16 +24,12 @@ use crate::RuleType;
 /// [`Pairs::tokens`]: struct.Pairs.html#method.tokens
 #[derive(Clone)]
 pub struct Tokens<'i, R> {
-    /// # Safety:
-    ///
-    /// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
     queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
     start: usize,
     end: usize,
 }
 
-// TODO(safety): QueueableTokens must be valid indices into input.
 pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
@@ -46,7 +42,7 @@ pub fn new<'i, R: RuleType>(
                 QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } => {
                     assert!(
                         input.get(input_pos..).is_some(),
-                        "💥 UNSAFE `Tokens` CREATED 💥"
+                        "💥 INVALID `Tokens` CREATED 💥"
                     )
                 }
             }
@@ -75,19 +71,15 @@ impl<'i, R: RuleType> Tokens<'i, R> {
 
                 Token::Start {
                     rule,
-                    // QueueableTokens are safely created.
-                    pos: unsafe { position::Position::new_unchecked(self.input, input_pos) },
+                    pos: position::Position::new_internal(self.input, input_pos),
                 }
             }
             QueueableToken::End {
                 rule, input_pos, ..
-            } => {
-                Token::End {
-                    rule,
-                    // QueueableTokens are safely created.
-                    pos: unsafe { position::Position::new_unchecked(self.input, input_pos) },
-                }
-            }
+            } => Token::End {
+                rule,
+                pos: position::Position::new_internal(self.input, input_pos),
+            },
         }
     }
 }

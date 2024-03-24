@@ -490,7 +490,7 @@ impl<R: RuleType> Error<R> {
         };
         let error = Error::new_from_pos(
             ErrorVariant::CustomError { message },
-            Position::new(input, error_position).unwrap(),
+            Position::new_internal(input, error_position),
         );
         Some(error)
     }

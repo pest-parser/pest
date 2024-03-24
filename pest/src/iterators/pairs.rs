@@ -205,7 +205,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     #[inline]
     pub fn flatten(self) -> FlatPairs<'i, R> {
-        unsafe { flat_pairs::new(self.queue, self.input, self.start, self.end) }
+        flat_pairs::new(self.queue, self.input, self.start, self.end)
     }
 
     /// Finds the first pair that has its node or branch tagged with the provided
@@ -347,14 +347,12 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     #[inline]
     pub fn peek(&self) -> Option<Pair<'i, R>> {
         if self.start < self.end {
-            Some(unsafe {
-                pair::new(
-                    Rc::clone(&self.queue),
-                    self.input,
-                    Rc::clone(&self.line_index),
-                    self.start,
-                )
-            })
+            Some(pair::new(
+                Rc::clone(&self.queue),
+                self.input,
+                Rc::clone(&self.line_index),
+                self.start,
+            ))
         } else {
             None
         }
@@ -427,14 +425,12 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
         self.end = self.pair_from_end();
         self.pairs_count -= 1;
 
-        let pair = unsafe {
-            pair::new(
-                Rc::clone(&self.queue),
-                self.input,
-                Rc::clone(&self.line_index),
-                self.end,
-            )
-        };
+        let pair = pair::new(
+            Rc::clone(&self.queue),
+            self.input,
+            Rc::clone(&self.line_index),
+            self.end,
+        );
 
         Some(pair)
     }
