@@ -20,7 +20,7 @@ use alloc::vec::Vec;
 use core::fmt::{Debug, Display, Formatter};
 use core::num::NonZeroUsize;
 use core::ops::Range;
-use core::sync::atomic::{AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use crate::error::{Error, ErrorVariant};
 use crate::iterators::pairs::new;
@@ -101,6 +101,22 @@ static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 ///             the number of calls is unlimited.
 pub fn set_call_limit(limit: Option<NonZeroUsize>) {
     CALL_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
+}
+
+static ERROR_DETAIL: AtomicBool = AtomicBool::new(false);
+
+/// Sets whether information for more error details
+/// should be collected. This is useful for debugging
+/// parser errors (as it leads to more comphrensive
+/// error messages), but it has a higher performance cost.
+/// (hence, it's off by default)
+///
+/// # Arguments
+///
+/// * `enabled` - Whether to enable the collection for
+///               more error details.
+pub fn set_error_detail(enabled: bool) {
+    ERROR_DETAIL.store(enabled, Ordering::Relaxed);
 }
 
 #[derive(Debug)]
@@ -204,6 +220,8 @@ impl Display for ParsingToken {
 /// The intuition is such rules will be most likely the query user initially wanted to write.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ParseAttempts<R> {
+    /// Indicates whether the parsing attempts are tracked.
+    enabled: bool,
     /// Vec of rule calls sequences awaiting tokens at the same `max_position`.
     /// If there are several stacks in vec, it means all those rule stacks are "equal"
     /// because their attempts occurred on the same position.
@@ -227,6 +245,7 @@ impl<R: RuleType> ParseAttempts<R> {
             expected_tokens: Vec::with_capacity(EXPECTED_TOKENS_INITIAL_CAPACITY),
             unexpected_tokens: Vec::with_capacity(EXPECTED_TOKENS_INITIAL_CAPACITY),
             max_position: 0,
+            enabled: ERROR_DETAIL.load(Ordering::Relaxed),
         }
     }
 
@@ -461,11 +480,18 @@ where
                 }
             };
 
-            Err(Error::new_from_pos_with_parsing_attempts(
-                variant,
-                Position::new_internal(input, state.attempt_pos),
-                state.parse_attempts.clone(),
-            ))
+            if state.parse_attempts.enabled {
+                Err(Error::new_from_pos_with_parsing_attempts(
+                    variant,
+                    Position::new_internal(input, state.attempt_pos),
+                    state.parse_attempts.clone(),
+                ))
+            } else {
+                Err(Error::new_from_pos(
+                    variant,
+                    Position::new_internal(input, state.attempt_pos),
+                ))
+            }
         }
     }
 }
@@ -675,7 +701,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 // Note, that we need to count positive parsing results too, because we can fail in
                 // optional rule call inside which may lie the farthest
                 // parsed token.
-                try_add_rule_to_stack(&mut new_state);
+                if new_state.parse_attempts.enabled {
+                    try_add_rule_to_stack(&mut new_state);
+                }
                 Ok(new_state)
             }
             Err(mut new_state) => {
@@ -687,7 +715,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                         neg_attempts_index,
                         attempts,
                     );
-                    try_add_rule_to_stack(&mut new_state);
+                    if new_state.parse_attempts.enabled {
+                        try_add_rule_to_stack(&mut new_state);
+                    }
                 }
 
                 if new_state.lookahead == Lookahead::None
@@ -981,13 +1011,15 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     where
         F: FnOnce(char) -> bool,
     {
-        let token = ParsingToken::BuiltInRule;
         let start_position = self.position.pos();
-        if self.position.match_char_by(f) {
-            self.handle_token_parse_result(start_position, token, true);
+        let succeeded = self.position.match_char_by(f);
+        if self.parse_attempts.enabled {
+            let token = ParsingToken::BuiltInRule;
+            self.handle_token_parse_result(start_position, token, succeeded);
+        }
+        if succeeded {
             Ok(self)
         } else {
-            self.handle_token_parse_result(start_position, token, false);
             Err(self)
         }
     }
@@ -1016,15 +1048,17 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn match_string(mut self: Box<Self>, string: &str) -> ParseResult<Box<Self>> {
-        let token = ParsingToken::Sensitive {
-            token: String::from(string),
-        };
         let start_position = self.position.pos();
-        if self.position.match_string(string) {
-            self.handle_token_parse_result(start_position, token, true);
+        let succeeded = self.position.match_string(string);
+        if self.parse_attempts.enabled {
+            let token = ParsingToken::Sensitive {
+                token: String::from(string),
+            };
+            self.handle_token_parse_result(start_position, token, succeeded);
+        }
+        if succeeded {
             Ok(self)
         } else {
-            self.handle_token_parse_result(start_position, token, false);
             Err(self)
         }
     }
@@ -1053,15 +1087,17 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn match_insensitive(mut self: Box<Self>, string: &str) -> ParseResult<Box<Self>> {
-        let token = ParsingToken::Insensitive {
-            token: String::from(string),
-        };
-        let start_position = self.position().pos();
-        if self.position.match_insensitive(string) {
-            self.handle_token_parse_result(start_position, token, true);
+        let start_position: usize = self.position().pos();
+        let succeeded = self.position.match_insensitive(string);
+        if self.parse_attempts.enabled {
+            let token = ParsingToken::Insensitive {
+                token: String::from(string),
+            };
+            self.handle_token_parse_result(start_position, token, succeeded);
+        }
+        if succeeded {
             Ok(self)
         } else {
-            self.handle_token_parse_result(start_position, token, false);
             Err(self)
         }
     }
@@ -1093,16 +1129,18 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn match_range(mut self: Box<Self>, range: Range<char>) -> ParseResult<Box<Self>> {
+        let start_position = self.position().pos();
         let token = ParsingToken::Range {
             start: range.start,
             end: range.end,
         };
-        let start_position = self.position().pos();
-        if self.position.match_range(range) {
-            self.handle_token_parse_result(start_position, token, true);
+        let succeeded = self.position.match_range(range);
+        if self.parse_attempts.enabled {
+            self.handle_token_parse_result(start_position, token, succeeded);
+        }
+        if succeeded {
             Ok(self)
         } else {
-            self.handle_token_parse_result(start_position, token, false);
             Err(self)
         }
     }

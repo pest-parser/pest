@@ -279,6 +279,8 @@ mod tests {
 
     #[test]
     fn sql_parse_attempts_error() {
+        pest::set_error_detail(true);
+
         fn is_whitespace(string: String) -> bool {
             string == "\r\n"
                 || (string.len() == 1 && string.chars().next().unwrap().is_whitespace())
