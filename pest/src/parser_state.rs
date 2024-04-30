@@ -107,7 +107,7 @@ static ERROR_DETAIL: AtomicBool = AtomicBool::new(false);
 
 /// Sets whether information for more error details
 /// should be collected. This is useful for debugging
-/// parser errors (as it leads to more comphrensive
+/// parser errors (as it leads to more comprehensive
 /// error messages), but it has a higher performance cost.
 /// (hence, it's off by default)
 ///
