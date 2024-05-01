@@ -79,7 +79,7 @@ jobs:
         with:
           kind: msrv
           tools: cargo-msrv
-          toolchain: 1.70.0 # needed for cargo-msrv due to cargo-platform v0.1.6
+          toolchain: 1.73.0 # needed for cargo-msrv due to cargo-platform v0.1.8
       - name: Check msrv
         shell: sh
         run: for crate in "derive" "generator" "grammars" "meta" "pest" "vm"; do cd "$crate" && cargo msrv verify && cd ..; done
