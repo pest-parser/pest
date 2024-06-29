@@ -51,7 +51,17 @@ pub fn new<'i, R: RuleType>(
 ) -> Pairs<'i, R> {
     let line_index = match line_index {
         Some(line_index) => line_index,
-        None => Rc::new(LineIndex::new(input)),
+        None => {
+            let last_input_pos = queue
+                .last()
+                .map(|token| match *token {
+                    QueueableToken::Start { input_pos, .. }
+                    | QueueableToken::End { input_pos, .. } => input_pos,
+                })
+                .unwrap_or(0);
+
+            Rc::new(LineIndex::new(&input[..last_input_pos]))
+        }
     };
 
     let mut pairs_count = 0;
@@ -205,7 +215,13 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     #[inline]
     pub fn flatten(self) -> FlatPairs<'i, R> {
-        flat_pairs::new(self.queue, self.input, self.start, self.end)
+        flat_pairs::new(
+            self.queue,
+            self.input,
+            self.line_index,
+            self.start,
+            self.end,
+        )
     }
 
     /// Finds the first pair that has its node or branch tagged with the provided

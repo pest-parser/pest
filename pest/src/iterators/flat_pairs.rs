@@ -32,13 +32,14 @@ pub struct FlatPairs<'i, R> {
 pub fn new<'i, R: RuleType>(
     queue: Rc<Vec<QueueableToken<'i, R>>>,
     input: &'i str,
+    line_index: Rc<LineIndex>,
     start: usize,
     end: usize,
 ) -> FlatPairs<'i, R> {
     FlatPairs {
         queue,
         input,
-        line_index: Rc::new(LineIndex::new(input)),
+        line_index,
         start,
         end,
     }
