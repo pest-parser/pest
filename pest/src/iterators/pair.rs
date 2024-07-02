@@ -25,7 +25,7 @@ use super::line_index::LineIndex;
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
-use crate::span::{self, Span};
+use crate::span::Span;
 use crate::RuleType;
 
 /// A matching pair of [`Token`]s and everything between them.
@@ -204,7 +204,7 @@ impl<'i, R: RuleType> Pair<'i, R> {
         let start = self.pos(self.start);
         let end = self.pos(self.pair());
 
-        span::Span::new_internal(self.input, start, end)
+        Span::new_internal(self.input, start, end)
     }
 
     /// Get current node tag
