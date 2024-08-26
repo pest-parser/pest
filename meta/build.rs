@@ -2,7 +2,8 @@
 use cargo::{
     core::{resolver::CliFeatures, Workspace},
     ops::{self, CompileOptions, Packages},
-    util::command_prelude::CompileMode, GlobalContext,
+    util::command_prelude::CompileMode,
+    GlobalContext,
 };
 use sha2::{Digest, Sha256};
 use std::env;
