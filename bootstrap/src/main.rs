@@ -18,7 +18,10 @@ fn main() {
 
     // workaround for Windows
     // TODO: use `normpath` or a different workaround on Windows?
-    let normalized_path = pest.to_string_lossy().to_string().replace(r#"\\?\"#, "");
+    let pest_ref = pest.to_string_lossy();
+    let normalized_path = pest_ref
+        .strip_prefix(r#"\\?\"#)
+        .unwrap_or_else(|| &pest_ref);
     let pest = Path::new(&normalized_path);
 
     // Path on which we should write generated grammar file.
