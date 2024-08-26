@@ -1,10 +1,8 @@
 #[cfg(feature = "not-bootstrap-in-src")]
 use cargo::{
     core::{resolver::CliFeatures, Workspace},
-    ops,
-    ops::{CompileOptions, Packages},
-    util::command_prelude::CompileMode,
-    Config,
+    ops::{self, CompileOptions, Packages},
+    util::command_prelude::CompileMode, GlobalContext,
 };
 use sha2::{Digest, Sha256};
 use std::env;
@@ -82,7 +80,7 @@ fn main() {
 
             #[cfg(feature = "not-bootstrap-in-src")]
             {
-                let config = Config::default().expect("cargo config");
+                let config = GlobalContext::default().expect("cargo config");
                 let workspace_manifest = manifest_dir
                     .join("../Cargo.toml")
                     .canonicalize()
