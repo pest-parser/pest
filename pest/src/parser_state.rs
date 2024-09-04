@@ -438,6 +438,7 @@ pub struct ParserState<'i, R: RuleType> {
     /// * CreateUser  = { "create" ~ "user"  ~ Name }
     /// * CreateTable = { "create" ~ "table" ~ Name }
     /// * Name = { SOME_DEFINITION }
+    ///
     /// While parsing the query we'll update tracker position to the start of "Bobby", because we'd
     /// successfully parse "create" + "user" (and not "table").
     parse_attempts: ParseAttempts<R>,

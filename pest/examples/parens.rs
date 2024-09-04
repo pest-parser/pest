@@ -48,6 +48,7 @@ impl Parser<Rule> for ParenParser {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct Paren(Vec<Paren>);
 
 fn expr(pairs: Pairs<Rule>) -> Vec<Paren> {

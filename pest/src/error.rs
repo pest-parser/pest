@@ -730,14 +730,13 @@ fn visualize_whitespace(input: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::super::position;
     use super::*;
     use alloc::vec;
 
     #[test]
     fn display_parsing_error_mixed() {
         let input = "ab\ncd\nef";
-        let pos = position::Position::new(input, 4).unwrap();
+        let pos = Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2, 3],
@@ -763,7 +762,7 @@ mod tests {
     #[test]
     fn display_parsing_error_positives() {
         let input = "ab\ncd\nef";
-        let pos = position::Position::new(input, 4).unwrap();
+        let pos = Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2],
@@ -789,7 +788,7 @@ mod tests {
     #[test]
     fn display_parsing_error_negatives() {
         let input = "ab\ncd\nef";
-        let pos = position::Position::new(input, 4).unwrap();
+        let pos = Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![],
@@ -815,7 +814,7 @@ mod tests {
     #[test]
     fn display_parsing_error_unknown() {
         let input = "ab\ncd\nef";
-        let pos = position::Position::new(input, 4).unwrap();
+        let pos = Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![],
@@ -841,7 +840,7 @@ mod tests {
     #[test]
     fn display_custom_pos() {
         let input = "ab\ncd\nef";
-        let pos = position::Position::new(input, 4).unwrap();
+        let pos = Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::CustomError {
                 message: "error: big one".to_owned(),
@@ -866,8 +865,8 @@ mod tests {
     #[test]
     fn display_custom_span_two_lines() {
         let input = "ab\ncd\nefgh";
-        let start = position::Position::new(input, 4).unwrap();
-        let end = position::Position::new(input, 9).unwrap();
+        let start = Position::new(input, 4).unwrap();
+        let end = Position::new(input, 9).unwrap();
         let error: Error<u32> = Error::new_from_span(
             ErrorVariant::CustomError {
                 message: "error: big one".to_owned(),
@@ -893,8 +892,8 @@ mod tests {
     #[test]
     fn display_custom_span_three_lines() {
         let input = "ab\ncd\nefgh";
-        let start = position::Position::new(input, 1).unwrap();
-        let end = position::Position::new(input, 9).unwrap();
+        let start = Position::new(input, 1).unwrap();
+        let end = Position::new(input, 9).unwrap();
         let error: Error<u32> = Error::new_from_span(
             ErrorVariant::CustomError {
                 message: "error: big one".to_owned(),
@@ -921,8 +920,8 @@ mod tests {
     #[test]
     fn display_custom_span_two_lines_inverted_cols() {
         let input = "abcdef\ngh";
-        let start = position::Position::new(input, 5).unwrap();
-        let end = position::Position::new(input, 8).unwrap();
+        let start = Position::new(input, 5).unwrap();
+        let end = Position::new(input, 8).unwrap();
         let error: Error<u32> = Error::new_from_span(
             ErrorVariant::CustomError {
                 message: "error: big one".to_owned(),
@@ -948,8 +947,8 @@ mod tests {
     #[test]
     fn display_custom_span_end_after_newline() {
         let input = "abcdef\n";
-        let start = position::Position::new(input, 0).unwrap();
-        let end = position::Position::new(input, 7).unwrap();
+        let start = Position::new(input, 0).unwrap();
+        let end = Position::new(input, 7).unwrap();
         assert!(start.at_start());
         assert!(end.at_end());
 
@@ -977,8 +976,8 @@ mod tests {
     #[test]
     fn display_custom_span_empty() {
         let input = "";
-        let start = position::Position::new(input, 0).unwrap();
-        let end = position::Position::new(input, 0).unwrap();
+        let start = Position::new(input, 0).unwrap();
+        let end = Position::new(input, 0).unwrap();
         assert!(start.at_start());
         assert!(end.at_end());
 
@@ -1006,7 +1005,7 @@ mod tests {
     #[test]
     fn mapped_parsing_error() {
         let input = "ab\ncd\nef";
-        let pos = position::Position::new(input, 4).unwrap();
+        let pos = Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2, 3],
@@ -1033,7 +1032,7 @@ mod tests {
     #[test]
     fn error_with_path() {
         let input = "ab\ncd\nef";
-        let pos = position::Position::new(input, 4).unwrap();
+        let pos = Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2, 3],
@@ -1060,7 +1059,7 @@ mod tests {
     #[test]
     fn underline_with_tabs() {
         let input = "a\txbc";
-        let pos = position::Position::new(input, 2).unwrap();
+        let pos = Position::new(input, 2).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2, 3],
