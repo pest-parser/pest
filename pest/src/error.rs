@@ -496,7 +496,7 @@ impl<R: RuleType> Error<R> {
     #[cfg(feature = "miette")]
     /// Turns an error into a [miette](crates.io/miette) Diagnostic.
     pub fn into_miette(self) -> impl ::miette::Diagnostic {
-        miette::MietteAdapter(self)
+        miette_adapter::MietteAdapter(self)
     }
 }
 
@@ -541,9 +541,11 @@ fn visualize_whitespace(input: &str) -> String {
 }
 
 #[cfg(feature = "miette")]
-mod miette {
+mod miette_adapter {
     use alloc::string::ToString;
     use std::boxed::Box;
+
+    use crate::error::LineColLocation;
 
     use super::{Error, InputLocation, RuleType};
 
@@ -551,7 +553,7 @@ mod miette {
 
     #[derive(thiserror::Error, Debug)]
     #[error("Failure to parse at {}", self.0.line_col)]
-    pub(crate) struct MietteAdapter<R: RuleType>(pub(crate) Error<R>);
+    pub(crate)struct MietteAdapter<R: RuleType>(pub(crate) Error<R>);
 
     impl<R: RuleType> Diagnostic for MietteAdapter<R> {
         fn source_code(&self) -> Option<&dyn SourceCode> {
@@ -561,9 +563,9 @@ mod miette {
         fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan>>> {
             let message = self.0.variant.message().to_string();
 
-            let (offset, length) = match self.0.location {
-                InputLocation::Pos(x) => (x, 0),
-                InputLocation::Span((x, y)) => (x, y),
+            let (offset, length) = match self.0.line_col {
+                LineColLocation::Pos((r, c)) => (c - 1, 1),
+                LineColLocation::Span((start_r, start_c), (end_r, end_c)) => (start_c - 1, end_c - start_c + 1),
             };
 
             let span = LabeledSpan::new(Some(message), offset, length);
@@ -572,7 +574,7 @@ mod miette {
         }
 
         fn help<'a>(&'a self) -> Option<Box<dyn core::fmt::Display + 'a>> {
-            Some(Box::new(self.0.variant.message()))
+            Some(Box::new(self.0.message()))
         }
     }
 }
@@ -928,6 +930,38 @@ mod tests {
                 "  |  	^---",
                 "  |",
                 "  = unexpected 4, 5, or 6; expected 1, 2, or 3",
+            ]
+            .join("\n")
+        );
+    }
+
+    #[cfg(feature = "miette")]
+    #[test]
+    fn miette_error() {
+        use miette::{MietteDiagnostic, LabeledSpan, Diagnostic};
+
+        let input = "abc\ndef";
+        let pos = position::Position::new(input, 4).unwrap();
+        let error: Error<u32> = Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![1, 2, 3],
+                negatives: vec![4, 5, 6],
+            },
+            pos,
+        );
+
+        let miette_error = miette::Error::new(error.into_miette());
+
+        assert_eq!(
+            format!("{:?}", miette_error),
+            vec![
+                "  \u{1b}[31m×\u{1b}[0m Failure to parse at (2, 1)",
+                "   ╭────",
+                " \u{1b}[2m1\u{1b}[0m │ def",
+                "   · \u{1b}[35;1m┬\u{1b}[0m",
+                "   · \u{1b}[35;1m╰── \u{1b}[35;1munexpected 4, 5, or 6; expected 1, 2, or 3\u{1b}[0m\u{1b}[0m",
+                "   ╰────",
+                "\u{1b}[36m  help: \u{1b}[0munexpected 4, 5, or 6; expected 1, 2, or 3\n"
             ]
             .join("\n")
         );
