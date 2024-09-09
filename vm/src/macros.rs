@@ -127,6 +127,7 @@ macro_rules! consumes_to {
     };
 }
 
+/// A macro that tests input parses to the expected tokens.
 #[macro_export]
 macro_rules! parses_to {
     ( parser: $parser:expr, input: $string:expr, rule: $rule:expr,
@@ -171,6 +172,7 @@ macro_rules! parses_to {
     };
 }
 
+/// A macro that tests input fails to parse.
 #[macro_export]
 macro_rules! fails_with {
     ( parser: $parser:expr, input: $string:expr, rule: $rule:expr,

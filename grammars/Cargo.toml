@@ -1,25 +1,31 @@
 [package]
 name = "pest_grammars"
 description = "pest popular grammar implementations"
-version = "2.1.0"
-edition = "2018"
+version = "2.7.12"
+edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
-homepage = "https://pest-parser.github.io/"
+homepage = "https://pest.rs/"
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
 keywords = ["pest", "parser", "peg", "grammar"]
 categories = ["parsing"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 readme = "_README.md"
-rust-version = "1.56"
+rust-version = "1.61"
 
 [dependencies]
-pest = { path = "../pest", version = "2.1.0" }
-pest_derive = { path = "../derive", version = "2.1.0" }
+pest = { path = "../pest", version = "2.7.12" }
+pest_derive = { path = "../derive", version = "2.7.12" }
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.5"
+pretty_assertions = "1.3.0"
+lazy_static = "1.4.0"
 
 [[bench]]
 name = "json"
+harness = false
+
+[[bench]]
+name = "http"
 harness = false

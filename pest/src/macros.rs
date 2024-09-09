@@ -329,12 +329,13 @@ pub mod tests {
         a,
         b,
         c,
+        d,
     }
 
     pub struct AbcParser;
 
     impl Parser<Rule> for AbcParser {
-        fn parse(_: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
+        fn parse(_: Rule, input: &str) -> Result<Pairs<'_, Rule>, Error<Rule>> {
             state(input, |state| {
                 state
                     .rule(Rule::a, |s| {
@@ -345,6 +346,7 @@ pub mod tests {
                             .skip(1)
                     })
                     .and_then(|s| s.skip(1).unwrap().rule(Rule::c, |s| s.match_string("e")))
+                    .and_then(|s| s.optional(|s| s.rule(Rule::d, |s| s.match_string("fgh"))))
             })
         }
     }

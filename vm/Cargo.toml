@@ -1,18 +1,21 @@
 [package]
 name = "pest_vm"
 description = "pest grammar virtual machine"
-version = "2.1.0"
-edition = "2018"
+version = "2.7.12"
+edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
-homepage = "https://pest-parser.github.io/"
+homepage = "https://pest.rs/"
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
 keywords = ["pest", "vm"]
 categories = ["parsing"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 readme = "_README.md"
-rust-version = "1.56"
+rust-version = "1.61"
 
 [dependencies]
-pest = { path = "../pest", version = "2.1.0" }
-pest_meta = { path = "../meta", version = "2.1.0" }
+pest = { path = "../pest", version = "2.7.12" }
+pest_meta = { path = "../meta", version = "2.7.12" }
+
+[features]
+grammar-extras = ["pest_meta/grammar-extras"]

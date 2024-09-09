@@ -3,19 +3,25 @@ name = "pest_grammars-fuzz"
 version = "0.0.0"
 authors = ["Automatically generated"]
 publish = false
-rust-version = "1.56"
+rust-version = "1.61"
 
 [package.metadata]
 cargo-fuzz = true
 
 [dependencies.pest_grammars]
 path = ".."
+[dependencies.pest]
+path = "../../pest"
 [dependencies.libfuzzer-sys]
 git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
 
 # Prevent this from interfering with workspaces
 [workspace]
 members = ["."]
+
+[[bin]]
+name = "http"
+path = "fuzz_targets/http.rs"
 
 [[bin]]
 name = "json"

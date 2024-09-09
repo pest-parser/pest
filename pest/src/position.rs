@@ -20,19 +20,12 @@ use crate::span;
 #[derive(Clone, Copy)]
 pub struct Position<'i> {
     input: &'i str,
-    /// # Safety:
-    ///
-    /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
     pos: usize,
 }
 
 impl<'i> Position<'i> {
     /// Create a new `Position` without checking invariants. (Checked with `debug_assertions`.)
-    ///
-    /// # Safety:
-    ///
-    /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
-    pub(crate) unsafe fn new_unchecked(input: &str, pos: usize) -> Position {
+    pub(crate) fn new_internal(input: &str, pos: usize) -> Position<'_> {
         debug_assert!(input.get(pos..).is_some());
         Position { input, pos }
     }
@@ -49,7 +42,7 @@ impl<'i> Position<'i> {
     /// assert_eq!(Position::new(heart, 1), None);
     /// assert_ne!(Position::new(heart, cheart.len_utf8()), None);
     /// ```
-    pub fn new(input: &str, pos: usize) -> Option<Position> {
+    pub fn new(input: &str, pos: usize) -> Option<Position<'_>> {
         input.get(pos..).map(|_| Position { input, pos })
     }
 
@@ -106,8 +99,7 @@ impl<'i> Position<'i> {
         if ptr::eq(self.input, other.input)
         /* && self.input.get(self.pos..other.pos).is_some() */
         {
-            // This is safe because the pos field of a Position should always be a valid str index.
-            unsafe { span::Span::new_unchecked(self.input, self.pos, other.pos) }
+            span::Span::new_internal(self.input, self.pos, other.pos)
         } else {
             // TODO: maybe a panic if self.pos < other.pos
             panic!("span created from positions from different inputs")
@@ -115,6 +107,9 @@ impl<'i> Position<'i> {
     }
 
     /// Returns the line and column number of this `Position`.
+    ///
+    /// This is an O(n) operation, where n is the number of chars in the input.
+    /// You better use [`pair.line_col()`](struct.Pair.html#method.line_col) instead.
     ///
     /// # Examples
     ///
@@ -125,7 +120,7 @@ impl<'i> Position<'i> {
     /// enum Rule {}
     ///
     /// let input = "\na";
-    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut state: Box<pest::ParserState<'_, Rule>> = pest::ParserState::new(input);
     /// let mut result = state.match_string("\na");
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().line_col(), (2, 2));
@@ -135,9 +130,7 @@ impl<'i> Position<'i> {
         if self.pos > self.input.len() {
             panic!("position out of bounds");
         }
-
         let mut pos = self.pos;
-        // Position's pos is always a UTF-8 border.
         let slice = &self.input[..pos];
         let mut chars = slice.chars().peekable();
 
@@ -187,7 +180,7 @@ impl<'i> Position<'i> {
     /// enum Rule {}
     ///
     /// let input = "\na";
-    /// let mut state: Box<pest::ParserState<Rule>> = pest::ParserState::new(input);
+    /// let mut state: Box<pest::ParserState<'_, Rule>> = pest::ParserState::new(input);
     /// let mut result = state.match_string("\na");
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().line_of(), "a");
@@ -256,7 +249,7 @@ impl<'i> Position<'i> {
         let skipped = {
             let mut len = 0;
             // Position's pos is always a UTF-8 border.
-            let mut chars = (&self.input[self.pos..]).chars();
+            let mut chars = self.input[self.pos..].chars();
             for _ in 0..n {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
@@ -278,7 +271,7 @@ impl<'i> Position<'i> {
         let skipped = {
             let mut len = 0;
             // Position's pos is always a UTF-8 border.
-            let mut chars = (&self.input[..self.pos]).chars().rev();
+            let mut chars = self.input[..self.pos].chars().rev();
             for _ in 0..n {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
@@ -297,6 +290,60 @@ impl<'i> Position<'i> {
     /// this function will return `false` but its `pos` will *still* be updated.
     #[inline]
     pub(crate) fn skip_until(&mut self, strings: &[&str]) -> bool {
+        #[cfg(not(feature = "memchr"))]
+        {
+            self.skip_until_basic(strings)
+        }
+        #[cfg(feature = "memchr")]
+        {
+            match strings {
+                [] => (),
+                [s1] => {
+                    if let Some(from) =
+                        memchr::memmem::find(&self.input.as_bytes()[self.pos..], s1.as_bytes())
+                    {
+                        self.pos += from;
+                        return true;
+                    }
+                }
+                [s1, s2] if !s1.is_empty() && !s2.is_empty() => {
+                    let b1 = s1.as_bytes()[0];
+                    let b2 = s2.as_bytes()[0];
+                    let miter = memchr::memchr2_iter(b1, b2, &self.input.as_bytes()[self.pos..]);
+                    for from in miter {
+                        let start = &self.input[self.pos + from..];
+                        if start.starts_with(s1) || start.starts_with(s2) {
+                            self.pos += from;
+                            return true;
+                        }
+                    }
+                }
+                [s1, s2, s3] if !s1.is_empty() && !s2.is_empty() && s3.is_empty() => {
+                    let b1 = s1.as_bytes()[0];
+                    let b2 = s2.as_bytes()[0];
+                    let b3 = s2.as_bytes()[0];
+                    let miter =
+                        memchr::memchr3_iter(b1, b2, b3, &self.input.as_bytes()[self.pos..]);
+                    for from in miter {
+                        let start = &self.input[self.pos + from..];
+                        if start.starts_with(s1) || start.starts_with(s2) || start.starts_with(s3) {
+                            self.pos += from;
+                            return true;
+                        }
+                    }
+                }
+                _ => {
+                    return self.skip_until_basic(strings);
+                }
+            }
+            self.pos = self.input.len();
+            false
+        }
+    }
+
+    #[inline]
+    fn skip_until_basic(&mut self, strings: &[&str]) -> bool {
+        // TODO: optimize with Aho-Corasick, e.g. https://crates.io/crates/daachorse?
         for from in self.pos..self.input.len() {
             let bytes = if let Some(string) = self.input.get(from..) {
                 string.as_bytes()
@@ -332,7 +379,7 @@ impl<'i> Position<'i> {
     where
         F: FnOnce(char) -> bool,
     {
-        if let Some(c) = (&self.input[self.pos..]).chars().next() {
+        if let Some(c) = self.input[self.pos..].chars().next() {
             if f(c) {
                 self.pos += c.len_utf8();
                 true
@@ -383,7 +430,7 @@ impl<'i> Position<'i> {
     /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
     pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
-        if let Some(c) = (&self.input[self.pos..]).chars().next() {
+        if let Some(c) = self.input[self.pos..].chars().next() {
             if range.start <= c && c <= range.end {
                 self.pos += c.len_utf8();
                 return true;
@@ -395,7 +442,7 @@ impl<'i> Position<'i> {
 }
 
 impl<'i> fmt::Debug for Position<'i> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Position").field("pos", &self.pos).finish()
     }
 }
@@ -408,6 +455,7 @@ impl<'i> PartialEq for Position<'i> {
 
 impl<'i> Eq for Position<'i> {}
 
+#[allow(clippy::non_canonical_partial_ord_impl)]
 impl<'i> PartialOrd for Position<'i> {
     fn partial_cmp(&self, other: &Position<'i>) -> Option<Ordering> {
         if ptr::eq(self.input, other.input) {
@@ -465,6 +513,8 @@ mod tests {
         assert_eq!(Position::new(input, 7).unwrap().line_col(), (3, 1));
         assert_eq!(Position::new(input, 8).unwrap().line_col(), (3, 2));
         assert_eq!(Position::new(input, 11).unwrap().line_col(), (3, 3));
+        let input = "abcd嗨";
+        assert_eq!(Position::new(input, 7).unwrap().line_col(), (1, 6));
     }
 
     #[test]

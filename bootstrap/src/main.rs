@@ -3,17 +3,42 @@ extern crate quote;
 extern crate pest_generator;
 
 use pest_generator::derive_parser;
-use std::{fs::File, io::prelude::*, path::Path};
+use std::{
+    env,
+    fs::File,
+    io::prelude::*,
+    path::{Path, PathBuf},
+};
 
 fn main() {
     let pest = Path::new(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../meta/src/grammar.pest"
     ));
-    let rs = Path::new(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../meta/src/grammar.rs"
-    ));
+
+    // workaround for Windows
+    // TODO: use `normpath` or a different workaround on Windows?
+    let pest_ref = pest.to_string_lossy();
+    let normalized_path = pest_ref
+        .strip_prefix(r#"\\?\"#)
+        .unwrap_or_else(|| &pest_ref);
+    let pest = Path::new(&normalized_path);
+
+    // Path on which we should write generated grammar file.
+    // In case `not-bootstrap-in-src` is:
+    // * OFF -> in `grammar.rs` next to `grammar.pest`
+    // * ON  -> in `target/build/.../__pest_grammar.rs` directory as specified in `meta/build.rs`
+    let rs: PathBuf = if should_bootstrap_in_src() {
+        Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../meta/src/grammar.rs"
+        ))
+        .to_owned()
+    } else {
+        // the path is passed via command-line arguments
+        let path = env::args().nth(1).expect("path to grammar.rs");
+        PathBuf::from(path)
+    };
 
     let derived = {
         let path = pest.to_string_lossy();
@@ -21,10 +46,22 @@ fn main() {
             #[grammar = #path]
             pub struct PestParser;
         };
+        // Passing value to `derive_parser` as if there was a derive annotation
+        // next to the struct above.
         derive_parser(pest, false)
     };
 
     let mut file = File::create(rs).unwrap();
 
     writeln!(file, "pub struct PestParser;\n{}", derived,).unwrap();
+}
+
+#[cfg(not(feature = "not-bootstrap-in-src"))]
+fn should_bootstrap_in_src() -> bool {
+    true
+}
+
+#[cfg(feature = "not-bootstrap-in-src")]
+fn should_bootstrap_in_src() -> bool {
+    false
 }

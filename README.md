@@ -1,23 +1,18 @@
-<div align="center">
 
-# [***Transferring maintenance & keeping pest alive: #606***](https://github.com/pest-parser/pest/discussions/606)
-
-</div>
-
-  
 <p align="center">
   <img src="https://raw.github.com/pest-parser/pest/master/pest-logo.svg?sanitize=true" width="80%"/>
 </p>
 
 # pest. The Elegant Parser
 
-[![Join the chat at https://gitter.im/dragostis/pest](https://badges.gitter.im/dragostis/pest.svg)](https://gitter.im/dragostis/pest?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Book](https://img.shields.io/badge/book-WIP-4d76ae.svg)](https://pest-parser.github.io/book)
+[![Join the chat at https://gitter.im/pest-parser/pest](https://badges.gitter.im/dragostis/pest.svg)](https://gitter.im/pest-parser/pest?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Book](https://img.shields.io/badge/book-WIP-4d76ae.svg)](https://pest.rs/book)
 [![Docs](https://docs.rs/pest/badge.svg)](https://docs.rs/pest)
 
 [![pest Continuous Integration](https://github.com/pest-parser/pest/actions/workflows/ci.yml/badge.svg)](https://github.com/pest-parser/pest/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/pest-parser/pest/branch/master/graph/badge.svg)](https://codecov.io/gh/pest-parser/pest)
-[![Fuzzit Status](https://app.fuzzit.dev/badge?org_id=pest-parser)](https://app.fuzzit.dev/orgs/pest-parser/dashboard)
+<a href="https://blog.rust-lang.org/2021/11/01/Rust-1.61.0.html"><img alt="Rustc Version 1.61.0+" src="https://img.shields.io/badge/rustc-1.61.0%2B-lightgrey.svg"/></a>
+
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
 [![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
 
@@ -36,25 +31,28 @@ Other helpful resources:
 
 * API reference on [docs.rs]
 * play with grammars and share them on our [fiddle]
-* leave feedback, ask questions, or greet us on [Gitter]
+* find previous common questions answered or ask questions on [GitHub Discussions]
+* leave feedback, ask questions, or greet us on [Gitter] or [Discord]
 
-[book]: https://pest-parser.github.io/book
+[book]: https://pest.rs/book
 [docs.rs]: https://docs.rs/pest
-[fiddle]: https://pest-parser.github.io/#editor
-[Gitter]: https://gitter.im/dragostis/pest
+[fiddle]: https://pest.rs/#editor
+[Gitter]: https://gitter.im/pest-parser/pest
+[Discord]: https://discord.gg/XEGACtWpT2
+[GitHub Discussions]: https://github.com/pest-parser/pest/discussions
 
 ## Example
 
-The following is an example of a grammar for a list of alpha-numeric identifiers
-where the first identifier does not start with a digit:
+The following is an example of a grammar for a list of alphanumeric identifiers
+where all identifiers don't start with a digit:
 
 ```rust
 alpha = { 'a'..'z' | 'A'..'Z' }
 digit = { '0'..'9' }
 
-ident = { (alpha | digit)+ }
+ident = { !digit ~ (alpha | digit)+ }
 
-ident_list = _{ !digit ~ ident ~ (" " ~ ident)+ }
+ident_list = _{ ident ~ (" " ~ ident)* }
           // ^
           // ident_list rule is silent which means it produces no tokens
 ```
@@ -86,16 +84,16 @@ thread 'main' panicked at ' --> 1:1
   = expected ident', src/main.rs:12
 ```
 
+These error messages can be obtained from their default `Display` implementation,
+e.g. `panic!("{}", parser_result.unwrap_err())` or `println!("{}", e)`.
+
 ## Pairs API
 
 The grammar can be used to derive a `Parser` implementation automatically.
 Parsing returns an iterator of nested token pairs:
 
 ```rust
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
-
+use pest_derive::Parser;
 use pest::Parser;
 
 #[derive(Parser)]
@@ -103,7 +101,7 @@ use pest::Parser;
 struct IdentParser;
 
 fn main() {
-    let pairs = IdentParser::parse(Rule::ident_list, "a1 b2").unwrap_or_else(|e| panic!("{}", e));
+    let pairs = IdentParser::parse(Rule::ident_list, "a1 b2").unwrap_or_else(|e| panic!("{}", e));
 
     // Because ident_list is silent, the iterator will contain idents
     for pair in pairs {
@@ -138,6 +136,25 @@ Letter:  b
 Digit:   2
 ```
 
+### Defining multiple parsers in a single file
+The current automatic `Parser` derivation will produce the `Rule` enum
+which would have name conflicts if one tried to define multiple such structs
+that automatically derive `Parser`. One possible way around it is to put each
+parser struct in a separate namespace:
+
+```rust
+mod a {
+    #[derive(Parser)]
+    #[grammar = "a.pest"]
+    pub struct ParserA;
+}
+mod b {
+    #[derive(Parser)]
+    #[grammar = "b.pest"]
+    pub struct ParserB;
+}
+```
+
 ## Other features
 
 * Precedence climbing
@@ -146,6 +163,8 @@ Digit:   2
 * Runs on stable Rust
 
 ## Projects using pest
+
+You can find more projects and ecosystem tools in the [awesome-pest](https://github.com/pest-parser/awesome-pest) repo.
 
 * [pest_meta](https://github.com/pest-parser/pest/blob/master/meta/src/grammar.pest) (bootstrapped)
 * [AshPaper](https://github.com/shnewto/ashpaper)
@@ -177,6 +196,35 @@ Digit:   2
 * [qubit](https://github.com/abhimanyu003/qubit)
 * [caith](https://github.com/Geobert/caith) (a dice roller crate)
 * [Melody](https://github.com/yoav-lavi/melody)
+* [json5-nodes](https://github.com/jlyonsmith/json5-nodes)
+* [prisma](https://github.com/prisma/prisma)
+
+## Minimum Supported Rust Version (MSRV)
+
+This library should always compile with default features on **Rust 1.61.0**.
+
+## no_std support
+
+The `pest` and `pest_derive` crates can be built without the Rust standard
+library and target embedded environments. To do so, you need to disable
+their default features. In your `Cargo.toml`, you can specify it as follows:
+
+```toml
+[dependencies]
+# ...
+pest = { version = "2", default-features = false }
+pest_derive = { version = "2", default-features = false }
+```
+
+If you want to build these crates in the pest repository's workspace, you can
+pass the `--no-default-features` flag to `cargo` and specify these crates using
+the `--package` (`-p`) flag. For example:
+
+```bash
+$ cargo build --target thumbv7em-none-eabihf --no-default-features -p pest
+$ cargo bootstrap
+$ cargo build --target thumbv7em-none-eabihf --no-default-features -p pest_derive
+```
 
 ## Special thanks
 

@@ -16,7 +16,7 @@ extern crate pest;
 extern crate pest_derive;
 
 #[derive(Parser)]
-#[grammar = "../tests/grammar.pest"]
+#[grammar = "tests/grammar.pest"]
 struct GrammarParser;
 
 #[test]
@@ -256,6 +256,20 @@ fn choice_prefix() {
         rule: Rule::choice_prefix,
         tokens: [
             choice_prefix(0, 3, [
+                string(0, 3)
+            ])
+        ]
+    };
+}
+
+#[test]
+fn node_tag() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc",
+        rule: Rule::node_tag,
+        tokens: [
+            node_tag(0, 3, [
                 string(0, 3)
             ])
         ]

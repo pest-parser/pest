@@ -12,7 +12,7 @@ extern crate pest;
 
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
-use pest::prec_climber::{Assoc, Operator, PrecClimber};
+use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::{state, ParseResult, Parser, ParserState};
 
 #[allow(dead_code, non_camel_case_types)]
@@ -32,8 +32,12 @@ enum Rule {
 struct CalculatorParser;
 
 impl Parser<Rule> for CalculatorParser {
+    // false positive: pest uses `..` as a complete range (historically)
+    #[allow(clippy::almost_complete_range)]
     fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
-        fn expression(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn expression(
+            state: Box<ParserState<'_, Rule>>,
+        ) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::expression, |s| {
                 s.sequence(|s| {
                     primary(s).and_then(|s| {
@@ -53,7 +57,7 @@ impl Parser<Rule> for CalculatorParser {
             })
         }
 
-        fn primary(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn primary(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state
                 .sequence(|s| {
                     s.match_string("(")
@@ -63,7 +67,7 @@ impl Parser<Rule> for CalculatorParser {
                 .or_else(number)
         }
 
-        fn number(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn number(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::number, |s| {
                 s.sequence(|s| {
                     s.optional(|s| s.match_string("-")).and_then(|s| {
@@ -78,27 +82,27 @@ impl Parser<Rule> for CalculatorParser {
             })
         }
 
-        fn plus(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn plus(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::plus, |s| s.match_string("+"))
         }
 
-        fn minus(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn minus(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::minus, |s| s.match_string("-"))
         }
 
-        fn times(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn times(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::times, |s| s.match_string("*"))
         }
 
-        fn divide(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn divide(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::divide, |s| s.match_string("/"))
         }
 
-        fn modulus(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn modulus(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::modulus, |s| s.match_string("%"))
         }
 
-        fn power(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn power(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::power, |s| s.match_string("^"))
         }
 
@@ -109,8 +113,14 @@ impl Parser<Rule> for CalculatorParser {
     }
 }
 
-fn consume(pair: Pair<Rule>, climber: &PrecClimber<Rule>) -> i32 {
-    let primary = |pair| consume(pair, climber);
+#[allow(deprecated)]
+enum PrattOrPrecClimber<'a> {
+    Pratt(&'a PrattParser<Rule>),
+    PrecClimber(&'a pest::prec_climber::PrecClimber<Rule>),
+}
+
+fn consume(pair: Pair<Rule>, pratt_or_climber: &PrattOrPrecClimber) -> i32 {
+    let primary = |pair| consume(pair, pratt_or_climber);
     let infix = |lhs: i32, op: Pair<Rule>, rhs: i32| match op.as_rule() {
         Rule::plus => lhs + rhs,
         Rule::minus => lhs - rhs,
@@ -121,9 +131,16 @@ fn consume(pair: Pair<Rule>, climber: &PrecClimber<Rule>) -> i32 {
         _ => unreachable!(),
     };
 
-    match pair.as_rule() {
-        Rule::expression => climber.climb(pair.into_inner(), primary, infix),
-        Rule::number => pair.as_str().parse().unwrap(),
+    #[allow(deprecated)]
+    match (pair.as_rule(), pratt_or_climber) {
+        (Rule::expression, PrattOrPrecClimber::Pratt(pratt)) => pratt
+            .map_primary(primary)
+            .map_infix(infix)
+            .parse(pair.into_inner()),
+        (Rule::expression, PrattOrPrecClimber::PrecClimber(climber)) => {
+            climber.climb(pair.into_inner(), primary, infix)
+        }
+        (Rule::number, _) => pair.as_str().parse().unwrap(),
         _ => unreachable!(),
     }
 }
@@ -187,7 +204,9 @@ fn expression() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn prec_climb() {
+    use pest::prec_climber::{Assoc, Operator, PrecClimber};
     let climber = PrecClimber::new(vec![
         Operator::new(Rule::plus, Assoc::Left) | Operator::new(Rule::minus, Assoc::Left),
         Operator::new(Rule::times, Assoc::Left)
@@ -197,5 +216,30 @@ fn prec_climb() {
     ]);
 
     let pairs = CalculatorParser::parse(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
-    assert_eq!(-1_525, consume(pairs.unwrap().next().unwrap(), &climber));
+    assert_eq!(
+        -1_525,
+        consume(
+            pairs.unwrap().next().unwrap(),
+            &PrattOrPrecClimber::PrecClimber(&climber)
+        )
+    );
+}
+
+#[test]
+fn pratt_parse() {
+    let pratt = PrattParser::new()
+        .op(Op::infix(Rule::plus, Assoc::Left) | Op::infix(Rule::minus, Assoc::Left))
+        .op(Op::infix(Rule::times, Assoc::Left)
+            | Op::infix(Rule::divide, Assoc::Left)
+            | Op::infix(Rule::modulus, Assoc::Left))
+        .op(Op::infix(Rule::power, Assoc::Right));
+
+    let pairs = CalculatorParser::parse(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
+    assert_eq!(
+        -1_525,
+        consume(
+            pairs.unwrap().next().unwrap(),
+            &PrattOrPrecClimber::Pratt(&pratt)
+        )
+    );
 }

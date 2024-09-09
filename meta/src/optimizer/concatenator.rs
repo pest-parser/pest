@@ -16,7 +16,6 @@ pub fn concatenate(rule: Rule) -> Rule {
         ty,
         expr: expr.map_bottom_up(|expr| {
             if ty == RuleType::Atomic {
-                // TODO: Use box syntax when it gets stabilized.
                 match expr {
                     Expr::Seq(lhs, rhs) => match (*lhs, *rhs) {
                         (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),

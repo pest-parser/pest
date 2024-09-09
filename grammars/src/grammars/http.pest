@@ -1,0 +1,20 @@
+http = { SOI ~ (delimiter | request)* ~ EOI}
+
+request = {	
+	request_line ~
+    headers? ~
+    NEWLINE
+}
+
+request_line = _{ method ~ " "+ ~ uri ~ " "+ ~ "HTTP/" ~ version ~ NEWLINE }
+uri = { (!whitespace ~ ANY)+ }
+method = { ("GET" | "DELETE" | "POST" | "PUT") }
+version = { (ASCII_DIGIT | ".")+ }
+whitespace = _{ " " | "\t" }
+
+headers = { header+ }
+header = { header_name ~ ":" ~ whitespace ~ header_value ~ NEWLINE }
+header_name = { (!(NEWLINE | ":") ~ ANY)+ }
+header_value = { (!NEWLINE ~ ANY)+ }
+
+delimiter = { NEWLINE+ }

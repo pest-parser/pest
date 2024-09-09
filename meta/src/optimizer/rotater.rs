@@ -12,7 +12,6 @@ use crate::ast::*;
 pub fn rotate(rule: Rule) -> Rule {
     fn rotate_internal(expr: Expr) -> Expr {
         match expr {
-            // TODO: Use box syntax when it gets stabilized.
             Expr::Seq(lhs, rhs) => {
                 let lhs = *lhs;
                 match lhs {

@@ -1,17 +1,17 @@
 [package]
 name = "pest_derive"
 description = "pest's derive macro"
-version = "2.1.0"
-edition = "2018"
+version = "2.7.12"
+edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
-homepage = "https://pest-parser.github.io/"
+homepage = "https://pest.rs/"
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
 keywords = ["pest", "parser", "peg", "grammar"]
 categories = ["parsing"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 readme = "_README.md"
-rust-version = "1.56"
+rust-version = "1.61"
 
 [lib]
 name = "pest_derive"
@@ -20,8 +20,10 @@ proc-macro = true
 [features]
 default = ["std"]
 std = ["pest/std", "pest_generator/std"]
+not-bootstrap-in-src = ["pest_generator/not-bootstrap-in-src"]
+grammar-extras = ["pest_generator/grammar-extras"]
 
 [dependencies]
 # for tests, included transitively anyway
-pest = { path = "../pest", version = "2.1.0", default-features = false }
-pest_generator = { path = "../generator", version = "2.1.0", default-features = false }
+pest = { path = "../pest", version = "2.7.12", default-features = false }
+pest_generator = { path = "../generator", version = "2.7.12", default-features = false }

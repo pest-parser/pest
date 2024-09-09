@@ -103,7 +103,7 @@ mod tests {
         }];
 
         assert_eq!(
-            restore_on_err(rules[0].clone(), &to_hash_map(&rules)),
+            restore_on_err(rules[0].clone(), &to_optimized_hash_map(&rules)),
             rules[0].clone()
         );
     }
@@ -123,7 +123,7 @@ mod tests {
         };
 
         assert_eq!(
-            restore_on_err(rules[0].clone(), &to_hash_map(&rules)),
+            restore_on_err(rules[0].clone(), &to_optimized_hash_map(&rules)),
             restored
         );
     }
@@ -146,7 +146,7 @@ mod tests {
         };
 
         assert_eq!(
-            restore_on_err(rules[0].clone(), &to_hash_map(&rules)),
+            restore_on_err(rules[0].clone(), &to_optimized_hash_map(&rules)),
             restored
         );
     }

@@ -18,11 +18,11 @@ struct ParenParser;
 
 impl Parser<Rule> for ParenParser {
     fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
-        fn expr(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn expr(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.sequence(|s| s.repeat(paren).and_then(|s| s.end_of_input()))
         }
 
-        fn paren(state: Box<ParserState<Rule>>) -> ParseResult<Box<ParserState<Rule>>> {
+        fn paren(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::paren, |s| {
                 s.sequence(|s| {
                     s.match_string("(")
@@ -48,6 +48,7 @@ impl Parser<Rule> for ParenParser {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct Paren(Vec<Paren>);
 
 fn expr(pairs: Pairs<Rule>) -> Vec<Paren> {

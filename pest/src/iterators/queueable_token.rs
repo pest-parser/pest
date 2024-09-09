@@ -14,14 +14,21 @@
 //   * it finds its pair in O(1) time instead of O(N), since pair positions are known at parse time
 //     and can easily be stored instead of recomputed
 #[derive(Debug)]
-pub enum QueueableToken<R> {
+pub enum QueueableToken<'i, R> {
     Start {
+        /// Queue (as a vec) contains both `Start` token and `End` for the same rule.
+        /// This field is an index of corresponding `End` token in vec.
         end_token_index: usize,
+        /// Position from which rule was tried to parse (or successfully parsed).
         input_pos: usize,
     },
     End {
+        /// Queue (as a vec) contains both `Start` token and `End` for the same rule.
+        /// This filed is an index of corresponding `Start` token in vec.
         start_token_index: usize,
         rule: R,
+        tag: Option<&'i str>,
+        /// Position at which successfully parsed rule finished (ended).
         input_pos: usize,
     },
 }

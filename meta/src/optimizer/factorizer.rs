@@ -15,7 +15,6 @@ pub fn factor(rule: Rule) -> Rule {
         name,
         ty,
         expr: expr.map_top_down(|expr| {
-            // TODO: Use box syntax when it gets stabilized.
             match expr {
                 Expr::Choice(lhs, rhs) => match (*lhs, *rhs) {
                     (Expr::Seq(l1, r1), Expr::Seq(l2, r2)) => {
@@ -26,7 +25,11 @@ pub fn factor(rule: Rule) -> Rule {
                         }
                     }
                     // Converts `(rule ~ rest) | rule` to `rule ~ rest?`, avoiding trying to match `rule` twice.
-                    (Expr::Seq(l1, l2), r) => {
+                    // This is only done for atomic rules, because other rule types have implicit whitespaces.
+                    // FIXME: "desugar" implicit whitespace rules before applying any optimizations
+                    (Expr::Seq(l1, l2), r)
+                        if matches!(ty, RuleType::Atomic | RuleType::CompoundAtomic) =>
+                    {
                         if *l1 == r {
                             Expr::Seq(l1, Box::new(Expr::Opt(l2)))
                         } else {

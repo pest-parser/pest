@@ -21,11 +21,12 @@ There is a single fuzzing target for this crate that interacts with
 
 ### `pest_grammars`
 
+- `http`
 - `toml`
 - `json`
 
-There are two fuzzing targets for this crate: one tests the json grammar in the
-`json` module and the other tests the toml grammar in the `toml` module. They
+There are three fuzzing targets for this crate: one tests the http request grammar in the `http` module, one tests the json grammar in the
+`json` module and the last one tests the toml grammar in the `toml` module. They
 interact directly with the `pest::Parser::parse` function provided by derived
 on the respective Parsers in each module.
 

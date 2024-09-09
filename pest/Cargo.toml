@@ -1,32 +1,38 @@
 [package]
 name = "pest"
 description = "The Elegant Parser"
-version = "2.1.3"
-edition = "2018"
+version = "2.7.12"
+edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
-homepage = "https://pest-parser.github.io/"
+homepage = "https://pest.rs/"
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
 keywords = ["pest", "parser", "peg", "grammar"]
 categories = ["parsing"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 readme = "_README.md"
-rust-version = "1.56"
+rust-version = "1.61"
 
 [features]
 # Implements `std::error::Error` for the `Error` type
-std = ["ucd-trie/std", "thiserror"]
+std = ["ucd-trie/std", "dep:thiserror"]
 # Enables the `to_json` function for `Pair` and `Pairs`
-pretty-print = ["serde", "serde_json"]
+pretty-print = ["dep:serde", "dep:serde_json"]
 # Enable const fn constructor for `PrecClimber`
 const_prec_climber = []
 
 [dependencies]
-ucd-trie = { version = "0.1.1", default-features = false }
-serde = { version = "1.0.89", optional = true }
-serde_json = { version = "1.0.39", optional = true}
-thiserror = { version = "1.0.31", optional = true }
+ucd-trie = { version = "0.1.5", default-features = false }
+serde = { version = "1.0.145", optional = true }
+serde_json = { version = "1.0.85", optional = true }
+thiserror = { version = "1.0.37", optional = true }
+memchr = { version = "2", optional = true }
 miette = { version = "7.2.0", optional = true, features = ["fancy"] }
 
 [dev-dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
 miette = { version = "7.2.0", features = ["fancy"] }
+
+[[bench]]
+name = "stack"
+harness = false

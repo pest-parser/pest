@@ -1,0 +1,60 @@
+name: Setup
+description: Initial setup for workflows
+
+inputs:
+  kind:
+    description: Job kind (for cache key)
+    required: false
+  toolchain:
+    description: Toolchain version
+    required: false
+    default: "1.61.0"
+  components:
+    description: Toolchain components
+    required: false
+  targets:
+    description: Toolchain targets
+    required: false
+  tools:
+    description: Additional tools to install
+    required: false
+
+outputs:
+  cache-key:
+    description: Cache key
+    value: ${{inputs.kind}}-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rust nightly # for minimal-versions
+      uses: dtolnay/rust-toolchain@nightly
+    - name: Install Rust ${{inputs.toolchain}}
+      uses: dtolnay/rust-toolchain@master
+      id: toolchain
+      with:
+        toolchain: ${{inputs.toolchain}}
+        components: ${{inputs.components}}
+        targets: ${{inputs.targets}}
+    - name: Install cargo-hack,cargo-minimal-versions
+      uses: taiki-e/install-action@v1
+      with:
+        tool: cargo-hack,cargo-minimal-versions
+    - name: Install ${{inputs.tools}}
+      uses: taiki-e/install-action@v1
+      if: ${{inputs.tools}}
+      with:
+        tool: ${{inputs.tools}}
+    - name: Generate lockfile
+      run: cargo minimal-versions generate-lockfile
+      shell: sh
+    - name: Set up cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: ${{inputs.kind}}-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}
+    - name: Bootstraping Grammars - Building
+      run: cargo build --package pest_bootstrap
+      shell: sh
+    - name: Bootstraping Grammars - Executing
+      run: cargo run --package pest_bootstrap
+      shell: sh

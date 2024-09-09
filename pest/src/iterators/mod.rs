@@ -10,6 +10,7 @@
 //! Types and iterators for parser output.
 
 mod flat_pairs;
+mod line_index;
 mod pair;
 pub(crate) mod pairs;
 mod queueable_token;

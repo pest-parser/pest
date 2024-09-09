@@ -3,11 +3,13 @@ name = "pest_meta-fuzz"
 version = "0.0.0"
 authors = ["Automatically generated"]
 publish = false
-rust-version = "1.56"
+rust-version = "1.61"
 
 [package.metadata]
 cargo-fuzz = true
 
+[dependencies.pest]
+path = "../../pest"
 [dependencies.pest_meta]
 path = ".."
 [dependencies.libfuzzer-sys]
