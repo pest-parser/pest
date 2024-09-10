@@ -672,7 +672,7 @@ impl<R: RuleType> Error<R> {
         }
     }
 
-    #[cfg(feature = "miette")]
+    #[cfg(feature = "miette-error")]
     /// Turns an error into a [miette](crates.io/miette) Diagnostic.
     pub fn into_miette(self) -> impl ::miette::Diagnostic {
         miette_adapter::MietteAdapter(self)
@@ -734,19 +734,19 @@ fn visualize_whitespace(input: &str) -> String {
     input.to_owned().replace('\r', "␍").replace('\n', "␊")
 }
 
-#[cfg(feature = "miette")]
+#[cfg(feature = "miette-error")]
 mod miette_adapter {
     use alloc::string::ToString;
     use std::boxed::Box;
 
     use crate::error::LineColLocation;
 
-    use super::{Error, InputLocation, RuleType};
+    use super::{Error, RuleType};
 
     use miette::{Diagnostic, LabeledSpan, SourceCode};
 
     #[derive(thiserror::Error, Debug)]
-    #[error("Failure to parse at {}", self.0.line_col)]
+    #[error("Failure to parse at {:?}", self.0.line_col)]
     pub(crate) struct MietteAdapter<R: RuleType>(pub(crate) Error<R>);
 
     impl<R: RuleType> Diagnostic for MietteAdapter<R> {
@@ -758,8 +758,8 @@ mod miette_adapter {
             let message = self.0.variant.message().to_string();
 
             let (offset, length) = match self.0.line_col {
-                LineColLocation::Pos((r, c)) => (c - 1, 1),
-                LineColLocation::Span((start_r, start_c), (end_r, end_c)) => {
+                LineColLocation::Pos((_, c)) => (c - 1, 1),
+                LineColLocation::Span((_, start_c), (_, end_c)) => {
                     (start_c - 1, end_c - start_c + 1)
                 }
             };
@@ -1152,13 +1152,11 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "miette")]
+    #[cfg(feature = "miette-error")]
     #[test]
     fn miette_error() {
-        use miette::{Diagnostic, LabeledSpan, MietteDiagnostic};
-
         let input = "abc\ndef";
-        let pos = position::Position::new(input, 4).unwrap();
+        let pos = Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
             ErrorVariant::ParsingError {
                 positives: vec![1, 2, 3],

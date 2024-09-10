@@ -69,7 +69,7 @@ fn main() {
         line.pop();
 
         let parsed = ParenParser::parse(Rule::expr, &line);
-        #[cfg(feature = "miette")]
+        #[cfg(feature = "miette-error")]
         let parsed = parsed
             .map_err(Error::into_miette)
             .map_err(miette::Report::from);
@@ -77,10 +77,10 @@ fn main() {
         match parsed {
             Ok(pairs) => println!("{:?}", expr(pairs)),
             // To print pest errors, use Display formatting.
-            #[cfg(not(feature = "miette"))]
+            #[cfg(not(feature = "miette-error"))]
             Err(e) => eprintln!("\n{}", e),
             // To print miette errors, use Debug formatting.
-            #[cfg(feature = "miette")]
+            #[cfg(feature = "miette-error")]
             Err(e) => eprintln!("\n{:?}", e),
         };
     }
