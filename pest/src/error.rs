@@ -600,7 +600,7 @@ impl<R: RuleType> Error<R> {
         }
     }
 
-    pub fn format(&self) -> String {
+    pub(crate) fn format(&self) -> String {
         let spacing = self.spacing();
         let path = self
             .path
@@ -747,7 +747,7 @@ mod miette_adapter {
 
     #[derive(thiserror::Error, Debug)]
     #[error("Failure to parse at {}", self.0.line_col)]
-    pub(crate)struct MietteAdapter<R: RuleType>(pub(crate) Error<R>);
+    pub(crate) struct MietteAdapter<R: RuleType>(pub(crate) Error<R>);
 
     impl<R: RuleType> Diagnostic for MietteAdapter<R> {
         fn source_code(&self) -> Option<&dyn SourceCode> {
@@ -759,7 +759,9 @@ mod miette_adapter {
 
             let (offset, length) = match self.0.line_col {
                 LineColLocation::Pos((r, c)) => (c - 1, 1),
-                LineColLocation::Span((start_r, start_c), (end_r, end_c)) => (start_c - 1, end_c - start_c + 1),
+                LineColLocation::Span((start_r, start_c), (end_r, end_c)) => {
+                    (start_c - 1, end_c - start_c + 1)
+                }
             };
 
             let span = LabeledSpan::new(Some(message), offset, length);
@@ -1153,7 +1155,7 @@ mod tests {
     #[cfg(feature = "miette")]
     #[test]
     fn miette_error() {
-        use miette::{MietteDiagnostic, LabeledSpan, Diagnostic};
+        use miette::{Diagnostic, LabeledSpan, MietteDiagnostic};
 
         let input = "abc\ndef";
         let pos = position::Position::new(input, 4).unwrap();
@@ -1162,7 +1164,7 @@ mod tests {
                 positives: vec![1, 2, 3],
                 negatives: vec![4, 5, 6],
             },
-            pos, 
+            pos,
         );
 
         let miette_error = miette::Error::new(error.into_miette());
