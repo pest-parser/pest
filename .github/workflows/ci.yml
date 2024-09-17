@@ -46,7 +46,7 @@ jobs:
       - name: cargo clippy
         run: cargo clippy --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --all-targets -- -Dwarnings
       - name: cargo test
-        run: cargo test --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --release
+        run: NO_COLOR=0 cargo test --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --release
       - name: cargo test (ignored)
         run: cargo test -p pest_grammars --lib --verbose --release -- --ignored tests::toml_handles_deep_nesting_unstable
 
@@ -101,7 +101,7 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --workspace --lcov --output-path lcov.info
+        run: NO_COLOR=0 cargo llvm-cov --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --workspace --lcov --output-path lcov.info
       - name: Upload Results to Codecov
         uses: codecov/codecov-action@v3
         with:
