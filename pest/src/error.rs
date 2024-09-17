@@ -1170,7 +1170,7 @@ mod tests {
         assert_eq!(
             format!("{:?}", miette_error),
             [
-                "  \u{1b}[31m×\u{1b}[0m Failure to parse at (2, 1)",
+                "  \u{1b}[31m×\u{1b}[0m Failure to parse at Pos((2, 1))",
                 "   ╭────",
                 " \u{1b}[2m1\u{1b}[0m │ def",
                 "   · \u{1b}[35;1m┬\u{1b}[0m",
