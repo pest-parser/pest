@@ -25,7 +25,7 @@ jobs:
           kind: check
           toolchain: 1.74.0 # needed for `clap` in pest_debugger
       - name: cargo check
-        run: cargo check --all --features pretty-print,const_prec_climber,memchr,grammar-extras --all-targets
+        run: cargo check --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --all-targets
 
   testing:
     name: Unit, Style, and Lint Testing
@@ -44,9 +44,9 @@ jobs:
       - name: cargo fmt
         run: cargo fmt --all -- --check
       - name: cargo clippy
-        run: cargo clippy --all --features pretty-print,const_prec_climber,memchr,grammar-extras --all-targets -- -Dwarnings
+        run: cargo clippy --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --all-targets -- -Dwarnings
       - name: cargo test
-        run: cargo test --all --features pretty-print,const_prec_climber,memchr,grammar-extras --release
+        run: cargo test --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --release
       - name: cargo test (ignored)
         run: cargo test -p pest_grammars --lib --verbose --release -- --ignored tests::toml_handles_deep_nesting_unstable
 
@@ -64,7 +64,7 @@ jobs:
           kind: check
           toolchain: 1.74.0 # needed for `clap` in pest_debugger
       - name: cargo doc
-        run: cargo doc --all --features pretty-print,const_prec_climber,memchr,grammar-extras
+        run: cargo doc --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error
 
   dependency:
     name: Minimal Versions Testing
@@ -101,7 +101,7 @@ jobs:
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov --features pretty-print,const_prec_climber,memchr,grammar-extras --workspace --lcov --output-path lcov.info
+        run: cargo llvm-cov --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --workspace --lcov --output-path lcov.info
       - name: Upload Results to Codecov
         uses: codecov/codecov-action@v3
         with:
