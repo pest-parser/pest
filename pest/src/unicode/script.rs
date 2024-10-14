@@ -2,9 +2,9 @@
 //
 //   ucd-generate script --trie-set ./target/ucd/
 //
-// Unicode version: 15.1.0.
+// Unicode version: 16.0.0.
 //
-// ucd-generate 0.3.0 is available on crates.io.
+// ucd-generate 0.3.1 is available on crates.io.
 
 pub const BY_NAME: &'static [(&'static str, &'static ::ucd_trie::TrieSet)] = &[
   ("Adlam", ADLAM), ("Ahom", AHOM),
@@ -22,10 +22,11 @@ pub const BY_NAME: &'static [(&'static str, &'static ::ucd_trie::TrieSet)] = &[
   ("Deseret", DESERET), ("Devanagari", DEVANAGARI),
   ("Dives_Akuru", DIVES_AKURU), ("Dogra", DOGRA), ("Duployan", DUPLOYAN),
   ("Egyptian_Hieroglyphs", EGYPTIAN_HIEROGLYPHS), ("Elbasan", ELBASAN),
-  ("Elymaic", ELYMAIC), ("Ethiopic", ETHIOPIC), ("Georgian", GEORGIAN),
-  ("Glagolitic", GLAGOLITIC), ("Gothic", GOTHIC), ("Grantha", GRANTHA),
-  ("Greek", GREEK), ("Gujarati", GUJARATI), ("Gunjala_Gondi", GUNJALA_GONDI),
-  ("Gurmukhi", GURMUKHI), ("Han", HAN), ("Hangul", HANGUL),
+  ("Elymaic", ELYMAIC), ("Ethiopic", ETHIOPIC), ("Garay", GARAY),
+  ("Georgian", GEORGIAN), ("Glagolitic", GLAGOLITIC), ("Gothic", GOTHIC),
+  ("Grantha", GRANTHA), ("Greek", GREEK), ("Gujarati", GUJARATI),
+  ("Gunjala_Gondi", GUNJALA_GONDI), ("Gurmukhi", GURMUKHI),
+  ("Gurung_Khema", GURUNG_KHEMA), ("Han", HAN), ("Hangul", HANGUL),
   ("Hanifi_Rohingya", HANIFI_ROHINGYA), ("Hanunoo", HANUNOO),
   ("Hatran", HATRAN), ("Hebrew", HEBREW), ("Hiragana", HIRAGANA),
   ("Imperial_Aramaic", IMPERIAL_ARAMAIC), ("Inherited", INHERITED),
@@ -34,8 +35,8 @@ pub const BY_NAME: &'static [(&'static str, &'static ::ucd_trie::TrieSet)] = &[
   ("Kaithi", KAITHI), ("Kannada", KANNADA), ("Katakana", KATAKANA),
   ("Kawi", KAWI), ("Kayah_Li", KAYAH_LI), ("Kharoshthi", KHAROSHTHI),
   ("Khitan_Small_Script", KHITAN_SMALL_SCRIPT), ("Khmer", KHMER),
-  ("Khojki", KHOJKI), ("Khudawadi", KHUDAWADI), ("Lao", LAO),
-  ("Latin", LATIN), ("Lepcha", LEPCHA), ("Limbu", LIMBU),
+  ("Khojki", KHOJKI), ("Khudawadi", KHUDAWADI), ("Kirat_Rai", KIRAT_RAI),
+  ("Lao", LAO), ("Latin", LATIN), ("Lepcha", LEPCHA), ("Limbu", LIMBU),
   ("Linear_A", LINEAR_A), ("Linear_B", LINEAR_B), ("Lisu", LISU),
   ("Lycian", LYCIAN), ("Lydian", LYDIAN), ("Mahajani", MAHAJANI),
   ("Makasar", MAKASAR), ("Malayalam", MALAYALAM), ("Mandaic", MANDAIC),
@@ -49,28 +50,30 @@ pub const BY_NAME: &'static [(&'static str, &'static ::ucd_trie::TrieSet)] = &[
   ("Nag_Mundari", NAG_MUNDARI), ("Nandinagari", NANDINAGARI),
   ("New_Tai_Lue", NEW_TAI_LUE), ("Newa", NEWA), ("Nko", NKO),
   ("Nushu", NUSHU), ("Nyiakeng_Puachue_Hmong", NYIAKENG_PUACHUE_HMONG),
-  ("Ogham", OGHAM), ("Ol_Chiki", OL_CHIKI), ("Old_Hungarian", OLD_HUNGARIAN),
-  ("Old_Italic", OLD_ITALIC), ("Old_North_Arabian", OLD_NORTH_ARABIAN),
-  ("Old_Permic", OLD_PERMIC), ("Old_Persian", OLD_PERSIAN),
-  ("Old_Sogdian", OLD_SOGDIAN), ("Old_South_Arabian", OLD_SOUTH_ARABIAN),
-  ("Old_Turkic", OLD_TURKIC), ("Old_Uyghur", OLD_UYGHUR), ("Oriya", ORIYA),
-  ("Osage", OSAGE), ("Osmanya", OSMANYA), ("Pahawh_Hmong", PAHAWH_HMONG),
+  ("Ogham", OGHAM), ("Ol_Chiki", OL_CHIKI), ("Ol_Onal", OL_ONAL),
+  ("Old_Hungarian", OLD_HUNGARIAN), ("Old_Italic", OLD_ITALIC),
+  ("Old_North_Arabian", OLD_NORTH_ARABIAN), ("Old_Permic", OLD_PERMIC),
+  ("Old_Persian", OLD_PERSIAN), ("Old_Sogdian", OLD_SOGDIAN),
+  ("Old_South_Arabian", OLD_SOUTH_ARABIAN), ("Old_Turkic", OLD_TURKIC),
+  ("Old_Uyghur", OLD_UYGHUR), ("Oriya", ORIYA), ("Osage", OSAGE),
+  ("Osmanya", OSMANYA), ("Pahawh_Hmong", PAHAWH_HMONG),
   ("Palmyrene", PALMYRENE), ("Pau_Cin_Hau", PAU_CIN_HAU),
   ("Phags_Pa", PHAGS_PA), ("Phoenician", PHOENICIAN),
   ("Psalter_Pahlavi", PSALTER_PAHLAVI), ("Rejang", REJANG), ("Runic", RUNIC),
   ("Samaritan", SAMARITAN), ("Saurashtra", SAURASHTRA), ("Sharada", SHARADA),
   ("Shavian", SHAVIAN), ("Siddham", SIDDHAM), ("SignWriting", SIGNWRITING),
   ("Sinhala", SINHALA), ("Sogdian", SOGDIAN), ("Sora_Sompeng", SORA_SOMPENG),
-  ("Soyombo", SOYOMBO), ("Sundanese", SUNDANESE),
+  ("Soyombo", SOYOMBO), ("Sundanese", SUNDANESE), ("Sunuwar", SUNUWAR),
   ("Syloti_Nagri", SYLOTI_NAGRI), ("Syriac", SYRIAC), ("Tagalog", TAGALOG),
   ("Tagbanwa", TAGBANWA), ("Tai_Le", TAI_LE), ("Tai_Tham", TAI_THAM),
   ("Tai_Viet", TAI_VIET), ("Takri", TAKRI), ("Tamil", TAMIL),
   ("Tangsa", TANGSA), ("Tangut", TANGUT), ("Telugu", TELUGU),
   ("Thaana", THAANA), ("Thai", THAI), ("Tibetan", TIBETAN),
-  ("Tifinagh", TIFINAGH), ("Tirhuta", TIRHUTA), ("Toto", TOTO),
-  ("Ugaritic", UGARITIC), ("Vai", VAI), ("Vithkuqi", VITHKUQI),
-  ("Wancho", WANCHO), ("Warang_Citi", WARANG_CITI), ("Yezidi", YEZIDI),
-  ("Yi", YI), ("Zanabazar_Square", ZANABAZAR_SQUARE),
+  ("Tifinagh", TIFINAGH), ("Tirhuta", TIRHUTA), ("Todhri", TODHRI),
+  ("Toto", TOTO), ("Tulu_Tigalari", TULU_TIGALARI), ("Ugaritic", UGARITIC),
+  ("Vai", VAI), ("Vithkuqi", VITHKUQI), ("Wancho", WANCHO),
+  ("Warang_Citi", WARANG_CITI), ("Yezidi", YEZIDI), ("Yi", YI),
+  ("Zanabazar_Square", ZANABAZAR_SQUARE),
 ];
 
 pub const ADLAM: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
@@ -227,7 +230,7 @@ pub const ARABIC: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
     6, 5, 5, 5, 5, 7, 5, 8, 9, 0, 10, 5, 11, 0, 0, 0, 0,
   ],
   tree2_level2: &[
-    0, 0xFFFF000000000000, 0xFFFFFFFFFF037FFF, 0xFFFFFFFBFFFFFFFF,
+    0, 0xFFFF000000000000, 0xFFFFFFFFFF837FFF, 0xFFFFFFFBFFFFFFFF,
     0xFFFFFFFFFFFF0000, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFF80007,
     0x3FFFFFFFFFFFFFFF, 0xFFFFFFFFFFFCFFFF, 0xFFFF0000000080FF,
     0xFFDF000000000000, 0x1FFFFFFFFFFFFFFF,
@@ -256,7 +259,7 @@ pub const ARABIC: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 5, 6, 0, 0, 0, 0,
   ],
   tree3_level3: &[
-    0, 0x7FFFFFFF00000000, 0xE000000000000000, 0xAF7FE96FFFFFFEF,
+    0, 0x7FFFFFFF00000000, 0xF00000000000001C, 0xAF7FE96FFFFFFEF,
     0x5EF7F796AA96EA84, 0xFFFFBEE0FFFFBFF, 0x3000000000000,
   ],
 };
@@ -402,7 +405,7 @@ pub const BALINESE: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   ],
   tree2_level2: &[
-    0, 0xFFFFFFFFFFFFFFFF, 0x7FFFFFFFFFFF1FFF,
+    0, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFDFFF,
   ],
   tree3_level1: &[
   ],
@@ -1329,10 +1332,10 @@ pub const COMMON: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
     0x800000000000000, 0x380000000000, 0x60000000000000, 0x2C,
     0x4EFDE0200080000, 0xFFFFFFFFFFFFCFFF, 0x7FF1FFDFFFFFFFFF,
     0xFFFFFFFF00007FFF, 0x1, 0xFFFBF3BFFFFFFFFF, 0xFFFFBFFF,
-    0xFFFFFFFFFFFF0E00, 0xFFFFFFFFFFFFFFFF, 0x7FFFFFFFFF, 0xFFFFFFFF000007FF,
+    0xFFFFFFFFFFFF0E00, 0xFFFFFFFFFFFFFFFF, 0x3FFFFFFFFFF, 0xFFFFFFFF000007FF,
     0xFFCFFFFFFFFFFFFF, 0xFFFFFFFFFFBFFFFF, 0x3FFFFFFF, 0xFFFF000000000000,
     0xF0FF0001FFFFFF5F, 0x118000000, 0x1800000000000000, 0xFFFF0000,
-    0x800FFFFFFFFF, 0xFFFFFFFF00000000, 0x80000000FFFFFFFF,
+    0x803FFFFFFFFF, 0xFFFFFFFF00000000, 0x80000000FFFFFFFF,
     0x800000000000FFFF, 0xFFFFFFFFFF000000, 0x3FFFFFFFF, 0x700,
     0x3FF000000000000, 0x400000000000, 0x8000, 0xC0008000000,
     0xC000000000000000, 0xFFFF000003FF0000, 0xF7FFFF7FFFF, 0xF8000001FFFFFFFE,
@@ -1361,34 +1364,34 @@ pub const COMMON: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 6, 7, 6, 6, 6, 6, 6, 6,
+    8, 0, 0, 9, 6, 10, 6, 6, 6, 11, 12, 13, 14, 15, 0, 0, 0, 16, 6, 17, 0, 0,
+    6, 18, 19, 20, 21, 22, 6, 6, 6, 6, 23, 6, 6, 6, 6, 24, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 6, 7, 8, 7, 7, 7, 9, 10, 11, 12, 13, 0, 0, 0, 14, 7, 15, 0, 0, 7,
-    16, 17, 18, 19, 20, 7, 7, 7, 7, 21, 7, 7, 7, 7, 22, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    23, 24, 0, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 7, 27, 28, 7, 7, 29,
-    30, 31, 32, 0, 0, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 33, 7, 34,
-    7, 35, 36, 37, 38, 0, 7, 7, 7, 7, 7, 39, 40, 41, 7, 7, 42, 43, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 44, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    25, 26, 0, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 6, 29, 30, 6, 6, 31,
+    32, 33, 34, 0, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 35, 6, 36,
+    6, 37, 38, 39, 40, 41, 6, 6, 6, 6, 6, 42, 43, 44, 6, 6, 45, 7, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 46, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0,
   ],
   tree3_level3: &[
     0, 0xFF8FFFFFFFFFFF87, 0x1FFF0000, 0x1FFFFFFFFFFF0000, 0xFFFFFFE00000000,
-    0xF00000000, 0xFFFFFFFFFFFF0000, 0xFFFFFFFFFFFFFFFF, 0xF,
-    0x3FFFFFFFFFFFFF, 0xFFFFFE7FFFFFFFFF, 0x7FFFC7FFFFFFFFF,
-    0xFFFFC3FFFFFFF018, 0x7FFFFFFFFFF, 0xFFFFF000FFFFF, 0x1FFFFFF007FFFFF,
-    0xFFFFFFFFFFDFFFFF, 0xEBFFDE64DFFFFFFF, 0xFFFFFFFFFFFFFFEF,
-    0x7BFFFFFFDFDFE7BF, 0xFFFFFFFFFFFDFC5F, 0xFFFFFF3FFFFFFFFF,
-    0xFFFFFFFFFFFFCFFF, 0xFFFE000000000000, 0x1FFFFFFFFFFFFF,
-    0x3FFFFFFFFFFFFFFE, 0xFFFF0FFFFFFFFFFF, 0xFFFE7FFF000FFFFF,
-    0x3FFFFFFFFEFFFE, 0x3FFFFFFFFFFF, 0xFFFFFFC000000000, 0xFFFFFFFFFFF0006,
-    0x3F000301FF, 0x1FFF1FFFF0FFFFFF, 0xF87FFFFFFFFFFFFF, 0x10FFF03FFFFFF,
-    0xFFFFFFFFFFFF0FFF, 0xFFFFFFFF03FF00FF, 0x33FFFFFFF00FF,
-    0x1FFF3FFF000FFFFF, 0xBFFFFFFFFFFF01FF, 0x1FF01FF0FFFC03F,
-    0xFFFFFFFFFFF7FFFF, 0x3FF0000000007FF, 0xFFFFFFFF00000002,
+    0xF00000000, 0xFFFFFFFFFFFFFFFF, 0x3FFFFFFFFFFFFFF, 0xFFFFFFFFFFFFF,
+    0xFFFFFFFFFFFF0000, 0xF, 0x3FFFFFFFFFFFFF, 0xFFFFFE7FFFFFFFFF,
+    0x7FFFC7FFFFFFFFF, 0xFFFFC3FFFFFFF018, 0x7FFFFFFFFFF, 0xFFFFF000FFFFF,
+    0x1FFFFFF007FFFFF, 0xFFFFFFFFFFDFFFFF, 0xEBFFDE64DFFFFFFF,
+    0xFFFFFFFFFFFFFFEF, 0x7BFFFFFFDFDFE7BF, 0xFFFFFFFFFFFDFC5F,
+    0xFFFFFF3FFFFFFFFF, 0xFFFFFFFFFFFFCFFF, 0xFFFE000000000000,
+    0x1FFFFFFFFFFFFF, 0x3FFFFFFFFFFFFFFE, 0xFFFF0FFFFFFFFFFF,
+    0xFFFE7FFF000FFFFF, 0x3FFFFFFFFEFFFE, 0x3FFFFFFFFFFF, 0xFFFFFFC000000000,
+    0xFFFFFFFFFFF0006, 0x3F000301FF, 0x1FFF1FFFF0FFFFFF, 0xF87FFFFFFFFFFFFF,
+    0x10FFF03FFFFFF, 0xFFFFFFFFFFFF0FFF, 0xFFFFFFFF03FF00FF,
+    0xFFF3FFFFFFF00FF, 0x3, 0x1FFF3FFF000FFFFF, 0xFFFFFFFFFFFF83FF,
+    0x1FF03FF9FFFC07F, 0xFFFFFFFFFFF7FFFF, 0xFFFFFFFF00000002,
   ],
 };
 
@@ -1604,7 +1607,7 @@ pub const CYRILLIC: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0,
   ],
   tree2_level2: &[
-    0, 0x1FF, 0x80000000000, 0x100000000000000, 0xFFFFFFFF00000000,
+    0, 0x7FF, 0x80000000000, 0x100000000000000, 0xFFFFFFFF00000000,
     0xFFFFFFFFFFFFFFFF, 0xFFFFFFFF, 0xC00000000000,
   ],
   tree3_level1: &[
@@ -1859,7 +1862,7 @@ pub const EGYPTIAN_HIEROGLYPHS: &'static ::ucd_trie::TrieSet = &::ucd_trie::Trie
   tree2_level2: &[
   ],
   tree3_level1: &[
-    0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1875,12 +1878,14 @@ pub const EGYPTIAN_HIEROGLYPHS: &'static ::ucd_trie::TrieSet = &::ucd_trie::Trie
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   ],
   tree3_level3: &[
-    0, 0xFFFFFFFFFFFFFFFF, 0x3FFFFF,
+    0, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFF003FFFFF, 0x7FFFFFFFFFFFFFF,
   ],
 };
 
@@ -2029,6 +2034,41 @@ pub const ETHIOPIC: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
   ],
   tree3_level3: &[
     0, 0x7FFF6F7F00000000,
+  ],
+};
+
+pub const GARAY: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
+  tree1_level1: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
+  ],
+  tree2_level1: &[
+  ],
+  tree2_level2: &[
+  ],
+  tree3_level1: &[
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1,
+  ],
+  tree3_level2: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
+  ],
+  tree3_level3: &[
+    0, 0xFFFFFE3FFFFFFFFF, 0xC03F,
   ],
 };
 
@@ -2466,6 +2506,41 @@ pub const GURMUKHI: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
   tree3_level2: &[
   ],
   tree3_level3: &[
+  ],
+};
+
+pub const GURUNG_KHEMA: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
+  tree1_level1: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
+  ],
+  tree2_level1: &[
+  ],
+  tree2_level2: &[
+  ],
+  tree3_level1: &[
+    0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+  ],
+  tree3_level2: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
+  ],
+  tree3_level3: &[
+    0, 0x3FFFFFFFFFFFFFF,
   ],
 };
 
@@ -3349,7 +3424,7 @@ pub const KAWI: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
     2, 0, 0,
   ],
   tree3_level3: &[
-    0, 0xC7FFFFFFFFFDFFFF, 0x3FFFFFF,
+    0, 0xC7FFFFFFFFFDFFFF, 0x7FFFFFF,
   ],
 };
 
@@ -3479,7 +3554,7 @@ pub const KHITAN_SMALL_SCRIPT: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieS
     2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   ],
   tree3_level3: &[
-    0, 0x1000000000, 0xFFFFFFFFFFFFFFFF, 0x3FFFFF,
+    0, 0x1000000000, 0xFFFFFFFFFFFFFFFF, 0x80000000003FFFFF,
   ],
 };
 
@@ -3611,6 +3686,41 @@ pub const KHUDAWADI: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
   ],
 };
 
+pub const KIRAT_RAI: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
+  tree1_level1: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
+  ],
+  tree2_level1: &[
+  ],
+  tree2_level2: &[
+  ],
+  tree3_level1: &[
+    0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+  ],
+  tree3_level2: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
+  ],
+  tree3_level3: &[
+    0, 0x3FFFFFFFFFFFFFF,
+  ],
+};
+
 pub const LAO: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
   tree1_level1: &[
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -3723,7 +3833,7 @@ pub const LATIN: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
     0, 0xFFFFF03FFFFFFFFF, 0xFEFFF83C1FFFFFFF, 0x7FFFFFFFFFFFFFFF,
     0xFFFFFFFFFFFFFFFF, 0x8002000000000000, 0x1FFF0000, 0x40C0000000000,
     0xFFFFFFFF00004000, 0x1FF, 0xFFFFFFFF00000000, 0xFFFFFFFC00000000,
-    0xFFFFFFFFFFFFF8FF, 0xFFFC000003EB07FF, 0xFFFF000000000000, 0x3DFF7FFFFFF,
+    0xFFFFFFFFFFFFF8FF, 0xFFFC00001FEB3FFF, 0xFFFF000000000000, 0x3DFF7FFFFFF,
     0x7F, 0x7FFFFFE00000000, 0x7FFFFFE,
   ],
   tree3_level1: &[
@@ -4842,10 +4952,28 @@ pub const MYANMAR: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
     0, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFF, 0x7FFFFFFF00000000, 0xFFFFFFFF00000000,
   ],
   tree3_level1: &[
+    0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
   ],
   tree3_level2: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
   ],
   tree3_level3: &[
+    0, 0xFFFFF0000,
   ],
 };
 
@@ -5249,6 +5377,41 @@ pub const OL_CHIKI: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
   tree3_level2: &[
   ],
   tree3_level3: &[
+  ],
+};
+
+pub const OL_ONAL: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
+  tree1_level1: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
+  ],
+  tree2_level1: &[
+  ],
+  tree2_level2: &[
+  ],
+  tree3_level1: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+  ],
+  tree3_level2: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
+  ],
+  tree3_level3: &[
+    0, 0x87FFFFFFFFFF0000,
   ],
 };
 
@@ -6539,6 +6702,41 @@ pub const SUNDANESE: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
   ],
 };
 
+pub const SUNUWAR: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
+  tree1_level1: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
+  ],
+  tree2_level1: &[
+  ],
+  tree2_level2: &[
+  ],
+  tree3_level1: &[
+    0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+  ],
+  tree3_level2: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
+  ],
+  tree3_level3: &[
+    0, 0x3FF0003FFFFFFFF,
+  ],
+};
+
 pub const SYLOTI_NAGRI: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
   tree1_level1: &[
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -7415,6 +7613,41 @@ pub const TIRHUTA: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
   ],
 };
 
+pub const TODHRI: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
+  tree1_level1: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
+  ],
+  tree2_level1: &[
+  ],
+  tree2_level2: &[
+  ],
+  tree3_level1: &[
+    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1,
+  ],
+  tree3_level2: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
+  ],
+  tree3_level3: &[
+    0, 0xFFFFFFFFFFFFF,
+  ],
+};
+
 pub const TOTO: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
   tree1_level1: &[
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -7447,6 +7680,41 @@ pub const TOTO: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
   ],
   tree3_level3: &[
     0, 0x7FFFFFFF0000,
+  ],
+};
+
+pub const TULU_TIGALARI: &'static ::ucd_trie::TrieSet = &::ucd_trie::TrieSet {
+  tree1_level1: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
+  ],
+  tree2_level1: &[
+  ],
+  tree2_level2: &[
+  ],
+  tree3_level1: &[
+    0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+  ],
+  tree3_level2: &[
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
+  ],
+  tree3_level3: &[
+    0, 0xFFBFFFFFFFFF4BFF, 0x601BFF7A5,
   ],
 };
 
