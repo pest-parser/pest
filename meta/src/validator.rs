@@ -667,7 +667,7 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
                 None
             }
             ParserExpr::Seq(ref lhs, ref rhs) => {
-                if is_non_failing(&lhs.expr, rules, &mut vec![trace.last().unwrap().clone()]) {
+                if is_non_failing(&lhs.expr, rules, &mut vec![trace.last().unwrap().clone()]) || is_non_progressing(&lhs.expr, rules, &mut vec![trace.last().unwrap().clone()]){
                     check_expr(rhs, rules, trace)
                 } else {
                     check_expr(lhs, rules, trace)
