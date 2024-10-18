@@ -667,7 +667,13 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
                 None
             }
             ParserExpr::Seq(ref lhs, ref rhs) => {
-                if is_non_failing(&lhs.expr, rules, &mut vec![trace.last().unwrap().clone()]) {
+                if is_non_failing(&lhs.expr, rules, &mut vec![trace.last().unwrap().clone()])
+                    || is_non_progressing(
+                        &lhs.expr,
+                        rules,
+                        &mut vec![trace.last().unwrap().clone()],
+                    )
+                {
                     check_expr(rhs, rules, trace)
                 } else {
                     check_expr(lhs, rules, trace)
@@ -1803,6 +1809,22 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::pratt_parser might be useful in this case")]
     fn non_primary_choice_left_recursion() {
         let input = "a = { \"a\" | a }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap(),
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:14
+  |
+1 | a = { !\"a\" ~ a }
+  |              ^
+  |
+  = rule a is left-recursive (a -> a); pest::pratt_parser might be useful in this case")]
+    fn non_progressing_left_recursion() {
+        let input = "a = { !\"a\" ~ a }";
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap(),
         ));
