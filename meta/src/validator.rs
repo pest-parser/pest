@@ -1817,6 +1817,22 @@ mod tests {
     #[test]
     #[should_panic(expected = "grammar error
 
+ --> 1:14
+  |
+1 | a = { !\"a\" ~ a }
+  |              ^
+  |
+  = rule a is left-recursive (a -> a); pest::pratt_parser might be useful in this case")]
+    fn non_progressing_left_recursion() {
+        let input = "a = { !\"a\" ~ a }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap(),
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
  --> 1:7
   |
 1 | a = { \"a\"* | \"a\" | \"b\" }
