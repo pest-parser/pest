@@ -129,7 +129,6 @@ impl Cli {
         cmd.find(' ').map(|pos| &cmd[pos + 1..])
     }
 
-    
     fn execute_command(&mut self, command: &str) -> Result<(), DebuggerError> {
         match command {
             "" => (),
