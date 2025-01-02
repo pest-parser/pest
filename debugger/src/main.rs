@@ -125,6 +125,11 @@ impl Cli {
         println!("Unrecognized command: {}; use h for help", command);
     }
 
+    fn extract_arg(cmd: &str) -> Option<&str> {
+        cmd.find(' ').map(|pos| &cmd[pos + 1..])
+    }
+
+    
     fn execute_command(&mut self, command: &str) -> Result<(), DebuggerError> {
         match command {
             "" => (),
@@ -134,7 +139,7 @@ impl Cli {
             "ba" => self.context.add_all_rules_breakpoints()?,
             "da" => self.context.delete_all_breakpoints(),
             grammar if "grammar".starts_with(grammar) => {
-                let grammar_file = grammar.find(" ").and_then(|pos| Some(&grammar[pos + 1..]));
+                let grammar_file = Self::extract_arg(grammar);
                 if let Some(grammar_file) = grammar_file {
                     self.grammar(PathBuf::from(grammar_file))?;
                 } else {
@@ -142,7 +147,7 @@ impl Cli {
                 }
             }
             input if "input".starts_with(input) => {
-                let input_file = input.find(" ").and_then(|pos| Some(&input[pos + 1..]));
+                let input_file = Self::extract_arg(input);
                 if let Some(input_file) = input_file {
                     self.input(PathBuf::from(input_file))?;
                 } else {
@@ -154,9 +159,7 @@ impl Cli {
                 self.context.load_input_direct(input.to_owned());
             }
             breakpoint if "breakpoint".starts_with(breakpoint) => {
-                let rule = breakpoint
-                    .find(" ")
-                    .and_then(|pos| Some(&breakpoint[pos + 1..]));
+                let rule = Self::extract_arg(breakpoint);
                 if let Some(rule) = rule {
                     self.breakpoint(rule);
                 } else {
@@ -164,7 +167,7 @@ impl Cli {
                 }
             }
             delete if "delete".starts_with(delete) => {
-                let rule = delete.find(" ").and_then(|pos| Some(&delete[pos + 1..]));
+                let rule = Self::extract_arg(delete);
                 if let Some(rule) = rule {
                     self.context.delete_breakpoint(rule);
                 } else {
@@ -172,7 +175,7 @@ impl Cli {
                 }
             }
             run if "run".starts_with(run) => {
-                let rule = run.find(" ").and_then(|pos| Some(&run[pos + 1..]));
+                let rule = Self::extract_arg(run);
                 if let Some(rule) = rule {
                     self.run(rule)?;
                 } else {
