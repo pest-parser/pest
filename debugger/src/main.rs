@@ -106,17 +106,17 @@ impl Cli {
         println!(
             "\n\
              Use the following commands:\n\
-             g <grammar filename>          - load .pest grammar\n\
-             i <input filename>            - load input from a file\n\
-             id <input text>               - load input directly from a single-line input\n\
-             ba                            - add breakpoints at all rules\n\
-             b <rule>                      - add a breakpoint at a rule\n\
-             d <rule>                      - delete a breakpoint at a rule\n\
-             da                            - delete all breakpoints\n\
-             r <rule>                      - run a rule\n\
-             c                             - continue\n\
-             l                             - list breakpoints\n\
-             h                             - help\n\
+             g(grammar)     <grammar filename>      - load .pest grammar\n\
+             i(input)       <input filename>        - load input from a file\n\
+             id             <input text>            - load input directly from a single-line input\n\
+             ba                                     - add breakpoints at all rules\n\
+             b(breakpoint)  <rule>                  - add a breakpoint at a rule\n\
+             d(delete)      <rule>                  - delete a breakpoint at a rule\n\
+             da                                     - delete all breakpoints\n\
+             r(run)         <rule>                  - run a rule\n\
+             c(continue)                            - continue\n\
+             l(list)                                - list breakpoints\n\
+             h(help)                                - help\n\
          "
         );
     }
@@ -125,25 +125,62 @@ impl Cli {
         println!("Unrecognized command: {}; use h for help", command);
     }
 
+    fn extract_arg(cmd: &str) -> Option<&str> {
+        cmd.find(' ').map(|pos| &cmd[pos + 1..])
+    }
+
     fn execute_command(&mut self, command: &str) -> Result<(), DebuggerError> {
         match command {
             "" => (),
-            "h" => Cli::help(),
-            "l" => self.list(),
-            "c" => self.cont()?,
+            help if "help".starts_with(help) => Cli::help(),
+            list if "list".starts_with(list) => self.list(),
+            cont if "continue".starts_with(cont) => self.cont()?,
             "ba" => self.context.add_all_rules_breakpoints()?,
             "da" => self.context.delete_all_breakpoints(),
-            x if x.starts_with("g ") => self.grammar(PathBuf::from(&x[2..]))?,
-            x if x.starts_with("i ") => self.input(PathBuf::from(&x[2..]))?,
+            grammar if "grammar".starts_with(grammar) => {
+                let grammar_file = Self::extract_arg(grammar);
+                if let Some(grammar_file) = grammar_file {
+                    self.grammar(PathBuf::from(grammar_file))?;
+                } else {
+                    println!("expected filename, usage: g(grammar) <filename>");
+                }
+            }
+            input if "input".starts_with(input) => {
+                let input_file = Self::extract_arg(input);
+                if let Some(input_file) = input_file {
+                    self.input(PathBuf::from(input_file))?;
+                } else {
+                    println!("expected filename, usage: i(input) <filename>");
+                }
+            }
             x if x.starts_with("id ") => {
                 let input = &x[3..];
                 self.context.load_input_direct(input.to_owned());
             }
-            x if x.starts_with("b ") => self.breakpoint(&x[2..]),
-            x if x.starts_with("d ") => {
-                self.context.delete_breakpoint(&x[2..]);
+            breakpoint if "breakpoint".starts_with(breakpoint) => {
+                let rule = Self::extract_arg(breakpoint);
+                if let Some(rule) = rule {
+                    self.breakpoint(rule);
+                } else {
+                    println!("expected rule, usage: b(breakpoint) <rule>");
+                }
             }
-            x if x.starts_with("r ") => self.run(&x[2..])?,
+            delete if "delete".starts_with(delete) => {
+                let rule = Self::extract_arg(delete);
+                if let Some(rule) = rule {
+                    self.context.delete_breakpoint(rule);
+                } else {
+                    println!("expected rule, usage: d(delete) <rule>");
+                }
+            }
+            run if "run".starts_with(run) => {
+                let rule = Self::extract_arg(run);
+                if let Some(rule) = rule {
+                    self.run(rule)?;
+                } else {
+                    println!("expected rule, usage: r(run) <rule>");
+                }
+            }
             x => Cli::unrecognized(x),
         };
         Ok(())
