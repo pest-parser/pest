@@ -155,7 +155,7 @@ impl Cli {
                 }
             }
             x if x.starts_with("id ") => {
-                let input = &x[3..];
+                let input = &command[3..];
                 self.context.load_input_direct(input.to_owned());
             }
             breakpoint if "breakpoint".starts_with(breakpoint) => {
