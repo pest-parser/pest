@@ -130,7 +130,8 @@ impl Cli {
     }
 
     fn execute_command(&mut self, command: &str) -> Result<(), DebuggerError> {
-        match command {
+        let verb = command.split(&[' ', '\t']).next().unwrap().trim();
+        match verb {
             "" => (),
             help if "help".starts_with(help) => Cli::help(),
             list if "list".starts_with(list) => self.list(),
@@ -138,7 +139,7 @@ impl Cli {
             "ba" => self.context.add_all_rules_breakpoints()?,
             "da" => self.context.delete_all_breakpoints(),
             grammar if "grammar".starts_with(grammar) => {
-                let grammar_file = Self::extract_arg(grammar);
+                let grammar_file = Self::extract_arg(command);
                 if let Some(grammar_file) = grammar_file {
                     self.grammar(PathBuf::from(grammar_file))?;
                 } else {
@@ -146,7 +147,7 @@ impl Cli {
                 }
             }
             input if "input".starts_with(input) => {
-                let input_file = Self::extract_arg(input);
+                let input_file = Self::extract_arg(command);
                 if let Some(input_file) = input_file {
                     self.input(PathBuf::from(input_file))?;
                 } else {
@@ -154,11 +155,11 @@ impl Cli {
                 }
             }
             x if x.starts_with("id ") => {
-                let input = &x[3..];
+                let input = &command[3..];
                 self.context.load_input_direct(input.to_owned());
             }
             breakpoint if "breakpoint".starts_with(breakpoint) => {
-                let rule = Self::extract_arg(breakpoint);
+                let rule = Self::extract_arg(command);
                 if let Some(rule) = rule {
                     self.breakpoint(rule);
                 } else {
@@ -166,7 +167,7 @@ impl Cli {
                 }
             }
             delete if "delete".starts_with(delete) => {
-                let rule = Self::extract_arg(delete);
+                let rule = Self::extract_arg(command);
                 if let Some(rule) = rule {
                     self.context.delete_breakpoint(rule);
                 } else {
@@ -174,7 +175,7 @@ impl Cli {
                 }
             }
             run if "run".starts_with(run) => {
-                let rule = Self::extract_arg(run);
+                let rule = Self::extract_arg(command);
                 if let Some(rule) = rule {
                     self.run(rule)?;
                 } else {
