@@ -222,7 +222,7 @@ struct CliArgs {
     grammar_file: Option<PathBuf>,
     input_file: Option<PathBuf>,
     rule: Option<String>,
-    breakpoint: Option<String>,
+    breakpoints: Vec<String>,
     session_file: Option<PathBuf>,
     no_update: bool,
 }
@@ -233,7 +233,7 @@ impl Default for CliArgs {
             grammar_file: None,
             input_file: None,
             rule: None,
-            breakpoint: None,
+            breakpoints: Vec::new(),
             session_file: None,
             no_update: false,
         };
@@ -268,7 +268,7 @@ impl Default for CliArgs {
                 }
                 "-b" | "--breakpoint" => {
                     if let Some(breakpoint) = iter.next() {
-                        result.breakpoint = Some(breakpoint);
+                        result.breakpoints.push(breakpoint);
                     } else {
                         eprintln!("Error: missing breakpoint");
                         std::process::exit(1);
@@ -326,8 +326,8 @@ impl CliArgs {
                 eprintln!("Error: {}", e);
             }
         }
-        if let Some(breakpoint) = &self.breakpoint {
-            context.breakpoint(breakpoint);
+        for breakpoint in self.breakpoints {
+            context.breakpoint(& breakpoint);
         }
         if let Some(rule) = self.rule {
             if let Err(e) = context.run(&rule) {
