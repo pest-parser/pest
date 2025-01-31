@@ -252,9 +252,13 @@ impl DebuggerContext {
                     if is_done_signal.load(Ordering::SeqCst) {
                         return true;
                     }
-                    let lock = breakpoints.lock().expect(POISONED_LOCK_PANIC);
 
-                    if lock.contains(&rule) {
+                    let contains_rule = {
+                        let lock = breakpoints.lock().expect(POISONED_LOCK_PANIC);
+                        lock.contains(&rule)
+                    };
+
+                    if contains_rule {
                         rsender
                             .send(DebuggerEvent::Breakpoint(rule, pos.pos()))
                             .expect(CHANNEL_CLOSED_PANIC);
