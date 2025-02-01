@@ -294,7 +294,7 @@ impl Default for CliArgs {
                          -g, --grammar <grammar file>    - load .pest grammar\n\
                          -i, --input <input file>        - load input file\n\
                          -r, --rule <rule>               - run rule\n\
-                         -b, --breakpoint <rule>         - breakpoint at rule\n\
+                         -b, --breakpoint <rule>         - breakpoint at rule (can be specified multiple times)\n\
                          -s, --session <session file>    - load session history file\n\
                          -h, --help                      - print this help menu\n\
                      "
