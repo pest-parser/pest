@@ -327,7 +327,7 @@ impl CliArgs {
             }
         }
         for breakpoint in self.breakpoints {
-            context.breakpoint(& breakpoint);
+            context.breakpoint(&breakpoint);
         }
         if let Some(rule) = self.rule {
             if let Err(e) = context.run(&rule) {
