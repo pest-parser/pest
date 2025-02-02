@@ -50,6 +50,11 @@ wait_until_available() {
 
 for crate in ${CRATES}; do
   VERSION="$(get_local_version "${crate}")"
-  publish "${crate}"
-  wait_until_available "${crate}" "${VERSION}"
+  ONLINE_DATE="$(check_version_online "${crate}" "${VERSION}")"
+  if [ -n "${ONLINE_DATE}" ]; then
+    echo "Crate ${crate} is already published"
+  else
+    publish "${crate}"
+    wait_until_available "${crate}" "${VERSION}"
+  fi
 done
