@@ -15,7 +15,6 @@
     html_favicon_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg"
 )]
 #![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
-use core::panic;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
@@ -152,8 +151,11 @@ impl Cli {
         let ttype = match ttype.to_lowercase().as_str() {
             "pegviz" => TracingType::PegViz,
             "indented" => TracingType::Indented,
-            "none" => TracingType::Indented,
-            _ => panic!("Bad tracing type {ttype}!"),
+            "none" => TracingType::None,
+            _ => {
+                eprintln!("Bad tracing type {ttype}!");
+                return;
+            }
         };
         self.context.tracing(ttype);
     }

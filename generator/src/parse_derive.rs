@@ -99,7 +99,6 @@ fn attr_to_tracing_config(attrs: Vec<&Attribute>) -> TracingConfig {
     let mut tracing_config: TracingConfig = Default::default();
 
     for attr in attrs {
-        println!("attr");
         let attr_meta = attr.meta.clone();
 
         match attr_meta {
@@ -113,11 +112,9 @@ fn attr_to_tracing_config(attrs: Vec<&Attribute>) -> TracingConfig {
                             syn::parenthesized!(content in meta.input);
                             let lit: syn::LitInt = content.parse()?;
                             let n: usize = lit.base10_parse()?;
-                            println!("indent: {:#?}", n);
                             tracing_config.ttype = TracingType::Indented;
                             tracing_config.spacing = n;
                         } else {
-                            println!("indent: {:#?}", 2);
                             tracing_config.ttype = TracingType::Indented;
                             tracing_config.spacing = 2;
                         }
@@ -151,7 +148,7 @@ fn attr_to_tracing_config(attrs: Vec<&Attribute>) -> TracingConfig {
                 })
                 .expect("Macro attribute `tracing' parse failed.");
             }
-            _ => panic!("wut"),
+            _ => panic!("tracing attributes need to be MetaList type; example: #[tracing(Indented(3), SkipImplicit, SkipSilent)]")
         };
     }
 
