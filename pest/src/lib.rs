@@ -62,12 +62,42 @@
 //!
 //! The syntax of `.pest` files is documented in the [`pest_derive` crate].
 //!
-//! ## Inline grammars
+//! ### Inline grammars
 //!
 //! Grammars can also be inlined by using the `#[grammar_inline = "..."]` attribute.
 //!
 //! [`Parser`]: trait.Parser.html
 //! [`pest_derive` crate]: https://docs.rs/pest_derive/
+//!
+//! ### Tracing
+//!
+//! Tracing output for your parser, which is very verbose, can be enabled with
+//!
+//! ```ignore
+//! #[tracing(Indented(2))]
+//! ```
+//!
+//! , where the number is how many spaces to indent each level of trace, or
+//!
+//! ```ignore
+//! #[tracing(PegViz)]
+//! ```
+//!
+//! , which generates [PegViz compatible](https://github.com/fasterthanlime/pegviz) output.
+//!
+//! Other tracing options:
+//!
+//! Skip implicit whitepsace/comment rules in the output:
+//!
+//! ```ignore
+//! #[tracing(SkipImplicit)]
+//! ```
+//!
+//! Skip silent rules in the output:
+//!
+//! ```ignore
+//! #[tracing(SkipSilent)]
+//! ```
 //!
 //! ## Grammar
 //!
@@ -336,8 +366,8 @@ extern crate std;
 
 pub use crate::parser::Parser;
 pub use crate::parser_state::{
-    set_call_limit, set_error_detail, state, Atomicity, Lookahead, MatchDir, ParseResult,
-    ParserState,
+    set_call_limit, set_error_detail, state, state_with_tracing, Atomicity, Lookahead, MatchDir,
+    ParseResult, ParserState, TracingConfig, TracingType,
 };
 pub use crate::position::Position;
 pub use crate::span::{merge_spans, Lines, LinesSpan, Span};

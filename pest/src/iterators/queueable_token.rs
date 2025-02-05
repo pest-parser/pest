@@ -24,7 +24,7 @@ pub enum QueueableToken<'i, R> {
     },
     End {
         /// Queue (as a vec) contains both `Start` token and `End` for the same rule.
-        /// This filed is an index of corresponding `Start` token in vec.
+        /// This field is an index of corresponding `Start` token in vec.
         start_token_index: usize,
         rule: R,
         tag: Option<&'i str>,

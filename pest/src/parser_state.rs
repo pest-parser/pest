@@ -21,6 +21,9 @@ use core::fmt::{Debug, Display, Formatter};
 use core::num::NonZeroUsize;
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use proc_macro2::TokenStream;
+use quote::quote;
+use std::println;
 
 use crate::error::{Error, ErrorVariant};
 use crate::iterators::pairs::new;
@@ -72,6 +75,71 @@ pub enum Atomicity {
     CompoundAtomic,
     /// implicit whitespace is enabled
     NonAtomic,
+}
+
+/// Tracing options
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TracingType {
+    /// No tracing output
+    None,
+    /// Indented messages for tracing
+    Indented,
+    /// Tracing intended to be processed using the PegViz crate
+    PegViz,
+}
+
+impl quote::ToTokens for TracingType {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let path = match self {
+            TracingType::Indented => quote!(::pest::TracingType::Indented),
+            TracingType::None => quote!(::pest::TracingType::None),
+            TracingType::PegViz => quote!(::pest::TracingType::PegViz),
+        };
+        tokens.extend(path);
+    }
+}
+
+/// Configuration for whether and how to create tracing output during the parser run
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TracingConfig {
+    /// Type of tracing: None, Indented, or PegViz
+    pub ttype: TracingType,
+    /// How many characters wide to make each indent level
+    pub spacing: usize,
+    /// Whether to skip implicit whitespace / comments
+    pub skip_implicit: bool,
+    /// Whether to skip silent rules
+    pub skip_silent: bool,
+}
+
+// Used by `parse_derive`
+impl quote::ToTokens for TracingConfig {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let ttype = self.ttype;
+        let spacing = self.spacing;
+        let si = self.skip_implicit;
+        let ss = self.skip_silent;
+        let path = quote! {
+            ::pest::TracingConfig {
+                ttype: #ttype,
+                spacing: #spacing,
+                skip_implicit: #si,
+                skip_silent: #ss,
+            }
+        };
+        tokens.extend(path);
+    }
+}
+
+impl Default for TracingConfig {
+    fn default() -> Self {
+        TracingConfig {
+            ttype: TracingType::None,
+            spacing: 2,
+            skip_implicit: false,
+            skip_silent: false,
+        }
+    }
 }
 
 /// Type alias to simplify specifying the return value of chained closures.
@@ -442,6 +510,10 @@ pub struct ParserState<'i, R: RuleType> {
     /// While parsing the query we'll update tracker position to the start of "Bobby", because we'd
     /// successfully parse "create" + "user" (and not "table").
     parse_attempts: ParseAttempts<R>,
+    /// Configuration for tracing, if any
+    tracing_config: TracingConfig,
+    /// Used by the tracing module to track indentation
+    tracing_depth: usize,
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -458,7 +530,19 @@ pub fn state<'i, R: RuleType, F>(input: &'i str, f: F) -> Result<pairs::Pairs<'i
 where
     F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>,
 {
-    let state = ParserState::new(input);
+    state_with_tracing(input, Default::default(), f)
+}
+
+/// Same as `state` but allows specification of tracing-related attributes for the ParserState
+pub fn state_with_tracing<'i, R: RuleType, F>(
+    input: &'i str,
+    tracing_config: TracingConfig,
+    f: F,
+) -> Result<pairs::Pairs<'i, R>, Error<R>>
+where
+    F: FnOnce(Box<ParserState<'i, R>>) -> ParseResult<Box<ParserState<'i, R>>>,
+{
+    let state = ParserState::new_with_tracing(input, tracing_config);
 
     match f(state) {
         Ok(state) => {
@@ -509,6 +593,10 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// let state: Box<pest::ParserState<&str>> = pest::ParserState::new(input);
     /// ```
     pub fn new(input: &'i str) -> Box<Self> {
+        ParserState::new_with_tracing(input, Default::default())
+    }
+
+    pub fn new_with_tracing(input: &'i str, tracing_config: TracingConfig) -> Box<Self> {
         Box::new(ParserState {
             position: Position::from_start(input),
             queue: vec![],
@@ -520,7 +608,113 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             stack: Stack::new(),
             call_tracker: Default::default(),
             parse_attempts: ParseAttempts::new(),
+            tracing_config,
+            tracing_depth: 0,
         })
+    }
+
+    /// Wrapper for other `ParserState` calls that return `ParseResult`, wraps the calls in tracing
+    /// output if requested.
+    ///
+    /// `implicit` is set to true by callers handling an implicit whitespace / comment rule
+    ///
+    /// `silent` is the same for silent rules
+    ///
+    /// It's much easier to bail here than in the caller
+    #[inline]
+    pub fn trace_wrapper<F>(
+        mut self: Box<Self>,
+        rule_name: &str,
+        implicit: bool,
+        silent: bool,
+        func: F,
+    ) -> ParseResult<Box<Self>>
+    where
+        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
+    {
+        let pos = self.position;
+        let tracing_type = self.tracing_config.ttype;
+
+        if implicit && self.tracing_config.skip_implicit {
+            return func(self);
+        }
+
+        if silent && self.tracing_config.skip_silent {
+            return func(self);
+        }
+
+        match tracing_type {
+            TracingType::None => {}
+            TracingType::Indented => {
+                println!(
+                    "{}TRYING `{}` at {}:{}",
+                    " ".repeat(self.tracing_depth * self.tracing_config.spacing),
+                    rule_name,
+                    pos.line_col().0,
+                    pos.line_col().1,
+                );
+                self.tracing_depth += 1;
+            }
+            TracingType::PegViz => {
+                println!(
+                    "[PEG_TRACE] Attempting to match rule `{}` at {}:{}",
+                    rule_name,
+                    pos.line_col().0,
+                    pos.line_col().1,
+                );
+            }
+        }
+
+        let result = func(self);
+
+        match (tracing_type, result) {
+            (TracingType::None, Ok(new_state)) => Ok(new_state),
+            (TracingType::None, Err(new_state)) => Err(new_state),
+            (TracingType::Indented, Ok(mut new_state)) => {
+                new_state.tracing_depth -= 1;
+                println!(
+                    "{}MATCHED `{}` at {}:{}",
+                    " ".repeat(new_state.tracing_depth * new_state.tracing_config.spacing),
+                    rule_name,
+                    pos.line_col().0,
+                    pos.line_col().1,
+                );
+
+                Ok(new_state)
+            }
+            (TracingType::Indented, Err(mut new_state)) => {
+                new_state.tracing_depth -= 1;
+                println!(
+                    "{}FAILED `{}` at {}:{}",
+                    " ".repeat(new_state.tracing_depth * new_state.tracing_config.spacing),
+                    rule_name,
+                    pos.line_col().0,
+                    pos.line_col().1,
+                );
+
+                Err(new_state)
+            }
+            (TracingType::PegViz, Ok(new_state)) => {
+                println!(
+                    "[PEG_TRACE] Matched rule `{}` at {}:{}",
+                    rule_name,
+                    pos.line_col().0,
+                    pos.line_col().1,
+                );
+
+                Ok(new_state)
+            }
+            (TracingType::PegViz, Err(new_state)) => {
+                println!(
+                    "[PEG_TRACE] Failed to match rule `{}` at {}:{}",
+                    rule_name,
+                    pos.line_col().0,
+                    pos.line_col().1,
+                );
+
+                Err(new_state)
+            }
+        }
     }
 
     /// Get all parse attempts after process of parsing is finished.

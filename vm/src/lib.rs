@@ -18,7 +18,7 @@
 
 use pest::error::Error;
 use pest::iterators::Pairs;
-use pest::{unicode, Position};
+use pest::{unicode, Position, TracingConfig};
 use pest::{Atomicity, MatchDir, ParseResult, ParserState};
 use pest_meta::ast::RuleType;
 use pest_meta::optimizer::{OptimizedExpr, OptimizedRule};
@@ -69,7 +69,18 @@ impl Vm {
         rule: &'a str,
         input: &'a str,
     ) -> Result<Pairs<'a, &str>, Error<&str>> {
-        pest::state(input, |state| self.parse_rule(rule, state))
+        self.parse_with_tracing(rule, input, Default::default())
+    }
+
+    /// Runs a parser rule on an input with tracing
+    #[allow(clippy::perf)]
+    pub fn parse_with_tracing<'a>(
+        &'a self,
+        rule: &'a str,
+        input: &'a str,
+        tracing_config: TracingConfig,
+    ) -> Result<Pairs<'a, &str>, Error<&str>> {
+        pest::state_with_tracing(input, tracing_config, |state| self.parse_rule(rule, state))
     }
 
     #[allow(clippy::suspicious)]
@@ -84,43 +95,77 @@ impl Vm {
             }
         }
         match rule {
-            "ANY" => return state.skip(1),
-            "EOI" => return state.rule("EOI", |state| state.end_of_input()),
-            "SOI" => return state.start_of_input(),
-            "PEEK" => return state.stack_peek(),
-            "PEEK_ALL" => return state.stack_match_peek(),
-            "POP" => return state.stack_pop(),
-            "POP_ALL" => return state.stack_match_pop(),
-            "DROP" => return state.stack_drop(),
-            "ASCII_DIGIT" => return state.match_range('0'..'9'),
-            "ASCII_NONZERO_DIGIT" => return state.match_range('1'..'9'),
-            "ASCII_BIN_DIGIT" => return state.match_range('0'..'1'),
-            "ASCII_OCT_DIGIT" => return state.match_range('0'..'7'),
-            "ASCII_HEX_DIGIT" => {
-                return state
-                    .match_range('0'..'9')
-                    .or_else(|state| state.match_range('a'..'f'))
-                    .or_else(|state| state.match_range('A'..'F'));
+            "ANY" => return state.trace_wrapper(rule, false, false, |state| state.skip(1)),
+            "EOI" => {
+                return state.trace_wrapper(rule, false, false, |state| {
+                    state.rule("EOI", |state| state.end_of_input())
+                })
             }
-            "ASCII_ALPHA_LOWER" => return state.match_range('a'..'z'),
-            "ASCII_ALPHA_UPPER" => return state.match_range('A'..'Z'),
+            "SOI" => {
+                return state.trace_wrapper(rule, false, false, |state| state.start_of_input())
+            }
+            "PEEK" => return state.trace_wrapper(rule, false, false, |state| state.stack_peek()),
+            "PEEK_ALL" => {
+                return state.trace_wrapper(rule, false, false, |state| state.stack_match_peek())
+            }
+            "POP" => return state.trace_wrapper(rule, false, false, |state| state.stack_pop()),
+            "POP_ALL" => {
+                return state.trace_wrapper(rule, false, false, |state| state.stack_match_pop())
+            }
+            "DROP" => return state.trace_wrapper(rule, false, false, |state| state.stack_drop()),
+            "ASCII_DIGIT" => {
+                return state.trace_wrapper(rule, false, false, |state| state.match_range('0'..'9'))
+            }
+            "ASCII_NONZERO_DIGIT" => {
+                return state.trace_wrapper(rule, false, false, |state| state.match_range('1'..'9'))
+            }
+            "ASCII_BIN_DIGIT" => {
+                return state.trace_wrapper(rule, false, false, |state| state.match_range('0'..'1'))
+            }
+            "ASCII_OCT_DIGIT" => {
+                return state.trace_wrapper(rule, false, false, |state| state.match_range('0'..'7'))
+            }
+            "ASCII_HEX_DIGIT" => {
+                return state.trace_wrapper(rule, false, false, |state| {
+                    state
+                        .match_range('0'..'9')
+                        .or_else(|state| state.match_range('a'..'f'))
+                        .or_else(|state| state.match_range('A'..'F'))
+                })
+            }
+            "ASCII_ALPHA_LOWER" => {
+                return state.trace_wrapper(rule, false, false, |state| state.match_range('a'..'z'))
+            }
+            "ASCII_ALPHA_UPPER" => {
+                return state.trace_wrapper(rule, false, false, |state| state.match_range('A'..'Z'))
+            }
             "ASCII_ALPHA" => {
-                return state
-                    .match_range('a'..'z')
-                    .or_else(|state| state.match_range('A'..'Z'));
+                return state.trace_wrapper(rule, false, false, |state| {
+                    state
+                        .match_range('a'..'z')
+                        .or_else(|state| state.match_range('A'..'Z'))
+                })
             }
             "ASCII_ALPHANUMERIC" => {
-                return state
-                    .match_range('a'..'z')
-                    .or_else(|state| state.match_range('A'..'Z'))
-                    .or_else(|state| state.match_range('0'..'9'));
+                return state.trace_wrapper(rule, false, false, |state| {
+                    state
+                        .match_range('a'..'z')
+                        .or_else(|state| state.match_range('A'..'Z'))
+                        .or_else(|state| state.match_range('0'..'9'))
+                })
             }
-            "ASCII" => return state.match_range('\x00'..'\x7f'),
+            "ASCII" => {
+                return state.trace_wrapper(rule, false, false, |state| {
+                    state.match_range('\x00'..'\x7f')
+                })
+            }
             "NEWLINE" => {
-                return state
-                    .match_string("\n")
-                    .or_else(|state| state.match_string("\r\n"))
-                    .or_else(|state| state.match_string("\r"));
+                return state.trace_wrapper(rule, false, false, |state| {
+                    state
+                        .match_string("\n")
+                        .or_else(|state| state.match_string("\r\n"))
+                        .or_else(|state| state.match_string("\r"))
+                })
             }
             _ => (),
         };
@@ -128,44 +173,64 @@ impl Vm {
         if let Some(rule) = self.rules.get(rule) {
             if rule.name == "WHITESPACE" || rule.name == "COMMENT" {
                 match rule.ty {
-                    RuleType::Normal => state.rule(&rule.name, |state| {
+                    RuleType::Normal => state.trace_wrapper(&rule.name, true, false, |state| {
+                        state.rule(&rule.name, |state| {
+                            state.atomic(Atomicity::Atomic, |state| {
+                                self.parse_expr(&rule.expr, state)
+                            })
+                        })
+                    }),
+                    RuleType::Silent => state.trace_wrapper(&rule.name, true, true, |state| {
                         state.atomic(Atomicity::Atomic, |state| {
                             self.parse_expr(&rule.expr, state)
                         })
                     }),
-                    RuleType::Silent => state.atomic(Atomicity::Atomic, |state| {
-                        self.parse_expr(&rule.expr, state)
-                    }),
-                    RuleType::Atomic => state.rule(&rule.name, |state| {
-                        state.atomic(Atomicity::Atomic, |state| {
-                            self.parse_expr(&rule.expr, state)
+                    RuleType::Atomic => state.trace_wrapper(&rule.name, true, false, |state| {
+                        state.rule(&rule.name, |state| {
+                            state.atomic(Atomicity::Atomic, |state| {
+                                self.parse_expr(&rule.expr, state)
+                            })
                         })
                     }),
-                    RuleType::CompoundAtomic => state.atomic(Atomicity::CompoundAtomic, |state| {
-                        state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
-                    }),
-                    RuleType::NonAtomic => state.atomic(Atomicity::Atomic, |state| {
-                        state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
+                    RuleType::CompoundAtomic => {
+                        state.trace_wrapper(&rule.name, true, false, |state| {
+                            state.atomic(Atomicity::CompoundAtomic, |state| {
+                                state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
+                            })
+                        })
+                    }
+                    RuleType::NonAtomic => state.trace_wrapper(&rule.name, true, false, |state| {
+                        state.atomic(Atomicity::Atomic, |state| {
+                            state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
+                        })
                     }),
                 }
             } else {
                 match rule.ty {
-                    RuleType::Normal => {
+                    RuleType::Normal => state.trace_wrapper(&rule.name, false, false, |state| {
                         state.rule(&rule.name, move |state| self.parse_expr(&rule.expr, state))
-                    }
-                    RuleType::Silent => self.parse_expr(&rule.expr, state),
-                    RuleType::Atomic => state.rule(&rule.name, move |state| {
-                        state.atomic(Atomicity::Atomic, move |state| {
-                            self.parse_expr(&rule.expr, state)
+                    }),
+                    RuleType::Silent => state.trace_wrapper(&rule.name, false, true, |state| {
+                        self.parse_expr(&rule.expr, state)
+                    }),
+                    RuleType::Atomic => state.trace_wrapper(&rule.name, false, false, |state| {
+                        state.rule(&rule.name, move |state| {
+                            state.atomic(Atomicity::Atomic, move |state| {
+                                self.parse_expr(&rule.expr, state)
+                            })
                         })
                     }),
                     RuleType::CompoundAtomic => {
-                        state.atomic(Atomicity::CompoundAtomic, move |state| {
-                            state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
+                        state.trace_wrapper(&rule.name, false, false, |state| {
+                            state.atomic(Atomicity::CompoundAtomic, move |state| {
+                                state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
+                            })
                         })
                     }
-                    RuleType::NonAtomic => state.atomic(Atomicity::NonAtomic, move |state| {
-                        state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
+                    RuleType::NonAtomic => state.trace_wrapper(&rule.name, false, false, |state| {
+                        state.atomic(Atomicity::NonAtomic, move |state| {
+                            state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
+                        })
                     }),
                 }
             }
@@ -263,34 +328,66 @@ impl Vm {
             (false, false) => Ok(state),
             (true, false) => {
                 if state.atomicity() == Atomicity::NonAtomic {
-                    state.repeat(|state| self.parse_rule("WHITESPACE", state))
+                    // This is to match the output of the tracer in non-debugger mode, which includes a "skip" rule
+                    state.trace_wrapper("skip", true, false, |state| {
+                        state.repeat(|state| {
+                            state.trace_wrapper("WHITESPACE", true, false, |state| {
+                                self.parse_rule("WHITESPACE", state)
+                            })
+                        })
+                    })
                 } else {
                     Ok(state)
                 }
             }
             (false, true) => {
                 if state.atomicity() == Atomicity::NonAtomic {
-                    state.repeat(|state| self.parse_rule("COMMENT", state))
+                    // This is to match the output of the tracer in non-debugger mode, which includes a "skip" rule
+                    state.trace_wrapper("skip", true, false, |state| {
+                        state.repeat(|state| {
+                            state.trace_wrapper("COMMENT", true, false, |state| {
+                                self.parse_rule("COMMENT", state)
+                            })
+                        })
+                    })
                 } else {
                     Ok(state)
                 }
             }
             (true, true) => {
                 if state.atomicity() == Atomicity::NonAtomic {
-                    state.sequence(|state| {
-                        state
-                            .repeat(|state| self.parse_rule("WHITESPACE", state))
-                            .and_then(|state| {
-                                state.repeat(|state| {
-                                    state.sequence(|state| {
-                                        self.parse_rule("COMMENT", state).and_then(|state| {
-                                            state.repeat(|state| {
-                                                self.parse_rule("WHITESPACE", state)
-                                            })
+                    // This is to match the output of the tracer in non-debugger mode, which includes a "skip" rule
+                    state.trace_wrapper("skip", true, false, |state| {
+                        state.sequence(|state| {
+                            state
+                                .repeat(|state| {
+                                    state.trace_wrapper("WHITESPACE", true, false, |state| {
+                                        self.parse_rule("WHITESPACE", state)
+                                    })
+                                })
+                                .and_then(|state| {
+                                    state.repeat(|state| {
+                                        state.sequence(|state| {
+                                            state
+                                                .trace_wrapper("COMMENT", true, false, |state| {
+                                                    self.parse_rule("COMMENT", state)
+                                                })
+                                                .and_then(|state| {
+                                                    state.repeat(|state| {
+                                                        state.trace_wrapper(
+                                                            "WHITESPACE",
+                                                            true,
+                                                            false,
+                                                            |state| {
+                                                                self.parse_rule("WHITESPACE", state)
+                                                            },
+                                                        )
+                                                    })
+                                                })
                                         })
                                     })
                                 })
-                            })
+                        })
                     })
                 } else {
                     Ok(state)

@@ -161,6 +161,8 @@ mod b {
 * Input handling
 * Custom errors
 * Runs on stable Rust
+* Specialized parser debugger
+* Optional tracing output
 
 ## Projects using pest
 

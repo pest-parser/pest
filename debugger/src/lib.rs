@@ -70,7 +70,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use pest::{error::Error, Position};
+use pest::{error::Error, Position, TracingConfig, TracingType};
 use pest_meta::{
     optimizer::OptimizedRule,
     parse_and_optimize,
@@ -133,6 +133,7 @@ pub struct DebuggerContext {
     grammar: Option<Vec<OptimizedRule>>,
     input: Option<String>,
     breakpoints: Arc<Mutex<HashSet<String>>>,
+    tracing_config: TracingConfig,
 }
 
 const POISONED_LOCK_PANIC: &str = "poisoned lock";
@@ -211,6 +212,26 @@ impl DebuggerContext {
         breakpoints.insert(rule);
     }
 
+    /// Sets tracing on and its type
+    pub fn tracing(&mut self, ttype: TracingType) {
+        self.tracing_config.ttype = ttype;
+    }
+
+    /// Sets tracing indent spacing
+    pub fn tracing_spacing(&mut self, size: usize) {
+        self.tracing_config.spacing = size;
+    }
+
+    /// Sets tracing to skip implicit whitespace / comments
+    pub fn tracing_skip_implicit(&mut self) {
+        self.tracing_config.skip_implicit = true;
+    }
+
+    /// Sets tracing to skip silent rules
+    pub fn tracing_skip_silent(&mut self) {
+        self.tracing_config.skip_silent = true;
+    }
+
     /// Removes a rule from breakpoints.
     pub fn delete_breakpoint(&mut self, rule: &str) {
         let mut breakpoints = self.breakpoints.lock().expect(POISONED_LOCK_PANIC);
@@ -243,6 +264,7 @@ impl DebuggerContext {
         let breakpoints = Arc::clone(&self.breakpoints);
         let is_done = Arc::clone(&self.is_done);
         let is_done_signal = Arc::clone(&self.is_done);
+        let tracing_config = self.tracing_config;
 
         let rsender = sender.clone();
         thread::spawn(move || {
@@ -269,7 +291,7 @@ impl DebuggerContext {
                 }),
             );
 
-            match vm.parse(&rule, &input) {
+            match vm.parse_with_tracing(&rule, &input, tracing_config) {
                 Ok(_) => sender.send(DebuggerEvent::Eof).expect(CHANNEL_CLOSED_PANIC),
                 Err(error) => sender
                     .send(DebuggerEvent::Error(error.to_string()))
@@ -364,6 +386,7 @@ impl Default for DebuggerContext {
             grammar: None,
             input: None,
             breakpoints: Arc::new(Mutex::new(HashSet::new())),
+            tracing_config: Default::default(),
         }
     }
 }
