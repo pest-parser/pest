@@ -17,6 +17,7 @@ readme = "_README.md"
 rust-version = "1.61"
 
 [dependencies]
+clap = { version = "4.0.32", features = ["derive"] }
 pest = { path = "../pest", version = "2.7.15" }
 pest_meta = { path = "../meta", version = "2.7.15" }
 pest_vm = { path = "../vm", version = "2.7.15" }

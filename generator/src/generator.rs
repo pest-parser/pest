@@ -35,6 +35,7 @@ pub fn generate(
 ) -> TokenStream {
     let uses_eoi = defaults.iter().any(|name| *name == "EOI");
     let name = parsed_derive.name;
+    let tracing_config = parsed_derive.tracing_config;
     let builtins = generate_builtin_rules();
     let include_fix = if include_grammar {
         generate_include(&name, paths)
@@ -76,6 +77,7 @@ pub fn generate(
                     }
 
                     pub mod visible {
+                        use ::pest::TracingType;
                         use super::super::Rule;
                         #( #rules )*
                     }
@@ -83,7 +85,9 @@ pub fn generate(
                     pub use self::visible::*;
                 }
 
-                ::pest::state(input, |state| {
+                ::pest::state_with_tracing(input,
+                    #tracing_config,
+                    |state| {
                     match rule {
                         #patterns
                     }
@@ -300,14 +304,23 @@ fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
 
 fn generate_rule(rule: OptimizedRule) -> TokenStream {
     let name = format_ident!("r#{}", rule.name);
+    let str_name = rule.name.clone();
+
+    let mut implicit = false;
+    if rule.name == "WHITESPACE" || rule.name == "COMMENT" {
+        implicit = true;
+    }
+
     let expr = if rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic {
         generate_expr_atomic(rule.expr)
     } else if rule.name == "WHITESPACE" || rule.name == "COMMENT" {
         let atomic = generate_expr_atomic(rule.expr);
 
         quote! {
-            state.atomic(::pest::Atomicity::Atomic, |state| {
-                #atomic
+            state.trace_wrapper(#str_name, #implicit, false, |state| {
+                state.atomic(::pest::Atomicity::Atomic, |state| {
+                    #atomic
+                })
             })
         }
     } else {
@@ -321,8 +334,10 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
-                state.rule(Rule::#name, |state| {
-                    #expr
+                state.trace_wrapper(#str_name, #implicit, false, |state| {
+                    state.rule(Rule::#name, |state| {
+                        #expr
+                    })
                 })
             }
         },
@@ -330,16 +345,20 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
-                #expr
+                state.trace_wrapper(#str_name, #implicit, true, |state| {
+                    #expr
+                })
             }
         },
         RuleType::Atomic => quote! {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
-                state.rule(Rule::#name, |state| {
-                    state.atomic(::pest::Atomicity::Atomic, |state| {
-                        #expr
+                state.trace_wrapper(#str_name, #implicit, false, |state| {
+                    state.rule(Rule::#name, |state| {
+                        state.atomic(::pest::Atomicity::Atomic, |state| {
+                            #expr
+                        })
                     })
                 })
             }
@@ -348,9 +367,11 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
-                state.atomic(::pest::Atomicity::CompoundAtomic, |state| {
-                    state.rule(Rule::#name, |state| {
-                        #expr
+                state.trace_wrapper(#str_name, #implicit, false, |state| {
+                    state.atomic(::pest::Atomicity::CompoundAtomic, |state| {
+                        state.rule(Rule::#name, |state| {
+                            #expr
+                        })
                     })
                 })
             }
@@ -359,9 +380,11 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
-                state.atomic(::pest::Atomicity::NonAtomic, |state| {
-                    state.rule(Rule::#name, |state| {
-                        #expr
+                state.trace_wrapper(#str_name, #implicit, false, |state| {
+                    state.atomic(::pest::Atomicity::NonAtomic, |state| {
+                        state.rule(Rule::#name, |state| {
+                            #expr
+                        })
                     })
                 })
             }
@@ -374,9 +397,10 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
     let comment = rules.iter().any(|rule| rule.name == "COMMENT");
 
     match (whitespace, comment) {
-        (false, false) => generate_rule!(skip, Ok(state)),
+        (false, false) => generate_rule!(skip, true, Ok(state)),
         (true, false) => generate_rule!(
             skip,
+            true,
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
                 state.repeat(|state| super::visible::WHITESPACE(state))
             } else {
@@ -385,6 +409,7 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
         ),
         (false, true) => generate_rule!(
             skip,
+            true,
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
                 state.repeat(|state| super::visible::COMMENT(state))
             } else {
@@ -393,6 +418,7 @@ fn generate_skip(rules: &[OptimizedRule]) -> TokenStream {
         ),
         (true, true) => generate_rule!(
             skip,
+            true,
             if state.atomicity() == ::pest::Atomicity::NonAtomic {
                 state.sequence(|state| {
                     state
@@ -1218,6 +1244,7 @@ mod tests {
             name,
             generics,
             non_exhaustive: false,
+            tracing_config: Default::default(),
         };
         assert_eq!(
             generate(parsed_derive, vec![PathBuf::from("base.pest"), PathBuf::from("test.pest")], rules, defaults, doc_comment, true).to_string(),
@@ -1256,36 +1283,45 @@ mod tests {
                                 #[inline]
                                 #[allow(dead_code, non_snake_case, unused_variables)]
                                 pub fn skip(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
-                                    Ok(state)
+                                    state.trace_wrapper(stringify!(skip), true, false, |state| { Ok (state) })
                                 }
                             }
 
                             pub mod visible {
+                                use ::pest::TracingType;
                                 use super::super::Rule;
 
                                 #[inline]
                                 #[allow(non_snake_case, unused_variables)]
                                 pub fn r#a(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
-                                    state.match_string("b")
+                                    state.trace_wrapper("a", false, true, |state| { state.match_string("b") })
                                 }
 
                                 #[inline]
                                 #[allow(non_snake_case, unused_variables)]
                                 pub fn r#if(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
-                                    self::r#a(state)
+                                    state.trace_wrapper("if", false, true, |state| { self::r#a(state) })
                                 }
 
                                 #[inline]
                                 #[allow(dead_code, non_snake_case, unused_variables)]
                                 pub fn ANY(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
-                                    state.skip(1)
+                                    state.trace_wrapper(stringify!(ANY), false, false, |state| { state.skip(1) })
                                 }
                             }
 
                             pub use self::visible::*;
                         }
 
-                        ::pest::state(input, |state| {
+                        ::pest::state_with_tracing(
+                            input,
+                            ::pest::TracingConfig {
+                                ttype: ::pest::TracingType::None,
+                                spacing: 2usize,
+                                skip_implicit: false,
+                                skip_silent: false,
+                            },
+                            |state| {
                             match rule {
                                 Rule::r#a => rules::r#a(state),
                                 Rule::r#if => rules::r#if(state)

@@ -9,6 +9,7 @@
 
 //! Types and helpers to parse the input of the derive macro.
 
+use pest::{TracingConfig, TracingType};
 use syn::{Attribute, DeriveInput, Expr, ExprLit, Generics, Ident, Lit, Meta};
 
 #[derive(Debug, PartialEq)]
@@ -25,6 +26,8 @@ pub struct ParsedDerive {
     pub generics: Generics,
     /// Indicates whether the 'non_exhaustive' attribute is added to the 'Rule' enum.
     pub non_exhaustive: bool,
+    /// Sets tracing settings
+    pub tracing_config: TracingConfig,
 }
 
 pub(crate) fn parse_derive(ast: DeriveInput) -> (ParsedDerive, Vec<GrammarSource>) {
@@ -46,8 +49,16 @@ pub(crate) fn parse_derive(ast: DeriveInput) -> (ParsedDerive, Vec<GrammarSource
 
     let mut grammar_sources = Vec::with_capacity(grammar.len());
     for attr in grammar {
-        grammar_sources.push(get_attribute(attr))
+        grammar_sources.push(attr_to_grammar_source(attr))
     }
+
+    let tracing_items: Vec<&Attribute> = ast
+        .attrs
+        .iter()
+        .filter(|attr| attr.meta.path().is_ident("tracing"))
+        .collect();
+
+    let tracing_config = attr_to_tracing_config(tracing_items);
 
     let non_exhaustive = ast
         .attrs
@@ -59,12 +70,13 @@ pub(crate) fn parse_derive(ast: DeriveInput) -> (ParsedDerive, Vec<GrammarSource
             name,
             generics,
             non_exhaustive,
+            tracing_config,
         },
         grammar_sources,
     )
 }
 
-fn get_attribute(attr: &Attribute) -> GrammarSource {
+fn attr_to_grammar_source(attr: &Attribute) -> GrammarSource {
     match &attr.meta {
         Meta::NameValue(name_value) => match &name_value.value {
             Expr::Lit(ExprLit {
@@ -81,6 +93,85 @@ fn get_attribute(attr: &Attribute) -> GrammarSource {
         },
         _ => panic!("grammar attribute must be of the form `grammar = \"...\"`"),
     }
+}
+
+fn attr_to_tracing_config(attrs: Vec<&Attribute>) -> TracingConfig {
+    let mut tracing_config: TracingConfig = Default::default();
+
+    for attr in attrs {
+        let attr_meta = attr.meta.clone();
+
+        match attr_meta {
+            Meta::List(list) => {
+                list.parse_nested_meta(|meta| {
+                    // #[tracing(Indented(N))] or #[tracing(Indented)]
+                    //
+                    if case_insensitive_ident_check(&meta, "Indented")? {
+                        let content;
+                        if meta.input.peek(syn::token::Paren) {
+                            syn::parenthesized!(content in meta.input);
+                            let lit: syn::LitInt = content.parse()?;
+                            let n: usize = lit.base10_parse()?;
+                            tracing_config.ttype = TracingType::Indented;
+                            tracing_config.spacing = n;
+                        } else {
+                            tracing_config.ttype = TracingType::Indented;
+                            tracing_config.spacing = 2;
+                        }
+                        return Ok(());
+                    }
+
+                    // #[tracing(PegViz)]
+                    if case_insensitive_ident_check(&meta, "PegViz")? {
+                        tracing_config.ttype = TracingType::PegViz;
+                        return Ok(());
+                    }
+
+                    // #[tracing(SkipImplicit)]
+                    if case_insensitive_ident_check(&meta, "SkipImplicit")? {
+                        tracing_config.skip_implicit = true;
+                        return Ok(());
+                    }
+
+                    // #[tracing(SkipSilent)]
+                    if case_insensitive_ident_check(&meta, "SkipSilent")? {
+                        tracing_config.skip_silent = true;
+                        return Ok(());
+                    }
+
+                    meta.error(format!(
+                        "Token inside `tracing` macro attribute unexpected: {:#?}",
+                        meta.path
+                    ));
+
+                    Ok(())
+                })
+                .expect("Macro attribute `tracing' parse failed.");
+            }
+            _ => panic!("tracing attributes need to be MetaList type; example: #[tracing(Indented(3), SkipImplicit, SkipSilent)]")
+        };
+    }
+
+    tracing_config
+}
+
+// This blob is to do case-insensitive ident comparison with error checking.  Maybe a bit silly,
+// but why force the user to use particular casing?
+fn case_insensitive_ident_check(
+    meta: &syn::meta::ParseNestedMeta<'_>,
+    str: &str,
+) -> Result<bool, syn::Error> {
+    let meta_ident = meta
+        .path
+        .get_ident()
+        .ok_or(meta.error(format!(
+            "Token should be an ident but isn't: {:#?}",
+            meta.path
+        )))?
+        .to_string()
+        .to_lowercase();
+
+    Ok(meta_ident == str.to_lowercase())
 }
 
 #[cfg(test)]

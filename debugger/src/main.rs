@@ -21,6 +21,7 @@ use std::time::Duration;
 
 use pest::error::{Error, ErrorVariant};
 
+use pest::TracingType;
 use pest_debugger::{DebuggerContext, DebuggerError, DebuggerEvent};
 use reqwest::blocking::{Client, ClientBuilder};
 use rustyline::completion::{Completer, FilenameCompleter, Pair};
@@ -29,6 +30,101 @@ use rustyline::highlight::Highlighter;
 use rustyline::hint::{Hinter, HistoryHinter};
 use rustyline::validate::Validator;
 use rustyline::{Editor, Helper};
+
+use clap::{CommandFactory, Parser};
+
+#[derive(clap::Parser)]
+#[command(version, about, long_about = None)]
+struct ClapCliArgs {
+    /// Select the grammar
+    #[arg(short, long, alias = "grammar")]
+    grammar_file: Option<PathBuf>,
+
+    /// Select the input file
+    #[arg(short, long, alias = "input")]
+    input_file: Option<PathBuf>,
+
+    /// Select the session file
+    #[arg(short, long, alias = "session")]
+    session_file: Option<PathBuf>,
+
+    /// Select the start rule
+    #[arg(short, long)]
+    rule: Option<String>,
+
+    /// Select initial breakpoint rules (takes a space separated list)
+    #[arg(short, long, alias = "breakpoint")]
+    breakpoints: Vec<String>,
+
+    /// Don't check for updates
+    #[arg(short, long)]
+    no_update: bool,
+
+    /// Turn on tracing (string should be PegViz or Indented)
+    #[arg(short, long)]
+    tracing: Option<String>,
+
+    /// Set indent depth for Indented tracing
+    #[arg(long)]
+    tracing_spacing: Option<usize>,
+
+    /// Do not show tracing lines for implicit whitespace and comments
+    #[arg(long)]
+    tracing_skip_implicit: bool,
+
+    /// Do not show tracing lines for silent rules
+    #[arg(long)]
+    tracing_skip_silent: bool,
+}
+
+#[derive(clap::Parser)]
+#[command(version, about, long_about = None)]
+struct ClapRLArgs {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(clap::Subcommand)]
+#[clap(disable_help_subcommand = true)]
+#[clap(disable_help_flag = true)]
+#[clap(disable_version_flag = true)]
+#[clap(infer_subcommands = true)]
+enum Commands {
+    /// Select the grammar
+    Grammar { grammar: String },
+    /// Select the input file
+    Input { input: String },
+    /// Run starting at the given rule
+    #[clap(visible_alias("rule"))]
+    Run { run: String },
+    /// Add breakpoints (space separated)
+    Breakpoints {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        breakpoints: Vec<String>,
+    },
+    /// Give an input string
+    #[clap(visible_alias("text_input"))]
+    Id {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Set all breakpoints
+    Ba {},
+    /// Delete breakpoints (space separated)
+    Delete {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        delete: Vec<String>,
+    },
+    /// Delete all breakpoints
+    Da {},
+    /// List all breakpoints
+    List {},
+    /// Continue the given number of steps (default 1)
+    Continue { count: Option<u32> },
+    // We have to do help ourselves so it doesn't exit :D
+    /// Show help
+    Help {},
+}
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -51,11 +147,36 @@ impl Cli {
         self.context.add_breakpoint(rule.to_owned());
     }
 
+    fn tracing(&mut self, ttype: &str) {
+        let ttype = match ttype.to_lowercase().as_str() {
+            "pegviz" => TracingType::PegViz,
+            "indented" => TracingType::Indented,
+            "none" => TracingType::None,
+            _ => {
+                eprintln!("Bad tracing type {ttype}!");
+                return;
+            }
+        };
+        self.context.tracing(ttype);
+    }
+
+    fn tracing_spacing(&mut self, size: usize) {
+        self.context.tracing_spacing(size);
+    }
+
+    fn tracing_skip_implicit(&mut self) {
+        self.context.tracing_skip_implicit();
+    }
+
+    fn tracing_skip_silent(&mut self) {
+        self.context.tracing_skip_silent();
+    }
+
     fn run(&mut self, rule: &str) -> Result<(), DebuggerError> {
         let (sender, receiver) = mpsc::sync_channel(1);
         let rec = &receiver;
         self.context.run(rule, sender)?;
-        match rec.recv_timeout(Duration::from_secs(5)) {
+        match rec.recv_timeout(Duration::from_secs(30)) {
             Ok(DebuggerEvent::Breakpoint(rule, pos)) => {
                 let error: Error<()> = Error::new_from_pos(
                     ErrorVariant::CustomError {
@@ -63,6 +184,7 @@ impl Cli {
                     },
                     self.context.get_position(pos)?,
                 );
+
                 println!("{}", error);
             }
             Ok(DebuggerEvent::Eof) => println!("end-of-input reached"),
@@ -77,7 +199,7 @@ impl Cli {
         self.context.cont()?;
 
         match self.receiver {
-            Some(ref rec) => match rec.recv_timeout(Duration::from_secs(5)) {
+            Some(ref rec) => match rec.recv_timeout(Duration::from_secs(30)) {
                 Ok(DebuggerEvent::Breakpoint(rule, pos)) => {
                     let error: Error<()> = Error::new_from_pos(
                         ErrorVariant::CustomError {
@@ -85,6 +207,7 @@ impl Cli {
                         },
                         self.context.get_position(pos)?,
                     );
+
                     println!("{}", error);
                 }
                 Ok(DebuggerEvent::Eof) => println!("end-of-input reached"),
@@ -102,88 +225,60 @@ impl Cli {
         println!("Breakpoints: {}", breakpoints.join(", "));
     }
 
-    fn help() {
-        println!(
-            "\n\
-             Use the following commands:\n\
-             g(grammar)     <grammar filename>      - load .pest grammar\n\
-             i(input)       <input filename>        - load input from a file\n\
-             id             <input text>            - load input directly from a single-line input\n\
-             ba                                     - add breakpoints at all rules\n\
-             b(breakpoint)  <rule>                  - add a breakpoint at a rule\n\
-             d(delete)      <rule>                  - delete a breakpoint at a rule\n\
-             da                                     - delete all breakpoints\n\
-             r(run)         <rule>                  - run a rule\n\
-             c(continue)                            - continue\n\
-             l(list)                                - list breakpoints\n\
-             h(help)                                - help\n\
-         "
-        );
-    }
-
-    fn unrecognized(command: &str) {
-        println!("Unrecognized command: {}; use h for help", command);
-    }
-
-    fn extract_arg(cmd: &str) -> Option<&str> {
-        cmd.find(' ').map(|pos| &cmd[pos + 1..])
-    }
-
     fn execute_command(&mut self, command: &str) -> Result<(), DebuggerError> {
-        let verb = command.split(&[' ', '\t']).next().unwrap().trim();
-        match verb {
-            "" => (),
-            help if "help".starts_with(help) => Cli::help(),
-            list if "list".starts_with(list) => self.list(),
-            cont if "continue".starts_with(cont) => self.cont()?,
-            "ba" => self.context.add_all_rules_breakpoints()?,
-            "da" => self.context.delete_all_breakpoints(),
-            grammar if "grammar".starts_with(grammar) => {
-                let grammar_file = Self::extract_arg(command);
-                if let Some(grammar_file) = grammar_file {
-                    self.grammar(PathBuf::from(grammar_file))?;
+        // First "argument" needs to be the program name; we don't care so empty string
+        let mut words = vec![""];
+        for word in command.split_whitespace() {
+            words.push(word);
+        }
+        let args = ClapRLArgs::parse_from(&words);
+        match &args.command {
+            // We have to do help ourselves so it doesn't exit :D
+            Some(Commands::Help {}) => {
+                println!("{}", ClapRLArgs::command().render_long_help());
+            }
+            Some(Commands::Grammar { grammar }) => {
+                self.grammar(PathBuf::from(grammar))?;
+            }
+            Some(Commands::Input { input }) => {
+                self.input(PathBuf::from(input))?;
+            }
+            Some(Commands::Run { run }) => {
+                self.run(run)?;
+            }
+            Some(Commands::Ba {}) => self.context.add_all_rules_breakpoints()?,
+            Some(Commands::Da {}) => self.context.delete_all_breakpoints(),
+            Some(Commands::Continue { count }) => {
+                if let Some(x) = count {
+                    for _ in 0..*x {
+                        self.cont()?
+                    }
                 } else {
-                    println!("expected filename, usage: g(grammar) <filename>");
+                    self.cont()?
                 }
             }
-            input if "input".starts_with(input) => {
-                let input_file = Self::extract_arg(command);
-                if let Some(input_file) = input_file {
-                    self.input(PathBuf::from(input_file))?;
-                } else {
-                    println!("expected filename, usage: i(input) <filename>");
-                }
+            // NOTE: It seems possible that there are conditions under which this doesn't work
+            // because the "arguments" are not ones that Clap likes; if that happens, just pull the
+            // `id string` handling out of here.  Just check that the string starts with "id " and
+            // keep the rest.
+            Some(Commands::Id { args }) => {
+                self.context.load_input_direct(args.join(" ").to_owned());
             }
-            x if x.starts_with("id ") => {
-                let input = &command[3..];
-                self.context.load_input_direct(input.to_owned());
-            }
-            breakpoint if "breakpoint".starts_with(breakpoint) => {
-                let rule = Self::extract_arg(command);
-                if let Some(rule) = rule {
+            Some(Commands::Breakpoints { breakpoints }) => {
+                for rule in breakpoints {
                     self.breakpoint(rule);
-                } else {
-                    println!("expected rule, usage: b(breakpoint) <rule>");
                 }
             }
-            delete if "delete".starts_with(delete) => {
-                let rule = Self::extract_arg(command);
-                if let Some(rule) = rule {
+            Some(Commands::Delete { delete }) => {
+                for rule in delete {
                     self.context.delete_breakpoint(rule);
-                } else {
-                    println!("expected rule, usage: d(delete) <rule>");
                 }
             }
-            run if "run".starts_with(run) => {
-                let rule = Self::extract_arg(command);
-                if let Some(rule) = rule {
-                    self.run(rule)?;
-                } else {
-                    println!("expected rule, usage: r(run) <rule>");
-                }
+            Some(Commands::List {}) => {
+                self.list();
             }
-            x => Cli::unrecognized(x),
-        };
+            None => {}
+        }
         Ok(())
     }
 }
@@ -218,129 +313,10 @@ impl Completer for CliHelper {
     }
 }
 
-struct CliArgs {
-    grammar_file: Option<PathBuf>,
-    input_file: Option<PathBuf>,
-    rule: Option<String>,
-    breakpoints: Vec<String>,
-    session_file: Option<PathBuf>,
-    no_update: bool,
-}
-
-impl Default for CliArgs {
-    fn default() -> Self {
-        let mut result = Self {
-            grammar_file: None,
-            input_file: None,
-            rule: None,
-            breakpoints: Vec::new(),
-            session_file: None,
-            no_update: false,
-        };
-        let args = std::env::args();
-        let mut iter = args.skip(1);
-        let mut unexpected_arg = false;
-        while let Some(arg) = iter.next() {
-            match arg.as_str() {
-                "-g" | "--grammar" => {
-                    if let Some(grammar_file) = iter.next() {
-                        result.grammar_file = Some(PathBuf::from(grammar_file));
-                    } else {
-                        eprintln!("Error: missing grammar file");
-                        std::process::exit(1);
-                    }
-                }
-                "-i" | "--input" => {
-                    if let Some(input_file) = iter.next() {
-                        result.input_file = Some(PathBuf::from(input_file));
-                    } else {
-                        eprintln!("Error: missing input file");
-                        std::process::exit(1);
-                    }
-                }
-                "-r" | "--rule" => {
-                    if let Some(rule) = iter.next() {
-                        result.rule = Some(rule);
-                    } else {
-                        eprintln!("Error: missing rule");
-                        std::process::exit(1);
-                    }
-                }
-                "-b" | "--breakpoint" => {
-                    if let Some(breakpoint) = iter.next() {
-                        result.breakpoints.push(breakpoint);
-                    } else {
-                        eprintln!("Error: missing breakpoint");
-                        std::process::exit(1);
-                    }
-                }
-                "-s" | "--session" => {
-                    if let Some(session_file) = iter.next() {
-                        result.session_file = Some(PathBuf::from(session_file));
-                    } else {
-                        eprintln!("Error: missing session file");
-                        std::process::exit(1);
-                    }
-                }
-                "--no-update" => {
-                    result.no_update = true;
-                }
-                "-h" | "--help" => {
-                    println!(
-                        "\n\
-                         Usage: pest_debugger [options]\n\
-                         \n\
-                         Options:\n\
-                         -g, --grammar <grammar file>    - load .pest grammar\n\
-                         -i, --input <input file>        - load input file\n\
-                         -r, --rule <rule>               - run rule\n\
-                         -b, --breakpoint <rule>         - breakpoint at rule (can be specified multiple times)\n\
-                         -s, --session <session file>    - load session history file\n\
-                         -h, --help                      - print this help menu\n\
-                     "
-                    );
-                    std::process::exit(0);
-                }
-                arg => {
-                    eprintln!("Error: unexpected argument `{}`", arg);
-                    unexpected_arg = true;
-                }
-            }
-        }
-        if unexpected_arg {
-            std::process::exit(1);
-        }
-        result
-    }
-}
-
-impl CliArgs {
-    fn init(self, context: &mut Cli) {
-        if let Some(grammar_file) = self.grammar_file {
-            if let Err(e) = context.grammar(grammar_file) {
-                eprintln!("Error: {}", e);
-            }
-        }
-        if let Some(input_file) = self.input_file {
-            if let Err(e) = context.input(input_file) {
-                eprintln!("Error: {}", e);
-            }
-        }
-        for breakpoint in self.breakpoints {
-            context.breakpoint(&breakpoint);
-        }
-        if let Some(rule) = self.rule {
-            if let Err(e) = context.run(&rule) {
-                eprintln!("Error: {}", e);
-            }
-        }
-    }
-}
-
 fn main() -> rustyline::Result<()> {
     let mut rl = Editor::<CliHelper>::new()?;
     let mut context = Cli::default();
-    let cli_args = CliArgs::default();
+    let cli_args = ClapCliArgs::parse();
 
     if !cli_args.no_update {
         let client = ClientBuilder::new()
@@ -349,7 +325,7 @@ fn main() -> rustyline::Result<()> {
                 "/",
                 env!("CARGO_PKG_VERSION")
             ))
-            .timeout(Some(Duration::from_secs(5)))
+            .timeout(Some(Duration::from_secs(30)))
             .build()
             .ok();
 
@@ -369,8 +345,11 @@ fn main() -> rustyline::Result<()> {
         completer: FilenameCompleter::new(),
         hinter: HistoryHinter {},
     };
+
     rl.set_helper(Some(h));
+
     println!("pest_debugger v{}\n", VERSION);
+
     let historyfile = if let Some(session_file) = &cli_args.session_file {
         if let Err(e) = rl.load_history(session_file) {
             eprintln!("Error loading history file: {}", e);
@@ -379,7 +358,46 @@ fn main() -> rustyline::Result<()> {
     } else {
         None
     };
-    cli_args.init(&mut context);
+
+    if let Some(grammar_file) = cli_args.grammar_file {
+        if let Err(e) = context.grammar(grammar_file) {
+            eprintln!("Error: {}", e);
+        }
+    }
+    if let Some(input_file) = cli_args.input_file {
+        if let Err(e) = context.input(input_file) {
+            eprintln!("Error: {}", e);
+        }
+    }
+    // The list is generated by one or more -b arguments, but each -b argument can also be a
+    // space-separated list
+    for breakpoint_list in cli_args.breakpoints {
+        for breakpoint in breakpoint_list.split_whitespace() {
+            context.breakpoint(breakpoint);
+        }
+    }
+    if let Some(rule) = cli_args.rule {
+        if let Err(e) = context.run(&rule) {
+            eprintln!("Error: {}", e);
+        }
+    }
+
+    if let Some(tracing) = cli_args.tracing {
+        context.tracing(&tracing);
+    }
+
+    if let Some(size) = cli_args.tracing_spacing {
+        context.tracing_spacing(size);
+    }
+
+    if cli_args.tracing_skip_implicit {
+        context.tracing_skip_implicit();
+    }
+
+    if cli_args.tracing_skip_silent {
+        context.tracing_skip_silent();
+    }
+
     loop {
         match rl.readline("> ") {
             Ok(line) => {
