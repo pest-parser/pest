@@ -156,7 +156,7 @@ jobs:
         id: setup
         with:
           kind: check
-          toolchain: nightly-2025-02-20
+          toolchain: stable
           tools: cargo-semver-checks
       - name: check semver compatibility
         shell: bash
