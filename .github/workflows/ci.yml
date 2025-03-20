@@ -23,7 +23,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           kind: check
-          toolchain: 1.74.0 # needed for `clap` in pest_debugger
+          toolchain: 1.81.0 # needed for `litemap v0.7.5` in pest_debugger
       - name: cargo check
         run: cargo check --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --all-targets
 
@@ -40,7 +40,7 @@ jobs:
         with:
           kind: check
           components: clippy, rustfmt
-          toolchain: 1.74.0 # needed for `clap` in pest_debugger
+          toolchain: 1.81.0 # needed for `litemap v0.7.5` in pest_debugger
       - name: cargo fmt
         run: cargo fmt --all -- --check
       - name: cargo clippy
@@ -62,7 +62,7 @@ jobs:
         id: setup
         with:
           kind: check
-          toolchain: 1.74.0 # needed for `clap` in pest_debugger
+          toolchain: 1.81.0 # needed for `litemap v0.7.5` in pest_debugger
       - name: cargo doc
         run: cargo doc --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error
 
@@ -79,7 +79,7 @@ jobs:
         with:
           kind: msrv
           tools: cargo-msrv
-          toolchain: 1.78.0 # needed for cargo-msrv
+          toolchain: 1.81.0 # needed for `litemap v0.7.5` in pest_debugger
       - name: Check msrv
         shell: sh
         run: for crate in "derive" "generator" "grammars" "meta" "pest" "vm"; do cd "$crate" && cargo msrv verify && cd ..; done
@@ -123,7 +123,7 @@ jobs:
         id: setup
         with:
           kind: check
-          toolchain: 1.74.0 # needed for `clap` in pest_debugger
+          toolchain: 1.81.0 # needed for `litemap v0.7.5` in pest_debugger
       - name: Check feature powerset
         run: cargo hack check --feature-powerset --optional-deps --exclude-all-features --skip not-bootstrap-in-src,cargo --keep-going --lib --tests --ignore-private
 
@@ -140,7 +140,7 @@ jobs:
         with:
           kind: check
           components: rust-src
-          toolchain: nightly-2024-11-30 # upgrade this regularly
+          toolchain: nightly-2025-02-20 # upgrade this regularly
       - name: check no_std compatibility
         run: cd pest && cargo build -j1 -Z build-std=core,alloc --no-default-features --target x86_64-unknown-linux-gnu
 
@@ -156,7 +156,7 @@ jobs:
         id: setup
         with:
           kind: check
-          toolchain: nightly-2024-11-30
+          toolchain: nightly-2025-02-20
           tools: cargo-semver-checks
       - name: check semver compatibility
         shell: bash
