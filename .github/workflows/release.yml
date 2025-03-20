@@ -15,7 +15,7 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@1.74.0 # needed for pest_debugger (clap requires it)
+        uses: dtolnay/rust-toolchain@1.81.0 # needed for `litemap v0.7.5` in pest_debugger
       - name: Bootstraping Grammars - Building
         run: cargo build --package pest_bootstrap
       - name: Bootstraping Grammars - Executing

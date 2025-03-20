@@ -3,7 +3,7 @@ name = "pest_meta-fuzz"
 version = "0.0.0"
 authors = ["Automatically generated"]
 publish = false
-rust-version = "1.61"
+rust-version = "1.65"
 
 [package.metadata]
 cargo-fuzz = true
