@@ -8,7 +8,7 @@ cargo run --package pest_bootstrap
 
 # current
 for crate in "pest_derive" "pest_generator" "pest_grammars" "pest_meta" "pest" "pest_vm" "pest_debugger"; do
-    cargo rustdoc -p $crate -- $RUSTDOC_LATE_FLAGS
+    cargo +nightly-2025-02-20 rustdoc -p $crate -- $RUSTDOC_LATE_FLAGS
     mv target/doc/$crate.json /tmp/current-$crate.json
 done
 
@@ -21,7 +21,7 @@ cargo clean
 cargo build --package pest_bootstrap
 cargo run --package pest_bootstrap
 for crate in "pest_derive" "pest_generator" "pest_grammars" "pest_meta" "pest" "pest_vm" "pest_debugger"; do
-    cargo rustdoc -p $crate -- $RUSTDOC_LATE_FLAGS
+    cargo +nightly-2025-02-20 rustdoc -p $crate -- $RUSTDOC_LATE_FLAGS
     mv target/doc/$crate.json /tmp/baseline-$crate.json
     echo "Checking $crate"
     cargo semver-checks check-release --current /tmp/current-$crate.json --baseline /tmp/baseline-$crate.json
