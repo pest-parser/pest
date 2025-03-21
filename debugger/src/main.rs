@@ -154,9 +154,13 @@ impl Cli {
                     println!("expected filename, usage: i(input) <filename>");
                 }
             }
-            x if x.starts_with("id ") => {
-                let input = &command[3..];
-                self.context.load_input_direct(input.to_owned());
+            x if x.starts_with("id") => {
+                let input_text = Self::extract_arg(command);
+                if let Some(input_text) = input_text {
+                    self.context.load_input_direct(input_text.to_owned());
+                } else {
+                    println!("expected input text, usage: id <input text>");
+                }
             }
             breakpoint if "breakpoint".starts_with(breakpoint) => {
                 let rule = Self::extract_arg(command);
