@@ -69,6 +69,7 @@ fn rule_to_optimized_rule(rule: Rule) -> OptimizedRule {
             Expr::Rep(expr) => OptimizedExpr::Rep(Box::new(to_optimized(*expr))),
             Expr::Skip(strings) => OptimizedExpr::Skip(strings),
             Expr::Push(expr) => OptimizedExpr::Push(Box::new(to_optimized(*expr))),
+            Expr::PushLiteral(string) => OptimizedExpr::PushLiteral(string),
             #[cfg(feature = "grammar-extras")]
             Expr::NodeTag(expr, tag) => OptimizedExpr::NodeTag(Box::new(to_optimized(*expr)), tag),
             #[cfg(feature = "grammar-extras")]
@@ -151,6 +152,8 @@ pub enum OptimizedExpr {
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<OptimizedExpr>),
+    /// Pushes a literal string to the stack, e.g. `push_literal("")`
+    PushLiteral(String),
     /// Matches an expression and assigns a label to it, e.g. #label = exp
     #[cfg(feature = "grammar-extras")]
     NodeTag(Box<OptimizedExpr>, String),
@@ -325,6 +328,7 @@ impl core::fmt::Display for OptimizedExpr {
                 write!(f, "(!({}) ~ ANY)*", strings)
             }
             OptimizedExpr::Push(expr) => write!(f, "PUSH({})", expr),
+            OptimizedExpr::PushLiteral(s) => write!(f, "PUSH_LITERAL({:?})", s),
             #[cfg(feature = "grammar-extras")]
             OptimizedExpr::NodeTag(expr, tag) => {
                 write!(f, "(#{} = {})", tag, expr)

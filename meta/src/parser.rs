@@ -166,6 +166,8 @@ pub enum ParserExpr<'i> {
     RepMinMax(Box<ParserNode<'i>>, u32, u32),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<ParserNode<'i>>),
+    /// Pushes a literal string to the stack, e.g. `push_literal("a")`
+    PushLiteral(String),
     /// Matches an expression and assigns a label to it, e.g. #label = exp
     #[cfg(feature = "grammar-extras")]
     NodeTag(Box<ParserNode<'i>>, String),
@@ -204,6 +206,7 @@ fn convert_node(node: ParserNode<'_>) -> Expr {
             Expr::RepMinMax(Box::new(convert_node(*node)), min, max)
         }
         ParserExpr::Push(node) => Expr::Push(Box::new(convert_node(*node))),
+        ParserExpr::PushLiteral(string) => Expr::PushLiteral(string),
         #[cfg(feature = "grammar-extras")]
         ParserExpr::NodeTag(node, tag) => Expr::NodeTag(Box::new(convert_node(*node)), tag),
     }
@@ -227,6 +230,7 @@ pub fn rename_meta_rule(rule: &Rule) -> String {
     match *rule {
         Rule::grammar_rule => "rule".to_owned(),
         Rule::_push => "PUSH".to_owned(),
+        Rule::_push_literal => "PUSH_LITERAL".to_owned(),
         Rule::assignment_operator => "`=`".to_owned(),
         Rule::silent_modifier => "`_`".to_owned(),
         Rule::atomic_modifier => "`@`".to_owned(),
@@ -391,6 +395,16 @@ fn consume_expr<'i>(
                         ParserNode {
                             expr: ParserExpr::Push(Box::new(node)),
                             span: start.span(&end),
+                        }
+                    }
+                    Rule::_push_literal => {
+                        let mut pairs = pair.into_inner();
+                        pairs.next().unwrap(); // opening_paren
+                        let contents_pair = pairs.next().unwrap();
+                        let string = unescape(contents_pair.as_str()).expect("incorrect string literal");
+                        ParserNode {
+                            expr: ParserExpr::PushLiteral(string[1..string.len() - 1].to_owned()),
+                            span: contents_pair.clone().as_span(),
                         }
                     }
                     Rule::peek_slice => {
@@ -1316,6 +1330,7 @@ mod tests {
                 Rule::positive_predicate_operator,
                 Rule::negative_predicate_operator,
                 Rule::_push,
+                Rule::_push_literal,
                 Rule::peek_slice,
                 Rule::identifier,
                 Rule::insensitive_string,
@@ -1438,6 +1453,7 @@ mod tests {
                 Rule::positive_predicate_operator,
                 Rule::negative_predicate_operator,
                 Rule::_push,
+                Rule::_push_literal,
                 Rule::peek_slice,
                 Rule::identifier,
                 Rule::insensitive_string,

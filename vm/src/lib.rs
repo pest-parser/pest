@@ -236,6 +236,7 @@ impl Vm {
                 })
             }),
             OptimizedExpr::Push(ref expr) => state.stack_push(|state| self.parse_expr(expr, state)),
+            OptimizedExpr::PushLiteral(ref string) => state.stack_push_literal(string.to_owned()),
             OptimizedExpr::Skip(ref strings) => state.skip_until(
                 &strings
                     .iter()
