@@ -152,7 +152,7 @@ pub enum OptimizedExpr {
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<OptimizedExpr>),
-    /// Pushes a literal string to the stack, e.g. `push_literal("")`
+    /// Pushes a literal string to the stack, e.g. `push_literal("a")`
     PushLiteral(String),
     /// Matches an expression and assigns a label to it, e.g. #label = exp
     #[cfg(feature = "grammar-extras")]
