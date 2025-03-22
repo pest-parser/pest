@@ -10,13 +10,6 @@
 //! The core functionality of parsing grammar.
 //! State of parser during the process of rules handling.
 
-use crate::error::{Error, ErrorVariant};
-use crate::iterators::pairs::new;
-use crate::iterators::{pairs, QueueableToken};
-use crate::position::Position;
-use crate::span::Span;
-use crate::stack::Stack;
-use crate::RuleType;
 use alloc::borrow::{Cow, ToOwned};
 use alloc::boxed::Box;
 use alloc::collections::BTreeSet;
@@ -29,6 +22,14 @@ use core::num::NonZeroUsize;
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::ops::Deref;
+
+use crate::error::{Error, ErrorVariant};
+use crate::iterators::pairs::new;
+use crate::iterators::{pairs, QueueableToken};
+use crate::position::Position;
+use crate::span::Span;
+use crate::stack::Stack;
+use crate::RuleType;
 
 /// The current lookahead status of a [`ParserState`].
 ///
