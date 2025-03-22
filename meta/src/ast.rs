@@ -688,6 +688,15 @@ mod tests {
 
         #[test]
         #[cfg(feature = "grammar-extras")]
+        fn push_literal() {
+            assert_eq!(
+                Expr::PushLiteral("one \" ' two".to_string()).to_string(),
+                r#"PUSH_LITERAL("one \" ' two")"#
+            )
+        }
+
+        #[test]
+        #[cfg(feature = "grammar-extras")]
         fn node_tag() {
             assert_eq!(
                 Expr::NodeTag(Box::new(Expr::Ident("expr".to_owned())), "label".to_owned())

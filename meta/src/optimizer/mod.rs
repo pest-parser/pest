@@ -1095,6 +1095,15 @@ mod tests {
 
         #[test]
         #[cfg(feature = "grammar-extras")]
+        fn push_literal() {
+            assert_eq!(
+                OptimizedExpr::PushLiteral("a \" b".to_owned()).to_string(),
+                r#"PUSH_LITERAL("a \" b")"#,
+            );
+        }
+
+        #[test]
+        #[cfg(feature = "grammar-extras")]
         fn node_tag() {
             assert_eq!(
                 OptimizedExpr::NodeTag(

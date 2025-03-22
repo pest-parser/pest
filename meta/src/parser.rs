@@ -1541,6 +1541,43 @@ mod tests {
     }
 
     #[test]
+    fn ast_push_literal() {
+        let input = r#"rule = _{ PUSH_LITERAL("a") }"#;
+
+        let pairs = PestParser::parse(Rule::grammar_rules, input).unwrap();
+        let ast = consume_rules_with_spans(pairs).unwrap();
+        let ast: Vec<_> = ast.into_iter().map(convert_rule).collect();
+
+        assert_eq!(
+            ast,
+            vec![AstRule {
+                name: "rule".to_owned(),
+                ty: RuleType::Silent,
+                expr: Expr::PushLiteral("a".to_string()),
+            }],
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:24
+  |
+1 | rule = _{ PUSH_LITERAL(a) }
+  |                        ^---
+  |
+  = expected quote")]
+    fn ast_push_literal_bad_input() {
+        let input = r#"rule = _{ PUSH_LITERAL(a) }"#;
+
+        let pairs_result = PestParser::parse(Rule::grammar_rules, input);
+        match pairs_result {
+            Ok(ok) => panic!("expected Err, but found {ok}"),
+            Err(e) => panic!("grammar error\n\n{e}"),
+        }
+    }
+
+    #[test]
     fn ast_peek_slice() {
         let input = "rule = _{ PEEK[-04..] ~ PEEK[..3] }";
 

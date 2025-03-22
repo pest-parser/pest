@@ -999,6 +999,19 @@ mod tests {
         assert!(!is_non_progressing(&push, &HashMap::new(), &mut Vec::new()));
     }
 
+    #[cfg(feature = "grammar-extras")]
+    #[test]
+    fn push_literal_is_non_progressing() {
+        let a = "";
+        let non_progressing_node = Box::new(ParserNode {
+            expr: ParserExpr::PushLiteral("a".to_string()),
+            span: Span::new(a, 0, 0).unwrap(),
+        });
+        let push = ParserExpr::Push(non_progressing_node.clone());
+
+        assert!(is_non_progressing(&push, &HashMap::new(), &mut Vec::new()));
+    }
+
     #[test]
     fn node_tag_forwards_is_non_progressing() {
         let progressing_node = Box::new(ParserNode {
@@ -1662,6 +1675,16 @@ mod tests {
         ));
         assert!(is_non_failing(
             &ParserExpr::PosPred(non_failing_node.clone()),
+            &HashMap::new(),
+            &mut Vec::new()
+        ));
+    }
+
+    #[cfg(feature = "grammar-extras")]
+    #[test]
+    fn push_literal_is_non_failing() {
+        assert!(is_non_failing(
+            &ParserExpr::PushLiteral("a".to_string()),
             &HashMap::new(),
             &mut Vec::new()
         ));
