@@ -21,7 +21,7 @@ use core::fmt::{Debug, Display, Formatter};
 use core::num::NonZeroUsize;
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::ops::Deref;
+use std::ops::Deref; // used in BorrowedOrRc.as_str
 
 use crate::error::{Error, ErrorVariant};
 use crate::iterators::pairs::new;
@@ -234,7 +234,12 @@ impl Display for ParsingToken {
         }
     }
 }
-
+/// A helper that provides efficient string handling without unnecessary copying.
+/// We use `Rc<String>` instead of `Cow<'i, str>` to avoid copying strings when cloning the `Owned` variant, since
+/// `Rc::clone` only increments a reference count.
+///
+/// (We need to clone this struct to detach it from the `&self` borrow in [SpanOrLiteral::as_borrowed_or_rc], so that
+/// we can then call `self.match_string` (a `mut self` method).
 #[derive(Debug, Clone)]
 enum BorrowedOrRc<'i> {
     Borrowed(&'i str),
@@ -1149,7 +1154,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert_eq!(result.unwrap().position().pos(), 1);
     /// ```
     #[inline]
-    #[allow(private_bounds)]
     pub fn stack_push_literal(
         mut self: Box<Self>,
         string: impl Into<Literal>,
