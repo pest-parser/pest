@@ -10,7 +10,7 @@
 //! The core functionality of parsing grammar.
 //! State of parser during the process of rules handling.
 
-use alloc::borrow::{Cow, ToOwned};
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::collections::BTreeSet;
 use alloc::rc::Rc;
@@ -216,16 +216,45 @@ impl Display for ParsingToken {
 }
 
 #[derive(Debug, Clone)]
+enum BorrowedOrRc<'i> {
+    Borrowed(&'i str),
+    Owned(Rc<String>),
+}
+
+impl From<&'static str> for BorrowedOrRc<'_> {
+    fn from(value: &'static str) -> Self {
+        BorrowedOrRc::Borrowed(value)
+    }
+}
+
+impl From<String> for BorrowedOrRc<'_> {
+    fn from(value: String) -> Self {
+        BorrowedOrRc::Owned(Rc::new(value))
+    }
+}
+
+/// A holder for a literal string, for use in `push_literal`. This is typically a `&'static str`, but is an owned
+/// `Rc<String>` for the pest vm.
+impl<'i> BorrowedOrRc<'i> {
+    fn as_str<'a: 'i>(&'a self) -> &'a str {
+        match self {
+            BorrowedOrRc::Borrowed(s) => *s,
+            BorrowedOrRc::Owned(s) => s.deref(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 enum SpanOrLiteral<'i> {
     Span(Span<'i>),
-    Literal(Cow<'i, str>),
+    Literal(BorrowedOrRc<'i>),
 }
 
 impl<'i> SpanOrLiteral<'i> {
     #[inline]
-    fn as_borrowed_or_rc(&self) -> Cow<'i, str> {
+    fn as_borrowed_or_rc(&self) -> BorrowedOrRc<'i> {
         match self {
-            Self::Span(s) => Cow::Borrowed(s.as_str()),
+            Self::Span(s) => BorrowedOrRc::Borrowed(s.as_str()),
             Self::Literal(s) => s.clone(),
         }
     }
@@ -1106,7 +1135,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     #[allow(private_bounds)]
     pub fn stack_push_literal(
         mut self: Box<Self>,
-        string: impl Into<Cow<'i, str>>,
+        string: impl Into<BorrowedOrRc<'i>>,
     ) -> ParseResult<Box<Self>> {
         self.stack.push(SpanOrLiteral::Literal(string.into()));
         Ok(self)
@@ -1502,7 +1531,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             .peek()
             .expect("peek was called on empty stack")
             .as_borrowed_or_rc();
-        self.match_string(string.deref())
+        self.match_string(string.as_str())
     }
 
     /// Pops the top of the stack and attempts to match the string. Returns `Ok(Box<ParserState>)`
@@ -1531,7 +1560,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             .pop()
             .expect("pop was called on empty stack")
             .as_borrowed_or_rc();
-        self.match_string(string.deref())
+        self.match_string(string.as_str())
     }
 
     /// Matches part of the state of the stack.
@@ -1578,7 +1607,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         let result = {
             let mut iter_b2t = self.stack[range].iter();
             let matcher =
-                |span: &SpanOrLiteral<'_>| position.match_string(span.as_borrowed_or_rc().deref());
+                |span: &SpanOrLiteral<'_>| position.match_string(span.as_borrowed_or_rc().as_str());
             match match_dir {
                 MatchDir::BottomToTop => iter_b2t.all(matcher),
                 MatchDir::TopToBottom => iter_b2t.rev().all(matcher),
@@ -1639,7 +1668,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         let mut position = self.position;
         let mut result = true;
         while let Some(span) = self.stack.pop() {
-            result = position.match_string(span.as_borrowed_or_rc().deref());
+            result = position.match_string(span.as_borrowed_or_rc().as_str());
             if !result {
                 break;
             }
