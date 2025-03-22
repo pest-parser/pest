@@ -420,7 +420,6 @@ fn consume_expr<'i>(
                             pair.as_span(),
                         )]);
                     }
-                    #[cfg(feature = "grammar-extras")]
                     Rule::peek_slice => {
                         let mut pairs = pair.clone().into_inner();
                         pairs.next().unwrap(); // opening_brack
