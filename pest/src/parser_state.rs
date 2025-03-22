@@ -10,7 +10,14 @@
 //! The core functionality of parsing grammar.
 //! State of parser during the process of rules handling.
 
-use alloc::borrow::{ToOwned};
+use crate::error::{Error, ErrorVariant};
+use crate::iterators::pairs::new;
+use crate::iterators::{pairs, QueueableToken};
+use crate::position::Position;
+use crate::span::Span;
+use crate::stack::Stack;
+use crate::RuleType;
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::collections::BTreeSet;
 use alloc::rc::Rc;
@@ -21,14 +28,7 @@ use core::fmt::{Debug, Display, Formatter};
 use core::num::NonZeroUsize;
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-
-use crate::error::{Error, ErrorVariant};
-use crate::iterators::pairs::new;
-use crate::iterators::{pairs, QueueableToken};
-use crate::position::Position;
-use crate::span::Span;
-use crate::stack::Stack;
-use crate::RuleType;
+use std::ops::Deref;
 
 /// The current lookahead status of a [`ParserState`].
 ///
@@ -217,7 +217,7 @@ impl Display for ParsingToken {
 #[derive(Debug, Clone)]
 enum BorrowedOrRc<'i> {
     Borrowed(&'i str),
-    Owned(Rc<String>)
+    Owned(Rc<String>),
 }
 
 impl From<&'static str> for BorrowedOrRc<'_> {
@@ -238,7 +238,7 @@ impl<'i> BorrowedOrRc<'i> {
     fn as_str<'a: 'i>(&'a self) -> &'a str {
         match self {
             BorrowedOrRc::Borrowed(s) => *s,
-            BorrowedOrRc::Owned(s) => s,
+            BorrowedOrRc::Owned(s) => s.deref(),
         }
     }
 }
@@ -258,7 +258,6 @@ impl<'i> SpanOrLiteral<'i> {
         }
     }
 }
-
 
 /// Structure that tracks all the parsing attempts made on the max position.
 /// We want to give an error hint about parsing rules that succeeded
@@ -1133,7 +1132,10 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     #[allow(private_bounds)]
-    pub fn stack_push_literal(mut self: Box<Self>, string: impl Into<BorrowedOrRc<'i>>) -> ParseResult<Box<Self>> {
+    pub fn stack_push_literal(
+        mut self: Box<Self>,
+        string: impl Into<BorrowedOrRc<'i>>,
+    ) -> ParseResult<Box<Self>> {
         self.stack.push(SpanOrLiteral::Literal(string.into()));
         Ok(self)
     }
@@ -1603,7 +1605,8 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         let mut position = self.position;
         let result = {
             let mut iter_b2t = self.stack[range].iter();
-            let matcher = |span: &SpanOrLiteral<'_>| position.match_string(span.as_borrowed_or_rc().as_str());
+            let matcher =
+                |span: &SpanOrLiteral<'_>| position.match_string(span.as_borrowed_or_rc().as_str());
             match match_dir {
                 MatchDir::BottomToTop => iter_b2t.all(matcher),
                 MatchDir::TopToBottom => iter_b2t.rev().all(matcher),
