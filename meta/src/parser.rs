@@ -167,6 +167,7 @@ pub enum ParserExpr<'i> {
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<ParserNode<'i>>),
     /// Pushes a literal string to the stack, e.g. `push_literal("a")`
+    #[cfg(feature = "grammar-extras")]
     PushLiteral(String),
     /// Matches an expression and assigns a label to it, e.g. #label = exp
     #[cfg(feature = "grammar-extras")]
@@ -206,6 +207,7 @@ fn convert_node(node: ParserNode<'_>) -> Expr {
             Expr::RepMinMax(Box::new(convert_node(*node)), min, max)
         }
         ParserExpr::Push(node) => Expr::Push(Box::new(convert_node(*node))),
+        #[cfg(feature = "grammar-extras")]
         ParserExpr::PushLiteral(string) => Expr::PushLiteral(string),
         #[cfg(feature = "grammar-extras")]
         ParserExpr::NodeTag(node, tag) => Expr::NodeTag(Box::new(convert_node(*node)), tag),
@@ -397,16 +399,28 @@ fn consume_expr<'i>(
                             span: start.span(&end),
                         }
                     }
+                    #[cfg(feature = "grammar-extras")]
                     Rule::_push_literal => {
                         let mut pairs = pair.into_inner();
                         pairs.next().unwrap(); // opening_paren
                         let contents_pair = pairs.next().unwrap();
-                        let string = unescape(contents_pair.as_str()).expect("incorrect string literal");
+                        let string =
+                            unescape(contents_pair.as_str()).expect("incorrect string literal");
                         ParserNode {
                             expr: ParserExpr::PushLiteral(string[1..string.len() - 1].to_owned()),
                             span: contents_pair.clone().as_span(),
                         }
                     }
+                    #[cfg(not(feature = "grammar-extras"))]
+                    Rule::_push_literal => {
+                        return Err(vec![Error::new_from_span(
+                            ErrorVariant::CustomError {
+                                message: "PUSH_LITERAL requires feature grammar-extras".to_owned(),
+                            },
+                            pair.as_span(),
+                        )]);
+                    }
+                    #[cfg(feature = "grammar-extras")]
                     Rule::peek_slice => {
                         let mut pairs = pair.clone().into_inner();
                         pairs.next().unwrap(); // opening_brack

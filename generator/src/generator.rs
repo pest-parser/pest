@@ -570,6 +570,7 @@ fn generate_expr(expr: OptimizedExpr) -> TokenStream {
                 state.stack_push(|state| #expr)
             }
         }
+        #[cfg(feature = "grammar-extras")]
         OptimizedExpr::PushLiteral(string) => {
             quote! {
                 state.stack_push_literal(#string)
@@ -760,6 +761,7 @@ fn generate_expr_atomic(expr: OptimizedExpr) -> TokenStream {
                 state.stack_push(|state| #expr)
             }
         }
+        #[cfg(feature = "grammar-extras")]
         OptimizedExpr::PushLiteral(string) => {
             quote! {
                 state.stack_push_literal(#string)
