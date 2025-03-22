@@ -1540,6 +1540,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "grammar-extras")]
     #[test]
     fn ast_push_literal() {
         let input = r#"rule = _{ PUSH_LITERAL("a") }"#;
