@@ -87,6 +87,26 @@ pub enum MatchDir {
     TopToBottom,
 }
 
+/// A literal value, for use in `push_literal`. Use the `Static` variant when possible (for example, within a derived
+/// parser). The owned variant is useful in contexts like vm.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Literal {
+    Static(&'static str),
+    Owned(String),
+}
+
+impl From<&'static str> for Literal {
+    fn from(value: &'static str) -> Self {
+        Self::Static(value)
+    }
+}
+
+impl From<String> for Literal {
+    fn from(value: String) -> Self {
+        Self::Owned(value)
+    }
+}
+
 static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 
 /// Sets the maximum call limit for the parser state
@@ -221,18 +241,6 @@ enum BorrowedOrRc<'i> {
     Owned(Rc<String>),
 }
 
-impl From<&'static str> for BorrowedOrRc<'_> {
-    fn from(value: &'static str) -> Self {
-        BorrowedOrRc::Borrowed(value)
-    }
-}
-
-impl From<String> for BorrowedOrRc<'_> {
-    fn from(value: String) -> Self {
-        BorrowedOrRc::Owned(Rc::new(value))
-    }
-}
-
 /// A holder for a literal string, for use in `push_literal`. This is typically a `&'static str`, but is an owned
 /// `Rc<String>` for the pest vm.
 impl<'i> BorrowedOrRc<'i> {
@@ -240,6 +248,15 @@ impl<'i> BorrowedOrRc<'i> {
         match self {
             BorrowedOrRc::Borrowed(s) => *s,
             BorrowedOrRc::Owned(s) => s.deref(),
+        }
+    }
+}
+
+impl From<Literal> for BorrowedOrRc<'_> {
+    fn from(value: Literal) -> Self {
+        match value {
+            Literal::Static(s) => Self::Borrowed(s),
+            Literal::Owned(s) => Self::Owned(Rc::new(s)),
         }
     }
 }
@@ -1135,9 +1152,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     #[allow(private_bounds)]
     pub fn stack_push_literal(
         mut self: Box<Self>,
-        string: impl Into<BorrowedOrRc<'i>>,
+        string: impl Into<Literal>,
     ) -> ParseResult<Box<Self>> {
-        self.stack.push(SpanOrLiteral::Literal(string.into()));
+        // convert string into a Literal, and then into a BorrowedOrRc
+        self.stack
+            .push(SpanOrLiteral::Literal(string.into().into()));
         Ok(self)
     }
 
