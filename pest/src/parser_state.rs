@@ -19,9 +19,9 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Display, Formatter};
 use core::num::NonZeroUsize;
+use core::ops::Deref; // used in BorrowedOrRc.as_str
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::ops::Deref; // used in BorrowedOrRc.as_str
 
 use crate::error::{Error, ErrorVariant};
 use crate::iterators::pairs::new;
@@ -251,7 +251,7 @@ enum BorrowedOrRc<'i> {
 impl<'i> BorrowedOrRc<'i> {
     fn as_str<'a: 'i>(&'a self) -> &'a str {
         match self {
-            BorrowedOrRc::Borrowed(s) => *s,
+            BorrowedOrRc::Borrowed(s) => s,
             BorrowedOrRc::Owned(s) => s.deref(),
         }
     }

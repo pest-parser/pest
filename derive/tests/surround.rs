@@ -8,12 +8,8 @@
 
 #[macro_use]
 extern crate pest;
-extern crate pest_grammars;
-
-#[cfg(feature = "grammar-extras")]
-use pest::Parser;
-use pest_derive::Parser;
-use pretty_assertions::assert_eq;
+#[macro_use]
+extern crate pest_derive;
 
 /// Surround-string parser.
 /// This is a simple grammar of string parsing, where the strings end with a different delimiter char than what they
@@ -28,7 +24,7 @@ use pretty_assertions::assert_eq;
 ///
 /// The grammar's `Top` rule supports multiple strings, one per line.
 #[derive(Parser)]
-#[grammar = "grammars/surround.pest"]
+#[grammar = "../tests/surround.pest"]
 pub struct SurroundParser;
 
 #[test]
