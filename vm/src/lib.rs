@@ -68,7 +68,7 @@ impl Vm {
         &'a self,
         rule: &'a str,
         input: &'a str,
-    ) -> Result<Pairs<'a, &str>, Error<&str>> {
+    ) -> Result<Pairs<'a, &'a str>, Error<&'a str>> {
         pest::state(input, |state| self.parse_rule(rule, state))
     }
 
