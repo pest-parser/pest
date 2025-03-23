@@ -10,7 +10,7 @@
 //! The core functionality of parsing grammar.
 //! State of parser during the process of rules handling.
 
-use alloc::borrow::ToOwned;
+use alloc::borrow::{Cow, ToOwned};
 use alloc::boxed::Box;
 use alloc::collections::BTreeSet;
 use alloc::rc::Rc;
@@ -85,26 +85,6 @@ pub enum MatchDir {
     BottomToTop,
     /// from the top to the bottom of the stack
     TopToBottom,
-}
-
-/// A literal value, for use in `push_literal`. Use the `Static` variant when possible (for example, within a derived
-/// parser). The owned variant is useful in contexts like vm.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Literal {
-    Static(&'static str),
-    Owned(String),
-}
-
-impl From<&'static str> for Literal {
-    fn from(value: &'static str) -> Self {
-        Self::Static(value)
-    }
-}
-
-impl From<String> for Literal {
-    fn from(value: String) -> Self {
-        Self::Owned(value)
-    }
 }
 
 static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
@@ -257,11 +237,11 @@ impl<'i> BorrowedOrRc<'i> {
     }
 }
 
-impl From<Literal> for BorrowedOrRc<'_> {
-    fn from(value: Literal) -> Self {
+impl From<Cow<'static, str>> for BorrowedOrRc<'_> {
+    fn from(value: Cow<'static, str>) -> Self {
         match value {
-            Literal::Static(s) => Self::Borrowed(s),
-            Literal::Owned(s) => Self::Owned(Rc::new(s)),
+            Cow::Borrowed(s) => Self::Borrowed(s),
+            Cow::Owned(s) => Self::Owned(Rc::new(s)),
         }
     }
 }
@@ -1156,7 +1136,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     #[inline]
     pub fn stack_push_literal(
         mut self: Box<Self>,
-        string: impl Into<Literal>,
+        string: impl Into<Cow<'static, str>>,
     ) -> ParseResult<Box<Self>> {
         // convert string into a Literal, and then into a BorrowedOrRc
         self.stack
