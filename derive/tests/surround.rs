@@ -6,13 +6,16 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+#![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
+#[cfg(not(feature = "std"))]
+use alloc::{format, vec, vec::Vec};
+
 #[macro_use]
 extern crate pest;
 extern crate pest_derive;
 
 #[cfg(feature = "grammar-extras")]
-use pest::Parser;
 use pest_derive::Parser;
 
 /// Surround-string parser.
@@ -27,7 +30,6 @@ use pest_derive::Parser;
 /// To keep things simple, strings do not support any escape sequences.
 ///
 /// The grammar's `Top` rule supports multiple strings, one per line.
-#[cfg(feature = "grammar-extras")]
 #[derive(Parser)]
 #[grammar = "../tests/surround.pest"]
 pub struct SurroundParser;
