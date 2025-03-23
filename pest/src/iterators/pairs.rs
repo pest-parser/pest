@@ -327,7 +327,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     pub fn find_tagged(
         self,
         tag: &'i str,
-    ) -> Filter<FlatPairs<'i, R>, impl FnMut(&Pair<'i, R>) -> bool + '_> {
+    ) -> Filter<FlatPairs<'i, R>, impl FnMut(&Pair<'i, R>) -> bool + 'i> {
         self.flatten()
             .filter(move |pair: &Pair<'i, R>| matches!(pair.as_node_tag(), Some(nt) if nt == tag))
     }
