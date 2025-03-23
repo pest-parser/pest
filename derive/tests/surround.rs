@@ -19,6 +19,7 @@ extern crate pest_derive;
 use pest_derive::Parser;
 
 /// Surround-string parser.
+///
 /// This is a simple grammar of string parsing, where the strings end with a different delimiter char than what they
 /// start with. The allowable forms are:
 ///
@@ -28,8 +29,6 @@ use pest_derive::Parser;
 /// ```
 ///
 /// To keep things simple, strings do not support any escape sequences.
-///
-/// The grammar's `Top` rule supports multiple strings, one per line.
 #[derive(Parser)]
 #[grammar = "../tests/surround.pest"]
 #[cfg(feature = "grammar-extras")]
