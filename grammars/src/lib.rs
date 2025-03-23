@@ -64,26 +64,6 @@ pub mod sql {
     pub struct SqlParser;
 }
 
-/// Grammar rules of an SQL parser
-#[allow(missing_docs)]
-pub mod surround {
-    /// Surround-string parser.
-    /// This is a simple grammar of string parsing, where the strings end with a different delimiter char than what they
-    /// start with. The allowable forms are:
-    ///
-    /// ```text
-    /// (foo)
-    /// <bar>
-    /// ```
-    ///
-    /// To keep things simple, strings do not support any escape sequences.
-    ///
-    /// The grammar's `Top` rule supports multiple strings, one per line.
-    #[derive(Parser)]
-    #[grammar = "grammars/surround.pest"]
-    pub struct SurroundParser;
-}
-
 #[cfg(test)]
 mod tests {
     use pest::iterators::Pairs;
