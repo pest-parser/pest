@@ -6,10 +6,14 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+extern crate alloc;
 #[macro_use]
 extern crate pest;
-#[macro_use]
 extern crate pest_derive;
+
+#[cfg(feature = "grammar-extras")]
+use pest::Parser;
+use pest_derive::Parser;
 
 /// Surround-string parser.
 /// This is a simple grammar of string parsing, where the strings end with a different delimiter char than what they
@@ -23,11 +27,13 @@ extern crate pest_derive;
 /// To keep things simple, strings do not support any escape sequences.
 ///
 /// The grammar's `Top` rule supports multiple strings, one per line.
+#[cfg(feature = "grammar-extras")]
 #[derive(Parser)]
 #[grammar = "../tests/surround.pest"]
 pub struct SurroundParser;
 
 #[test]
+#[cfg(feature = "grammar-extras")]
 fn surround_parenthesis() {
     parses_to! {
         parser: SurroundParser,
@@ -40,6 +46,7 @@ fn surround_parenthesis() {
 }
 
 #[test]
+#[cfg(feature = "grammar-extras")]
 fn surround_angle_brackets() {
     parses_to! {
         parser: SurroundParser,
@@ -52,6 +59,7 @@ fn surround_angle_brackets() {
 }
 
 #[test]
+#[cfg(feature = "grammar-extras")]
 fn start_with_one_end_with_other() {
     fails_with! {
         parser: SurroundParser,
