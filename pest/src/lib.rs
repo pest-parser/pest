@@ -271,7 +271,8 @@
 //! `PUSH_LITERAL("a")` pushes the argument to the stack without considering the input. The
 //! argument must be a literal string. This is often useful in conjunction with another rule before
 //! it. For example, `"[" ~ PUSH_LITERAL("]")` will look for an opening bracket `[` and, if it
-//! finds one, will push a closing bracket `]` to the stack.
+//! finds one, will push a closing bracket `]` to the stack. **Note**: `PUSH_LITERAL` requires the
+//! `grammar-extras` feature to be enabled.
 //!
 //! `PEEK` always matches the string at the top of stack. So, if the stack contains `["b", "a"]`
 //! (`"a"` being on top), this grammar:
