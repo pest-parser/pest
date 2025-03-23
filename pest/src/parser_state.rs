@@ -15,6 +15,7 @@ use alloc::boxed::Box;
 use alloc::collections::BTreeSet;
 use alloc::rc::Rc;
 use alloc::string::String;
+use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Display, Formatter};
@@ -215,33 +216,34 @@ impl Display for ParsingToken {
     }
 }
 /// A helper that provides efficient string handling without unnecessary copying.
-/// We use `Rc<String>` instead of `Cow<'i, str>` to avoid copying strings when cloning the `Owned` variant, since
-/// `Rc::clone` only increments a reference count.
+/// We use `Arc<String>` instead of `Cow<'i, str>` to avoid copying strings when cloning the `Owned` variant, since
+/// `Arc::clone` only increments a reference count. [SpanOrLiteral] needs to be [Send] and [Sync]`, so we use [Arc]
+/// instead of [Rc].
 ///
 /// (We need to clone this struct to detach it from the `&self` borrow in [SpanOrLiteral::as_borrowed_or_rc], so that
 /// we can then call `self.match_string` (a `mut self` method).
 #[derive(Debug, Clone)]
-enum BorrowedOrRc<'i> {
+enum BorrowedOrArc<'i> {
     Borrowed(&'i str),
-    Owned(Rc<String>),
+    Owned(Arc<String>),
 }
 
 /// A holder for a literal string, for use in `push_literal`. This is typically a `&'static str`, but is an owned
 /// `Rc<String>` for the pest vm.
-impl<'i> BorrowedOrRc<'i> {
+impl<'i> BorrowedOrArc<'i> {
     fn as_str<'a: 'i>(&'a self) -> &'a str {
         match self {
-            BorrowedOrRc::Borrowed(s) => s,
-            BorrowedOrRc::Owned(s) => s.deref(),
+            BorrowedOrArc::Borrowed(s) => s,
+            BorrowedOrArc::Owned(s) => s.deref(),
         }
     }
 }
 
-impl From<Cow<'static, str>> for BorrowedOrRc<'_> {
+impl From<Cow<'static, str>> for BorrowedOrArc<'_> {
     fn from(value: Cow<'static, str>) -> Self {
         match value {
             Cow::Borrowed(s) => Self::Borrowed(s),
-            Cow::Owned(s) => Self::Owned(Rc::new(s)),
+            Cow::Owned(s) => Self::Owned(Arc::new(s)),
         }
     }
 }
@@ -249,14 +251,14 @@ impl From<Cow<'static, str>> for BorrowedOrRc<'_> {
 #[derive(Debug, Clone)]
 enum SpanOrLiteral<'i> {
     Span(Span<'i>),
-    Literal(BorrowedOrRc<'i>),
+    Literal(BorrowedOrArc<'i>),
 }
 
 impl<'i> SpanOrLiteral<'i> {
     #[inline]
-    fn as_borrowed_or_rc(&self) -> BorrowedOrRc<'i> {
+    fn as_borrowed_or_rc(&self) -> BorrowedOrArc<'i> {
         match self {
-            Self::Span(s) => BorrowedOrRc::Borrowed(s.as_str()),
+            Self::Span(s) => BorrowedOrArc::Borrowed(s.as_str()),
             Self::Literal(s) => s.clone(),
         }
     }
