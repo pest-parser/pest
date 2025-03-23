@@ -1057,6 +1057,19 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "grammar-extras")]
+    fn push_literal() {
+        let expr = OptimizedExpr::PushLiteral("a".to_owned());
+        assert_eq!(
+            generate_expr_atomic(expr).to_string(),
+            quote! {
+                state.stack_push_literal("a")
+            }
+            .to_string()
+        )
+    }
+
+    #[test]
     fn expr_complex() {
         let expr = OptimizedExpr::Choice(
             Box::new(OptimizedExpr::Ident("a".to_owned())),
