@@ -32,6 +32,7 @@ use pest_derive::Parser;
 /// The grammar's `Top` rule supports multiple strings, one per line.
 #[derive(Parser)]
 #[grammar = "../tests/surround.pest"]
+#[cfg(feature = "grammar-extras")]
 pub struct SurroundParser;
 
 #[test]
