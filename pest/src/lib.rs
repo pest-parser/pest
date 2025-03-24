@@ -230,6 +230,8 @@
 //! * `ANY` - matches exactly one `char`
 //! * `SOI` - (start-of-input) matches only when a `Parser` is still at the starting position
 //! * `EOI` - (end-of-input) matches only when a `Parser` has reached its end
+//! * `PUSH` - matches a string and pushes it to the stack
+//! * `PUSH_LITERAL` - pushes a literal string to the stack
 //! * `POP` - pops a string from the stack and matches it
 //! * `POP_ALL` - pops the entire state of the stack and matches it
 //! * `PEEK` - peeks a string from the stack and matches it
@@ -261,10 +263,16 @@
 //! a = { b ~ WHITESPACE* ~ (COMMENT ~ WHITESPACE*)* ~ c }
 //! ```
 //!
-//! ## `PUSH`, `POP`, `DROP`, and `PEEK`
+//! ## `PUSH`, `PUSH_LITERAL`, `POP`, `DROP`, and `PEEK`
 //!
 //! `PUSH(e)` simply pushes the captured string of the expression `e` down a stack. This stack can
 //! then later be used to match grammar based on its content with `POP` and `PEEK`.
+//!
+//! `PUSH_LITERAL("a")` pushes the argument to the stack without considering the input. The
+//! argument must be a literal string. This is often useful in conjunction with another rule before
+//! it. For example, `"[" ~ PUSH_LITERAL("]")` will look for an opening bracket `[` and, if it
+//! finds one, will push a closing bracket `]` to the stack. **Note**: `PUSH_LITERAL` requires the
+//! `grammar-extras` feature to be enabled.
 //!
 //! `PEEK` always matches the string at the top of stack. So, if the stack contains `["b", "a"]`
 //! (`"a"` being on top), this grammar:

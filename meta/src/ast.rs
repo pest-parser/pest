@@ -94,6 +94,9 @@ pub enum Expr {
     Skip(Vec<String>),
     /// Matches an expression and pushes it to the stack, e.g. `push(e)`
     Push(Box<Expr>),
+    /// Pushes a literal string to the stack, e.g. `push_literal("a")`
+    #[cfg(feature = "grammar-extras")]
+    PushLiteral(String),
     /// Matches an expression and assigns a label to it, e.g. #label = exp
     #[cfg(feature = "grammar-extras")]
     NodeTag(Box<Expr>, String),
@@ -319,6 +322,8 @@ impl core::fmt::Display for Expr {
                 write!(f, "(!({}) ~ ANY)*", strings)
             }
             Expr::Push(expr) => write!(f, "PUSH({})", expr),
+            #[cfg(feature = "grammar-extras")]
+            Expr::PushLiteral(s) => write!(f, "PUSH_LITERAL({:?})", s),
             #[cfg(feature = "grammar-extras")]
             Expr::NodeTag(expr, tag) => {
                 write!(f, "(#{} = {})", tag, expr)
@@ -679,6 +684,15 @@ mod tests {
                 Expr::Push(Box::new(Expr::Ident("e".to_owned()))).to_string(),
                 "PUSH(e)",
             );
+        }
+
+        #[test]
+        #[cfg(feature = "grammar-extras")]
+        fn push_literal() {
+            assert_eq!(
+                Expr::PushLiteral("one \" ' two".to_string()).to_string(),
+                r#"PUSH_LITERAL("one \" ' two")"#
+            )
         }
 
         #[test]

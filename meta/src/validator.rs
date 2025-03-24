@@ -400,6 +400,8 @@ fn is_non_progressing<'i>(
             min == 0 || is_non_progressing(&inner.expr, rules, trace)
         }
         ParserExpr::Push(ref inner) => is_non_progressing(&inner.expr, rules, trace),
+        #[cfg(feature = "grammar-extras")]
+        ParserExpr::PushLiteral(_) => true,
         ParserExpr::RepOnce(ref inner) => is_non_progressing(&inner.expr, rules, trace),
         #[cfg(feature = "grammar-extras")]
         ParserExpr::NodeTag(ref inner, _) => is_non_progressing(&inner.expr, rules, trace),
@@ -494,6 +496,8 @@ fn is_non_failing<'i>(
         ParserExpr::Push(ref inner) | ParserExpr::PosPred(ref inner) => {
             is_non_failing(&inner.expr, rules, trace)
         }
+        #[cfg(feature = "grammar-extras")]
+        ParserExpr::PushLiteral(_) => true,
         #[cfg(feature = "grammar-extras")]
         ParserExpr::NodeTag(ref inner, _) => is_non_failing(&inner.expr, rules, trace),
     }
@@ -993,6 +997,19 @@ mod tests {
         let push = ParserExpr::Push(progressing_node.clone());
 
         assert!(!is_non_progressing(&push, &HashMap::new(), &mut Vec::new()));
+    }
+
+    #[cfg(feature = "grammar-extras")]
+    #[test]
+    fn push_literal_is_non_progressing() {
+        let a = "";
+        let non_progressing_node = Box::new(ParserNode {
+            expr: ParserExpr::PushLiteral("a".to_string()),
+            span: Span::new(a, 0, 0).unwrap(),
+        });
+        let push = ParserExpr::Push(non_progressing_node.clone());
+
+        assert!(is_non_progressing(&push, &HashMap::new(), &mut Vec::new()));
     }
 
     #[test]
@@ -1658,6 +1675,16 @@ mod tests {
         ));
         assert!(is_non_failing(
             &ParserExpr::PosPred(non_failing_node.clone()),
+            &HashMap::new(),
+            &mut Vec::new()
+        ));
+    }
+
+    #[cfg(feature = "grammar-extras")]
+    #[test]
+    fn push_literal_is_non_failing() {
+        assert!(is_non_failing(
+            &ParserExpr::PushLiteral("a".to_string()),
             &HashMap::new(),
             &mut Vec::new()
         ));
