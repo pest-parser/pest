@@ -130,6 +130,7 @@ pub enum DebuggerEvent {
 pub struct DebuggerContext {
     handle: Option<JoinHandle<()>>,
     is_done: Arc<AtomicBool>,
+    step_once: Arc<AtomicBool>,
     grammar: Option<Vec<OptimizedRule>>,
     input: Option<String>,
     breakpoints: Arc<Mutex<HashSet<String>>>,
@@ -243,6 +244,7 @@ impl DebuggerContext {
         let breakpoints = Arc::clone(&self.breakpoints);
         let is_done = Arc::clone(&self.is_done);
         let is_done_signal = Arc::clone(&self.is_done);
+        let step_once_signal = Arc::clone(&self.step_once);
 
         let rsender = sender.clone();
         thread::spawn(move || {
@@ -251,6 +253,15 @@ impl DebuggerContext {
                 Box::new(move |rule, pos| {
                     if is_done_signal.load(Ordering::SeqCst) {
                         return true;
+                    }
+
+                    if step_once_signal.load(Ordering::SeqCst) {
+                        step_once_signal.store(false, Ordering::SeqCst);
+                        rsender
+                            .send(DebuggerEvent::Breakpoint(rule, pos.pos()))
+                            .expect(CHANNEL_CLOSED_PANIC);
+
+                        return false;
                     }
 
                     let contains_rule = {
@@ -265,6 +276,7 @@ impl DebuggerContext {
 
                         thread::park();
                     }
+
                     false
                 }),
             );
@@ -347,6 +359,22 @@ impl DebuggerContext {
         }
     }
 
+    /// Continue the debugger, breaking on the next rule.
+    pub fn next(&mut self) -> Result<(), DebuggerError> {
+        if self.is_done.load(Ordering::SeqCst) {
+            return Err(DebuggerError::EofReached);
+        }
+
+        match self.handle {
+            Some(ref handle) => {
+                self.step_once.store(true, Ordering::SeqCst);
+                handle.thread().unpark();
+                Ok(())
+            }
+            None => Err(DebuggerError::RunRuleFirst),
+        }
+    }
+
     /// Returns a `Position` from the loaded input.
     pub fn get_position(&self, pos: usize) -> Result<Position<'_>, DebuggerError> {
         match self.input {
@@ -361,6 +389,7 @@ impl Default for DebuggerContext {
         Self {
             handle: None,
             is_done: Arc::new(AtomicBool::new(false)),
+            step_once: Arc::new(AtomicBool::new(false)),
             grammar: None,
             input: None,
             breakpoints: Arc::new(Mutex::new(HashSet::new())),
@@ -411,6 +440,14 @@ mod test {
 
         let event = receiver.recv().expect("Error: failed to receive event");
         assert_eq!(event, DebuggerEvent::Breakpoint("ident".to_owned(), 5));
+
+        context.delete_all_breakpoints();
+
+        context.next().expect("Error: failed to next");
+        
+        let event = receiver.recv().expect("Error: failed to receive event");
+        assert_eq!(event, DebuggerEvent::Breakpoint("digit".to_owned(), 5));
+
         context.cont().expect("Error: failed to continue");
         let event = receiver.recv().expect("Error: failed to receive event");
 

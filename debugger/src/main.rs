@@ -53,29 +53,22 @@ impl Cli {
 
     fn run(&mut self, rule: &str) -> Result<(), DebuggerError> {
         let (sender, receiver) = mpsc::sync_channel(1);
-        let rec = &receiver;
-        self.context.run(rule, sender)?;
-        match rec.recv_timeout(Duration::from_secs(5)) {
-            Ok(DebuggerEvent::Breakpoint(rule, pos)) => {
-                let error: Error<()> = Error::new_from_pos(
-                    ErrorVariant::CustomError {
-                        message: format!("parsing {}", rule),
-                    },
-                    self.context.get_position(pos)?,
-                );
-                println!("{}", error);
-            }
-            Ok(DebuggerEvent::Eof) => println!("end-of-input reached"),
-            Ok(DebuggerEvent::Error(error)) => println!("{}", error),
-            Err(_) => eprintln!("parsing timed out"),
-        }
         self.receiver = Some(receiver);
-        Ok(())
+        self.context.run(rule, sender)?;
+        self.receive()
     }
 
     fn cont(&mut self) -> Result<(), DebuggerError> {
         self.context.cont()?;
+        self.receive()
+    }
 
+    fn next(&mut self) -> Result<(), DebuggerError> {
+        self.context.next()?;
+        self.receive()
+    }
+
+    fn receive(&mut self) -> Result<(), DebuggerError> {
         match self.receiver {
             Some(ref rec) => match rec.recv_timeout(Duration::from_secs(5)) {
                 Ok(DebuggerEvent::Breakpoint(rule, pos)) => {
@@ -115,6 +108,7 @@ impl Cli {
              da                                     - delete all breakpoints\n\
              r(run)         <rule>                  - run a rule\n\
              c(continue)                            - continue\n\
+             n(next)                                - step to next rule\n\
              l(list)                                - list breakpoints\n\
              h(help)                                - help\n\
          "
@@ -136,6 +130,7 @@ impl Cli {
             help if "help".starts_with(help) => Cli::help(),
             list if "list".starts_with(list) => self.list(),
             cont if "continue".starts_with(cont) => self.cont()?,
+            next if "next".starts_with(next) => self.next()?,
             "ba" => self.context.add_all_rules_breakpoints()?,
             "da" => self.context.delete_all_breakpoints(),
             grammar if "grammar".starts_with(grammar) => {
