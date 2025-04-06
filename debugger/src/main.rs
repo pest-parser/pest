@@ -15,6 +15,7 @@
     html_favicon_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg"
 )]
 #![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
+use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
@@ -33,12 +34,13 @@ use rustyline::{Editor, Helper};
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Default)]
-struct Cli {
+struct Cli<'a> {
     context: DebuggerContext,
     receiver: Option<Receiver<DebuggerEvent>>,
+    last_command: Cow<'a, str>,
 }
 
-impl Cli {
+impl<'a> Cli<'a> {
     fn grammar(&mut self, path: PathBuf) -> Result<(), DebuggerError> {
         self.context.load_grammar(&path)
     }
@@ -124,9 +126,27 @@ impl Cli {
     }
 
     fn execute_command(&mut self, command: &str) -> Result<(), DebuggerError> {
-        let verb = command.split(&[' ', '\t']).next().unwrap().trim();
+        let command = if command.is_empty() {
+            // last_command is a Cow to avoid cloning the string when it's not needed
+            // while making the borrow checker happy about the references
+            let last = self.last_command.clone();
+            if !last.is_empty() {
+                println!("Repeating last command: {}", last);
+            }
+            &last.clone()
+        } else {
+            self.last_command = Cow::Owned(command.to_owned());
+            command
+        };
+
+        let verb = command
+            .split(&[' ', '\t'])
+            .next()
+            .unwrap_or_default()
+            .trim();
+
         match verb {
-            "" => (),
+            "" => (), // Empty command handled above
             help if "help".starts_with(help) => Cli::help(),
             list if "list".starts_with(list) => self.list(),
             cont if "continue".starts_with(cont) => self.cont()?,
@@ -314,7 +334,7 @@ impl Default for CliArgs {
 }
 
 impl CliArgs {
-    fn init(self, context: &mut Cli) {
+    fn init(self, context: &mut Cli<'_>) {
         if let Some(grammar_file) = self.grammar_file {
             if let Err(e) = context.grammar(grammar_file) {
                 eprintln!("Error: {}", e);
