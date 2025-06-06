@@ -198,6 +198,7 @@ You can find more projects and ecosystem tools in the [awesome-pest](https://git
 * [Melody](https://github.com/yoav-lavi/melody)
 * [json5-nodes](https://github.com/jlyonsmith/json5-nodes)
 * [prisma](https://github.com/prisma/prisma)
+* [ws2markdown](https://code.rosaelefanten.org/ws2markdown) (a WordStar to Markdown converter)
 
 ## Minimum Supported Rust Version (MSRV)
 
