@@ -10,7 +10,10 @@
 //! Helpers for validating pest grammars that could help with debugging
 //! and provide a more user-friendly error message.
 
-use std::{collections::{HashMap, HashSet}, sync::LazyLock};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::LazyLock
+};
 
 use pest::error::{Error, ErrorVariant, InputLocation};
 use pest::iterators::Pairs;
