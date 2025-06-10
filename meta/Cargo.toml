@@ -19,11 +19,10 @@ include = [
     "_README.md",
     "LICENSE-*",
 ]
-rust-version = "1.65"
+rust-version = "1.80"
 
 [dependencies]
 pest = { path = "../pest", version = "2.8.0" }
-once_cell = "1.8.0"
 
 [build-dependencies]
 sha2 = { version = "0.10", default-features = false }
