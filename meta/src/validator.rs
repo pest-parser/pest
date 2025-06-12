@@ -12,7 +12,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    sync::LazyLock
+    sync::LazyLock,
 };
 
 use pest::error::{Error, ErrorVariant, InputLocation};
