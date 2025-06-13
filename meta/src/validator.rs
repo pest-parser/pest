@@ -10,8 +10,10 @@
 //! Helpers for validating pest grammars that could help with debugging
 //! and provide a more user-friendly error message.
 
-use once_cell::sync::Lazy;
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::LazyLock,
+};
 
 use pest::error::{Error, ErrorVariant, InputLocation};
 use pest::iterators::Pairs;
@@ -20,7 +22,7 @@ use pest::Span;
 
 use crate::parser::{ParserExpr, ParserNode, ParserRule, Rule};
 
-static RUST_KEYWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+static RUST_KEYWORDS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     [
         "abstract", "alignof", "as", "become", "box", "break", "const", "continue", "crate", "do",
         "else", "enum", "extern", "false", "final", "fn", "for", "if", "impl", "in", "let", "loop",
@@ -33,7 +35,7 @@ static RUST_KEYWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     .collect()
 });
 
-static PEST_KEYWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+static PEST_KEYWORDS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     [
         "_", "ANY", "DROP", "EOI", "PEEK", "PEEK_ALL", "POP", "POP_ALL", "PUSH", "SOI",
     ]
@@ -42,7 +44,7 @@ static PEST_KEYWORDS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     .collect()
 });
 
-static BUILTINS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+static BUILTINS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     [
         "ANY",
         "DROP",
