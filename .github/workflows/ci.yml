@@ -82,7 +82,7 @@ jobs:
           toolchain: 1.82.0 # needed for `litemap v0.8.0` in pest_debugger
       - name: Check msrv
         shell: sh
-        run: for crate in "derive" "generator" "grammars" "meta" "pest" "vm"; do cd "$crate" && cargo msrv verify && cd ..; done
+        run: for crate in "derive" "generator" "grammars" "meta" "pest" "vm"; do cd "$crate" && cargo minimal-versions check && cd ..; done
 
   coverage:
     name: Test Coverage
