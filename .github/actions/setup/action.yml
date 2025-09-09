@@ -37,11 +37,11 @@ runs:
         components: ${{inputs.components}}
         targets: ${{inputs.targets}}
     - name: Install cargo-hack,cargo-minimal-versions
-      uses: taiki-e/install-action@v1
+      uses: taiki-e/install-action@v2
       with:
         tool: cargo-hack,cargo-minimal-versions
     - name: Install ${{inputs.tools}}
-      uses: taiki-e/install-action@v1
+      uses: taiki-e/install-action@v2
       if: ${{inputs.tools}}
       with:
         tool: ${{inputs.tools}}
