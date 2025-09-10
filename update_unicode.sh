@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
+set -u
 
 cargo install ucd-generate || true
 
 rm -r ./target/ucd/
 mkdir ./target/ucd/
 cd ./target/ucd/
-curl -LO https://www.unicode.org/Public/zipped/latest/UCD.zip
+curl -LO https://www.unicode.org/Public/$UNICODE_VERSION/ucd/UCD.zip
 unzip UCD.zip
 cd ../../
 
