@@ -29,7 +29,6 @@ use crate::RuleType;
 
 /// Parse-related error type.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-#[cfg_attr(feature = "std", derive(thiserror::Error))]
 pub struct Error<R> {
     /// Variant of the error
     pub variant: ErrorVariant<R>,
@@ -43,9 +42,11 @@ pub struct Error<R> {
     parse_attempts: Option<ParseAttempts<R>>,
 }
 
+#[cfg(feature = "std")]
+impl<R: RuleType> core::error::Error for Error<R> {}
+
 /// Different kinds of parsing errors.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-#[cfg_attr(feature = "std", derive(thiserror::Error))]
 pub enum ErrorVariant<R> {
     /// Generated parsing error with expected and unexpected `Rule`s
     ParsingError {
@@ -60,6 +61,9 @@ pub enum ErrorVariant<R> {
         message: String,
     },
 }
+
+#[cfg(feature = "std")]
+impl<R: RuleType> std::error::Error for ErrorVariant<R> {}
 
 /// Where an `Error` has occurred.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -737,6 +741,7 @@ fn visualize_whitespace(input: &str) -> String {
 #[cfg(feature = "miette-error")]
 mod miette_adapter {
     use alloc::string::ToString;
+    use core::fmt;
     use std::boxed::Box;
 
     use crate::error::LineColLocation;
@@ -745,8 +750,7 @@ mod miette_adapter {
 
     use miette::{Diagnostic, LabeledSpan, SourceCode};
 
-    #[derive(thiserror::Error, Debug)]
-    #[error("Failure to parse at {:?}", self.0.line_col)]
+    #[derive(Debug)]
     pub(crate) struct MietteAdapter<R: RuleType>(pub(crate) Error<R>);
 
     impl<R: RuleType> Diagnostic for MietteAdapter<R> {
@@ -769,9 +773,22 @@ mod miette_adapter {
             Some(Box::new(std::iter::once(span)))
         }
 
-        fn help<'a>(&'a self) -> Option<Box<dyn core::fmt::Display + 'a>> {
+        fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
             Some(Box::new(self.0.message()))
         }
+    }
+
+    impl<R: RuleType> fmt::Display for MietteAdapter<R> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "Failure to parse at {:?}", self.0.line_col)
+        }
+    }
+
+    impl<R> std::error::Error for MietteAdapter<R>
+    where
+        R: RuleType,
+        Self: fmt::Debug + fmt::Display,
+    {
     }
 }
 
