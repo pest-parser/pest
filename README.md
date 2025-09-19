@@ -202,7 +202,7 @@ You can find more projects and ecosystem tools in the [awesome-pest](https://git
 
 ## Minimum Supported Rust Version (MSRV)
 
-This library should always compile with default features on **Rust 1.80.0**.
+This library should always compile with default features on **Rust 1.81.0**.
 
 ## no_std support
 

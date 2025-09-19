@@ -42,7 +42,6 @@ pub struct Error<R> {
     parse_attempts: Option<ParseAttempts<R>>,
 }
 
-#[cfg(feature = "std")]
 impl<R: RuleType> core::error::Error for Error<R> {}
 
 /// Different kinds of parsing errors.
@@ -62,8 +61,7 @@ pub enum ErrorVariant<R> {
     },
 }
 
-#[cfg(feature = "std")]
-impl<R: RuleType> std::error::Error for ErrorVariant<R> {}
+impl<R: RuleType> core::error::Error for ErrorVariant<R> {}
 
 /// Where an `Error` has occurred.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -784,7 +782,7 @@ mod miette_adapter {
         }
     }
 
-    impl<R> std::error::Error for MietteAdapter<R>
+    impl<R> core::error::Error for MietteAdapter<R>
     where
         R: RuleType,
         Self: fmt::Debug + fmt::Display,
