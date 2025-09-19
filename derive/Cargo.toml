@@ -11,7 +11,7 @@ keywords = ["pest", "parser", "peg", "grammar"]
 categories = ["parsing"]
 license = "MIT OR Apache-2.0"
 readme = "_README.md"
-rust-version = "1.80"
+rust-version = "1.81"
 
 [lib]
 name = "pest_derive"
