@@ -9,9 +9,11 @@ jobs:
     name: Publish crates on release
     runs-on: ubuntu-latest
     environment: release
+    permissions:
+      id-token: write     # Required for OIDC token exchange
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
       - name: Install toolchain
@@ -20,7 +22,9 @@ jobs:
         run: cargo build --package pest_bootstrap
       - name: Bootstraping Grammars - Executing
         run: cargo run --package pest_bootstrap
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
       - name: Publish pest crates
         run: ./release.sh
         env:
-          CARGO_REGISTRY_TOKEN: ${{secrets.CARGO_REGISTRY_TOKEN}}
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}

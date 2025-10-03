@@ -9,7 +9,7 @@ get_local_version() {
 }
 
 check_version_online() {
-  curl -s "https://crates.io/api/v1/crates/${1}" | jq -r '.versions[]|select(.num == "'"${2}"'").updated_at'
+  curl -A "pest" -s "https://crates.io/api/v1/crates/${1}" | jq -r '.versions[]|select(.num == "'"${2}"'").updated_at'
 }
 
 get_manifest_path() {
