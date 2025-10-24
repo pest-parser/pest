@@ -374,6 +374,11 @@ impl<'i, R: RuleType> Pairs<'i, R> {
         }
     }
 
+    /// Returns `true` if the iterator contains no `Pair`s.
+    pub fn is_empty(&self) -> bool {
+        self.pairs_count == 0
+    }
+
     /// Generates a string that stores the lexical information of `self` in
     /// a pretty-printed JSON format.
     #[cfg(feature = "pretty-print")]
