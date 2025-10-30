@@ -24,7 +24,7 @@ mod concatenator;
 mod factorizer;
 mod lister;
 mod restorer;
-mod rotater;
+mod rotator;
 mod skipper;
 mod unroller;
 
@@ -33,7 +33,7 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<OptimizedRule> {
     let map = to_hash_map(&rules);
     let optimized: Vec<OptimizedRule> = rules
         .into_iter()
-        .map(rotater::rotate)
+        .map(rotator::rotate)
         .map(|rule| skipper::skip(rule, &map))
         .map(unroller::unroll)
         .map(concatenator::concatenate)
@@ -120,7 +120,7 @@ pub struct OptimizedRule {
 /// There may be non-breaking changes to the meta-grammar
 /// between minor versions. Those non-breaking changes, however,
 /// may translate into semver-breaking changes due to the additional variants
-/// propaged from the `Rule` enum. This is a known issue and will be fixed in the
+/// propagated from the `Rule` enum. This is a known issue and will be fixed in the
 /// future (e.g. by increasing MSRV and non_exhaustive annotations).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OptimizedExpr {

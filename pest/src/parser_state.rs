@@ -428,7 +428,7 @@ impl<R: RuleType> ParseAttempts<R> {
     }
 
     /// Reset state in case we've successfully parsed some token in
-    /// `match_string` or `match_insensetive`.
+    /// `match_string` or `match_insensitive`.
     fn nullify_expected_tokens(&mut self, new_max_position: usize) {
         self.call_stacks.clear();
         self.expected_tokens.clear();
@@ -701,7 +701,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         let mut try_add_rule_to_stack = |new_state: &mut Box<ParserState<'_, R>>| {
             if new_state.parse_attempts.max_position > remember_max_position {
-                // It means that one of `match_string` or e.g. `match_insensetive` function calls
+                // It means that one of `match_string` or e.g. `match_insensitive` function calls
                 // have already erased `self.parse_attempts.call_stacks` and that previously
                 // remembered values are not valid anymore.
                 remember_call_stacks_number = 0;
@@ -1016,7 +1016,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         token: ParsingToken,
         parse_succeeded: bool,
     ) {
-        // New position after tracked parsed element for case of `parse_succeded` is true.
+        // New position after tracked parsed element for case of `parse_succeeded` is true.
         // Position of parsing failure otherwise.
         let current_pos = self.position.pos();
 

@@ -294,7 +294,7 @@ mod tests {
                 )),
                 sql::Rule::CreateUser => Some(String::from("Expected user creation.")),
                 sql::Rule::SingleQuotedString => {
-                    Some(String::from("Add a string in single qoutes."))
+                    Some(String::from("Add a string in single quotes."))
                 }
                 sql::Rule::Query => Some(String::from("DML query expected.")),
                 sql::Rule::Expr => Some(String::from("Expected expression.")),
@@ -334,10 +334,10 @@ mod tests {
             .join("\n")
         );
 
-        let user_creation_password_without_single_qoutes = r#"create user
+        let user_creation_password_without_single_quotes = r#"create user
                                                                    Bob password "wrong""#;
         assert_eq!(
-            retrieve_parse_attempts_error_string(user_creation_password_without_single_qoutes),
+            retrieve_parse_attempts_error_string(user_creation_password_without_single_quotes),
             [
                 " --> 2:81",
                 "  |",
@@ -347,7 +347,7 @@ mod tests {
                 "  = error: parsing error occurred.",
                 "    note: expected one of tokens: WHITESPACE, `''`, `'`",
                 "    help: Expected user creation.",
-                "          - Add a string in single qoutes.",
+                "          - Add a string in single quotes.",
             ]
                 .join("\n")
         );
