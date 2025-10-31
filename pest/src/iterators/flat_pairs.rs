@@ -97,7 +97,7 @@ impl<'i, R: RuleType> FlatPairs<'i, R> {
     }
 }
 
-impl<'i, R: RuleType> ExactSizeIterator for FlatPairs<'i, R> {
+impl<R: RuleType> ExactSizeIterator for FlatPairs<'_, R> {
     fn len(&self) -> usize {
         // Tokens len is exactly twice as flatten pairs len
         (self.end - self.start) >> 1
@@ -129,7 +129,7 @@ impl<'i, R: RuleType> Iterator for FlatPairs<'i, R> {
     }
 }
 
-impl<'i, R: RuleType> DoubleEndedIterator for FlatPairs<'i, R> {
+impl<R: RuleType> DoubleEndedIterator for FlatPairs<'_, R> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.end <= self.start {
             return None;
@@ -148,7 +148,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for FlatPairs<'i, R> {
     }
 }
 
-impl<'i, R: RuleType> fmt::Debug for FlatPairs<'i, R> {
+impl<R: RuleType> fmt::Debug for FlatPairs<'_, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FlatPairs")
             .field("pairs", &self.clone().collect::<Vec<_>>())

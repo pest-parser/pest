@@ -324,7 +324,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     }
 }
 
-impl<'i, R: RuleType> fmt::Debug for Pair<'i, R> {
+impl<R: RuleType> fmt::Debug for Pair<'_, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let pair = &mut f.debug_struct("Pair");
         pair.field("rule", &self.as_rule());
@@ -338,7 +338,7 @@ impl<'i, R: RuleType> fmt::Debug for Pair<'i, R> {
     }
 }
 
-impl<'i, R: RuleType> fmt::Display for Pair<'i, R> {
+impl<R: RuleType> fmt::Display for Pair<'_, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let rule = self.as_rule();
         let start = self.pos(self.start);
@@ -371,7 +371,7 @@ impl<'i, R: PartialEq> PartialEq for Pair<'i, R> {
     }
 }
 
-impl<'i, R: Eq> Eq for Pair<'i, R> {}
+impl<R: Eq> Eq for Pair<'_, R> {}
 
 impl<'i, R: Hash> Hash for Pair<'i, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -382,7 +382,7 @@ impl<'i, R: Hash> Hash for Pair<'i, R> {
 }
 
 #[cfg(feature = "pretty-print")]
-impl<'i, R: RuleType> ::serde::Serialize for Pair<'i, R> {
+impl<R: RuleType> ::serde::Serialize for Pair<'_, R> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: ::serde::Serializer,

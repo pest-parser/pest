@@ -441,7 +441,7 @@ impl<'i> Position<'i> {
     }
 }
 
-impl<'i> fmt::Debug for Position<'i> {
+impl fmt::Debug for Position<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Position").field("pos", &self.pos).finish()
     }
@@ -453,7 +453,7 @@ impl<'i> PartialEq for Position<'i> {
     }
 }
 
-impl<'i> Eq for Position<'i> {}
+impl Eq for Position<'_> {}
 
 #[allow(clippy::non_canonical_partial_ord_impl)]
 impl<'i> PartialOrd for Position<'i> {
@@ -473,7 +473,7 @@ impl<'i> Ord for Position<'i> {
     }
 }
 
-impl<'i> Hash for Position<'i> {
+impl Hash for Position<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (self.input as *const str).hash(state);
         self.pos.hash(state);
