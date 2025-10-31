@@ -137,7 +137,7 @@ impl Default for CallLimitTracker {
 impl CallLimitTracker {
     fn limit_reached(&self) -> bool {
         self.current_call_limit
-            .map_or(false, |(current, limit)| current >= limit)
+            .is_some_and(|(current, limit)| current >= limit)
     }
 
     fn increment_depth(&mut self) {

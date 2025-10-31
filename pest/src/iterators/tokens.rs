@@ -84,7 +84,7 @@ impl<'i, R: RuleType> Tokens<'i, R> {
     }
 }
 
-impl<'i, R: RuleType> ExactSizeIterator for Tokens<'i, R> {
+impl<R: RuleType> ExactSizeIterator for Tokens<'_, R> {
     fn len(&self) -> usize {
         self.end - self.start
     }
@@ -111,7 +111,7 @@ impl<'i, R: RuleType> Iterator for Tokens<'i, R> {
     }
 }
 
-impl<'i, R: RuleType> DoubleEndedIterator for Tokens<'i, R> {
+impl<R: RuleType> DoubleEndedIterator for Tokens<'_, R> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.end <= self.start {
             return None;
@@ -125,7 +125,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for Tokens<'i, R> {
     }
 }
 
-impl<'i, R: RuleType> fmt::Debug for Tokens<'i, R> {
+impl<R: RuleType> fmt::Debug for Tokens<'_, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.clone()).finish()
     }
