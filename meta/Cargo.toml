@@ -19,7 +19,7 @@ include = [
     "_README.md",
     "LICENSE-*",
 ]
-rust-version = "1.81"
+rust-version = "1.83"
 
 [dependencies]
 pest = { path = "../pest", version = "2.8.3" }
