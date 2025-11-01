@@ -4,7 +4,7 @@ use pest::iterators::Pairs;
 use pest_meta::parser::Rule;
 use std::collections::HashMap;
 
-/// Abstraction for the grammer and rule doc.
+/// Abstraction for the grammar and rule doc.
 #[derive(Debug)]
 pub struct DocComment {
     /// The grammar documentation is defined at the beginning of a file with //!.

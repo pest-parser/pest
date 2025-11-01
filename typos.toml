@@ -1,0 +1,7 @@
+[files]
+extend-exclude = ["grammars/benches/requests.http", "grammars/benches/main.i18n.json"]
+
+[default.extend-words]
+ba = "ba"
+tham = "tham"
+vai = "vai"

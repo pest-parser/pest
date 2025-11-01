@@ -325,7 +325,7 @@ fn validate_tag_silent_rules<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<Err
 ///
 /// # Assumptions
 /// - In `ParserExpr::RepMinMax(inner,min,max)`, `min<=max`
-/// - All rules identiers have a matching definition
+/// - All rules identifiers have a matching definition
 /// - There is no left-recursion (if only this one is broken returns false)
 /// - Every expression is being checked
 fn is_non_progressing<'i>(
@@ -421,7 +421,7 @@ fn is_non_progressing<'i>(
 /// # Assumptions
 /// - In `ParserExpr::RepMinMax(inner,min,max)`, `min<=max`
 /// - In `ParserExpr::PeekSlice(max,Some(min))`, `max>=min`
-/// - All rules identiers have a matching definition
+/// - All rules identifiers have a matching definition
 /// - There is no left-recursion
 /// - All rules are being checked
 fn is_non_failing<'i>(
@@ -459,7 +459,7 @@ fn is_non_failing<'i>(
             } else {
                 // referring to another rule R that was already seen
                 // WARNING: this might mean there is a circular non-failing path
-                //   it's not obvious wether this can happen without left-recursion
+                //   it's not obvious whether this can happen without left-recursion
                 //   and thus breaking the assumption. Until there is answer to
                 //   this, to avoid changing behaviour we return:
                 false
