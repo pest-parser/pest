@@ -33,7 +33,7 @@ pub fn generate(
     doc_comment: &DocComment,
     include_grammar: bool,
 ) -> TokenStream {
-    let uses_eoi = defaults.iter().any(|name| *name == "EOI");
+    let uses_eoi = defaults.contains(&"EOI");
     let name = parsed_derive.name;
     let builtins = generate_builtin_rules();
     let include_fix = if include_grammar {
