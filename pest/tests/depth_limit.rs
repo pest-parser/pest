@@ -25,7 +25,7 @@ enum Rule {
 struct TestParser;
 
 impl Parser<Rule> for TestParser {
-    fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
+    fn parse(rule: Rule, input: &str) -> Result<Pairs<'_, Rule>, Error<Rule>> {
         fn expression(
             state: Box<ParserState<'_, Rule>>,
         ) -> ParseResult<Box<ParserState<'_, Rule>>> {
@@ -117,7 +117,7 @@ fn test_depth_limit_nested_parens() {
             panic!("Expected call limit error with very low limit");
         }
         Err(e) => {
-            let error_msg = format!("{}", e);
+            let _error_msg = format!("{}", e);
             // Check specifically for call limit error
             if let pest::error::ErrorVariant::CustomError { message } = &e.variant {
                 assert_eq!(
