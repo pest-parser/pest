@@ -185,8 +185,8 @@ fn test_depth_limit_reset() {
     assert!(result.is_ok());
 }
 
-/// This test demonstrates the issue from the GitHub issue:
-/// https://github.com/pest-parser/pest/issues/...
+/// This test demonstrates the issue from GitHub:
+/// Pest grammars can cause overflow within Pest itself with deeply nested structures.
 /// 
 /// The grammar from the issue can cause stack overflow with deeply
 /// nested parentheses. With set_depth_limit, we can prevent this.
