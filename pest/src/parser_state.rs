@@ -110,6 +110,16 @@ pub fn set_call_limit(limit: Option<NonZeroUsize>) {
 /// to prevent stack overflows caused by deeply nested grammars.
 /// If set, the depth is tracked across recursive rule invocations.
 ///
+/// This is particularly useful for grammars that can have deeply nested
+/// structures (like nested parentheses, nested function calls, etc.)
+/// which could cause stack overflow on the system stack.
+///
+/// The depth limit is different from the call limit:
+/// - Call limit (`set_call_limit`) tracks the total number of parser function
+///   calls and never decreases during parsing.
+/// - Depth limit (`set_depth_limit`) tracks the current recursion depth and
+///   decreases as the parser returns from recursive calls.
+///
 /// # Arguments
 ///
 /// * `limit` - The maximum recursion depth. If None,
@@ -121,12 +131,30 @@ pub fn set_call_limit(limit: Option<NonZeroUsize>) {
 /// use pest;
 /// use core::num::NonZeroUsize;
 ///
-/// // Set a depth limit of 100
+/// // Set a depth limit of 100 to prevent stack overflow
+/// // from deeply nested grammar rules
 /// pest::set_depth_limit(Some(NonZeroUsize::new(100).unwrap()));
 ///
-/// // Remove the depth limit
+/// // Parse your input...
+/// // If the depth exceeds 100, parsing will fail with
+/// // an error message "depth limit reached"
+///
+/// // Remove the depth limit when done
 /// pest::set_depth_limit(None);
 /// ```
+///
+/// # Use Cases
+///
+/// This is useful for:
+/// - Protecting against malicious input with excessive nesting
+/// - Preventing stack overflow in resource-constrained environments
+/// - Ensuring consistent behavior across platforms with different stack sizes
+///
+/// # Note
+///
+/// Setting the limit too low may prevent parsing of legitimate deeply nested
+/// expressions. The appropriate limit depends on your grammar complexity
+/// and the expected depth of valid inputs.
 pub fn set_depth_limit(limit: Option<NonZeroUsize>) {
     DEPTH_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
 }
@@ -726,11 +754,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     fn dec_depth(mut self: Box<Self>) -> Box<Self> {
         self.call_tracker.decrement_depth();
         self
-    }
-
-    #[inline]
-    fn reached_call_limit(&self) -> bool {
-        self.call_tracker.limit_reached()
     }
 
     /// Wrapper needed to generate tokens. This will associate the `R` type rule to the closure
