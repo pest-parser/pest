@@ -228,9 +228,10 @@ impl CallLimitTracker {
     }
 
     fn depth_limit_would_be_exceeded(&self) -> bool {
-        // Check if incrementing depth would exceed the limit
+        // Check if we're already at the limit
+        // (incrementing would exceed it)
         self.current_depth_limit
-            .is_some_and(|(current, limit)| current + 1 > limit)
+            .is_some_and(|(current, limit)| current >= limit)
     }
 
     fn increment_call(&mut self) {
@@ -749,8 +750,10 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     #[inline]
     fn inc_call_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
-        // Only check call limit here, not depth limit
-        // Depth limit is checked in inc_depth_check_limit
+        // Check if call limit is reached, or if depth limit was previously reached
+        // Note: We check depth_at_limit (not depth_limit_reached) because we only want
+        // to fail if the depth limit was ALREADY hit in a previous call.
+        // The actual depth limit check happens in inc_depth_check_limit.
         if self.call_tracker.call_limit_reached() || self.call_tracker.depth_at_limit.is_some() {
             return Err(self);
         }
