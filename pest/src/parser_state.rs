@@ -636,6 +636,8 @@ where
             Ok(new(Rc::new(state.queue), input, None, 0, len))
         }
         Err(mut state) => {
+            // Note: When both limits might be reached, depth limit is checked first
+            // to provide the most specific error message for recursion issues.
             let variant = if state.call_tracker.depth_limit_reached() {
                 ErrorVariant::CustomError {
                     message: "depth limit reached".to_owned(),
@@ -747,8 +749,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     #[inline]
     fn inc_call_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
-        if self.call_tracker.limit_reached() {
-            self.call_tracker.mark_limit_reached();
+        // Only check call limit here, not depth limit
+        // Depth limit is checked in inc_depth_check_limit
+        if self.call_tracker.call_limit_reached() || self.call_tracker.depth_at_limit.is_some() {
             return Err(self);
         }
         self.call_tracker.increment_call();

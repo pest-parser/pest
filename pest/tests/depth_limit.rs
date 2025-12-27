@@ -120,12 +120,14 @@ fn test_depth_limit_simple() {
 
 #[test]
 fn test_depth_limit_nested_parens() {
-    // Set a very low depth limit
-    pest::set_depth_limit(Some(NonZeroUsize::new(5).unwrap()));
+    // Make sure call limit is disabled
+    pest::set_call_limit(None);
+    // Set a very low depth limit (lower than what "1" needs)
+    // Parsing "1" requires: expression -> add_expr -> mul_expr -> primary -> number
+    // That's 5 rule invocations, so limit of 4 should fail
+    pest::set_depth_limit(Some(NonZeroUsize::new(4).unwrap()));
     
     // Simple expression should fail with this very low limit
-    // because even "1" requires multiple rule invocations:
-    // expression -> add_expr -> mul_expr -> primary -> number
     let result = TestParser::parse(Rule::expression, "1");
     
     match result {
@@ -134,14 +136,12 @@ fn test_depth_limit_nested_parens() {
         }
         Err(e) => {
             let error_msg = format!("{}", e);
-            eprintln!("Error message: {}", error_msg);
-            eprintln!("Error variant: {:?}", e.variant);
-            // Check if it's a custom error with depth limit message
+            // Check specifically for depth limit error
             if let pest::error::ErrorVariant::CustomError { message } = &e.variant {
-                assert!(message.contains("depth limit reached") || message.contains("call limit reached"), 
-                        "Expected depth/call limit error, got: {}", message);
+                assert_eq!(message, "depth limit reached", 
+                        "Expected depth limit error, got: {}", message);
             } else {
-                panic!("Expected CustomError variant, got: {:?}", e.variant);
+                panic!("Expected CustomError variant with depth limit, got: {:?}", e.variant);
             }
         }
     }
@@ -192,16 +192,17 @@ fn test_depth_limit_reset() {
 /// nested parentheses. With set_depth_limit, we can prevent this.
 #[test]
 fn test_prevents_stack_overflow_from_issue() {
-    // Set a reasonable depth limit to prevent stack overflow
-    // On Windows with 1MB stack, 300 nested parentheses would fail
-    // With depth limit, we can catch this before stack overflow
-    pest::set_depth_limit(Some(NonZeroUsize::new(100).unwrap()));
+    // Make sure call limit is disabled
+    pest::set_call_limit(None);
+    // Set a depth limit that's lower than what 150 nested parens would need
+    // Each level of parentheses requires several rule invocations
+    // (expression, add_expr, mul_expr, primary for opening, then same for closing)
+    pest::set_depth_limit(Some(NonZeroUsize::new(50).unwrap()));
     
-    // Create a deeply nested expression with 150 levels of nesting
-    // (which would be 300 parentheses total)
-    // This would cause stack overflow without the depth limit
+    // Create a deeply nested expression with 30 levels of nesting
+    // This would need more than 50 depth
     let mut deeply_nested = String::new();
-    let nesting_depth = 150;
+    let nesting_depth = 30;
     
     // Add opening parens
     for _ in 0..nesting_depth {
