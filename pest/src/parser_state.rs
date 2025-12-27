@@ -179,7 +179,8 @@ pub fn set_error_detail(enabled: bool) {
 struct CallLimitTracker {
     current_call_limit: Option<(usize, usize)>,
     current_depth_limit: Option<(usize, usize)>,
-    limit_was_reached: bool,
+    /// When set, indicates depth tracking should stop at this value (limit was reached)
+    depth_at_limit: Option<usize>,
 }
 
 impl Default for CallLimitTracker {
@@ -201,14 +202,14 @@ impl Default for CallLimitTracker {
         Self {
             current_call_limit,
             current_depth_limit,
-            limit_was_reached: false,
+            depth_at_limit: None,
         }
     }
 }
 
 impl CallLimitTracker {
     fn limit_reached(&self) -> bool {
-        self.limit_was_reached
+        self.depth_at_limit.is_some()
             || self.current_call_limit
                 .is_some_and(|(current, limit)| current >= limit)
             || self.current_depth_limit
@@ -221,8 +222,15 @@ impl CallLimitTracker {
     }
 
     fn depth_limit_reached(&self) -> bool {
+        self.depth_at_limit.is_some()
+            || self.current_depth_limit
+                .is_some_and(|(current, limit)| current >= limit)
+    }
+
+    fn depth_limit_would_be_exceeded(&self) -> bool {
+        // Check if incrementing depth would exceed the limit
         self.current_depth_limit
-            .is_some_and(|(current, limit)| current >= limit)
+            .is_some_and(|(current, limit)| current + 1 > limit)
     }
 
     fn increment_call(&mut self) {
@@ -232,6 +240,10 @@ impl CallLimitTracker {
     }
 
     fn increment_depth(&mut self) {
+        // Don't increment if we've already hit the limit
+        if self.depth_at_limit.is_some() {
+            return;
+        }
         if let Some((current, _)) = &mut self.current_depth_limit {
             *current += 1;
         }
@@ -239,7 +251,7 @@ impl CallLimitTracker {
 
     fn decrement_depth(&mut self) {
         // Don't decrement if limit was already reached - we want to preserve the error state
-        if self.limit_was_reached {
+        if self.depth_at_limit.is_some() {
             return;
         }
         if let Some((current, _)) = &mut self.current_depth_limit {
@@ -248,7 +260,10 @@ impl CallLimitTracker {
     }
 
     fn mark_limit_reached(&mut self) {
-        self.limit_was_reached = true;
+        // Record the current depth when limit is reached
+        if let Some((current, _)) = self.current_depth_limit {
+            self.depth_at_limit = Some(current);
+        }
     }
 }
 
@@ -742,11 +757,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     #[inline]
     fn inc_depth_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
-        self.call_tracker.increment_depth();
-        if self.call_tracker.limit_reached() {
+        // Check limit before incrementing
+        if self.call_tracker.depth_limit_would_be_exceeded() {
             self.call_tracker.mark_limit_reached();
             return Err(self);
         }
+        self.call_tracker.increment_depth();
         Ok(self)
     }
 
