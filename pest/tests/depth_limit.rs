@@ -184,3 +184,46 @@ fn test_depth_limit_reset() {
     let result = TestParser::parse(Rule::expression, "((((((1))))))");
     assert!(result.is_ok());
 }
+
+/// This test demonstrates the issue from the GitHub issue:
+/// https://github.com/pest-parser/pest/issues/...
+/// 
+/// The grammar from the issue can cause stack overflow with deeply
+/// nested parentheses. With set_depth_limit, we can prevent this.
+#[test]
+fn test_prevents_stack_overflow_from_issue() {
+    // Set a reasonable depth limit to prevent stack overflow
+    // On Windows with 1MB stack, 300 nested parentheses would fail
+    // With depth limit, we can catch this before stack overflow
+    pest::set_depth_limit(Some(NonZeroUsize::new(100).unwrap()));
+    
+    // Create a deeply nested expression with 150 levels of nesting
+    // (which would be 300 parentheses total)
+    // This would cause stack overflow without the depth limit
+    let mut deeply_nested = String::new();
+    let nesting_depth = 150;
+    
+    // Add opening parens
+    for _ in 0..nesting_depth {
+        deeply_nested.push('(');
+    }
+    deeply_nested.push('1');
+    // Add closing parens
+    for _ in 0..nesting_depth {
+        deeply_nested.push(')');
+    }
+    
+    let result = TestParser::parse(Rule::expression, &deeply_nested);
+    
+    // Should fail with depth limit reached, not stack overflow
+    assert!(result.is_err());
+    if let Err(e) = result {
+        let error_msg = format!("{}", e);
+        assert!(error_msg.contains("depth limit reached"), 
+                "Expected depth limit error, got: {}", error_msg);
+    }
+    
+    // Reset depth limit
+    pest::set_depth_limit(None);
+}
+
