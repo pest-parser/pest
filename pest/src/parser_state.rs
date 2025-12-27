@@ -89,6 +89,7 @@ pub enum MatchDir {
 }
 
 static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
+static DEPTH_LIMIT: AtomicUsize = AtomicUsize::new(0);
 
 /// Sets the maximum call limit for the parser state
 /// to prevent stack overflows or excessive execution times
@@ -103,6 +104,31 @@ static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 ///             the number of calls is unlimited.
 pub fn set_call_limit(limit: Option<NonZeroUsize>) {
     CALL_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
+}
+
+/// Sets the maximum recursion depth limit for the parser state
+/// to prevent stack overflows caused by deeply nested grammars.
+/// If set, the depth is tracked across recursive rule invocations.
+///
+/// # Arguments
+///
+/// * `limit` - The maximum recursion depth. If None,
+///             the recursion depth is unlimited.
+///
+/// # Examples
+///
+/// ```
+/// use pest;
+/// use core::num::NonZeroUsize;
+///
+/// // Set a depth limit of 100
+/// pest::set_depth_limit(Some(NonZeroUsize::new(100).unwrap()));
+///
+/// // Remove the depth limit
+/// pest::set_depth_limit(None);
+/// ```
+pub fn set_depth_limit(limit: Option<NonZeroUsize>) {
+    DEPTH_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
 }
 
 static ERROR_DETAIL: AtomicBool = AtomicBool::new(false);
@@ -124,26 +150,77 @@ pub fn set_error_detail(enabled: bool) {
 #[derive(Debug)]
 struct CallLimitTracker {
     current_call_limit: Option<(usize, usize)>,
+    current_depth_limit: Option<(usize, usize)>,
+    limit_was_reached: bool,
 }
 
 impl Default for CallLimitTracker {
     fn default() -> Self {
-        let limit = CALL_LIMIT.load(Ordering::Relaxed);
-        let current_call_limit = if limit > 0 { Some((0, limit)) } else { None };
-        Self { current_call_limit }
+        let call_limit = CALL_LIMIT.load(Ordering::Relaxed);
+        let current_call_limit = if call_limit > 0 {
+            Some((0, call_limit))
+        } else {
+            None
+        };
+        
+        let depth_limit = DEPTH_LIMIT.load(Ordering::Relaxed);
+        let current_depth_limit = if depth_limit > 0 {
+            Some((0, depth_limit))
+        } else {
+            None
+        };
+        
+        Self {
+            current_call_limit,
+            current_depth_limit,
+            limit_was_reached: false,
+        }
     }
 }
 
 impl CallLimitTracker {
     fn limit_reached(&self) -> bool {
+        self.limit_was_reached
+            || self.current_call_limit
+                .is_some_and(|(current, limit)| current >= limit)
+            || self.current_depth_limit
+                .is_some_and(|(current, limit)| current >= limit)
+    }
+
+    fn call_limit_reached(&self) -> bool {
         self.current_call_limit
             .is_some_and(|(current, limit)| current >= limit)
     }
 
-    fn increment_depth(&mut self) {
+    fn depth_limit_reached(&self) -> bool {
+        self.current_depth_limit
+            .is_some_and(|(current, limit)| current >= limit)
+    }
+
+    fn increment_call(&mut self) {
         if let Some((current, _)) = &mut self.current_call_limit {
             *current += 1;
         }
+    }
+
+    fn increment_depth(&mut self) {
+        if let Some((current, _)) = &mut self.current_depth_limit {
+            *current += 1;
+        }
+    }
+
+    fn decrement_depth(&mut self) {
+        // Don't decrement if limit was already reached - we want to preserve the error state
+        if self.limit_was_reached {
+            return;
+        }
+        if let Some((current, _)) = &mut self.current_depth_limit {
+            *current = current.saturating_sub(1);
+        }
+    }
+
+    fn mark_limit_reached(&mut self) {
+        self.limit_was_reached = true;
     }
 }
 
@@ -516,7 +593,11 @@ where
             Ok(new(Rc::new(state.queue), input, None, 0, len))
         }
         Err(mut state) => {
-            let variant = if state.reached_call_limit() {
+            let variant = if state.call_tracker.depth_limit_reached() {
+                ErrorVariant::CustomError {
+                    message: "depth limit reached".to_owned(),
+                }
+            } else if state.call_tracker.call_limit_reached() {
                 ErrorVariant::CustomError {
                     message: "call limit reached".to_owned(),
                 }
@@ -624,10 +705,27 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     #[inline]
     fn inc_call_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
         if self.call_tracker.limit_reached() {
+            self.call_tracker.mark_limit_reached();
             return Err(self);
         }
-        self.call_tracker.increment_depth();
+        self.call_tracker.increment_call();
         Ok(self)
+    }
+
+    #[inline]
+    fn inc_depth_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+        self.call_tracker.increment_depth();
+        if self.call_tracker.limit_reached() {
+            self.call_tracker.mark_limit_reached();
+            return Err(self);
+        }
+        Ok(self)
+    }
+
+    #[inline]
+    fn dec_depth(mut self: Box<Self>) -> Box<Self> {
+        self.call_tracker.decrement_depth();
+        self
     }
 
     #[inline]
@@ -661,6 +759,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
         self = self.inc_call_check_limit()?;
+        self = self.inc_depth_check_limit()?;
         // Position from which this `rule` starts parsing.
         let actual_pos = self.position.pos();
         // Remember index of the `self.queue` element that will be associated with this `rule`.
@@ -755,7 +854,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 if new_state.parse_attempts.enabled {
                     try_add_rule_to_stack(&mut new_state);
                 }
-                Ok(new_state)
+                Ok(new_state.dec_depth())
             }
             Err(mut new_state) => {
                 if new_state.lookahead != Lookahead::Negative {
@@ -777,7 +876,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     new_state.queue.truncate(index);
                 }
 
-                Err(new_state)
+                Err(new_state.dec_depth())
             }
         }
     }
