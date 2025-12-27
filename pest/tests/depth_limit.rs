@@ -7,10 +7,10 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use core::num::NonZeroUsize;
 use pest::error::Error;
 use pest::iterators::Pairs;
 use pest::{state, ParseResult, Parser, ParserState};
-use core::num::NonZeroUsize;
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -38,41 +38,27 @@ impl Parser<Rule> for TestParser {
             })
         }
 
-        fn add_expr(
-            state: Box<ParserState<'_, Rule>>,
-        ) -> ParseResult<Box<ParserState<'_, Rule>>> {
+        fn add_expr(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::add_expr, |s| {
                 s.sequence(|s| {
                     mul_expr(s).and_then(|s| {
-                        s.repeat(|s| {
-                            s.sequence(|s| {
-                                s.match_string("+").and_then(mul_expr)
-                            })
-                        })
+                        s.repeat(|s| s.sequence(|s| s.match_string("+").and_then(mul_expr)))
                     })
                 })
             })
         }
 
-        fn mul_expr(
-            state: Box<ParserState<'_, Rule>>,
-        ) -> ParseResult<Box<ParserState<'_, Rule>>> {
+        fn mul_expr(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::mul_expr, |s| {
                 s.sequence(|s| {
                     primary(s).and_then(|s| {
-                        s.repeat(|s| {
-                            s.sequence(|s| {
-                                s.match_string("*").and_then(primary)
-                            })
-                        })
+                        s.repeat(|s| s.sequence(|s| s.match_string("*").and_then(primary)))
                     })
                 })
             })
         }
 
-        fn primary(
-            state: Box<ParserState<'_, Rule>>,
-        ) -> ParseResult<Box<ParserState<'_, Rule>>> {
+        fn primary(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::primary, |s| {
                 number(s).or_else(|s| {
                     s.sequence(|s| {
@@ -84,14 +70,10 @@ impl Parser<Rule> for TestParser {
             })
         }
 
-        fn number(
-            state: Box<ParserState<'_, Rule>>,
-        ) -> ParseResult<Box<ParserState<'_, Rule>>> {
+        fn number(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.rule(Rule::number, |s| {
                 s.match_char_by(|c| c.is_ascii_digit())
-                    .and_then(|s| {
-                        s.repeat(|s| s.match_char_by(|c| c.is_ascii_digit()))
-                    })
+                    .and_then(|s| s.repeat(|s| s.match_char_by(|c| c.is_ascii_digit())))
             })
         }
 
@@ -109,11 +91,11 @@ impl Parser<Rule> for TestParser {
 fn test_depth_limit_simple() {
     // Set a recursion depth limit
     pest::set_call_limit(Some(NonZeroUsize::new(10).unwrap()));
-    
+
     // This should parse successfully - depth is less than 10
     let result = TestParser::parse(Rule::expression, "1");
     assert!(result.is_ok());
-    
+
     // Reset limit
     pest::set_call_limit(None);
 }
@@ -126,10 +108,10 @@ fn test_depth_limit_nested_parens() {
     // Parsing "1" requires: expression -> add_expr -> mul_expr -> primary -> number
     // That's 5 rule invocations, so limit of 4 should fail
     pest::set_call_limit(Some(NonZeroUsize::new(4).unwrap()));
-    
+
     // Simple expression should fail with this very low limit
     let result = TestParser::parse(Rule::expression, "1");
-    
+
     match result {
         Ok(_) => {
             panic!("Expected call limit error with very low limit");
@@ -138,14 +120,20 @@ fn test_depth_limit_nested_parens() {
             let error_msg = format!("{}", e);
             // Check specifically for call limit error
             if let pest::error::ErrorVariant::CustomError { message } = &e.variant {
-                assert_eq!(message, "call limit reached", 
-                        "Expected call limit error, got: {}", message);
+                assert_eq!(
+                    message, "call limit reached",
+                    "Expected call limit error, got: {}",
+                    message
+                );
             } else {
-                panic!("Expected CustomError variant with call limit, got: {:?}", e.variant);
+                panic!(
+                    "Expected CustomError variant with call limit, got: {:?}",
+                    e.variant
+                );
             }
         }
     }
-    
+
     // Reset limit
     pest::set_call_limit(None);
 }
@@ -154,11 +142,11 @@ fn test_depth_limit_nested_parens() {
 fn test_depth_limit_allows_simple_parse() {
     // Set a reasonable recursion depth limit
     pest::set_call_limit(Some(NonZeroUsize::new(50).unwrap()));
-    
+
     // Simple expression should work with reasonable limit
     let result = TestParser::parse(Rule::expression, "1+2");
     assert!(result.is_ok());
-    
+
     // Reset limit
     pest::set_call_limit(None);
 }
@@ -167,7 +155,7 @@ fn test_depth_limit_allows_simple_parse() {
 fn test_no_depth_limit() {
     // Make sure no limit allows parsing
     pest::set_call_limit(None);
-    
+
     // Even deeply nested expressions should work without a limit
     let nested = "((((((1))))))";
     let result = TestParser::parse(Rule::expression, nested);
@@ -179,7 +167,7 @@ fn test_depth_limit_reset() {
     // Set a limit, then remove it
     pest::set_call_limit(Some(NonZeroUsize::new(5).unwrap()));
     pest::set_call_limit(None);
-    
+
     // Should work after reset
     let result = TestParser::parse(Rule::expression, "((((((1))))))");
     assert!(result.is_ok());
@@ -187,9 +175,9 @@ fn test_depth_limit_reset() {
 
 /// This test demonstrates the issue from GitHub:
 /// Pest grammars can cause overflow within Pest itself with deeply nested structures.
-/// 
+///
 /// The grammar from the issue can cause stack overflow with deeply
-/// nested parentheses. With set_call_limit (which now tracks recursion depth), 
+/// nested parentheses. With set_call_limit (which now tracks recursion depth),
 /// we can prevent this.
 #[test]
 fn test_prevents_stack_overflow_from_issue() {
@@ -199,12 +187,12 @@ fn test_prevents_stack_overflow_from_issue() {
     // Each level of parentheses requires several rule invocations
     // (expression, add_expr, mul_expr, primary for opening, then recursion for content)
     pest::set_call_limit(Some(NonZeroUsize::new(50).unwrap()));
-    
+
     // Create a deeply nested expression with 30 levels of nesting
     // This would need more than 50 depth
     let mut deeply_nested = String::new();
     let nesting_depth = 30;
-    
+
     // Add opening parens
     for _ in 0..nesting_depth {
         deeply_nested.push('(');
@@ -214,18 +202,20 @@ fn test_prevents_stack_overflow_from_issue() {
     for _ in 0..nesting_depth {
         deeply_nested.push(')');
     }
-    
+
     let result = TestParser::parse(Rule::expression, &deeply_nested);
-    
+
     // Should fail with call limit reached (recursion depth limit), not stack overflow
     assert!(result.is_err());
     if let Err(e) = result {
         let error_msg = format!("{}", e);
-        assert!(error_msg.contains("call limit reached"), 
-                "Expected call limit error, got: {}", error_msg);
+        assert!(
+            error_msg.contains("call limit reached"),
+            "Expected call limit error, got: {}",
+            error_msg
+        );
     }
-    
+
     // Reset limit
     pest::set_call_limit(None);
 }
-
