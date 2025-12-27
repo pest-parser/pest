@@ -168,7 +168,7 @@ impl Default for CallLimitTracker {
         } else {
             None
         };
-        
+
         Self {
             current_depth_limit,
             depth_at_limit: None,
@@ -179,7 +179,8 @@ impl Default for CallLimitTracker {
 impl CallLimitTracker {
     fn limit_reached(&self) -> bool {
         self.depth_at_limit.is_some()
-            || self.current_depth_limit
+            || self
+                .current_depth_limit
                 .is_some_and(|(current, limit)| current >= limit)
     }
 
