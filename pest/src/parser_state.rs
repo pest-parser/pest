@@ -101,7 +101,7 @@ static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 /// # Arguments
 ///
 /// * `limit` - The maximum recursion depth. If None,
-///             the recursion depth is unlimited.
+///   the recursion depth is unlimited.
 ///
 /// # Examples
 ///
@@ -148,7 +148,7 @@ static ERROR_DETAIL: AtomicBool = AtomicBool::new(false);
 /// # Arguments
 ///
 /// * `enabled` - Whether to enable the collection for
-///               more error details.
+///   more error details.
 pub fn set_error_detail(enabled: bool) {
     ERROR_DETAIL.store(enabled, Ordering::Relaxed);
 }
