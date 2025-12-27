@@ -107,66 +107,66 @@ impl Parser<Rule> for TestParser {
 
 #[test]
 fn test_depth_limit_simple() {
-    // Set a depth limit
-    pest::set_depth_limit(Some(NonZeroUsize::new(10).unwrap()));
+    // Set a recursion depth limit
+    pest::set_call_limit(Some(NonZeroUsize::new(10).unwrap()));
     
     // This should parse successfully - depth is less than 10
     let result = TestParser::parse(Rule::expression, "1");
     assert!(result.is_ok());
     
-    // Reset depth limit
-    pest::set_depth_limit(None);
+    // Reset limit
+    pest::set_call_limit(None);
 }
 
 #[test]
 fn test_depth_limit_nested_parens() {
-    // Make sure call limit is disabled
+    // Make sure call limit is reset first
     pest::set_call_limit(None);
-    // Set a very low depth limit (lower than what "1" needs)
+    // Set a very low recursion depth limit (lower than what "1" needs)
     // Parsing "1" requires: expression -> add_expr -> mul_expr -> primary -> number
     // That's 5 rule invocations, so limit of 4 should fail
-    pest::set_depth_limit(Some(NonZeroUsize::new(4).unwrap()));
+    pest::set_call_limit(Some(NonZeroUsize::new(4).unwrap()));
     
     // Simple expression should fail with this very low limit
     let result = TestParser::parse(Rule::expression, "1");
     
     match result {
         Ok(_) => {
-            panic!("Expected depth limit error with very low limit");
+            panic!("Expected call limit error with very low limit");
         }
         Err(e) => {
             let error_msg = format!("{}", e);
-            // Check specifically for depth limit error
+            // Check specifically for call limit error
             if let pest::error::ErrorVariant::CustomError { message } = &e.variant {
-                assert_eq!(message, "depth limit reached", 
-                        "Expected depth limit error, got: {}", message);
+                assert_eq!(message, "call limit reached", 
+                        "Expected call limit error, got: {}", message);
             } else {
-                panic!("Expected CustomError variant with depth limit, got: {:?}", e.variant);
+                panic!("Expected CustomError variant with call limit, got: {:?}", e.variant);
             }
         }
     }
     
-    // Reset depth limit
-    pest::set_depth_limit(None);
+    // Reset limit
+    pest::set_call_limit(None);
 }
 
 #[test]
 fn test_depth_limit_allows_simple_parse() {
-    // Set a reasonable depth limit
-    pest::set_depth_limit(Some(NonZeroUsize::new(50).unwrap()));
+    // Set a reasonable recursion depth limit
+    pest::set_call_limit(Some(NonZeroUsize::new(50).unwrap()));
     
     // Simple expression should work with reasonable limit
     let result = TestParser::parse(Rule::expression, "1+2");
     assert!(result.is_ok());
     
-    // Reset depth limit
-    pest::set_depth_limit(None);
+    // Reset limit
+    pest::set_call_limit(None);
 }
 
 #[test]
 fn test_no_depth_limit() {
     // Make sure no limit allows parsing
-    pest::set_depth_limit(None);
+    pest::set_call_limit(None);
     
     // Even deeply nested expressions should work without a limit
     let nested = "((((((1))))))";
@@ -177,8 +177,8 @@ fn test_no_depth_limit() {
 #[test]
 fn test_depth_limit_reset() {
     // Set a limit, then remove it
-    pest::set_depth_limit(Some(NonZeroUsize::new(5).unwrap()));
-    pest::set_depth_limit(None);
+    pest::set_call_limit(Some(NonZeroUsize::new(5).unwrap()));
+    pest::set_call_limit(None);
     
     // Should work after reset
     let result = TestParser::parse(Rule::expression, "((((((1))))))");
@@ -189,15 +189,16 @@ fn test_depth_limit_reset() {
 /// Pest grammars can cause overflow within Pest itself with deeply nested structures.
 /// 
 /// The grammar from the issue can cause stack overflow with deeply
-/// nested parentheses. With set_depth_limit, we can prevent this.
+/// nested parentheses. With set_call_limit (which now tracks recursion depth), 
+/// we can prevent this.
 #[test]
 fn test_prevents_stack_overflow_from_issue() {
-    // Make sure call limit is disabled
+    // Make sure call limit is disabled initially
     pest::set_call_limit(None);
-    // Set a depth limit that's lower than what 150 nested parens would need
+    // Set a recursion depth limit that's lower than what 30 nested parens would need
     // Each level of parentheses requires several rule invocations
-    // (expression, add_expr, mul_expr, primary for opening, then same for closing)
-    pest::set_depth_limit(Some(NonZeroUsize::new(50).unwrap()));
+    // (expression, add_expr, mul_expr, primary for opening, then recursion for content)
+    pest::set_call_limit(Some(NonZeroUsize::new(50).unwrap()));
     
     // Create a deeply nested expression with 30 levels of nesting
     // This would need more than 50 depth
@@ -216,15 +217,15 @@ fn test_prevents_stack_overflow_from_issue() {
     
     let result = TestParser::parse(Rule::expression, &deeply_nested);
     
-    // Should fail with depth limit reached, not stack overflow
+    // Should fail with call limit reached (recursion depth limit), not stack overflow
     assert!(result.is_err());
     if let Err(e) = result {
         let error_msg = format!("{}", e);
-        assert!(error_msg.contains("depth limit reached"), 
-                "Expected depth limit error, got: {}", error_msg);
+        assert!(error_msg.contains("call limit reached"), 
+                "Expected call limit error, got: {}", error_msg);
     }
     
-    // Reset depth limit
-    pest::set_depth_limit(None);
+    // Reset limit
+    pest::set_call_limit(None);
 }
 

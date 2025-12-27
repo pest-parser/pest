@@ -89,36 +89,14 @@ pub enum MatchDir {
 }
 
 static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
-static DEPTH_LIMIT: AtomicUsize = AtomicUsize::new(0);
-
-/// Sets the maximum call limit for the parser state
-/// to prevent stack overflows or excessive execution times
-/// in some grammars.
-/// If set, the calls are tracked as a running total
-/// over all non-terminal rules that can nest closures
-/// (which are passed to transform the parser state).
-///
-/// # Arguments
-///
-/// * `limit` - The maximum number of calls. If None,
-///             the number of calls is unlimited.
-pub fn set_call_limit(limit: Option<NonZeroUsize>) {
-    CALL_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
-}
 
 /// Sets the maximum recursion depth limit for the parser state
 /// to prevent stack overflows caused by deeply nested grammars.
-/// If set, the depth is tracked across recursive rule invocations.
 ///
-/// This is particularly useful for grammars that can have deeply nested
-/// structures (like nested parentheses, nested function calls, etc.)
-/// which could cause stack overflow on the system stack.
-///
-/// The depth limit is different from the call limit:
-/// - Call limit (`set_call_limit`) tracks the total number of parser function
-///   calls and never decreases during parsing.
-/// - Depth limit (`set_depth_limit`) tracks the current recursion depth and
-///   decreases as the parser returns from recursive calls.
+/// The depth is tracked across recursive rule invocations, incrementing
+/// when entering a rule and decrementing when exiting. This provides
+/// protection against stack overflow from deeply nested structures
+/// (like nested parentheses, nested function calls, etc.).
 ///
 /// # Arguments
 ///
@@ -133,14 +111,14 @@ pub fn set_call_limit(limit: Option<NonZeroUsize>) {
 ///
 /// // Set a depth limit of 100 to prevent stack overflow
 /// // from deeply nested grammar rules
-/// pest::set_depth_limit(Some(NonZeroUsize::new(100).unwrap()));
+/// pest::set_call_limit(Some(NonZeroUsize::new(100).unwrap()));
 ///
 /// // Parse your input...
 /// // If the depth exceeds 100, parsing will fail with
-/// // an error message "depth limit reached"
+/// // an error message "call limit reached"
 ///
-/// // Remove the depth limit when done
-/// pest::set_depth_limit(None);
+/// // Remove the limit when done
+/// pest::set_call_limit(None);
 /// ```
 ///
 /// # Use Cases
@@ -155,8 +133,8 @@ pub fn set_call_limit(limit: Option<NonZeroUsize>) {
 /// Setting the limit too low may prevent parsing of legitimate deeply nested
 /// expressions. The appropriate limit depends on your grammar complexity
 /// and the expected depth of valid inputs.
-pub fn set_depth_limit(limit: Option<NonZeroUsize>) {
-    DEPTH_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
+pub fn set_call_limit(limit: Option<NonZeroUsize>) {
+    CALL_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
 }
 
 static ERROR_DETAIL: AtomicBool = AtomicBool::new(false);
@@ -177,7 +155,6 @@ pub fn set_error_detail(enabled: bool) {
 
 #[derive(Debug)]
 struct CallLimitTracker {
-    current_call_limit: Option<(usize, usize)>,
     current_depth_limit: Option<(usize, usize)>,
     /// When set, indicates depth tracking should stop at this value (limit was reached)
     depth_at_limit: Option<usize>,
@@ -185,14 +162,7 @@ struct CallLimitTracker {
 
 impl Default for CallLimitTracker {
     fn default() -> Self {
-        let call_limit = CALL_LIMIT.load(Ordering::Relaxed);
-        let current_call_limit = if call_limit > 0 {
-            Some((0, call_limit))
-        } else {
-            None
-        };
-        
-        let depth_limit = DEPTH_LIMIT.load(Ordering::Relaxed);
+        let depth_limit = CALL_LIMIT.load(Ordering::Relaxed);
         let current_depth_limit = if depth_limit > 0 {
             Some((0, depth_limit))
         } else {
@@ -200,7 +170,6 @@ impl Default for CallLimitTracker {
         };
         
         Self {
-            current_call_limit,
             current_depth_limit,
             depth_at_limit: None,
         }
@@ -209,19 +178,6 @@ impl Default for CallLimitTracker {
 
 impl CallLimitTracker {
     fn limit_reached(&self) -> bool {
-        self.depth_at_limit.is_some()
-            || self.current_call_limit
-                .is_some_and(|(current, limit)| current >= limit)
-            || self.current_depth_limit
-                .is_some_and(|(current, limit)| current >= limit)
-    }
-
-    fn call_limit_reached(&self) -> bool {
-        self.current_call_limit
-            .is_some_and(|(current, limit)| current >= limit)
-    }
-
-    fn depth_limit_reached(&self) -> bool {
         self.depth_at_limit.is_some()
             || self.current_depth_limit
                 .is_some_and(|(current, limit)| current >= limit)
@@ -232,12 +188,6 @@ impl CallLimitTracker {
         // (incrementing would exceed it)
         self.current_depth_limit
             .is_some_and(|(current, limit)| current >= limit)
-    }
-
-    fn increment_call(&mut self) {
-        if let Some((current, _)) = &mut self.current_call_limit {
-            *current += 1;
-        }
     }
 
     fn increment_depth(&mut self) {
@@ -637,13 +587,7 @@ where
             Ok(new(Rc::new(state.queue), input, None, 0, len))
         }
         Err(mut state) => {
-            // Note: When both limits might be reached, depth limit is checked first
-            // to provide the most specific error message for recursion issues.
-            let variant = if state.call_tracker.depth_limit_reached() {
-                ErrorVariant::CustomError {
-                    message: "depth limit reached".to_owned(),
-                }
-            } else if state.call_tracker.call_limit_reached() {
+            let variant = if state.call_tracker.limit_reached() {
                 ErrorVariant::CustomError {
                     message: "call limit reached".to_owned(),
                 }
@@ -750,19 +694,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     #[inline]
     fn inc_call_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
-        // Check if call limit is reached, or if depth limit was previously reached
-        // Note: We check depth_at_limit (not depth_limit_reached) because we only want
-        // to fail if the depth limit was ALREADY hit in a previous call.
-        // The actual depth limit check happens in inc_depth_check_limit.
-        if self.call_tracker.call_limit_reached() || self.call_tracker.depth_at_limit.is_some() {
-            return Err(self);
-        }
-        self.call_tracker.increment_call();
-        Ok(self)
-    }
-
-    #[inline]
-    fn inc_depth_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
         // Check limit before incrementing
         if self.call_tracker.depth_limit_would_be_exceeded() {
             self.call_tracker.mark_limit_reached();
@@ -804,7 +735,6 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
         self = self.inc_call_check_limit()?;
-        self = self.inc_depth_check_limit()?;
         // Position from which this `rule` starts parsing.
         let actual_pos = self.position.pos();
         // Remember index of the `self.queue` element that will be associated with this `rule`.
