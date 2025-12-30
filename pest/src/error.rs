@@ -36,6 +36,12 @@ pub struct Error<R> {
     pub location: InputLocation,
     /// Line/column within the input string
     pub line_col: LineColLocation,
+    inner: Box<ErrorInner<R>>,
+}
+
+/// Private information for parse errors.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+struct ErrorInner<R> {
     path: Option<String>,
     line: String,
     continued_line: Option<String>,
@@ -200,11 +206,13 @@ impl<R: RuleType> Error<R> {
         Error {
             variant,
             location: InputLocation::Pos(pos.pos()),
-            path: None,
-            line,
-            continued_line: None,
             line_col: LineColLocation::Pos(pos.line_col()),
-            parse_attempts: None,
+            inner: Box::new(ErrorInner {
+                path: None,
+                line,
+                continued_line: None,
+                parse_attempts: None,
+            }),
         }
     }
 
@@ -216,7 +224,7 @@ impl<R: RuleType> Error<R> {
         parse_attempts: ParseAttempts<R>,
     ) -> Error<R> {
         let mut error = Self::new_from_pos(variant, pos);
-        error.parse_attempts = Some(parse_attempts);
+        error.inner.parse_attempts = Some(parse_attempts);
         error
     }
 
@@ -279,11 +287,13 @@ impl<R: RuleType> Error<R> {
         Error {
             variant,
             location: InputLocation::Span((span.start(), end.pos())),
-            path: None,
-            line: start_line,
-            continued_line,
             line_col: LineColLocation::Span(span.start_pos().line_col(), end_line_col),
-            parse_attempts: None,
+            inner: Box::new(ErrorInner {
+                path: None,
+                line: start_line,
+                continued_line,
+                parse_attempts: None,
+            }),
         }
     }
 
@@ -312,7 +322,7 @@ impl<R: RuleType> Error<R> {
     /// ).with_path("file.rs");
     /// ```
     pub fn with_path(mut self, path: &str) -> Error<R> {
-        self.path = Some(path.to_owned());
+        self.inner.path = Some(path.to_owned());
 
         self
     }
@@ -343,12 +353,12 @@ impl<R: RuleType> Error<R> {
     /// assert_eq!(Some("file.rs"), error.path());
     /// ```
     pub fn path(&self) -> Option<&str> {
-        self.path.as_deref()
+        self.inner.path.as_deref()
     }
 
     /// Returns the line that the error is on.
     pub fn line(&self) -> &str {
-        self.line.as_str()
+        self.inner.line.as_str()
     }
 
     /// Renames all `Rule`s if this is a [`ParsingError`]. It does nothing when called on a
@@ -409,7 +419,7 @@ impl<R: RuleType> Error<R> {
     /// Get detailed information about errored rules sequence.
     /// Returns `Some(results)` only for `ParsingError`.
     pub fn parse_attempts(&self) -> Option<ParseAttempts<R>> {
-        self.parse_attempts.clone()
+        self.inner.parse_attempts.clone()
     }
 
     /// Get error message based on parsing attempts.
@@ -420,7 +430,7 @@ impl<R: RuleType> Error<R> {
         rule_to_message: &RuleToMessageFn<R>,
         is_whitespace: &IsWhitespaceFn,
     ) -> Option<Error<R>> {
-        let attempts = if let Some(ref parse_attempts) = self.parse_attempts {
+        let attempts = if let Some(ref parse_attempts) = self.inner.parse_attempts {
             parse_attempts.clone()
         } else {
             return None;
@@ -538,7 +548,7 @@ impl<R: RuleType> Error<R> {
             _ => None,
         };
         let offset = start - 1;
-        let line_chars = self.line.chars();
+        let line_chars = self.inner.line.chars();
 
         for c in line_chars.take(offset) {
             match c {
@@ -605,12 +615,13 @@ impl<R: RuleType> Error<R> {
     pub(crate) fn format(&self) -> String {
         let spacing = self.spacing();
         let path = self
+            .inner
             .path
             .as_ref()
             .map(|path| format!("{}:", path))
             .unwrap_or_default();
 
-        let pair = (self.line_col.clone(), &self.continued_line);
+        let pair = (self.line_col.clone(), &self.inner.continued_line);
         if let (LineColLocation::Span(_, end), Some(ref continued_line)) = pair {
             let has_line_gap = end.0 - self.start().0 > 1;
             if has_line_gap {
@@ -629,7 +640,7 @@ impl<R: RuleType> Error<R> {
                     ls = self.start().0,
                     le = end.0,
                     c = self.start().1,
-                    line = self.line,
+                    line = self.inner.line,
                     continued_line = continued_line,
                     underline = self.underline(),
                     message = self.message()
@@ -649,7 +660,7 @@ impl<R: RuleType> Error<R> {
                     ls = self.start().0,
                     le = end.0,
                     c = self.start().1,
-                    line = self.line,
+                    line = self.inner.line,
                     continued_line = continued_line,
                     underline = self.underline(),
                     message = self.message()
@@ -667,7 +678,7 @@ impl<R: RuleType> Error<R> {
                 p = path,
                 l = self.start().0,
                 c = self.start().1,
-                line = self.line,
+                line = self.inner.line,
                 underline = self.underline(),
                 message = self.message()
             )
@@ -753,7 +764,7 @@ mod miette_adapter {
 
     impl<R: RuleType> Diagnostic for MietteAdapter<R> {
         fn source_code(&self) -> Option<&dyn SourceCode> {
-            Some(&self.0.line)
+            Some(&self.0.inner.line)
         }
 
         fn labels(&self) -> Option<Box<dyn Iterator<Item = LabeledSpan>>> {
