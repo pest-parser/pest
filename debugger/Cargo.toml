@@ -1,7 +1,7 @@
 [package]
 name = "pest_debugger"
 description = "pest grammar debugger"
-version = "2.8.4"
+version = "2.8.5"
 edition = "2021"
 authors = [
     "Dragoș Tiselice <dragostiselice@gmail.com>",
@@ -17,9 +17,9 @@ readme = "_README.md"
 rust-version = "1.83"
 
 [dependencies]
-pest = { path = "../pest", version = "2.8.4" }
-pest_meta = { path = "../meta", version = "2.8.4" }
-pest_vm = { path = "../vm", version = "2.8.4" }
+pest = { path = "../pest", version = "2.8.5" }
+pest_meta = { path = "../meta", version = "2.8.5" }
+pest_vm = { path = "../vm", version = "2.8.5" }
 reqwest = { version = "= 0.11.13", default-features = false, features = [
     "blocking",
     "json",
