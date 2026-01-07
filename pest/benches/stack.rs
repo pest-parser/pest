@@ -55,14 +55,14 @@ fn snapshot_pop_clear<T: Clone>(elements: impl Iterator<Item = T>) {
 }
 
 fn benchmark(b: &mut Criterion) {
-    use core::iter::repeat;
+    use core::iter::repeat_n;
     // use criterion::black_box;
     let times = 10000usize;
     let small = 0..times;
     let medium = ("", 0usize, 1usize);
-    let medium = repeat(medium).take(times);
+    let medium = repeat_n(medium, times);
     let large = [""; 64];
-    let large = repeat(large).take(times);
+    let large = repeat_n(large, times);
     macro_rules! test_series {
         ($kind:ident) => {
             b.bench_function(stringify!(push - restore - $kind), |b| {
