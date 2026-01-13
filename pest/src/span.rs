@@ -270,12 +270,12 @@ impl<'i> Span<'i> {
     }
 }
 
-impl fmt::Debug for Span<'_> {
+impl<'i> fmt::Debug for Span<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let range = self.start..self.end;
         f.debug_struct("Span")
             .field("str", &self.as_str())
-            .field("start", &self.start)
-            .field("end", &self.end)
+            .field("range", &range)
             .finish()
     }
 }
