@@ -270,7 +270,7 @@ impl<'i> Span<'i> {
     }
 }
 
-impl<'i> fmt::Debug for Span<'i> {
+impl fmt::Debug for Span<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let range = self.start..self.end;
         f.debug_struct("Span")
