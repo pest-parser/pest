@@ -465,14 +465,18 @@ impl<R: RuleType> fmt::Debug for Pairs<'_, R> {
 
 impl<R: RuleType> fmt::Display for Pairs<'_, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "[{}]",
-            self.clone()
-                .map(|pair| format!("{}", pair))
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
+        let inner = self
+            .clone()
+            .map(|pair| {
+                if f.alternate() {
+                    format!("{pair:#}")
+                } else {
+                    format!("{pair}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        write!(f, "[{inner}]")
     }
 }
 
@@ -621,8 +625,9 @@ mod tests {
     fn pairs_display() {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
+        assert_eq!(format!("{}", pairs), "[abc, e]".to_owned());
         assert_eq!(
-            format!("{}", pairs),
+            format!("{:#}", pairs),
             "[a(0, 3, [b(1, 2)]), c(4, 5)]".to_owned()
         );
     }
