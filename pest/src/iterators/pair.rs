@@ -7,7 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use alloc::format;
 use alloc::rc::Rc;
 #[cfg(feature = "pretty-print")]
 use alloc::string::String;
