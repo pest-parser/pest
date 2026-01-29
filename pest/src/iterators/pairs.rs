@@ -621,10 +621,7 @@ mod tests {
     fn pairs_display() {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
-        assert_eq!(
-            format!("{}", pairs),
-            "[a(0, 3, [b(1, 2)]), c(4, 5)]".to_owned()
-        );
+        assert_eq!(format!("{}", pairs), "[abc, e]".to_owned());
     }
 
     #[test]
