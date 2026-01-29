@@ -340,26 +340,7 @@ impl<R: RuleType> fmt::Debug for Pair<'_, R> {
 
 impl<R: RuleType> fmt::Display for Pair<'_, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let rule = self.as_rule();
-        let start = self.pos(self.start);
-        let end = self.pos(self.pair());
-        let mut pairs = self.clone().into_inner().peekable();
-
-        if pairs.peek().is_none() {
-            write!(f, "{:?}({}, {})", rule, start, end)
-        } else {
-            write!(
-                f,
-                "{:?}({}, {}, [{}])",
-                rule,
-                start,
-                end,
-                pairs
-                    .map(|pair| format!("{}", pair))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
-        }
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -408,6 +389,7 @@ impl<R: RuleType> ::serde::Serialize for Pair<'_, R> {
 
 #[cfg(test)]
 mod tests {
+    use crate::alloc::string::ToString;
     use crate::macros::tests::*;
     use crate::parser::Parser;
 
@@ -458,5 +440,11 @@ mod tests {
         let pair = AbcParser::parse(Rule::a, input).unwrap().next().unwrap();
 
         assert_eq!(input, pair.get_input());
+    }
+    #[test]
+    fn pair_to_string_matches_as_str() {
+        let pair = AbcParser::parse(Rule::a, "abcde").unwrap().next().unwrap();
+
+        assert_eq!(pair.to_string(), pair.as_str().to_string());
     }
 }
