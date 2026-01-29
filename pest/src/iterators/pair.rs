@@ -7,6 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use alloc::format;
 use alloc::rc::Rc;
 #[cfg(feature = "pretty-print")]
 use alloc::string::String;
@@ -339,7 +340,30 @@ impl<R: RuleType> fmt::Debug for Pair<'_, R> {
 
 impl<R: RuleType> fmt::Display for Pair<'_, R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.as_str())
+        if f.alternate() {
+            let rule = self.as_rule();
+            let start = self.pos(self.start);
+            let end = self.pos(self.pair());
+            let mut pairs = self.clone().into_inner().peekable();
+
+            if pairs.peek().is_none() {
+                write!(f, "{:?}({}, {})", rule, start, end)
+            } else {
+                write!(
+                    f,
+                    "{:?}({}, {}, [{}])",
+                    rule,
+                    start,
+                    end,
+                    pairs
+                        .map(|pair| format!("{:#}", pair))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        } else {
+            write!(f, "{}", self.as_str())
+        }
     }
 }
 
@@ -388,7 +412,7 @@ impl<R: RuleType> ::serde::Serialize for Pair<'_, R> {
 
 #[cfg(test)]
 mod tests {
-    use crate::alloc::string::ToString;
+    use crate::alloc::{borrow::ToOwned, format, string::ToString};
     use crate::macros::tests::*;
     use crate::parser::Parser;
 
@@ -445,5 +469,11 @@ mod tests {
         let pair = AbcParser::parse(Rule::a, "abcde").unwrap().next().unwrap();
 
         assert_eq!(pair.to_string(), pair.as_str().to_string());
+    }
+    #[test]
+    fn alternate_format() {
+        let pair = AbcParser::parse(Rule::a, "abcde").unwrap().next().unwrap();
+        assert_eq!(format!("{}", pair), "abc".to_owned());
+        assert_eq!(format!("{:#}", pair), "a(0, 3, [b(1, 2)])".to_owned());
     }
 }
