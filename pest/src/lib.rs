@@ -116,8 +116,8 @@
 //! 2. Atomic (`@`)
 //!
 //!     Atomic rules do not accept whitespace or comments within their expressions and have a
-//!     cascading effect on any rule they call. I.e. rules that are not atomic but are called by atomic
-//!     rules behave atomically.
+//!    cascading effect on any rule they call. I.e. rules that are not atomic but are called by atomic
+//!    rules behave atomically.
 //!
 //!     Any rules called by atomic rules do not generate token pairs.
 //!
@@ -133,7 +133,7 @@
 //! 3. Compound-atomic (`$`)
 //!
 //!     Compound-atomic are identical to atomic rules with the exception that rules called by them are
-//!     not forbidden from generating token pairs.
+//!    not forbidden from generating token pairs.
 //!
 //!     ```ignore
 //!     a =  { "a" }
@@ -147,7 +147,7 @@
 //! 4. Non-atomic (`!`)
 //!
 //!     Non-atomic are identical to normal rules with the exception that they stop the cascading effect
-//!     of atomic and compound-atomic rules.
+//!    of atomic and compound-atomic rules.
 //!
 //!     ```ignore
 //!     a =  { "a" }
