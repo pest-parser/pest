@@ -52,9 +52,3 @@ runs:
       uses: Swatinem/rust-cache@v2
       with:
         shared-key: ${{inputs.kind}}-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}
-    - name: Bootstraping Grammars - Building
-      run: cargo build --package pest_bootstrap
-      shell: sh
-    - name: Bootstraping Grammars - Executing
-      run: cargo run --package pest_bootstrap
-      shell: sh
