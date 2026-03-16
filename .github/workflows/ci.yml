@@ -50,6 +50,23 @@ jobs:
       - name: cargo test (ignored)
         run: cargo test -p pest_grammars --lib --verbose --release -- --ignored tests::toml_handles_deep_nesting_unstable
 
+  check-grammar-sync:
+    name: Ensure grammar.rs matches grammar.pest
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          kind: check
+          toolchain: 1.83.0 # needed for the `icu` crates in pest_meta
+      - name: Regenerate grammar.rs
+        run: cargo bootstrap
+      - name: Check for uncommitted changes
+        run: git diff --exit-code meta/src/grammar.rs
+
   doc:
     name: Documentation check
     needs: check
@@ -125,7 +142,7 @@ jobs:
           kind: check
           toolchain: 1.85.0 # needed for the `clap_lex` crates in pest_debugger
       - name: Check feature powerset
-        run: cargo hack check --feature-powerset --optional-deps --exclude-all-features --skip not-bootstrap-in-src,cargo --keep-going --lib --tests --ignore-private
+        run: cargo hack check --feature-powerset --optional-deps --exclude-all-features --keep-going --lib --tests --ignore-private
 
   no_std:
     name: check for no_std compatibility

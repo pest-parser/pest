@@ -1,6 +1,6 @@
 [package]
 name = "pest_bootstrap"
-description = "pest bootstrap script"
+description = "update grammar.rs from grammar.pest"
 version = "0.0.0"
 edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
@@ -16,7 +16,4 @@ pest_generator = "2.1.1" # Use the crates-io version, which (should be) known-go
 quote = "1.0"
 
 [features]
-default = []
-# Whether or not the bootstrapper should put the generated .rs file in the
-# source tree or in the output tree
-not-bootstrap-in-src = []
+not-bootstrap-in-src = [] # deprecated, exists for backwards compatibilty
