@@ -18,10 +18,6 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@1.83.0 # needed for the `icu` crates in pest_meta
-      - name: Bootstraping Grammars - Building
-        run: cargo build --package pest_bootstrap
-      - name: Bootstraping Grammars - Executing
-        run: cargo run --package pest_bootstrap
       - uses: rust-lang/crates-io-auth-action@v1
         id: auth
       - name: Publish pest crates
