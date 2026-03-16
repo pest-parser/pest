@@ -18,7 +18,7 @@ get_manifest_path() {
 
 publish() {
   echo "Publishing crate $1..."
-  cargo publish --manifest-path "$(get_manifest_path "${1}")" --allow-dirty --all-features
+  cargo publish --manifest-path "$(get_manifest_path "${1}")" --all-features
   echo ""
 }
 
