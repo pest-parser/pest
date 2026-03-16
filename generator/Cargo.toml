@@ -16,7 +16,6 @@ rust-version = "1.83"
 [features]
 default = ["std"]
 std = ["pest/std"]
-not-bootstrap-in-src = [] # deprecated, exists for backwards compatibilty
 grammar-extras = ["pest_meta/grammar-extras"]
 # Export internal API that is not intended to be stable
 export-internal = []

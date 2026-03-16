@@ -25,5 +25,4 @@ pest = { path = "../pest", version = "2.8.6" }
 
 [features]
 default = []
-not-bootstrap-in-src = [] # deprecated, exists for backwards compatibilty
 grammar-extras = []

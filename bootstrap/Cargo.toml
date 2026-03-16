@@ -16,4 +16,3 @@ pest_generator = "2.1.1" # Use the crates-io version, which (should be) known-go
 quote = "1.0"
 
 [features]
-not-bootstrap-in-src = [] # deprecated, exists for backwards compatibilty
