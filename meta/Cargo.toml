@@ -15,7 +15,6 @@ exclude = ["src/grammar.pest"]
 include = [
     "Cargo.toml",
     "src/**/*",
-    "src/grammar.rs",
     "_README.md",
     "LICENSE-*",
 ]
@@ -24,11 +23,6 @@ rust-version = "1.83"
 [dependencies]
 pest = { path = "../pest", version = "2.8.6" }
 
-[build-dependencies]
-sha2 = { version = "0.10", default-features = false }
-cargo = { version = "0.81.0", optional = true }
-
 [features]
 default = []
-not-bootstrap-in-src = ["dep:cargo"]
 grammar-extras = []
