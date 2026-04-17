@@ -132,9 +132,8 @@ macro_rules! consumes_to {
 macro_rules! parses_to {
     ( parser: $parser:expr, input: $string:expr, rule: $rule:expr,
       tokens: [ $( $names:ident $calls:tt ),* $(,)* ] ) => {
-
-        #[allow(unused_mut)]
         {
+            #![allow(unused_mut)]
             let vm = $parser;
             let mut tokens = vm.parse($rule, $string).unwrap().tokens();
 
@@ -177,9 +176,9 @@ macro_rules! parses_to {
 macro_rules! fails_with {
     ( parser: $parser:expr, input: $string:expr, rule: $rule:expr,
       positives: $positives:expr, negatives: $negatives:expr, pos: $pos:expr ) => {
-        #[allow(unused_mut)]
-        #[allow(unused_variables)]
         {
+            #![allow(unused_mut)]
+            #![allow(unused_variables)]
             let vm = $parser;
             let error = vm.parse($rule, $string).unwrap_err();
 
