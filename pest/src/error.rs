@@ -1181,6 +1181,9 @@ mod tests {
     #[cfg(feature = "miette-error")]
     #[test]
     fn miette_error() {
+        // Force color output so the test passes regardless of TTY availability
+        std::env::set_var("FORCE_COLOR", "1");
+
         let input = "abc\ndef";
         let pos = Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
