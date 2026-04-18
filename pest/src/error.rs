@@ -1181,6 +1181,10 @@ mod tests {
     #[cfg(feature = "miette-error")]
     #[test]
     fn miette_error() {
+        // Force color output so the test passes regardless of TTY availability
+        let prev_force_color = std::env::var_os("FORCE_COLOR");
+        std::env::set_var("FORCE_COLOR", "1");
+
         let input = "abc\ndef";
         let pos = Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
@@ -1206,5 +1210,12 @@ mod tests {
             ]
             .join("\n")
         );
+
+        // Restore previous FORCE_COLOR state to avoid cross-test leakage
+        if let Some(prev) = prev_force_color {
+            std::env::set_var("FORCE_COLOR", prev);
+        } else {
+            std::env::remove_var("FORCE_COLOR");
+        }
     }
 }
