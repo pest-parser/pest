@@ -12,6 +12,7 @@
     html_favicon_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg"
 )]
 #![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
+#[allow(clippy::doc_overindented_list_items)]
 //! # pest. The Elegant Parser
 //!
 //! pest is a general purpose parser written in Rust with a focus on accessibility, correctness,
