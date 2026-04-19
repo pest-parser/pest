@@ -111,6 +111,10 @@ impl<'i> Position<'i> {
     /// This is an O(n) operation, where n is the number of chars in the input.
     /// You better use [`pair.line_col()`](struct.Pair.html#method.line_col) instead.
     ///
+    /// # Panics
+    ///
+    /// Panics if the position is out of bounds.
+    ///
     /// # Examples
     ///
     /// ```

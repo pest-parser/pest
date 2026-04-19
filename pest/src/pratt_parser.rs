@@ -312,6 +312,12 @@ where
     /// parser (previously defined using [`map_primary`], [`map_prefix`], [`map_postfix`],
     /// and [`map_infix`] methods).
     ///
+    /// # Panics
+    ///
+    /// Panics if the input pairs contain a prefix operator with no [`map_prefix`],
+    /// an infix operator with no [`map_infix`], a postfix operator with no [`map_postfix`],
+    /// or an unexpected token that is not a valid prefix, primary, infix, or postfix expression.
+    ///
     /// [`map_primary`]: struct.PrattParser.html#method.map_primary
     /// [`map_prefix`]: struct.PrattParserMap.html#method.map_prefix
     /// [`map_postfix`]: struct.PrattParserMap.html#method.map_postfix
