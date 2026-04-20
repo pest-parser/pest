@@ -663,4 +663,31 @@ mod tests {
 
         positions.insert(start);
     }
+
+    #[test]
+    #[should_panic(expected = "span created from positions from different inputs")]
+    fn span_panic_different_inputs() {
+        let input1 = "a";
+        let input2 = "b";
+        let pos1 = Position::from_start(input1);
+        let pos2 = Position::from_start(input2);
+
+        pos1.span(&pos2);
+    }
+
+    #[test]
+    #[should_panic(expected = "position out of bounds")]
+    fn line_col_panic_out_of_bounds() {
+        let input = "ab";
+        let pos = Position::new_internal(input, 5);
+        pos.line_col();
+    }
+
+    #[test]
+    #[should_panic(expected = "position out of bounds")]
+    fn line_of_panic_out_of_bounds() {
+        let input = "ab";
+        let pos = Position::new_internal(input, 5);
+        pos.line_of();
+    }
 }
