@@ -318,7 +318,6 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
 
     match rule.ty {
         RuleType::Normal => quote! {
-            #[inline]
             #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                 state.rule(Rule::#name, |state| {
@@ -327,14 +326,12 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
             }
         },
         RuleType::Silent => quote! {
-            #[inline]
             #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                 #expr
             }
         },
         RuleType::Atomic => quote! {
-            #[inline]
             #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                 state.rule(Rule::#name, |state| {
@@ -345,7 +342,6 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
             }
         },
         RuleType::CompoundAtomic => quote! {
-            #[inline]
             #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                 state.atomic(::pest::Atomicity::CompoundAtomic, |state| {
@@ -356,7 +352,6 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
             }
         },
         RuleType::NonAtomic => quote! {
-            #[inline]
             #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                 state.atomic(::pest::Atomicity::NonAtomic, |state| {
@@ -1288,13 +1283,11 @@ mod tests {
                             pub mod visible {
                                 use super::super::Rule;
 
-                                #[inline]
                                 #[allow(non_snake_case, unused_variables)]
                                 pub fn r#a(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                                     state.match_string("b")
                                 }
 
-                                #[inline]
                                 #[allow(non_snake_case, unused_variables)]
                                 pub fn r#if(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
                                     self::r#a(state)
