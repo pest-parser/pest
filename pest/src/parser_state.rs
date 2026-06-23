@@ -1513,6 +1513,10 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// Peeks the top of the stack and attempts to match the string. Returns `Ok(Box<ParserState>)`
     /// if the string is matched successfully, or `Err(Box<ParserState>)` otherwise.
     ///
+    /// # Panics
+    ///
+    /// Panics if the stack is empty.
+    ///
     /// # Examples
     ///
     /// ```
@@ -1541,6 +1545,10 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     /// Pops the top of the stack and attempts to match the string. Returns `Ok(Box<ParserState>)`
     /// if the string is matched successfully, or `Err(Box<ParserState>)` otherwise.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stack is empty.
     ///
     /// # Examples
     ///

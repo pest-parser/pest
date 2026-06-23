@@ -175,6 +175,10 @@ impl<'i> Position<'i> {
 
     /// Returns the entire line of the input that contains this `Position`.
     ///
+    /// # Panics
+    ///
+    /// Panics if the position is out of bounds (e.g., beyond the end of the input).
+    ///
     /// # Examples
     ///
     /// ```
@@ -470,6 +474,9 @@ impl<'i> PartialOrd for Position<'i> {
     }
 }
 
+/// # Panics
+///
+/// Panics when comparing positions from different input strings.
 impl<'i> Ord for Position<'i> {
     fn cmp(&self, other: &Position<'i>) -> Ordering {
         self.partial_cmp(other)
