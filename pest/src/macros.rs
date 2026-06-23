@@ -191,9 +191,8 @@ macro_rules! consumes_to {
 macro_rules! parses_to {
     ( parser: $parser:ident, input: $string:expr, rule: $rules:tt :: $rule:tt,
       tokens: [ $( $names:ident $calls:tt ),* $(,)* ] ) => {
-
-        #[allow(unused_mut)]
         {
+            #![allow(unused_mut)]
             use $crate::Parser;
 
             let mut tokens = $parser::parse($rules::$rule, $string).unwrap().tokens();
@@ -289,8 +288,8 @@ macro_rules! parses_to {
 macro_rules! fails_with {
     ( parser: $parser:ident, input: $string:expr, rule: $rules:tt :: $rule:tt,
       positives: $positives:expr, negatives: $negatives:expr, pos: $pos:expr ) => {
-        #[allow(unused_mut)]
         {
+            #![allow(unused_mut)]
             use $crate::Parser;
 
             let error = $parser::parse($rules::$rule, $string).unwrap_err();
