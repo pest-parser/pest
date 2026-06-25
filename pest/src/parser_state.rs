@@ -90,17 +90,49 @@ pub enum MatchDir {
 
 static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 
-/// Sets the maximum call limit for the parser state
-/// to prevent stack overflows or excessive execution times
-/// in some grammars.
-/// If set, the calls are tracked as a running total
-/// over all non-terminal rules that can nest closures
-/// (which are passed to transform the parser state).
+/// Sets the maximum recursion depth limit for the parser state
+/// to prevent stack overflows caused by deeply nested grammars.
+///
+/// The depth is tracked across recursive rule invocations, incrementing
+/// when entering a rule and decrementing when exiting. This provides
+/// protection against stack overflow from deeply nested structures
+/// (like nested parentheses, nested function calls, etc.).
 ///
 /// # Arguments
 ///
-/// * `limit` - The maximum number of calls. If None,
-///             the number of calls is unlimited.
+/// * `limit` - The maximum recursion depth. If None,
+///   the recursion depth is unlimited.
+///
+/// # Examples
+///
+/// ```
+/// use pest;
+/// use core::num::NonZeroUsize;
+///
+/// // Set a depth limit of 100 to prevent stack overflow
+/// // from deeply nested grammar rules
+/// pest::set_call_limit(Some(NonZeroUsize::new(100).unwrap()));
+///
+/// // Parse your input...
+/// // If the depth exceeds 100, parsing will fail with
+/// // an error message "call limit reached"
+///
+/// // Remove the limit when done
+/// pest::set_call_limit(None);
+/// ```
+///
+/// # Use Cases
+///
+/// This is useful for:
+/// - Protecting against malicious input with excessive nesting
+/// - Preventing stack overflow in resource-constrained environments
+/// - Ensuring consistent behavior across platforms with different stack sizes
+///
+/// # Note
+///
+/// Setting the limit too low may prevent parsing of legitimate deeply nested
+/// expressions. The appropriate limit depends on your grammar complexity
+/// and the expected depth of valid inputs.
 pub fn set_call_limit(limit: Option<NonZeroUsize>) {
     CALL_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
 }
@@ -116,33 +148,73 @@ static ERROR_DETAIL: AtomicBool = AtomicBool::new(false);
 /// # Arguments
 ///
 /// * `enabled` - Whether to enable the collection for
-///               more error details.
+///   more error details.
 pub fn set_error_detail(enabled: bool) {
     ERROR_DETAIL.store(enabled, Ordering::Relaxed);
 }
 
 #[derive(Debug)]
 struct CallLimitTracker {
-    current_call_limit: Option<(usize, usize)>,
+    current_depth_limit: Option<(usize, usize)>,
+    /// When set, indicates depth tracking should stop at this value (limit was reached)
+    depth_at_limit: Option<usize>,
 }
 
 impl Default for CallLimitTracker {
     fn default() -> Self {
-        let limit = CALL_LIMIT.load(Ordering::Relaxed);
-        let current_call_limit = if limit > 0 { Some((0, limit)) } else { None };
-        Self { current_call_limit }
+        let depth_limit = CALL_LIMIT.load(Ordering::Relaxed);
+        let current_depth_limit = if depth_limit > 0 {
+            Some((0, depth_limit))
+        } else {
+            None
+        };
+
+        Self {
+            current_depth_limit,
+            depth_at_limit: None,
+        }
     }
 }
 
 impl CallLimitTracker {
     fn limit_reached(&self) -> bool {
-        self.current_call_limit
+        self.depth_at_limit.is_some()
+            || self
+                .current_depth_limit
+                .is_some_and(|(current, limit)| current >= limit)
+    }
+
+    fn depth_limit_would_be_exceeded(&self) -> bool {
+        // Check if we're already at the limit
+        // (incrementing would exceed it)
+        self.current_depth_limit
             .is_some_and(|(current, limit)| current >= limit)
     }
 
     fn increment_depth(&mut self) {
-        if let Some((current, _)) = &mut self.current_call_limit {
+        // Don't increment if we've already hit the limit
+        if self.depth_at_limit.is_some() {
+            return;
+        }
+        if let Some((current, _)) = &mut self.current_depth_limit {
             *current += 1;
+        }
+    }
+
+    fn decrement_depth(&mut self) {
+        // Don't decrement if limit was already reached - we want to preserve the error state
+        if self.depth_at_limit.is_some() {
+            return;
+        }
+        if let Some((current, _)) = &mut self.current_depth_limit {
+            *current = current.saturating_sub(1);
+        }
+    }
+
+    fn mark_limit_reached(&mut self) {
+        // Record the current depth when limit is reached
+        if let Some((current, _)) = self.current_depth_limit {
+            self.depth_at_limit = Some(current);
         }
     }
 }
@@ -516,7 +588,7 @@ where
             Ok(new(Rc::new(state.queue), input, None, 0, len))
         }
         Err(mut state) => {
-            let variant = if state.reached_call_limit() {
+            let variant = if state.call_tracker.limit_reached() {
                 ErrorVariant::CustomError {
                     message: "call limit reached".to_owned(),
                 }
@@ -623,7 +695,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     #[inline]
     fn inc_call_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
-        if self.call_tracker.limit_reached() {
+        // Check limit before incrementing
+        if self.call_tracker.depth_limit_would_be_exceeded() {
+            self.call_tracker.mark_limit_reached();
             return Err(self);
         }
         self.call_tracker.increment_depth();
@@ -631,8 +705,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 
     #[inline]
-    fn reached_call_limit(&self) -> bool {
-        self.call_tracker.limit_reached()
+    fn dec_depth(mut self: Box<Self>) -> Box<Self> {
+        self.call_tracker.decrement_depth();
+        self
     }
 
     /// Wrapper needed to generate tokens. This will associate the `R` type rule to the closure
@@ -755,7 +830,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 if new_state.parse_attempts.enabled {
                     try_add_rule_to_stack(&mut new_state);
                 }
-                Ok(new_state)
+                Ok(new_state.dec_depth())
             }
             Err(mut new_state) => {
                 if new_state.lookahead != Lookahead::Negative {
@@ -777,7 +852,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                     new_state.queue.truncate(index);
                 }
 
-                Err(new_state)
+                Err(new_state.dec_depth())
             }
         }
     }

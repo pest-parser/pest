@@ -17,7 +17,7 @@ enum Rule {
 struct ParenParser;
 
 impl Parser<Rule> for ParenParser {
-    fn parse(rule: Rule, input: &str) -> Result<Pairs<Rule>, Error<Rule>> {
+    fn parse(rule: Rule, input: &str) -> Result<Pairs<'_, Rule>, Error<Rule>> {
         fn expr(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
             state.sequence(|s| s.repeat(paren).and_then(|s| s.end_of_input()))
         }
