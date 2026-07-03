@@ -1129,6 +1129,41 @@ mod tests {
     }
 
     #[test]
+    fn character_unescaped_quote_is_rejected() {
+        // A single quote can only appear inside a character literal if it's
+        // escaped (as in '\''), just like a double quote must be escaped
+        // inside a string literal. Previously `inner_chr` matched `ANY`
+        // unconditionally, so `'''` was silently accepted as a character
+        // literal for `'`, even though every other tool (syntax highlighters,
+        // the playground, etc.) treats it as invalid.
+        fails_with! {
+            parser: PestParser,
+            input: "'''",
+            rule: Rule::character,
+            positives: vec![Rule::inner_chr],
+            negatives: vec![],
+            pos: 1
+        };
+    }
+
+    #[test]
+    fn character_escaped_quote_is_accepted() {
+        // The correct, unambiguous way to write a literal `'` still works.
+        parses_to! {
+            parser: PestParser,
+            input: "'\\''",
+            rule: Rule::character,
+            tokens: [
+                character(0, 4, [
+                    single_quote(0, 1),
+                    inner_chr(1, 3),
+                    single_quote(3, 4)
+                ])
+            ]
+        };
+    }
+
+    #[test]
     fn number() {
         parses_to! {
             parser: PestParser,

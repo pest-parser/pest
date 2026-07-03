@@ -176,7 +176,7 @@ character = ${ single_quote ~ inner_chr ~ single_quote }
 inner_str = @{ (!("\"" | "\\") ~ ANY)* ~ (escape ~ inner_str)? }
 
 /// An escaped or any character.
-inner_chr = @{ escape | ANY }
+inner_chr = @{ escape | (!("'" | "\\") ~ ANY) }
 
 /// An escape sequence.
 escape = @{ "\\" ~ ("\"" | "\\" | "r" | "n" | "t" | "0" | "'" | code | unicode) }
