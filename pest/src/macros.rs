@@ -287,30 +287,28 @@ macro_rules! parses_to {
 #[macro_export]
 macro_rules! fails_with {
     ( parser: $parser:ident, input: $string:expr, rule: $rules:tt :: $rule:tt,
-      positives: $positives:expr, negatives: $negatives:expr, pos: $pos:expr ) => {
-        {
-            #![allow(unused_mut)]
-            use $crate::Parser;
+      positives: $positives:expr, negatives: $negatives:expr, pos: $pos:expr ) => {{
+        #![allow(unused_mut)]
+        use $crate::Parser;
 
-            let error = $parser::parse($rules::$rule, $string).unwrap_err();
+        let error = $parser::parse($rules::$rule, $string).unwrap_err();
 
-            match error.variant {
-                $crate::error::ErrorVariant::ParsingError {
-                    positives,
-                    negatives,
-                } => {
-                    assert_eq!(positives, $positives, "positives");
-                    assert_eq!(negatives, $negatives, "negatives");
-                }
-                _ => unreachable!(),
-            };
-
-            match error.location {
-                $crate::error::InputLocation::Pos(pos) => assert_eq!(pos, $pos, "pos"),
-                _ => unreachable!(),
+        match error.variant {
+            $crate::error::ErrorVariant::ParsingError {
+                positives,
+                negatives,
+            } => {
+                assert_eq!(positives, $positives, "positives");
+                assert_eq!(negatives, $negatives, "negatives");
             }
+            _ => unreachable!(),
+        };
+
+        match error.location {
+            $crate::error::InputLocation::Pos(pos) => assert_eq!(pos, $pos, "pos"),
+            _ => unreachable!(),
         }
-    };
+    }};
 }
 
 #[cfg(test)]
