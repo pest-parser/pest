@@ -1,7 +1,7 @@
 [package]
 name = "pest"
 description = "The Elegant Parser"
-version = "2.8.7"
+version = "2.8.8"
 edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest.rs/"
