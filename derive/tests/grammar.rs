@@ -277,6 +277,21 @@ fn node_tag() {
 }
 
 #[test]
+fn neg_pred_with_tag() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abcabc",
+        rule: Rule::neg_pred_with_tag,
+        tokens: [
+            neg_pred_with_tag(0, 6, [
+                string(0, 3),
+                string(3, 6)
+            ])
+        ]
+    };
+}
+
+#[test]
 fn optional_string() {
     parses_to! {
         parser: GrammarParser,

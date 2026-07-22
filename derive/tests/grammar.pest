@@ -22,6 +22,8 @@ sequence_atomic_compound = @{ sequence_compound }
 sequence_nested = { string ~ string }
 sequence_compound_nested = ${ sequence_nested }
 node_tag = { #string = string }
+neg_pred_with_tag = { (!neg_pred_tag_bar ~ #tag_foo = string)+ }
+neg_pred_tag_bar = _{ #tag_bar = range }
 choice = { string | range }
 choice_prefix = { | string | range }
 optional = { string? }
