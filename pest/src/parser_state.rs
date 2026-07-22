@@ -816,6 +816,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// ```
     #[inline]
     pub fn tag_node(mut self: Box<Self>, tag: &'i str) -> ParseResult<Box<Self>> {
+        if self.lookahead != Lookahead::None {
+            return Ok(self);
+        }
         if let Some(QueueableToken::End { tag: old, .. }) = self.queue.last_mut() {
             *old = Some(tag)
         }
