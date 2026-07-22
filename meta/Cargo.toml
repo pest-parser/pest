@@ -1,7 +1,7 @@
 [package]
 name = "pest_meta"
 description = "pest meta language parser and validator"
-version = "2.8.7"
+version = "2.8.8"
 edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest.rs/"
@@ -21,7 +21,7 @@ include = [
 rust-version = "1.83"
 
 [dependencies]
-pest = { path = "../pest", version = "2.8.7" }
+pest = { path = "../pest", version = "2.8.8" }
 
 [features]
 default = []

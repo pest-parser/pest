@@ -17,7 +17,7 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@1.83.0 # needed for the `icu` crates in pest_meta
+        uses: dtolnay/rust-toolchain@1.86.0 # needed for the `icu_*` crates in pest_debugger
       - uses: rust-lang/crates-io-auth-action@v1
         id: auth
       - name: Publish pest crates
