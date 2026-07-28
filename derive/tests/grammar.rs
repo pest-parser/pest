@@ -867,6 +867,18 @@ fn checkpoint_restore() {
 }
 
 #[test]
+fn clear_nested_snapshot() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "aa",
+        rule: Rule::clear_nested_snapshot,
+        tokens: [
+            clear_nested_snapshot(0, 2, [EOI(2, 2)])
+        ]
+    };
+}
+
+#[test]
 fn ascii_digits() {
     parses_to! {
         parser: GrammarParser,

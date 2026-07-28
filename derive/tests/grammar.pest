@@ -49,6 +49,7 @@ peek_slice_23 = { PUSH(range) ~ PUSH(range) ~ PUSH(range) ~ PUSH(range) ~ PUSH(r
 pop_ = { PUSH(range) ~ PUSH(range) ~ POP ~ POP }
 pop_all = { PUSH(range) ~ PUSH(range) ~ POP_ALL }
 pop_fail = { PUSH(range) ~ !POP ~ range ~ POP }
+clear_nested_snapshot = { PUSH("a") ~ ( POP? ~ "X" )? ~ POP ~ EOI }
 checkpoint_restore = ${
 		PUSH("") ~ (PUSH("a") ~ "b" ~ POP | DROP ~ "b" | POP ~ "a") ~ EOI
 }

@@ -917,15 +917,15 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         let token_index = self.queue.len();
         let initial_pos = self.position;
 
-        let result = f(self);
+        let result = f(self.checkpoint());
 
         match result {
-            Ok(new_state) => Ok(new_state),
+            Ok(new_state) => Ok(new_state.checkpoint_ok()),
             Err(mut new_state) => {
                 // Restore the initial position and truncate the token queue.
                 new_state.position = initial_pos;
                 new_state.queue.truncate(token_index);
-                Err(new_state)
+                Err(new_state.restore())
             }
         }
     }

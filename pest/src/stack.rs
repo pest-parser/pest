@@ -100,9 +100,21 @@ impl<T: Clone> Stack<T> {
 
     /// The parsing after the last snapshot was successful so clearing it.
     pub fn clear_snapshot(&mut self) {
-        if let Some((len, unpopped)) = self.lengths.pop() {
-            // Popped elements from previous state are no longer needed.
-            self.popped.truncate(self.popped.len() - (len - unpopped));
+        if let Some((len, remained)) = self.lengths.pop() {
+            let popped_count = len - remained;
+            if let Some((_, parent_remained)) = self.lengths.last_mut() {
+                let merged_remained = (*parent_remained).min(remained);
+                let parent_popped = *parent_remained - merged_remained;
+                *parent_remained = merged_remained;
+
+                let popped_start = self.popped.len() - popped_count;
+                drop(
+                    self.popped
+                        .drain(popped_start..popped_start + popped_count - parent_popped),
+                );
+            } else {
+                self.popped.truncate(self.popped.len() - popped_count);
+            }
         }
     }
 
@@ -242,6 +254,35 @@ mod test {
         stack.snapshot();
         stack.pop();
         stack.clear_snapshot();
+
+        assert_eq!(stack[0..stack.len()], [0]);
+    }
+
+    #[test]
+    fn nested_snapshot_pop_clear_restore() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+        stack.snapshot();
+        stack.snapshot();
+        stack.pop();
+        stack.clear_snapshot();
+        stack.restore();
+
+        assert_eq!(stack[0..stack.len()], [0]);
+    }
+
+    #[test]
+    fn nested_snapshot_clear_preserves_outer_boundary() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+        stack.snapshot();
+        stack.push(1);
+        stack.snapshot();
+        stack.pop();
+        stack.clear_snapshot();
+        stack.restore();
 
         assert_eq!(stack[0..stack.len()], [0]);
     }
