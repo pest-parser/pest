@@ -7,8 +7,10 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use std::array::from_fn;
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use pest::pratt_parser::{Affix, Assoc, ConstPrattParser, Op, PrattParser, PrattParserOps};
+use pest::pratt_parser::{Assoc, ConstPrattParser, Op, PrattParser, PrattParserOps};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 enum Rule {
@@ -85,13 +87,8 @@ fn build_runtime() -> PrattParser<Rule> {
     parser
 }
 
-fn build_const() -> ConstPrattParser<Rule> {
-    let mut ops = Vec::new();
-    for (i, &rule) in RULES.iter().enumerate() {
-        ops.push((rule, Affix::Infix(Assoc::Left), (i as u32) + 1));
-    }
-    let ops: &'static [(Rule, Affix, u32)] = Box::leak(ops.into_boxed_slice());
-    ConstPrattParser::new_const(ops)
+fn build_const() -> ConstPrattParser<Rule, 30> {
+    ConstPrattParser::new_const(from_fn(|i| (Op::infix(RULES[i], Assoc::Left), 0)))
 }
 
 fn benchmark(b: &mut Criterion) {

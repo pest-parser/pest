@@ -12,6 +12,7 @@
 
 use core::iter::Peekable;
 use core::marker::PhantomData;
+use core::mem::ManuallyDrop;
 use core::ops::BitOr;
 
 use alloc::boxed::Box;
@@ -19,6 +20,8 @@ use alloc::collections::BTreeMap;
 
 use crate::iterators::Pair;
 use crate::RuleType;
+
+pub use crate::pratt_precedence;
 
 /// Associativity of an infix binary operator, used by [`Op::infix(Assoc)`].
 ///
@@ -43,6 +46,9 @@ pub struct Op<R: RuleType> {
 }
 
 /// The position of an operator relative to its operand.
+///
+/// This is an implementation detail used by the Pratt parser internals.
+#[doc(hidden)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Affix {
     /// Prefix operator, appearing before its operand.
@@ -55,7 +61,7 @@ pub enum Affix {
 
 impl<R: RuleType> Op<R> {
     /// Defines `rule` as a prefix unary operator.
-    pub fn prefix(rule: R) -> Self {
+    pub const fn prefix(rule: R) -> Self {
         Self {
             rule,
             affix: Affix::Prefix,
@@ -64,7 +70,7 @@ impl<R: RuleType> Op<R> {
     }
 
     /// Defines `rule` as a postfix unary operator.
-    pub fn postfix(rule: R) -> Self {
+    pub const fn postfix(rule: R) -> Self {
         Self {
             rule,
             affix: Affix::Postfix,
@@ -73,7 +79,7 @@ impl<R: RuleType> Op<R> {
     }
 
     /// Defines `rule` as an infix binary operator with associativity `assoc`.
-    pub fn infix(rule: R, assoc: Assoc) -> Self {
+    pub const fn infix(rule: R, assoc: Assoc) -> Self {
         Self {
             rule,
             affix: Affix::Infix(assoc),
@@ -117,7 +123,7 @@ impl<R: RuleType> BitOr for Op<R> {
 ///
 /// ```pest
 /// WHITESPACE   =  _{ " " | "\t" | NEWLINE }
-///  
+///
 /// program      =   { SOI ~ expr ~ EOI }
 ///   expr       =   { prefix* ~ primary ~ postfix* ~ (infix ~ prefix* ~ primary ~ postfix* )* }
 ///     infix    =  _{ add | sub | mul | div | pow }
@@ -258,11 +264,19 @@ impl<R: RuleType> PrattParser<R> {
             phantom: PhantomData,
         }
     }
+
+    fn get(&self, rule: &R) -> Option<(Affix, Prec)> {
+        self.ops.get(rule).copied()
+    }
 }
 
-/// Trait for types that provide operator metadata to [`PrattParserMap`].
+/// Internal trait for types that provide operator metadata to [`PrattParserMap`].
+///
+/// This trait is an implementation detail and not intended to be implemented
+/// by downstream code.
 ///
 /// [`PrattParserMap`]: struct.PrattParserMap.html
+#[doc(hidden)]
 pub trait PrattParserOps<R: RuleType> {
     /// Look up the affix and precedence of `rule`.
     fn get(&self, rule: &R) -> Option<(Affix, Prec)>;
@@ -270,7 +284,7 @@ pub trait PrattParserOps<R: RuleType> {
 
 impl<R: RuleType> PrattParserOps<R> for PrattParser<R> {
     fn get(&self, rule: &R) -> Option<(Affix, Prec)> {
-        self.ops.get(rule).copied()
+        PrattParser::get(self, rule)
     }
 }
 
@@ -278,37 +292,50 @@ impl<R: RuleType> PrattParserOps<R> for PrattParser<R> {
 /// memory.
 ///
 /// It is functionally equivalent to [`PrattParser`], but it is constructed from
-/// a static slice of operators rather than the chained `.op(...)` builder.
+/// a static array of [`Op`]s rather than the chained `.op(...)` builder.
 ///
 /// [`PrattParser`]: struct.PrattParser.html
-pub struct ConstPrattParser<R: RuleType + 'static> {
-    ops: &'static [(R, Affix, Prec)],
+pub struct ConstPrattParser<R: RuleType + 'static, const N: usize> {
+    ops: [(R, Affix, Prec); N],
 }
 
-impl<R: RuleType + 'static> ConstPrattParser<R> {
-    /// Create a `ConstPrattParser` from a static slice of operators.
+impl<R: RuleType + 'static, const N: usize> ConstPrattParser<R, N> {
+    /// Create a `ConstPrattParser` from a static array of (`[`Op`]`, `u8`)
+    /// pairs.
     ///
-    /// Each tuple is `(rule, affix, precedence)`. Higher precedence values bind
-    /// more tightly. The absolute values do not matter, only their ordering.
+    /// Just like [`PrattParser::op`], but for use in a `const` context. The `u8`
+    /// in each pair is a precedence delta: use `0` to keep the same precedence
+    /// as the previous operator, and `1` (or higher) to move to the next
+    /// precedence level. The first delta should be `0`.
     ///
     /// # Example
     ///
     /// ```
-    /// # use pest::pratt_parser::{Affix, Assoc, ConstPrattParser};
+    /// # use pest::pratt_parser::{Assoc, ConstPrattParser, Op};
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// # enum Rule { expr, int, add, sub, mul, div, pow, neg, fac }
-    /// static PRATT: ConstPrattParser<Rule> = ConstPrattParser::new_const(&[
-    ///     (Rule::add, Affix::Infix(Assoc::Left), 1),
-    ///     (Rule::sub, Affix::Infix(Assoc::Left), 1),
-    ///     (Rule::mul, Affix::Infix(Assoc::Left), 2),
-    ///     (Rule::div, Affix::Infix(Assoc::Left), 2),
-    ///     (Rule::pow, Affix::Infix(Assoc::Right), 3),
-    ///     (Rule::neg, Affix::Prefix, 4),
-    ///     (Rule::fac, Affix::Postfix, 5),
+    /// static PRATT: ConstPrattParser<Rule, 7> = ConstPrattParser::new_const([
+    ///     (Op::infix(Rule::add, Assoc::Left), 0), // lowest precedence
+    ///     (Op::infix(Rule::sub, Assoc::Left), 0), // same precedence as add
+    ///     (Op::infix(Rule::mul, Assoc::Left), 1), // next precedence level
+    ///     (Op::infix(Rule::div, Assoc::Left), 0), // same precedence as mul
+    ///     (Op::infix(Rule::pow, Assoc::Right), 1),
+    ///     (Op::prefix(Rule::neg), 1),
+    ///     (Op::postfix(Rule::fac), 1), // highest precedence
     /// ]);
     /// ```
-    pub const fn new_const(ops: &'static [(R, Affix, Prec)]) -> Self {
-        Self { ops }
+    pub const fn new_const(ops: [(Op<R>, u8); N]) -> Self {
+        let mut internal_ops = [(ops[0].0.rule, ops[0].0.affix, PREC_STEP); N];
+        let mut prec = PREC_STEP;
+        let mut index = 1;
+        while index < N {
+            let (op, delta) = &ops[index];
+            prec += (*delta as Prec) * PREC_STEP;
+            internal_ops[index] = (op.rule, op.affix, prec);
+            index += 1;
+        }
+        let _ = ManuallyDrop::new(ops);
+        Self { ops: internal_ops }
     }
 
     /// Maps primary expressions with a closure `primary`.
@@ -329,18 +356,23 @@ impl<R: RuleType + 'static> ConstPrattParser<R> {
             phantom: PhantomData,
         }
     }
-}
 
-impl<R: RuleType + 'static> PrattParserOps<R> for ConstPrattParser<R> {
+    #[inline]
     fn get(&self, rule: &R) -> Option<(Affix, Prec)> {
         let mut i = 0;
-        while i < self.ops.len() {
+        while i < N {
             if self.ops[i].0 == *rule {
                 return Some((self.ops[i].1, self.ops[i].2));
             }
             i += 1;
         }
         None
+    }
+}
+
+impl<R: RuleType + 'static, const N: usize> PrattParserOps<R> for ConstPrattParser<R, N> {
+    fn get(&self, rule: &R) -> Option<(Affix, Prec)> {
+        ConstPrattParser::get(self, rule)
     }
 }
 
@@ -483,4 +515,39 @@ where
             None => 0,
         }
     }
+}
+
+/// Convenience macro for building a const Pratt parser precedence table.
+///
+/// Each argument is a precedence level: a list of [`Op`] constructors sharing
+/// the same precedence, separated by `|`. Levels are separated by `,`; later
+/// levels bind more tightly than earlier ones.
+///
+/// # Example
+///
+/// ```
+/// # use pest::pratt_parser::{Assoc, ConstPrattParser, Op, pratt_precedence};
+/// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+/// # enum Rule { expr, int, add, sub, mul, div, pow, neg, fac }
+/// static PRATT: ConstPrattParser<Rule, 7> = ConstPrattParser::new_const(pratt_precedence![
+///     Op::infix(Rule::add, Assoc::Left) | Op::infix(Rule::sub, Assoc::Left),
+///     Op::infix(Rule::mul, Assoc::Left) | Op::infix(Rule::div, Assoc::Left),
+///     Op::infix(Rule::pow, Assoc::Right),
+///     Op::prefix(Rule::neg),
+///     Op::postfix(Rule::fac),
+/// ]);
+/// ```
+#[macro_export]
+macro_rules! pratt_precedence {
+    (
+        $(
+            $first_head:ident :: $first_tail:ident $first_args:tt
+            $( | $head:ident :: $tail:ident $args:tt )*
+        ),* $(,)?
+    ) => {[$(
+        ( $first_head :: $first_tail $first_args, 1u8 ),
+        $(
+            ( $head :: $tail $args, 0u8 ),
+        )*
+    )*]};
 }

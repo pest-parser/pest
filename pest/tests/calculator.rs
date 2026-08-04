@@ -12,7 +12,7 @@ extern crate pest;
 
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
-use pest::pratt_parser::{Affix, Assoc, ConstPrattParser, Op, PrattParser};
+use pest::pratt_parser::{Assoc, ConstPrattParser, Op, PrattParser};
 use pest::{state, ParseResult, Parser, ParserState};
 
 #[allow(dead_code, non_camel_case_types)]
@@ -116,7 +116,7 @@ impl Parser<Rule> for CalculatorParser {
 #[allow(deprecated)]
 enum PrattOrPrecClimber<'a> {
     Pratt(&'a PrattParser<Rule>),
-    ConstPratt(&'a ConstPrattParser<Rule>),
+    ConstPratt(&'a ConstPrattParser<Rule, 6>),
     PrecClimber(&'a pest::prec_climber::PrecClimber<Rule>),
 }
 
@@ -251,14 +251,37 @@ fn pratt_parse() {
 
 #[test]
 fn const_pratt_parse() {
-    static PRATT: ConstPrattParser<Rule> = ConstPrattParser::new_const(&[
-        (Rule::plus, Affix::Infix(Assoc::Left), 1),
-        (Rule::minus, Affix::Infix(Assoc::Left), 1),
-        (Rule::times, Affix::Infix(Assoc::Left), 2),
-        (Rule::divide, Affix::Infix(Assoc::Left), 2),
-        (Rule::modulus, Affix::Infix(Assoc::Left), 2),
-        (Rule::power, Affix::Infix(Assoc::Right), 3),
+    static PRATT: ConstPrattParser<Rule, 6> = ConstPrattParser::new_const([
+        (Op::infix(Rule::plus, Assoc::Left), 0),
+        (Op::infix(Rule::minus, Assoc::Left), 0),
+        (Op::infix(Rule::times, Assoc::Left), 1),
+        (Op::infix(Rule::divide, Assoc::Left), 0),
+        (Op::infix(Rule::modulus, Assoc::Left), 0),
+        (Op::infix(Rule::power, Assoc::Right), 1),
     ]);
+
+    let pairs = CalculatorParser::parse(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
+    assert_eq!(
+        -1_525,
+        consume(
+            pairs.unwrap().next().unwrap(),
+            &PrattOrPrecClimber::ConstPratt(&PRATT)
+        )
+    );
+}
+
+#[test]
+fn const_pratt_macro_parse() {
+    use pest::pratt_parser::pratt_precedence;
+
+    static PRATT: ConstPrattParser<Rule, 6> =
+        ConstPrattParser::new_const(pratt_precedence![
+            Op::infix(Rule::plus, Assoc::Left) | Op::infix(Rule::minus, Assoc::Left),
+            Op::infix(Rule::times, Assoc::Left)
+                | Op::infix(Rule::divide, Assoc::Left)
+                | Op::infix(Rule::modulus, Assoc::Left),
+            Op::infix(Rule::power, Assoc::Right),
+        ]);
 
     let pairs = CalculatorParser::parse(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
     assert_eq!(
