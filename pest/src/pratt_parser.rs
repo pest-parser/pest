@@ -31,7 +31,8 @@ pub enum Assoc {
     Right,
 }
 
-type Prec = u32;
+/// Operator precedence level.
+pub type Prec = u32;
 const PREC_STEP: Prec = 10;
 
 /// An operator that corresponds to a rule.
@@ -41,9 +42,14 @@ pub struct Op<R: RuleType> {
     next: Option<Box<Op<R>>>,
 }
 
-enum Affix {
+/// The position of an operator relative to its operand.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Affix {
+    /// Prefix operator, appearing before its operand.
     Prefix,
+    /// Postfix operator, appearing after its operand.
     Postfix,
+    /// Infix binary operator with the given associativity.
     Infix(Assoc),
 }
 
@@ -254,21 +260,107 @@ impl<R: RuleType> PrattParser<R> {
     }
 }
 
+/// Trait for types that provide operator metadata to [`PrattParserMap`].
+///
+/// [`PrattParserMap`]: struct.PrattParserMap.html
+pub trait PrattParserOps<R: RuleType> {
+    /// Look up the affix and precedence of `rule`.
+    fn get(&self, rule: &R) -> Option<(Affix, Prec)>;
+}
+
+impl<R: RuleType> PrattParserOps<R> for PrattParser<R> {
+    fn get(&self, rule: &R) -> Option<(Affix, Prec)> {
+        self.ops.get(rule).copied()
+    }
+}
+
+/// A Pratt parser that can be built in a `const` context and stored in static
+/// memory.
+///
+/// It is functionally equivalent to [`PrattParser`], but it is constructed from
+/// a static slice of operators rather than the chained `.op(...)` builder.
+///
+/// [`PrattParser`]: struct.PrattParser.html
+pub struct ConstPrattParser<R: RuleType + 'static> {
+    ops: &'static [(R, Affix, Prec)],
+}
+
+impl<R: RuleType + 'static> ConstPrattParser<R> {
+    /// Create a `ConstPrattParser` from a static slice of operators.
+    ///
+    /// Each tuple is `(rule, affix, precedence)`. Higher precedence values bind
+    /// more tightly. The absolute values do not matter, only their ordering.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use pest::pratt_parser::{Affix, Assoc, ConstPrattParser};
+    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// # enum Rule { expr, int, add, sub, mul, div, pow, neg, fac }
+    /// static PRATT: ConstPrattParser<Rule> = ConstPrattParser::new_const(&[
+    ///     (Rule::add, Affix::Infix(Assoc::Left), 1),
+    ///     (Rule::sub, Affix::Infix(Assoc::Left), 1),
+    ///     (Rule::mul, Affix::Infix(Assoc::Left), 2),
+    ///     (Rule::div, Affix::Infix(Assoc::Left), 2),
+    ///     (Rule::pow, Affix::Infix(Assoc::Right), 3),
+    ///     (Rule::neg, Affix::Prefix, 4),
+    ///     (Rule::fac, Affix::Postfix, 5),
+    /// ]);
+    /// ```
+    pub const fn new_const(ops: &'static [(R, Affix, Prec)]) -> Self {
+        Self { ops }
+    }
+
+    /// Maps primary expressions with a closure `primary`.
+    pub fn map_primary<'pratt, 'a, 'i, X, T>(
+        &'pratt self,
+        primary: X,
+    ) -> PrattParserMap<'pratt, 'a, 'i, R, X, T, Self>
+    where
+        X: FnMut(Pair<'i, R>) -> T,
+        R: 'pratt,
+    {
+        PrattParserMap {
+            pratt: self,
+            primary,
+            prefix: None,
+            postfix: None,
+            infix: None,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<R: RuleType + 'static> PrattParserOps<R> for ConstPrattParser<R> {
+    fn get(&self, rule: &R) -> Option<(Affix, Prec)> {
+        let mut i = 0;
+        while i < self.ops.len() {
+            if self.ops[i].0 == *rule {
+                return Some((self.ops[i].1, self.ops[i].2));
+            }
+            i += 1;
+        }
+        None
+    }
+}
+
 type PrefixFn<'a, 'i, R, T> = Box<dyn FnMut(Pair<'i, R>, T) -> T + 'a>;
 type PostfixFn<'a, 'i, R, T> = Box<dyn FnMut(T, Pair<'i, R>) -> T + 'a>;
 type InfixFn<'a, 'i, R, T> = Box<dyn FnMut(T, Pair<'i, R>, T) -> T + 'a>;
 
-/// Product of calling [`map_primary`] on [`PrattParser`], defines how expressions should
-/// be mapped.
+/// Product of calling [`map_primary`] on a [`PrattParser`] or [`ConstPrattParser`],
+/// defines how expressions should be mapped.
 ///
 /// [`map_primary`]: struct.PrattParser.html#method.map_primary
 /// [`PrattParser`]: struct.PrattParser.html
-pub struct PrattParserMap<'pratt, 'a, 'i, R, F, T>
+/// [`ConstPrattParser`]: struct.ConstPrattParser.html
+pub struct PrattParserMap<'pratt, 'a, 'i, R, F, T, P = PrattParser<R>>
 where
     R: RuleType,
     F: FnMut(Pair<'i, R>) -> T,
+    P: PrattParserOps<R>,
 {
-    pratt: &'pratt PrattParser<R>,
+    pratt: &'pratt P,
     primary: F,
     prefix: Option<PrefixFn<'a, 'i, R, T>>,
     postfix: Option<PostfixFn<'a, 'i, R, T>>,
@@ -276,10 +368,11 @@ where
     phantom: PhantomData<T>,
 }
 
-impl<'pratt, 'a, 'i, R, F, T> PrattParserMap<'pratt, 'a, 'i, R, F, T>
+impl<'pratt, 'a, 'i, R, F, T, P> PrattParserMap<'pratt, 'a, 'i, R, F, T, P>
 where
     R: RuleType + 'pratt,
     F: FnMut(Pair<'i, R>) -> T,
+    P: PrattParserOps<R> + 'pratt,
 {
     /// Maps prefix operators with closure `prefix`.
     pub fn map_prefix<X>(mut self, prefix: X) -> Self
@@ -322,11 +415,11 @@ where
     /// [`map_prefix`]: struct.PrattParserMap.html#method.map_prefix
     /// [`map_postfix`]: struct.PrattParserMap.html#method.map_postfix
     /// [`map_infix`]: struct.PrattParserMap.html#method.map_infix
-    pub fn parse<P: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: P) -> T {
+    pub fn parse<I: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: I) -> T {
         self.expr(&mut pairs.peekable(), 0)
     }
 
-    fn expr<P: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: &mut Peekable<P>, rbp: Prec) -> T {
+    fn expr<I: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: &mut Peekable<I>, rbp: Prec) -> T {
         let mut lhs = self.nud(pairs);
         while rbp < self.lbp(pairs) {
             lhs = self.led(pairs, lhs);
@@ -338,11 +431,11 @@ where
     ///
     /// "the action that should happen when the symbol is encountered
     ///  as start of an expression (most notably, prefix operators)
-    fn nud<P: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: &mut Peekable<P>) -> T {
+    fn nud<I: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: &mut Peekable<I>) -> T {
         let pair = pairs.next().expect("Pratt parsing expects non-empty Pairs");
-        match self.pratt.ops.get(&pair.as_rule()) {
+        match self.pratt.get(&pair.as_rule()) {
             Some((Affix::Prefix, prec)) => {
-                let rhs = self.expr(pairs, *prec - 1);
+                let rhs = self.expr(pairs, prec - 1);
                 match self.prefix.as_mut() {
                     Some(prefix) => prefix(pair, rhs),
                     None => panic!("Could not map {}, no `.map_prefix(...)` specified", pair),
@@ -357,13 +450,13 @@ where
     ///
     /// "the action that should happen when the symbol is encountered
     /// after the start of an expression (most notably, infix and postfix operators)"
-    fn led<P: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: &mut Peekable<P>, lhs: T) -> T {
+    fn led<I: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: &mut Peekable<I>, lhs: T) -> T {
         let pair = pairs.next().unwrap();
-        match self.pratt.ops.get(&pair.as_rule()) {
+        match self.pratt.get(&pair.as_rule()) {
             Some((Affix::Infix(assoc), prec)) => {
-                let rhs = match *assoc {
-                    Assoc::Left => self.expr(pairs, *prec),
-                    Assoc::Right => self.expr(pairs, *prec - 1),
+                let rhs = match assoc {
+                    Assoc::Left => self.expr(pairs, prec),
+                    Assoc::Right => self.expr(pairs, prec - 1),
                 };
                 match self.infix.as_mut() {
                     Some(infix) => infix(lhs, pair, rhs),
@@ -381,10 +474,10 @@ where
     /// Left-Binding-Power
     ///
     /// "describes the symbol's precedence in infix form (most notably, operator precedence)"
-    fn lbp<P: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: &mut Peekable<P>) -> Prec {
+    fn lbp<I: Iterator<Item = Pair<'i, R>>>(&mut self, pairs: &mut Peekable<I>) -> Prec {
         match pairs.peek() {
-            Some(pair) => match self.pratt.ops.get(&pair.as_rule()) {
-                Some((_, prec)) => *prec,
+            Some(pair) => match self.pratt.get(&pair.as_rule()) {
+                Some((_, prec)) => prec,
                 None => panic!("Expected operator, found {}", pair),
             },
             None => 0,
