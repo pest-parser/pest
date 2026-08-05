@@ -274,14 +274,13 @@ fn const_pratt_parse() {
 fn const_pratt_macro_parse() {
     use pest::pratt_parser::pratt_precedence;
 
-    static PRATT: ConstPrattParser<Rule, 6> =
-        ConstPrattParser::new_const(pratt_precedence![
-            Op::infix(Rule::plus, Assoc::Left) | Op::infix(Rule::minus, Assoc::Left),
-            Op::infix(Rule::times, Assoc::Left)
-                | Op::infix(Rule::divide, Assoc::Left)
-                | Op::infix(Rule::modulus, Assoc::Left),
-            Op::infix(Rule::power, Assoc::Right),
-        ]);
+    static PRATT: ConstPrattParser<Rule, 6> = ConstPrattParser::new_const(pratt_precedence![
+        Op::infix(Rule::plus, Assoc::Left) | Op::infix(Rule::minus, Assoc::Left),
+        Op::infix(Rule::times, Assoc::Left)
+            | Op::infix(Rule::divide, Assoc::Left)
+            | Op::infix(Rule::modulus, Assoc::Left),
+        Op::infix(Rule::power, Assoc::Right),
+    ]);
 
     let pairs = CalculatorParser::parse(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
     assert_eq!(
