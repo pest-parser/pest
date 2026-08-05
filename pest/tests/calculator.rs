@@ -252,12 +252,12 @@ fn pratt_parse() {
 #[test]
 fn const_pratt_parse() {
     static PRATT: ConstPrattParser<Rule, 6> = ConstPrattParser::new_const([
-        (Op::infix(Rule::plus, Assoc::Left), 0),
-        (Op::infix(Rule::minus, Assoc::Left), 0),
-        (Op::infix(Rule::times, Assoc::Left), 1),
-        (Op::infix(Rule::divide, Assoc::Left), 0),
-        (Op::infix(Rule::modulus, Assoc::Left), 0),
-        (Op::infix(Rule::power, Assoc::Right), 1),
+        (Op::infix(Rule::plus, Assoc::Left), true),
+        (Op::infix(Rule::minus, Assoc::Left), false),
+        (Op::infix(Rule::times, Assoc::Left), true),
+        (Op::infix(Rule::divide, Assoc::Left), false),
+        (Op::infix(Rule::modulus, Assoc::Left), false),
+        (Op::infix(Rule::power, Assoc::Right), true),
     ]);
 
     let pairs = CalculatorParser::parse(Rule::expression, "-12+3*(4-9)^3^2/9%7381");

@@ -300,13 +300,14 @@ pub struct ConstPrattParser<R: RuleType + 'static, const N: usize> {
 }
 
 impl<R: RuleType + 'static, const N: usize> ConstPrattParser<R, N> {
-    /// Create a `ConstPrattParser` from a static array of (`[`Op`]`, `u8`)
+    /// Create a `ConstPrattParser` from a static array of (`[`Op`]`, `bool`)
     /// pairs.
     ///
-    /// Just like [`PrattParser::op`], but for use in a `const` context. The `u8`
-    /// in each pair is a precedence delta relative to the previous operator:
-    /// use `0` to keep the same precedence, and `1` (or higher) to move to the
-    /// next precedence level. The first delta must be `0`.
+    /// Just like [`PrattParser::op`], but for use in a `const` context. The
+    /// `bool` in each pair tells whether the operator starts a new precedence
+    /// level (`true`) or shares the previous operator's level (`false`).
+    /// Levels are ordered from lowest to highest precedence; the first
+    /// operator must start a new level (`true`).
     ///
     /// # Example
     ///
@@ -315,22 +316,37 @@ impl<R: RuleType + 'static, const N: usize> ConstPrattParser<R, N> {
     /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     /// # enum Rule { expr, int, add, sub, mul, div, pow, neg, fac }
     /// static PRATT: ConstPrattParser<Rule, 7> = ConstPrattParser::new_const([
-    ///     (Op::infix(Rule::add, Assoc::Left), 0), // lowest precedence
-    ///     (Op::infix(Rule::sub, Assoc::Left), 0), // same precedence as add
-    ///     (Op::infix(Rule::mul, Assoc::Left), 1), // next precedence level
-    ///     (Op::infix(Rule::div, Assoc::Left), 0), // same precedence as mul
-    ///     (Op::infix(Rule::pow, Assoc::Right), 1),
-    ///     (Op::prefix(Rule::neg), 1),
-    ///     (Op::postfix(Rule::fac), 1), // highest precedence
+    ///     (Op::infix(Rule::add, Assoc::Left), true), // lowest precedence
+    ///     (Op::infix(Rule::sub, Assoc::Left), false), // same precedence as add
+    ///     (Op::infix(Rule::mul, Assoc::Left), true), // next precedence level
+    ///     (Op::infix(Rule::div, Assoc::Left), false), // same precedence as mul
+    ///     (Op::infix(Rule::pow, Assoc::Right), true),
+    ///     (Op::prefix(Rule::neg), true),
+    ///     (Op::postfix(Rule::fac), true), // highest precedence
     /// ]);
     /// ```
-    pub const fn new_const(ops: [(Op<R>, u8); N]) -> Self {
-        let mut internal_ops = [(ops[0].0.rule, ops[0].0.affix, PREC_STEP); N];
-        let mut prec = PREC_STEP;
-        let mut index = 1;
+    pub const fn new_const(ops: [(Op<R>, bool); N]) -> Self {
+        const {
+            assert!(N > 0, "ConstPrattParser requires at least one operator");
+        }
+        assert!(
+            ops[0].1,
+            "the first operator must start a new precedence level (`true`)"
+        );
+
+        // The initial values are dummies; every entry is overwritten below.
+        let mut internal_ops: [(R, Affix, Prec); N] = [(ops[0].0.rule, Affix::Prefix, 0); N];
+        let mut prec = 0;
+        let mut index = 0;
         while index < N {
-            let (op, delta) = &ops[index];
-            prec += (*delta as Prec) * PREC_STEP;
+            let (op, new_level) = &ops[index];
+            assert!(
+                op.next.is_none(),
+                "chained operators (created with `|`) are not supported in ConstPrattParser"
+            );
+            if *new_level {
+                prec += PREC_STEP;
+            }
             internal_ops[index] = (op.rule, op.affix, prec);
             index += 1;
         }
@@ -523,6 +539,11 @@ where
 /// the same precedence, separated by `|`. Levels are separated by `,`; later
 /// levels bind more tightly than earlier ones.
 ///
+/// Each operator must be written as a two-segment call, for example
+/// `Op::infix(Rule::add, Assoc::Left)`. Fully qualified paths and turbofish
+/// forms are not accepted, because a macro matcher cannot follow an
+/// expression fragment with `|`. Import `Op` and use the short form.
+///
 /// # Example
 ///
 /// ```
@@ -537,20 +558,37 @@ where
 ///     Op::postfix(Rule::fac),
 /// ]);
 /// ```
+///
+/// Fully qualified paths are rejected with a compile error:
+///
+/// ```compile_fail
+/// # use pest::pratt_parser::{Assoc, ConstPrattParser, pratt_precedence};
+/// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+/// # enum Rule { expr, int, add, sub }
+/// static PRATT: ConstPrattParser<Rule, 2> = ConstPrattParser::new_const(pratt_precedence![
+///     pest::pratt_parser::Op::infix(Rule::add, Assoc::Left)
+///         | pest::pratt_parser::Op::infix(Rule::sub, Assoc::Left),
+/// ]);
+/// ```
 #[macro_export]
 macro_rules! pratt_precedence {
+    // Operators must use a two-segment path: `Op::infix(args)`.
     (
-        $first_head:ident :: $first_tail:ident $first_args:tt
-        $( | $head:ident :: $tail:ident $args:tt )*
-        $(, $next_head:ident :: $next_tail:ident $next_args:tt
-            $( | $next_rest_head:ident :: $next_rest_tail:ident $next_rest_args:tt )*
-        )* $(,)?
-    ) => {[
-        ( $first_head :: $first_tail $first_args, 0u8 )
-        $(, ( $head :: $tail $args, 0u8 ) )*
-        $(,
-            ( $next_head :: $next_tail $next_args, 1u8 )
-            $(, ( $next_rest_head :: $next_rest_tail $next_rest_args, 0u8 ) )*
-        )*
-    ]};
+        $(
+            $first_head:ident :: $first_tail:ident $first_args:tt
+            $( | $head:ident :: $tail:ident $args:tt )*
+        ),* $(,)?
+    ) => {
+        [$(
+            ( $first_head :: $first_tail $first_args, true )
+            $(, ( $head :: $tail $args, false ) )*
+        ),*]
+    };
+    ($($t:tt)*) => {
+        compile_error!(
+            "unsupported operator syntax in `pratt_precedence!`: \
+             each operator must be a two-segment call like `Op::infix(Rule::add, Assoc::Left)`; \
+             fully qualified paths and turbofish forms are not accepted"
+        )
+    };
 }

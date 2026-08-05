@@ -88,7 +88,7 @@ fn build_runtime() -> PrattParser<Rule> {
 }
 
 fn build_const() -> ConstPrattParser<Rule, 30> {
-    ConstPrattParser::new_const(from_fn(|i| (Op::infix(RULES[i], Assoc::Left), 0)))
+    ConstPrattParser::new_const(from_fn(|i| (Op::infix(RULES[i], Assoc::Left), true)))
 }
 
 fn benchmark(b: &mut Criterion) {
