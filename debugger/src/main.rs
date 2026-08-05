@@ -27,6 +27,7 @@ use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
 use rustyline::hint::{Hinter, HistoryHinter};
+use rustyline::history::DefaultHistory;
 use rustyline::validate::Validator;
 use rustyline::{Editor, Helper};
 
@@ -342,7 +343,7 @@ impl CliArgs {
 }
 
 fn main() -> rustyline::Result<()> {
-    let mut rl = Editor::<CliHelper>::new()?;
+    let mut rl = Editor::<CliHelper, DefaultHistory>::new()?;
     let mut context = Cli::default();
     let cli_args = CliArgs::default();
 
@@ -387,7 +388,9 @@ fn main() -> rustyline::Result<()> {
     loop {
         match rl.readline("> ") {
             Ok(line) => {
-                rl.add_history_entry(line.clone());
+                if let Err(err) = rl.add_history_entry(line.clone()) {
+                    eprintln!("Error adding history entry: {}", err);
+                }
                 if let Err(err) = context.execute_command(line.trim()) {
                     println!("Error: {}", err);
                 }
