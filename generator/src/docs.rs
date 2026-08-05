@@ -61,15 +61,13 @@ pub fn consume(pairs: Pairs<'_, Rule>) -> DocComment {
                                 line_doc.push('\n');
                             }
                         }
-                        Rule::identifier => {
-                            if !line_doc.is_empty() {
-                                let rule_name = inner.as_str().to_owned();
+                        Rule::identifier if !line_doc.is_empty() => {
+                            let rule_name = inner.as_str().to_owned();
 
-                                // Remove last \n
-                                line_doc.pop();
-                                line_docs.insert(rule_name, line_doc.clone());
-                                line_doc.clear();
-                            }
+                            // Remove last \n
+                            line_doc.pop();
+                            line_docs.insert(rule_name, line_doc.clone());
+                            line_doc.clear();
                         }
                         _ => (),
                     }
