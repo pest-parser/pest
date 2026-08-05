@@ -11,8 +11,10 @@ extern crate pest_derive;
 
 #[cfg(feature = "grammar-extras")]
 use pest::Parser;
+#[cfg(feature = "grammar-extras")]
 use pest_derive::Parser;
 
+#[cfg(feature = "grammar-extras")]
 #[derive(Parser)]
 #[grammar = "../tests/implicit.pest"]
 struct TestImplicitParser;

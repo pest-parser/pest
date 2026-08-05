@@ -11,7 +11,7 @@ extern crate alloc;
 #[cfg(not(feature = "std"))]
 use alloc::{format, vec, vec::Vec};
 
-#[macro_use]
+#[cfg_attr(feature = "grammar-extras", macro_use)]
 extern crate pest;
 extern crate pest_derive;
 
