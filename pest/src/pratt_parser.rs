@@ -304,9 +304,9 @@ impl<R: RuleType + 'static, const N: usize> ConstPrattParser<R, N> {
     /// pairs.
     ///
     /// Just like [`PrattParser::op`], but for use in a `const` context. The `u8`
-    /// in each pair is a precedence delta: use `0` to keep the same precedence
-    /// as the previous operator, and `1` (or higher) to move to the next
-    /// precedence level. The first delta should be `0`.
+    /// in each pair is a precedence delta relative to the previous operator:
+    /// use `0` to keep the same precedence, and `1` (or higher) to move to the
+    /// next precedence level. The first delta must be `0`.
     ///
     /// # Example
     ///
@@ -359,12 +359,12 @@ impl<R: RuleType + 'static, const N: usize> ConstPrattParser<R, N> {
 
     #[inline]
     fn get(&self, rule: &R) -> Option<(Affix, Prec)> {
-        let mut i = 0;
-        while i < N {
+        let mut i = N;
+        while i > 0 {
+            i -= 1;
             if self.ops[i].0 == *rule {
                 return Some((self.ops[i].1, self.ops[i].2));
             }
-            i += 1;
         }
         None
     }
@@ -540,14 +540,17 @@ where
 #[macro_export]
 macro_rules! pratt_precedence {
     (
-        $(
-            $first_head:ident :: $first_tail:ident $first_args:tt
-            $( | $head:ident :: $tail:ident $args:tt )*
-        ),* $(,)?
-    ) => {[$(
-        ( $first_head :: $first_tail $first_args, 1u8 ),
-        $(
-            ( $head :: $tail $args, 0u8 ),
+        $first_head:ident :: $first_tail:ident $first_args:tt
+        $( | $head:ident :: $tail:ident $args:tt )*
+        $(, $next_head:ident :: $next_tail:ident $next_args:tt
+            $( | $next_rest_head:ident :: $next_rest_tail:ident $next_rest_args:tt )*
+        )* $(,)?
+    ) => {[
+        ( $first_head :: $first_tail $first_args, 0u8 )
+        $(, ( $head :: $tail $args, 0u8 ) )*
+        $(,
+            ( $next_head :: $next_tail $next_args, 1u8 )
+            $(, ( $next_rest_head :: $next_rest_tail $next_rest_args, 0u8 ) )*
         )*
-    )*]};
+    ]};
 }
