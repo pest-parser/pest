@@ -31,3 +31,7 @@ path = "fuzz_targets/json.rs"
 [[bin]]
 name = "toml"
 path = "fuzz_targets/toml.rs"
+
+[[bin]]
+name = "sql"
+path = "fuzz_targets/sql.rs"
