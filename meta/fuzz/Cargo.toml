@@ -4,6 +4,7 @@ version = "0.0.0"
 authors = ["Automatically generated"]
 publish = false
 rust-version = "1.83"
+edition = "2021"
 
 [package.metadata]
 cargo-fuzz = true

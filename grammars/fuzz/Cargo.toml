@@ -4,6 +4,7 @@ version = "0.0.0"
 authors = ["Automatically generated"]
 publish = false
 rust-version = "1.83"
+edition = "2021"
 
 [package.metadata]
 cargo-fuzz = true
@@ -30,3 +31,7 @@ path = "fuzz_targets/json.rs"
 [[bin]]
 name = "toml"
 path = "fuzz_targets/toml.rs"
+
+[[bin]]
+name = "sql"
+path = "fuzz_targets/sql.rs"
