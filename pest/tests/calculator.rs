@@ -12,7 +12,7 @@ extern crate pest;
 
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
-use pest::pratt_parser::{Assoc, Op, PrattParser};
+use pest::pratt_parser::{Assoc, ConstPrattParser, Op, PrattParser};
 use pest::{state, ParseResult, Parser, ParserState};
 
 #[allow(dead_code, non_camel_case_types)]
@@ -116,6 +116,7 @@ impl Parser<Rule> for CalculatorParser {
 #[allow(deprecated)]
 enum PrattOrPrecClimber<'a> {
     Pratt(&'a PrattParser<Rule>),
+    ConstPratt(&'a ConstPrattParser<Rule, 6>),
     PrecClimber(&'a pest::prec_climber::PrecClimber<Rule>),
 }
 
@@ -134,6 +135,10 @@ fn consume(pair: Pair<Rule>, pratt_or_climber: &PrattOrPrecClimber) -> i32 {
     #[allow(deprecated)]
     match (pair.as_rule(), pratt_or_climber) {
         (Rule::expression, PrattOrPrecClimber::Pratt(pratt)) => pratt
+            .map_primary(primary)
+            .map_infix(infix)
+            .parse(pair.into_inner()),
+        (Rule::expression, PrattOrPrecClimber::ConstPratt(pratt)) => pratt
             .map_primary(primary)
             .map_infix(infix)
             .parse(pair.into_inner()),
@@ -240,6 +245,49 @@ fn pratt_parse() {
         consume(
             pairs.unwrap().next().unwrap(),
             &PrattOrPrecClimber::Pratt(&pratt)
+        )
+    );
+}
+
+#[test]
+fn const_pratt_parse() {
+    static PRATT: ConstPrattParser<Rule, 6> = ConstPrattParser::new_const([
+        (Op::infix(Rule::plus, Assoc::Left), true),
+        (Op::infix(Rule::minus, Assoc::Left), false),
+        (Op::infix(Rule::times, Assoc::Left), true),
+        (Op::infix(Rule::divide, Assoc::Left), false),
+        (Op::infix(Rule::modulus, Assoc::Left), false),
+        (Op::infix(Rule::power, Assoc::Right), true),
+    ]);
+
+    let pairs = CalculatorParser::parse(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
+    assert_eq!(
+        -1_525,
+        consume(
+            pairs.unwrap().next().unwrap(),
+            &PrattOrPrecClimber::ConstPratt(&PRATT)
+        )
+    );
+}
+
+#[test]
+fn const_pratt_macro_parse() {
+    use pest::pratt_parser::pratt_precedence;
+
+    static PRATT: ConstPrattParser<Rule, 6> = ConstPrattParser::new_const(pratt_precedence![
+        Op::infix(Rule::plus, Assoc::Left) | Op::infix(Rule::minus, Assoc::Left),
+        Op::infix(Rule::times, Assoc::Left)
+            | Op::infix(Rule::divide, Assoc::Left)
+            | Op::infix(Rule::modulus, Assoc::Left),
+        Op::infix(Rule::power, Assoc::Right),
+    ]);
+
+    let pairs = CalculatorParser::parse(Rule::expression, "-12+3*(4-9)^3^2/9%7381");
+    assert_eq!(
+        -1_525,
+        consume(
+            pairs.unwrap().next().unwrap(),
+            &PrattOrPrecClimber::ConstPratt(&PRATT)
         )
     );
 }
