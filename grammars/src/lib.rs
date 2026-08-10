@@ -116,9 +116,14 @@ mod tests {
         let s1 = json::JsonParser::parse(json::Rule::json, sample1);
         assert!(s1.is_err());
         assert_eq!(s1.unwrap_err().variant.message(), ERROR);
+        // sample2 is still parsed to check it neither hangs nor panics, but the
+        // grammar now rejects it on an unescaped newline before it reaches the
+        // `escape ~ inner` recursion, so that recursion is covered explicitly.
         let s2 = json::JsonParser::parse(json::Rule::json, sample2);
         assert!(s2.is_err());
-        assert_eq!(s2.unwrap_err().variant.message(), ERROR);
+        let escapes = format!("\"{}\"", "\\\\".repeat(6000));
+        let s3 = json::JsonParser::parse(json::Rule::json, &escapes);
+        assert_eq!(s3.unwrap_err().variant.message(), ERROR);
     }
 
     #[test]

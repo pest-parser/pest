@@ -100,6 +100,18 @@ fn string_with_escapes() {
 }
 
 #[test]
+fn string_rejects_unescaped_control_characters() {
+    // RFC 8259 section 7: U+0000 through U+001F must be escaped.
+    for input in ["\"\u{0}\"", "\"\t\"", "\"\u{1f}\""] {
+        assert!(
+            JsonParser::parse(Rule::json, input).is_err(),
+            "expected {:?} to be rejected",
+            input
+        );
+    }
+}
+
+#[test]
 fn array_empty() {
     parses_to! {
         parser: JsonParser,
