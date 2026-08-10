@@ -59,7 +59,7 @@ is the fuzzing target to run:
 Additionally, you can run the fuzz target together with its dictionary with the following command:
 
 ```sh
-> cargo fuzz run [target] -- -dict=grammars/fuzz/dict/[target].dict
+> cargo fuzz run [target] -- -dict=fuzz/dict/[target].dict 
 ```
 
 The path is relative to the directory you run the command from. libFuzzer
