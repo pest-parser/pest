@@ -24,11 +24,14 @@ There is a single fuzzing target for this crate that interacts with
 - `http`
 - `toml`
 - `json`
+- `sql`
 
-There are three fuzzing targets for this crate: one tests the http request grammar in the `http` module, one tests the json grammar in the
-`json` module and the last one tests the toml grammar in the `toml` module. They
-interact directly with the `pest::Parser::parse` function provided by derived
+There are four fuzzing targets for this crate: one tests the http request grammar in the `http` module, one tests the json grammar in the `json` module, one tests the toml grammar in the `toml` module, and the last one tests the sql grammar in the `sql` module. They interact directly with the `pest::Parser::parse` function provided by derived
 on the respective Parsers in each module.
+
+## Dictionaries
+
+Dictionaries of syntax tokens for the `pest_grammars` fuzz targets live in `grammars/fuzz/dict`. Passing one dictionary to libFuzzer lets it splice whole keywords and punctuation into inputs instead of rediscovering them one byte at a time.
 
 ## Running a target
 
@@ -52,6 +55,15 @@ is the fuzzing target to run:
 > When compiling the fuzzing crate for the first time, it fails with an error
 > about the lack of the dynamic library `proc_macro` (at least on macOS). To fix
 > this error, simply run `cargo fuzz` again.
+
+Additionally, you can run the fuzz target together with its dictionary with the following command:
+
+```sh
+> cargo fuzz run [target] -- -dict=fuzz/dict/[target].dict 
+```
+
+The path is relative to the directory you run the command from. libFuzzer
+reports how many entries it loaded at startup.
 
 For more information, run `cargo fuzz -h` or check out the `cargo-fuzz`
 project linked above.
