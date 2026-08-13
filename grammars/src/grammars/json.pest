@@ -26,7 +26,7 @@ array = { "[" ~ value ~ ("," ~ value)* ~ "]" | "[" ~ "]" }
 value = { string | number | object | array | bool | null }
 
 string  = @{ "\"" ~ inner ~ "\"" }
-inner   = @{ (!("\"" | "\\") ~ ANY)* ~ (escape ~ inner)? }
+inner   = @{ (!("\"" | "\\" | '\u{0000}'..'\u{001F}') ~ ANY)* ~ (escape ~ inner)? }
 escape  = @{ "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t" | unicode) }
 unicode = @{ "u" ~ ASCII_HEX_DIGIT{4} }
 
