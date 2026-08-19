@@ -430,6 +430,7 @@ impl<R: RuleType> Error<R> {
         rule_to_message: &RuleToMessageFn<R>,
         is_whitespace: &IsWhitespaceFn,
     ) -> Option<Error<R>> {
+        #[allow(clippy::question_mark)]
         let attempts = if let Some(ref parse_attempts) = self.inner.parse_attempts {
             parse_attempts.clone()
         } else {

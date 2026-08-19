@@ -598,7 +598,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<E
                         ErrorVariant::CustomError {
                             message: format!(
                                 "{} cannot fail and will repeat infinitely",
-                                &rule.name
+                                rule.name
                             ),
                         },
                         rule.node.span,
@@ -608,7 +608,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<E
                         ErrorVariant::CustomError {
                             message: format!(
                                 "{} is non-progressing and will repeat infinitely",
-                                &rule.name
+                                rule.name
                             ),
                         },
                         rule.node.span,
