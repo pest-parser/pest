@@ -96,7 +96,7 @@ jobs:
         with:
           kind: msrv
           tools: cargo-msrv
-          toolchain: 1.83.0 # needed for the `icu_*` crates in pest_debugger
+          toolchain: 1.83.0 # validates the 1.83.0 MSRV with minimal dependency versions
       - name: Check msrv
         shell: sh
         run: for crate in "derive" "generator" "grammars" "meta" "pest" "vm"; do cd "$crate" && cargo minimal-versions check && cd ..; done
