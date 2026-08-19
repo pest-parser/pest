@@ -610,7 +610,7 @@ mod tests {
 
         #[rustfmt::skip]
         assert_eq!(
-            format!("{:?}", pairs),
+            format!("{pairs:?}"),
             "[\
                 Pair { rule: a, span: Span { str: \"abc\", range: 0..3 }, inner: [\
                     Pair { rule: b, span: Span { str: \"b\", range: 1..2 }, inner: [] }\
@@ -625,9 +625,9 @@ mod tests {
     fn pairs_display() {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
-        assert_eq!(format!("{}", pairs), "[abc, e]".to_owned());
+        assert_eq!(format!("{pairs}"), "[abc, e]".to_owned());
         assert_eq!(
-            format!("{:#}", pairs),
+            format!("{pairs:#}"),
             "[a(0, 3, [b(1, 2)]), c(4, 5)]".to_owned()
         );
     }

@@ -81,7 +81,7 @@ fn main() {
             Err(e) => eprintln!("\n{}", e),
             // To print miette errors, use Debug formatting.
             #[cfg(feature = "miette-error")]
-            Err(e) => eprintln!("\n{:?}", e),
+            Err(e) => eprintln!("\n{e:?}"),
         };
     }
 }

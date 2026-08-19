@@ -149,7 +149,7 @@ impl<R: RuleType> ParseAttempts<R> {
                     if token.is_whitespace(is_whitespace_fn) {
                         String::from("WHITESPACE")
                     } else {
-                        format!("`{}`", token)
+                        format!("`{token}`")
                     }
                 })
                 .collect();
@@ -521,7 +521,7 @@ impl<R: RuleType> Error<R> {
             LineColLocation::Span((start_line, _), (end_line, _)) => cmp::max(start_line, end_line),
         };
 
-        let line_str_len = format!("{}", line).len();
+        let line_str_len = format!("{line}").len();
 
         let mut spacing = String::new();
         for _ in 0..line_str_len {
@@ -608,7 +608,7 @@ impl<R: RuleType> Error<R> {
                     .map(f)
                     .collect::<Vec<_>>()
                     .join(", ");
-                format!("{}, or {}", separated, non_separated)
+                format!("{separated}, or {non_separated}")
             }
         }
     }
@@ -619,7 +619,7 @@ impl<R: RuleType> Error<R> {
             .inner
             .path
             .as_ref()
-            .map(|path| format!("{}:", path))
+            .map(|path| format!("{path}:"))
             .unwrap_or_default();
 
         let pair = (self.line_col.clone(), &self.inner.continued_line);
@@ -722,7 +722,7 @@ impl<R: RuleType> ErrorVariant<R> {
                 ref positives,
                 ref negatives,
             } => Cow::Owned(Error::parsing_error_message(positives, negatives, |r| {
-                format!("{:?}", r)
+                format!("{r:?}")
             })),
             ErrorVariant::CustomError { ref message } => Cow::Borrowed(message),
         }
@@ -820,7 +820,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> 2:2",
                 "  |",
@@ -846,7 +846,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> 2:2",
                 "  |",
@@ -872,7 +872,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> 2:2",
                 "  |",
@@ -898,7 +898,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> 2:2",
                 "  |",
@@ -923,7 +923,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> 2:2",
                 "  |",
@@ -949,7 +949,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> 2:2",
                 "  |",
@@ -976,7 +976,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> 1:2",
                 "  |",
@@ -1004,7 +1004,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> 1:6",
                 "  |",
@@ -1034,7 +1034,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> 1:1",
                 "  |",
@@ -1063,7 +1063,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> 1:1",
                 "  |",
@@ -1090,7 +1090,7 @@ mod tests {
         .renamed_rules(|n| format!("{}", n + 1));
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> 2:2",
                 "  |",
@@ -1117,7 +1117,7 @@ mod tests {
         .with_path("file.rs");
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> file.rs:2:2",
                 "  |",
@@ -1144,7 +1144,7 @@ mod tests {
         .with_path("file.rs");
 
         assert_eq!(
-            format!("{}", error),
+            format!("{error}"),
             [
                 " --> file.rs:1:3",
                 "  |",
@@ -1199,7 +1199,7 @@ mod tests {
         let miette_error = miette::Error::new(error.into_miette());
 
         assert_eq!(
-            format!("{:?}", miette_error),
+            format!("{miette_error:?}"),
             [
                 "  \u{1b}[31m×\u{1b}[0m Failure to parse at Pos((2, 1))",
                 "   ╭────",

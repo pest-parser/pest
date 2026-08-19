@@ -80,11 +80,7 @@ mod tests {
             assert_eq!(
                 (res.0, res.1),
                 (line, col),
-                "Expected: ({}, {}, {}, {:?})",
-                offset,
-                line,
-                col,
-                c
+                "Expected: ({offset}, {line}, {col}, {c:?})"
             );
         }
     }

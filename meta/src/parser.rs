@@ -251,7 +251,7 @@ pub fn rename_meta_rule(rule: &Rule) -> String {
         Rule::single_quote => "`'`".to_owned(),
         Rule::grammar_doc => "//!".to_owned(),
         Rule::line_doc => "///".to_owned(),
-        other_rule => format!("{:?}", other_rule),
+        other_rule => format!("{other_rule:?}"),
     }
 }
 

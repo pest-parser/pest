@@ -347,7 +347,7 @@ impl<R: RuleType> fmt::Display for Pair<'_, R> {
             let mut pairs = self.clone().into_inner().peekable();
 
             if pairs.peek().is_none() {
-                write!(f, "{:?}({}, {})", rule, start, end)
+                write!(f, "{rule:?}({start}, {end})")
             } else {
                 write!(
                     f,
@@ -356,7 +356,7 @@ impl<R: RuleType> fmt::Display for Pair<'_, R> {
                     start,
                     end,
                     pairs
-                        .map(|pair| format!("{:#}", pair))
+                        .map(|pair| format!("{pair:#}"))
                         .collect::<Vec<_>>()
                         .join(", ")
                 )
@@ -473,7 +473,7 @@ mod tests {
     #[test]
     fn alternate_format() {
         let pair = AbcParser::parse(Rule::a, "abcde").unwrap().next().unwrap();
-        assert_eq!(format!("{}", pair), "abc".to_owned());
-        assert_eq!(format!("{:#}", pair), "a(0, 3, [b(1, 2)])".to_owned());
+        assert_eq!(format!("{pair}"), "abc".to_owned());
+        assert_eq!(format!("{pair:#}"), "a(0, 3, [b(1, 2)])".to_owned());
     }
 }
