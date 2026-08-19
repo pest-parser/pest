@@ -311,7 +311,7 @@ impl DebuggerContext {
             }
             handle
                 .join()
-                .map_err(|e| DebuggerError::PreviousRunPanic(format!("{:?}", e)))?;
+                .map_err(|e| DebuggerError::PreviousRunPanic(format!("{e:?}")))?;
         }
 
         self.is_done.store(false, Ordering::SeqCst);

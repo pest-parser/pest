@@ -60,14 +60,14 @@ impl Cli {
             Ok(DebuggerEvent::Breakpoint(rule, pos)) => {
                 let error: Error<()> = Error::new_from_pos(
                     ErrorVariant::CustomError {
-                        message: format!("parsing {}", rule),
+                        message: format!("parsing {rule}"),
                     },
                     self.context.get_position(pos)?,
                 );
-                println!("{}", error);
+                println!("{error}");
             }
             Ok(DebuggerEvent::Eof) => println!("end-of-input reached"),
-            Ok(DebuggerEvent::Error(error)) => println!("{}", error),
+            Ok(DebuggerEvent::Error(error)) => println!("{error}"),
             Err(_) => eprintln!("parsing timed out"),
         }
         self.receiver = Some(receiver);
@@ -82,14 +82,14 @@ impl Cli {
                 Ok(DebuggerEvent::Breakpoint(rule, pos)) => {
                     let error: Error<()> = Error::new_from_pos(
                         ErrorVariant::CustomError {
-                            message: format!("parsing {}", rule),
+                            message: format!("parsing {rule}"),
                         },
                         self.context.get_position(pos)?,
                     );
-                    println!("{}", error);
+                    println!("{error}");
                 }
                 Ok(DebuggerEvent::Eof) => println!("end-of-input reached"),
-                Ok(DebuggerEvent::Error(error)) => println!("{}", error),
+                Ok(DebuggerEvent::Error(error)) => println!("{error}"),
                 Err(_) => eprintln!("parsing timed out"),
             },
             None => println!("Error: run rule first"),
@@ -123,7 +123,7 @@ impl Cli {
     }
 
     fn unrecognized(command: &str) {
-        println!("Unrecognized command: {}; use h for help", command);
+        println!("Unrecognized command: {command}; use h for help");
     }
 
     fn extract_arg(cmd: &str) -> Option<&str> {
@@ -307,7 +307,7 @@ impl Default for CliArgs {
                     std::process::exit(0);
                 }
                 arg => {
-                    eprintln!("Error: unexpected argument `{}`", arg);
+                    eprintln!("Error: unexpected argument `{arg}`");
                     unexpected_arg = true;
                 }
             }
@@ -323,12 +323,12 @@ impl CliArgs {
     fn init(self, context: &mut Cli) {
         if let Some(grammar_file) = self.grammar_file {
             if let Err(e) = context.grammar(grammar_file) {
-                eprintln!("Error: {}", e);
+                eprintln!("Error: {e}");
             }
         }
         if let Some(input_file) = self.input_file {
             if let Err(e) = context.input(input_file) {
-                eprintln!("Error: {}", e);
+                eprintln!("Error: {e}");
             }
         }
         for breakpoint in self.breakpoints {
@@ -336,7 +336,7 @@ impl CliArgs {
         }
         if let Some(rule) = self.rule {
             if let Err(e) = context.run(&rule) {
-                eprintln!("Error: {}", e);
+                eprintln!("Error: {e}");
             }
         }
     }
@@ -360,10 +360,7 @@ fn main() -> rustyline::Result<()> {
 
         if let Some(client) = client {
             if let Some(new_version) = check_for_updates(client) {
-                println!(
-                    "A new version of pest_debugger is available: v{}",
-                    new_version
-                );
+                println!("A new version of pest_debugger is available: v{new_version}");
             } else {
                 println!("pest_debugger is up to date.");
             }
@@ -375,10 +372,10 @@ fn main() -> rustyline::Result<()> {
         hinter: HistoryHinter {},
     };
     rl.set_helper(Some(h));
-    println!("pest_debugger v{}\n", VERSION);
+    println!("pest_debugger v{VERSION}\n");
     let historyfile = if let Some(session_file) = &cli_args.session_file {
         if let Err(e) = rl.load_history(session_file) {
-            eprintln!("Error loading history file: {}", e);
+            eprintln!("Error loading history file: {e}");
         }
         Some(session_file.clone())
     } else {
@@ -389,24 +386,24 @@ fn main() -> rustyline::Result<()> {
         match rl.readline("> ") {
             Ok(line) => {
                 if let Err(err) = rl.add_history_entry(line.clone()) {
-                    eprintln!("Error adding history entry: {}", err);
+                    eprintln!("Error adding history entry: {err}");
                 }
                 if let Err(err) = context.execute_command(line.trim()) {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
             Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => {
                 break;
             }
             Err(err) => {
-                println!("Error: {:?}", err);
+                println!("Error: {err:?}");
                 break;
             }
         }
     }
     if let Some(historyfile) = historyfile {
         if let Err(e) = rl.save_history(&historyfile) {
-            eprintln!("Error saving history file: {}", e);
+            eprintln!("Error saving history file: {e}");
         }
     }
     Ok(())

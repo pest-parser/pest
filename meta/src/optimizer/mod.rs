@@ -271,17 +271,17 @@ impl OptimizedExpr {
 impl core::fmt::Display for OptimizedExpr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            OptimizedExpr::Str(s) => write!(f, "{:?}", s),
-            OptimizedExpr::Insens(s) => write!(f, "^{:?}", s),
+            OptimizedExpr::Str(s) => write!(f, "{s:?}"),
+            OptimizedExpr::Insens(s) => write!(f, "^{s:?}"),
             OptimizedExpr::Range(start, end) => {
                 let start = start.chars().next().expect("Empty range start.");
                 let end = end.chars().next().expect("Empty range end.");
-                write!(f, "({:?}..{:?})", start, end)
+                write!(f, "({start:?}..{end:?})")
             }
-            OptimizedExpr::Ident(id) => write!(f, "{}", id),
+            OptimizedExpr::Ident(id) => write!(f, "{id}"),
             OptimizedExpr::PeekSlice(start, end) => match end {
-                Some(end) => write!(f, "PEEK[{}..{}]", start, end),
-                None => write!(f, "PEEK[{}..]", start),
+                Some(end) => write!(f, "PEEK[{start}..{end}]"),
+                None => write!(f, "PEEK[{start}..]"),
             },
             OptimizedExpr::PosPred(expr) => write!(f, "&{}", expr.as_ref()),
             OptimizedExpr::NegPred(expr) => write!(f, "!{}", expr.as_ref()),
@@ -296,10 +296,10 @@ impl core::fmt::Display for OptimizedExpr {
                 nodes.push(current);
                 let sequence = nodes
                     .iter()
-                    .map(|node| format!("{}", node))
+                    .map(|node| format!("{node}"))
                     .collect::<Vec<_>>()
                     .join(" ~ ");
-                write!(f, "({})", sequence)
+                write!(f, "({sequence})")
             }
             OptimizedExpr::Choice(lhs, rhs) => {
                 let mut nodes = Vec::new();
@@ -312,29 +312,29 @@ impl core::fmt::Display for OptimizedExpr {
                 nodes.push(current);
                 let sequence = nodes
                     .iter()
-                    .map(|node| format!("{}", node))
+                    .map(|node| format!("{node}"))
                     .collect::<Vec<_>>()
                     .join(" | ");
-                write!(f, "({})", sequence)
+                write!(f, "({sequence})")
             }
-            OptimizedExpr::Opt(expr) => write!(f, "{}?", expr),
-            OptimizedExpr::Rep(expr) => write!(f, "{}*", expr),
+            OptimizedExpr::Opt(expr) => write!(f, "{expr}?"),
+            OptimizedExpr::Rep(expr) => write!(f, "{expr}*"),
             #[cfg(feature = "grammar-extras")]
-            OptimizedExpr::RepOnce(expr) => write!(f, "{}+", expr),
+            OptimizedExpr::RepOnce(expr) => write!(f, "{expr}+"),
             OptimizedExpr::Skip(strings) => {
                 let strings = strings
                     .iter()
-                    .map(|s| format!("{:?}", s))
+                    .map(|s| format!("{s:?}"))
                     .collect::<Vec<_>>()
                     .join(" | ");
-                write!(f, "(!({}) ~ ANY)*", strings)
+                write!(f, "(!({strings}) ~ ANY)*")
             }
-            OptimizedExpr::Push(expr) => write!(f, "PUSH({})", expr),
+            OptimizedExpr::Push(expr) => write!(f, "PUSH({expr})"),
             #[cfg(feature = "grammar-extras")]
-            OptimizedExpr::PushLiteral(s) => write!(f, "PUSH_LITERAL({:?})", s),
+            OptimizedExpr::PushLiteral(s) => write!(f, "PUSH_LITERAL({s:?})"),
             #[cfg(feature = "grammar-extras")]
             OptimizedExpr::NodeTag(expr, tag) => {
-                write!(f, "(#{} = {})", tag, expr)
+                write!(f, "(#{tag} = {expr})")
             }
             OptimizedExpr::RestoreOnErr(expr) => core::fmt::Display::fmt(expr.as_ref(), f),
         }

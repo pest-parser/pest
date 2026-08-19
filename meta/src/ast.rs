@@ -260,17 +260,17 @@ impl Expr {
 impl core::fmt::Display for Expr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Expr::Str(s) => write!(f, "{:?}", s),
-            Expr::Insens(s) => write!(f, "^{:?}", s),
+            Expr::Str(s) => write!(f, "{s:?}"),
+            Expr::Insens(s) => write!(f, "^{s:?}"),
             Expr::Range(start, end) => {
                 let start = start.chars().next().expect("Empty range start.");
                 let end = end.chars().next().expect("Empty range end.");
-                write!(f, "({:?}..{:?})", start, end)
+                write!(f, "({start:?}..{end:?})")
             }
-            Expr::Ident(id) => write!(f, "{}", id),
+            Expr::Ident(id) => write!(f, "{id}"),
             Expr::PeekSlice(start, end) => match end {
-                Some(end) => write!(f, "PEEK[{}..{}]", start, end),
-                None => write!(f, "PEEK[{}..]", start),
+                Some(end) => write!(f, "PEEK[{start}..{end}]"),
+                None => write!(f, "PEEK[{start}..]"),
             },
             Expr::PosPred(expr) => write!(f, "&{}", expr.as_ref()),
             Expr::NegPred(expr) => write!(f, "!{}", expr.as_ref()),
@@ -285,10 +285,10 @@ impl core::fmt::Display for Expr {
                 nodes.push(current);
                 let sequence = nodes
                     .iter()
-                    .map(|node| format!("{}", node))
+                    .map(|node| format!("{node}"))
                     .collect::<Vec<_>>()
                     .join(" ~ ");
-                write!(f, "({})", sequence)
+                write!(f, "({sequence})")
             }
             Expr::Choice(lhs, rhs) => {
                 let mut nodes = Vec::new();
@@ -301,32 +301,32 @@ impl core::fmt::Display for Expr {
                 nodes.push(current);
                 let sequence = nodes
                     .iter()
-                    .map(|node| format!("{}", node))
+                    .map(|node| format!("{node}"))
                     .collect::<Vec<_>>()
                     .join(" | ");
-                write!(f, "({})", sequence)
+                write!(f, "({sequence})")
             }
-            Expr::Opt(expr) => write!(f, "{}?", expr),
-            Expr::Rep(expr) => write!(f, "{}*", expr),
-            Expr::RepOnce(expr) => write!(f, "{}+", expr),
-            Expr::RepExact(expr, n) => write!(f, "{}{{{}}}", expr, n),
-            Expr::RepMin(expr, min) => write!(f, "{}{{{},}}", expr, min),
-            Expr::RepMax(expr, max) => write!(f, "{}{{,{}}}", expr, max),
-            Expr::RepMinMax(expr, min, max) => write!(f, "{}{{{}, {}}}", expr, min, max),
+            Expr::Opt(expr) => write!(f, "{expr}?"),
+            Expr::Rep(expr) => write!(f, "{expr}*"),
+            Expr::RepOnce(expr) => write!(f, "{expr}+"),
+            Expr::RepExact(expr, n) => write!(f, "{expr}{{{n}}}"),
+            Expr::RepMin(expr, min) => write!(f, "{expr}{{{min},}}"),
+            Expr::RepMax(expr, max) => write!(f, "{expr}{{,{max}}}"),
+            Expr::RepMinMax(expr, min, max) => write!(f, "{expr}{{{min}, {max}}}"),
             Expr::Skip(strings) => {
                 let strings = strings
                     .iter()
-                    .map(|s| format!("{:?}", s))
+                    .map(|s| format!("{s:?}"))
                     .collect::<Vec<_>>()
                     .join(" | ");
-                write!(f, "(!({}) ~ ANY)*", strings)
+                write!(f, "(!({strings}) ~ ANY)*")
             }
-            Expr::Push(expr) => write!(f, "PUSH({})", expr),
+            Expr::Push(expr) => write!(f, "PUSH({expr})"),
             #[cfg(feature = "grammar-extras")]
-            Expr::PushLiteral(s) => write!(f, "PUSH_LITERAL({:?})", s),
+            Expr::PushLiteral(s) => write!(f, "PUSH_LITERAL({s:?})"),
             #[cfg(feature = "grammar-extras")]
             Expr::NodeTag(expr, tag) => {
-                write!(f, "(#{} = {})", tag, expr)
+                write!(f, "(#{tag} = {expr})")
             }
         }
     }

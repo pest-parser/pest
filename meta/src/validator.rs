@@ -130,7 +130,7 @@ pub fn validate_rust_keywords(definitions: &Vec<Span<'_>>) -> Vec<Error<Rule>> {
         if RUST_KEYWORDS.contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
-                    message: format!("{} is a rust keyword", name),
+                    message: format!("{name} is a rust keyword"),
                 },
                 *definition,
             ))
@@ -151,7 +151,7 @@ pub fn validate_pest_keywords(definitions: &Vec<Span<'_>>) -> Vec<Error<Rule>> {
         if PEST_KEYWORDS.contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
-                    message: format!("{} is a pest keyword", name),
+                    message: format!("{name} is a pest keyword"),
                 },
                 *definition,
             ))
@@ -173,7 +173,7 @@ pub fn validate_already_defined(definitions: &Vec<Span<'_>>) -> Vec<Error<Rule>>
         if defined.contains(&name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
-                    message: format!("rule {} already defined", name),
+                    message: format!("rule {name} already defined"),
                 },
                 *definition,
             ))
@@ -200,7 +200,7 @@ pub fn validate_undefined<'i>(
         if !definitions.contains(name) && !BUILTINS.contains(name) {
             errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
-                    message: format!("rule {} is undefined", name),
+                    message: format!("rule {name} is undefined"),
                 },
                 *rule,
             ))
@@ -598,7 +598,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<E
                         ErrorVariant::CustomError {
                             message: format!(
                                 "{} cannot fail and will repeat infinitely",
-                                &rule.name
+                                rule.name
                             ),
                         },
                         rule.node.span,
@@ -608,7 +608,7 @@ fn validate_whitespace_comment<'a, 'i: 'a>(rules: &'a [ParserRule<'i>]) -> Vec<E
                         ErrorVariant::CustomError {
                             message: format!(
                                 "{} is non-progressing and will repeat infinitely",
-                                &rule.name
+                                rule.name
                             ),
                         },
                         rule.node.span,

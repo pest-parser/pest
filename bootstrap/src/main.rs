@@ -34,5 +34,5 @@ fn main() {
     ));
     let mut file = File::create(rs).unwrap();
 
-    writeln!(file, "pub struct PestParser;\n{}", derived).unwrap();
+    writeln!(file, "pub struct PestParser;\n{derived}").unwrap();
 }

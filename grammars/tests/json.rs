@@ -105,8 +105,7 @@ fn string_rejects_unescaped_control_characters() {
     for input in ["\"\u{0}\"", "\"\t\"", "\"\u{1f}\""] {
         assert!(
             JsonParser::parse(Rule::json, input).is_err(),
-            "expected {:?} to be rejected",
-            input
+            "expected {input:?} to be rejected"
         );
     }
 }

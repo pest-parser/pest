@@ -42,8 +42,8 @@ where
         panic!(
             "{}{}",
             "grammar error\n\n".to_owned(),
-            &e.into_iter()
-                .map(|error| format!("{}", error))
+            e.into_iter()
+                .map(|error| format!("{error}"))
                 .collect::<Vec<_>>()
                 .join("\n\n")
         )

@@ -23,6 +23,6 @@ fn main() {
         .into_inner()
         .filter(|pair| Rule::Command == pair.as_rule())
         .for_each(|pair| {
-            println!("{:#?}", pair);
+            println!("{pair:#?}");
         });
 }

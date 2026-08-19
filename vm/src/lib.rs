@@ -175,7 +175,7 @@ impl Vm {
                 return state.match_char_by(property);
             }
 
-            panic!("undefined rule {}", rule);
+            panic!("undefined rule {rule}");
         }
     }
 

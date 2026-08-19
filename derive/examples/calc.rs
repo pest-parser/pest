@@ -23,19 +23,19 @@ fn parse_to_str(pairs: Pairs<Rule>, pratt: &PrattParser<Rule>) -> String {
             _ => unreachable!(),
         })
         .map_prefix(|op, rhs| match op.as_rule() {
-            Rule::neg => format!("(-{})", rhs),
+            Rule::neg => format!("(-{rhs})"),
             _ => unreachable!(),
         })
         .map_postfix(|lhs, op| match op.as_rule() {
-            Rule::fac => format!("({}!)", lhs),
+            Rule::fac => format!("({lhs}!)"),
             _ => unreachable!(),
         })
         .map_infix(|lhs, op, rhs| match op.as_rule() {
-            Rule::add => format!("({}+{})", lhs, rhs),
-            Rule::sub => format!("({}-{})", lhs, rhs),
-            Rule::mul => format!("({}*{})", lhs, rhs),
-            Rule::div => format!("({}/{})", lhs, rhs),
-            Rule::pow => format!("({}^{})", lhs, rhs),
+            Rule::add => format!("({lhs}+{rhs})"),
+            Rule::sub => format!("({lhs}-{rhs})"),
+            Rule::mul => format!("({lhs}*{rhs})"),
+            Rule::div => format!("({lhs}/{rhs})"),
+            Rule::pow => format!("({lhs}^{rhs})"),
             _ => unreachable!(),
         })
         .parse(pairs)
@@ -98,12 +98,12 @@ fn main() {
                     .into_inner() // inner of expr
             }
             Err(err) => {
-                println!("Failed parsing input: {:}", err);
+                println!("Failed parsing input: {err:}");
                 continue;
             }
         };
 
-        print!("{} => ", source);
+        print!("{source} => ");
         print!("{} => ", parse_to_str(pairs.clone(), &pratt));
         println!("{}", parse_to_i32(pairs.clone(), &pratt));
     }

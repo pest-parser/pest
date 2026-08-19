@@ -89,7 +89,7 @@ pub fn derive_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
 
                 let data = match read_file(&path) {
                     Ok(data) => data,
-                    Err(error) => panic!("error opening {:?}: {}", file_name, error),
+                    Err(error) => panic!("error opening {file_name:?}: {error}"),
                 };
                 (data, Some(path.clone()))
             }
@@ -163,9 +163,7 @@ mod tests {
 
         assert!(
             token.to_string().contains(expected.to_string().as_str()),
-            "{}\n\nExpected to contains:\n{}",
-            token,
-            expected
+            "{token}\n\nExpected to contains:\n{expected}"
         );
     }
 }
