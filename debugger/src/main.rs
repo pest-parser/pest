@@ -360,9 +360,7 @@ fn main() -> rustyline::Result<()> {
 
         if let Some(client) = client {
             if let Some(new_version) = check_for_updates(client) {
-                println!(
-                    "A new version of pest_debugger is available: v{new_version}"
-                );
+                println!("A new version of pest_debugger is available: v{new_version}");
             } else {
                 println!("pest_debugger is up to date.");
             }
