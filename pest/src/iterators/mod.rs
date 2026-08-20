@@ -13,11 +13,13 @@ mod flat_pairs;
 mod line_index;
 mod pair;
 pub(crate) mod pairs;
+mod pairs_builder;
 mod queueable_token;
 mod tokens;
 
 pub use self::flat_pairs::FlatPairs;
 pub use self::pair::Pair;
 pub use self::pairs::Pairs;
+pub use self::pairs_builder::PairsBuilder;
 pub(crate) use self::queueable_token::QueueableToken;
 pub use self::tokens::Tokens;
