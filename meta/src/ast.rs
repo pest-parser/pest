@@ -257,15 +257,64 @@ impl Expr {
     }
 }
 
+/// Writes `string` as a pest string or character literal delimited by `quote`.
+///
+/// `{:?}` cannot be used directly: for `U+0001..=U+000F` it emits the single-hex-digit form
+/// `\u{1}`, and pest's own `unicode` rule is `"u" ~ "{" ~ hex_digit{2, 6} ~ "}"`, so that form
+/// is not valid pest. Everything else is escaped exactly as `{:?}` escapes it, which is what
+/// keeps control characters out of generated doc comments.
+pub(crate) fn fmt_literal(
+    f: &mut core::fmt::Formatter<'_>,
+    string: &str,
+    quote: char,
+) -> core::fmt::Result {
+    write!(f, "{quote}")?;
+    for c in string.chars() {
+        match c {
+            _ if c == quote => write!(f, "\\{c}")?,
+            // The delimiter that is not in use needs no escape, just as `{:?}` leaves `'`
+            // alone inside a string and `"` alone inside a character.
+            '\'' | '"' => write!(f, "{c}")?,
+            '\u{1}'..='\u{8}' | '\u{b}' | '\u{c}' | '\u{e}' | '\u{f}' => {
+                write!(f, "\\u{{{:02x}}}", c as u32)?
+            }
+            _ => write!(f, "{}", c.escape_debug())?,
+        }
+    }
+    write!(f, "{quote}")
+}
+
+impl Expr {
+    /// Renders `self` as the operand of a postfix operator (`?`, `*`, `+`, `{n}`, ...).
+    ///
+    /// pest binds postfix operators tighter than the `&` and `!` prefixes, so a predicate
+    /// operand has to be parenthesised: without this, `Opt(NegPred(e))` would print as `!e?`,
+    /// which re-parses as `NegPred(Opt(e))` — a rule that always succeeds turned into one that
+    /// always fails.
+    fn as_postfix_operand(&self) -> String {
+        match self {
+            Expr::PosPred(_) | Expr::NegPred(_) => format!("({self})"),
+            _ => format!("{self}"),
+        }
+    }
+}
+
 impl core::fmt::Display for Expr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Expr::Str(s) => write!(f, "{s:?}"),
-            Expr::Insens(s) => write!(f, "^{s:?}"),
+            Expr::Str(s) => fmt_literal(f, s, '"'),
+            Expr::Insens(s) => {
+                write!(f, "^")?;
+                fmt_literal(f, s, '"')
+            }
             Expr::Range(start, end) => {
                 let start = start.chars().next().expect("Empty range start.");
                 let end = end.chars().next().expect("Empty range end.");
-                write!(f, "({start:?}..{end:?})")
+                write!(f, "(")?;
+                fmt_literal(f, start.encode_utf8(&mut [0; 4]), '\'')?;
+                write!(f, "..")?;
+                fmt_literal(f, end.encode_utf8(&mut [0; 4]), '\'')?;
+                write!(f, ")")
             }
             Expr::Ident(id) => write!(f, "{id}"),
             Expr::PeekSlice(start, end) => match end {
@@ -306,24 +355,32 @@ impl core::fmt::Display for Expr {
                     .join(" | ");
                 write!(f, "({sequence})")
             }
-            Expr::Opt(expr) => write!(f, "{expr}?"),
-            Expr::Rep(expr) => write!(f, "{expr}*"),
-            Expr::RepOnce(expr) => write!(f, "{expr}+"),
-            Expr::RepExact(expr, n) => write!(f, "{expr}{{{n}}}"),
-            Expr::RepMin(expr, min) => write!(f, "{expr}{{{min},}}"),
-            Expr::RepMax(expr, max) => write!(f, "{expr}{{,{max}}}"),
-            Expr::RepMinMax(expr, min, max) => write!(f, "{expr}{{{min}, {max}}}"),
+            Expr::Opt(expr) => write!(f, "{}?", expr.as_postfix_operand()),
+            Expr::Rep(expr) => write!(f, "{}*", expr.as_postfix_operand()),
+            Expr::RepOnce(expr) => write!(f, "{}+", expr.as_postfix_operand()),
+            Expr::RepExact(expr, n) => write!(f, "{}{{{n}}}", expr.as_postfix_operand()),
+            Expr::RepMin(expr, min) => write!(f, "{}{{{min},}}", expr.as_postfix_operand()),
+            Expr::RepMax(expr, max) => write!(f, "{}{{,{max}}}", expr.as_postfix_operand()),
+            Expr::RepMinMax(expr, min, max) => {
+                write!(f, "{}{{{min}, {max}}}", expr.as_postfix_operand())
+            }
             Expr::Skip(strings) => {
-                let strings = strings
-                    .iter()
-                    .map(|s| format!("{s:?}"))
-                    .collect::<Vec<_>>()
-                    .join(" | ");
-                write!(f, "(!({strings}) ~ ANY)*")
+                write!(f, "(!(")?;
+                for (i, s) in strings.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " | ")?;
+                    }
+                    fmt_literal(f, s, '"')?;
+                }
+                write!(f, ") ~ ANY)*")
             }
             Expr::Push(expr) => write!(f, "PUSH({expr})"),
             #[cfg(feature = "grammar-extras")]
-            Expr::PushLiteral(s) => write!(f, "PUSH_LITERAL({s:?})"),
+            Expr::PushLiteral(s) => {
+                write!(f, "PUSH_LITERAL(")?;
+                fmt_literal(f, s, '"')?;
+                write!(f, ")")
+            }
             #[cfg(feature = "grammar-extras")]
             Expr::NodeTag(expr, tag) => {
                 write!(f, "(#{tag} = {expr})")
@@ -474,6 +531,73 @@ mod tests {
         fn peek_slice() {
             assert_eq!(Expr::PeekSlice(0, None).to_string(), "PEEK[0..]");
             assert_eq!(Expr::PeekSlice(0, Some(-1)).to_string(), "PEEK[0..-1]");
+        }
+
+        #[test]
+        fn postfix_over_predicate_is_parenthesised() {
+            // pest binds postfix operators tighter than `&` and `!`, so an unparenthesised
+            // `!e?` would re-parse as `NegPred(Opt(e))` instead of `Opt(NegPred(e))`.
+            let neg = || Box::new(Expr::NegPred(Box::new(Expr::Ident("e".to_owned()))));
+            let pos = || Box::new(Expr::PosPred(Box::new(Expr::Ident("e".to_owned()))));
+
+            assert_eq!(Expr::Opt(neg()).to_string(), "(!e)?");
+            assert_eq!(Expr::Rep(neg()).to_string(), "(!e)*");
+            assert_eq!(Expr::RepOnce(neg()).to_string(), "(!e)+");
+            assert_eq!(Expr::RepExact(neg(), 2).to_string(), "(!e){2}");
+            assert_eq!(Expr::RepMin(neg(), 2).to_string(), "(!e){2,}");
+            assert_eq!(Expr::RepMax(neg(), 2).to_string(), "(!e){,2}");
+            assert_eq!(Expr::RepMinMax(pos(), 2, 3).to_string(), "(&e){2, 3}");
+
+            // Non-predicate operands keep their unparenthesised form.
+            assert_eq!(
+                Expr::Opt(Box::new(Expr::Ident("e".to_owned()))).to_string(),
+                "e?"
+            );
+        }
+
+        #[test]
+        fn control_characters_use_a_two_digit_unicode_escape() {
+            // pest's own rule is `unicode = @{ "u" ~ "{" ~ hex_digit{2, 6} ~ "}" }`, so the
+            // single-digit form `{:?}` emits for U+0001..=U+000F is not valid pest.
+            assert_eq!(Expr::Str("\u{1}".to_owned()).to_string(), r#""\u{01}""#);
+            assert_eq!(Expr::Insens("\u{f}".to_owned()).to_string(), r#"^"\u{0f}""#);
+            assert_eq!(
+                Expr::Range("\u{1}".to_owned(), "\u{b}".to_owned()).to_string(),
+                r#"('\u{01}'..'\u{0b}')"#,
+            );
+            // The escapes `{:?}` already gets right are unchanged.
+            assert_eq!(
+                Expr::Str("\0\t\n\r\\\"".to_owned()).to_string(),
+                r#""\0\t\n\r\\\"""#
+            );
+            assert_eq!(Expr::Str("a'b".to_owned()).to_string(), r#""a'b""#);
+            assert_eq!(
+                Expr::Range("'".to_owned(), "\"".to_owned()).to_string(),
+                r#"('\''..'"')"#,
+            );
+        }
+
+        /// Every rule of every grammar below is printed and parsed back; the AST has to survive.
+        #[test]
+        fn display_round_trips_through_the_parser() {
+            use crate::parser::{consume_rules, parse, Rule as PRule};
+
+            let sources = [
+                r#"r = { (!"a")? ~ "b" }"#,
+                r#"r = { (&"a"){2, 3} }"#,
+                r#"r = @{ (!"a"){2} }"#,
+                r#"r = { "\u{0001}" ~ ^"\u{000b}" ~ '\u{0007}'..'\u{000f}' }"#,
+                r#"r = { PUSH("a") ~ PEEK[0..-1] ~ POP }"#,
+                r#"r = { ("a" ~ "b") | ("a" ~ "c") }"#,
+            ];
+
+            for source in sources {
+                let rules = consume_rules(parse(PRule::grammar_rules, source).unwrap()).unwrap();
+                let printed = format!("r = {{ {} }}", rules[0].expr);
+                let reparsed = consume_rules(parse(PRule::grammar_rules, &printed).unwrap())
+                    .unwrap_or_else(|e| panic!("{printed} did not parse: {e:?}"));
+                assert_eq!(rules[0].expr, reparsed[0].expr, "printed as {printed}");
+            }
         }
 
         #[test]

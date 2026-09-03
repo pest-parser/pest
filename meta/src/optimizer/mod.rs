@@ -268,15 +268,35 @@ impl OptimizedExpr {
     }
 }
 
+impl OptimizedExpr {
+    /// Renders `self` as the operand of a postfix operator (`?`, `*`, `+`).
+    ///
+    /// See [`crate::ast::Expr::as_postfix_operand`]: pest binds postfix operators tighter than
+    /// the `&` and `!` prefixes, so a predicate operand has to be parenthesised.
+    fn as_postfix_operand(&self) -> String {
+        match self {
+            OptimizedExpr::PosPred(_) | OptimizedExpr::NegPred(_) => format!("({self})"),
+            _ => format!("{self}"),
+        }
+    }
+}
+
 impl core::fmt::Display for OptimizedExpr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            OptimizedExpr::Str(s) => write!(f, "{s:?}"),
-            OptimizedExpr::Insens(s) => write!(f, "^{s:?}"),
+            OptimizedExpr::Str(s) => fmt_literal(f, s, '"'),
+            OptimizedExpr::Insens(s) => {
+                write!(f, "^")?;
+                fmt_literal(f, s, '"')
+            }
             OptimizedExpr::Range(start, end) => {
                 let start = start.chars().next().expect("Empty range start.");
                 let end = end.chars().next().expect("Empty range end.");
-                write!(f, "({start:?}..{end:?})")
+                write!(f, "(")?;
+                fmt_literal(f, start.encode_utf8(&mut [0; 4]), '\'')?;
+                write!(f, "..")?;
+                fmt_literal(f, end.encode_utf8(&mut [0; 4]), '\'')?;
+                write!(f, ")")
             }
             OptimizedExpr::Ident(id) => write!(f, "{id}"),
             OptimizedExpr::PeekSlice(start, end) => match end {
@@ -317,21 +337,27 @@ impl core::fmt::Display for OptimizedExpr {
                     .join(" | ");
                 write!(f, "({sequence})")
             }
-            OptimizedExpr::Opt(expr) => write!(f, "{expr}?"),
-            OptimizedExpr::Rep(expr) => write!(f, "{expr}*"),
+            OptimizedExpr::Opt(expr) => write!(f, "{}?", expr.as_postfix_operand()),
+            OptimizedExpr::Rep(expr) => write!(f, "{}*", expr.as_postfix_operand()),
             #[cfg(feature = "grammar-extras")]
-            OptimizedExpr::RepOnce(expr) => write!(f, "{expr}+"),
+            OptimizedExpr::RepOnce(expr) => write!(f, "{}+", expr.as_postfix_operand()),
             OptimizedExpr::Skip(strings) => {
-                let strings = strings
-                    .iter()
-                    .map(|s| format!("{s:?}"))
-                    .collect::<Vec<_>>()
-                    .join(" | ");
-                write!(f, "(!({strings}) ~ ANY)*")
+                write!(f, "(!(")?;
+                for (i, s) in strings.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " | ")?;
+                    }
+                    fmt_literal(f, s, '"')?;
+                }
+                write!(f, ") ~ ANY)*")
             }
             OptimizedExpr::Push(expr) => write!(f, "PUSH({expr})"),
             #[cfg(feature = "grammar-extras")]
-            OptimizedExpr::PushLiteral(s) => write!(f, "PUSH_LITERAL({s:?})"),
+            OptimizedExpr::PushLiteral(s) => {
+                write!(f, "PUSH_LITERAL(")?;
+                fmt_literal(f, s, '"')?;
+                write!(f, ")")
+            }
             #[cfg(feature = "grammar-extras")]
             OptimizedExpr::NodeTag(expr, tag) => {
                 write!(f, "(#{tag} = {expr})")
@@ -732,6 +758,45 @@ mod tests {
         /// for it expand `#[doc("...")]` to `/// ...`,
         /// and when the document comment breaks the line,
         /// it will be expanded into wrong codes.
+        #[test]
+        fn postfix_over_predicate_is_parenthesised() {
+            let neg = || {
+                Box::new(OptimizedExpr::NegPred(Box::new(OptimizedExpr::Ident(
+                    "e".to_owned(),
+                ))))
+            };
+            let pos = || {
+                Box::new(OptimizedExpr::PosPred(Box::new(OptimizedExpr::Ident(
+                    "e".to_owned(),
+                ))))
+            };
+
+            assert_eq!(OptimizedExpr::Opt(neg()).to_string(), "(!e)?");
+            assert_eq!(OptimizedExpr::Rep(pos()).to_string(), "(&e)*");
+            assert_eq!(
+                OptimizedExpr::Opt(Box::new(OptimizedExpr::Ident("e".to_owned()))).to_string(),
+                "e?"
+            );
+        }
+
+        /// U+0001..=U+000F must not use the single-hex-digit form: pest's own rule is
+        /// `unicode = @{ "u" ~ "{" ~ hex_digit{2, 6} ~ "}" }`.
+        #[test]
+        fn control_character_below_u_0010() {
+            assert_eq!(
+                OptimizedExpr::Str("\u{1}".to_owned()).to_string(),
+                r#""\u{01}""#
+            );
+            assert_eq!(
+                OptimizedExpr::Range("\u{1}".to_owned(), "\u{f}".to_owned()).to_string(),
+                r#"('\u{01}'..'\u{0f}')"#,
+            );
+            assert_eq!(
+                OptimizedExpr::Skip(vec!["\u{b}".to_owned()]).to_string(),
+                r#"(!("\u{0b}") ~ ANY)*"#,
+            );
+        }
+
         #[test]
         fn control_character() {
             assert_eq!(OptimizedExpr::Str("\n".to_owned()).to_string(), "\"\\n\"");
