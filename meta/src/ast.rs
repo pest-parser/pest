@@ -458,6 +458,48 @@ impl Iterator for ExprTopDownIterator {
     }
 }
 
+/// Grammars whose printed form has to parse back to what it was printed from.
+///
+/// Both layers round-trip the same corpus: [`Expr`] here, and
+/// [`crate::optimizer::OptimizedExpr`] in `optimizer::tests::display`. A new `Display` case
+/// belongs here rather than in a one-off test, so that both layers get it.
+#[cfg(test)]
+pub(crate) const ROUND_TRIP_GRAMMARS: &[&str] = &[
+    r#"r = { (!"a")? ~ "b" }"#,
+    r#"r = { (&"a"){2, 3} }"#,
+    r#"r = @{ (!"a"){2} }"#,
+    r#"r = { "\u{0001}" ~ ^"\u{000b}" ~ '\u{0007}'..'\u{000f}' }"#,
+    r#"r = { PUSH("a") ~ PEEK[0..-1] ~ POP }"#,
+    r#"r = { ("a" ~ "b") | ("a" ~ "c") }"#,
+    r#"r = ${ "a"* ~ "b"+ }"#,
+    r#"r = @{ "a"{2,} ~ "b"{,2} }"#,
+    r#"r = { SOI ~ ^"aB" ~ 'a'..'z' ~ EOI }"#,
+    r#"r = { PEEK_ALL ~ POP_ALL ~ DROP }"#,
+    r#"r = { ("a" | "b" | "c")+ }"#,
+    r#"r = { &"a" ~ "a" ~ r2 } r2 = _{ "b" }"#,
+    // The optimizer's restorer wraps the operand of `Opt`/`Rep` in `RestoreOnErr` when it
+    // touches the stack, so only the optimized layer sees these shapes.
+    r#"r = { (!PUSH("a"))? ~ "b" }"#,
+    r#"r = { (&PUSH("a"))? ~ "b" }"#,
+    r#"r = { (!("a" ~ POP))? ~ "b" }"#,
+    r#"r = { ((!PUSH("a"))? ~ ANY)* }"#,
+    r#"r = { (PUSH("a") | PUSH("b")) ~ "c" }"#,
+    r#"r = { ("a" ~ PUSH("b"))* }"#,
+];
+
+/// Reprints one rule as grammar source, keeping the modifier that its [`RuleType`] came from.
+#[cfg(test)]
+pub(crate) fn print_rule(name: &str, ty: RuleType, expr: impl core::fmt::Display) -> String {
+    let modifier = match ty {
+        RuleType::Normal => "",
+        RuleType::Silent => "_",
+        RuleType::Atomic => "@",
+        RuleType::CompoundAtomic => "$",
+        RuleType::NonAtomic => "!",
+    };
+    format!("{name} = {modifier}{{ {expr} }}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -577,26 +619,25 @@ mod tests {
             );
         }
 
-        /// Every rule of every grammar below is printed and parsed back; the AST has to survive.
+        /// Every rule of every [`ROUND_TRIP_GRAMMARS`] grammar is printed and parsed back;
+        /// the AST has to survive.
         #[test]
         fn display_round_trips_through_the_parser() {
             use crate::parser::{consume_rules, parse, Rule as PRule};
 
-            let sources = [
-                r#"r = { (!"a")? ~ "b" }"#,
-                r#"r = { (&"a"){2, 3} }"#,
-                r#"r = @{ (!"a"){2} }"#,
-                r#"r = { "\u{0001}" ~ ^"\u{000b}" ~ '\u{0007}'..'\u{000f}' }"#,
-                r#"r = { PUSH("a") ~ PEEK[0..-1] ~ POP }"#,
-                r#"r = { ("a" ~ "b") | ("a" ~ "c") }"#,
-            ];
-
-            for source in sources {
+            for source in ROUND_TRIP_GRAMMARS {
                 let rules = consume_rules(parse(PRule::grammar_rules, source).unwrap()).unwrap();
-                let printed = format!("r = {{ {} }}", rules[0].expr);
-                let reparsed = consume_rules(parse(PRule::grammar_rules, &printed).unwrap())
-                    .unwrap_or_else(|e| panic!("{printed} did not parse: {e:?}"));
-                assert_eq!(rules[0].expr, reparsed[0].expr, "printed as {printed}");
+                let printed = rules
+                    .iter()
+                    .map(|rule| print_rule(&rule.name, rule.ty, &rule.expr))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                let reparsed = consume_rules(
+                    parse(PRule::grammar_rules, &printed)
+                        .unwrap_or_else(|e| panic!("{printed} did not parse: {e}")),
+                )
+                .unwrap_or_else(|e| panic!("{printed} was rejected: {e:?}"));
+                assert_eq!(rules, reparsed, "printed as {printed}");
             }
         }
 
