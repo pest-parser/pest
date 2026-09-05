@@ -268,15 +268,39 @@ impl OptimizedExpr {
     }
 }
 
+impl OptimizedExpr {
+    /// Renders `self` as the operand of a postfix operator (`?`, `*`, `+`).
+    ///
+    /// See [`crate::ast::Expr::as_postfix_operand`]: pest binds postfix operators tighter than
+    /// the `&` and `!` prefixes, so a predicate operand has to be parenthesised.
+    ///
+    /// `RestoreOnErr` prints as its inner expression, and the restorer inserts exactly one of
+    /// them between `Opt`/`Rep` and their operand, so it has to be looked through here as well.
+    fn as_postfix_operand(&self) -> String {
+        match self {
+            OptimizedExpr::PosPred(_) | OptimizedExpr::NegPred(_) => format!("({self})"),
+            OptimizedExpr::RestoreOnErr(expr) => expr.as_postfix_operand(),
+            _ => format!("{self}"),
+        }
+    }
+}
+
 impl core::fmt::Display for OptimizedExpr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            OptimizedExpr::Str(s) => write!(f, "{s:?}"),
-            OptimizedExpr::Insens(s) => write!(f, "^{s:?}"),
+            OptimizedExpr::Str(s) => fmt_literal(f, s, '"'),
+            OptimizedExpr::Insens(s) => {
+                write!(f, "^")?;
+                fmt_literal(f, s, '"')
+            }
             OptimizedExpr::Range(start, end) => {
                 let start = start.chars().next().expect("Empty range start.");
                 let end = end.chars().next().expect("Empty range end.");
-                write!(f, "({start:?}..{end:?})")
+                write!(f, "(")?;
+                fmt_literal(f, start.encode_utf8(&mut [0; 4]), '\'')?;
+                write!(f, "..")?;
+                fmt_literal(f, end.encode_utf8(&mut [0; 4]), '\'')?;
+                write!(f, ")")
             }
             OptimizedExpr::Ident(id) => write!(f, "{id}"),
             OptimizedExpr::PeekSlice(start, end) => match end {
@@ -317,21 +341,27 @@ impl core::fmt::Display for OptimizedExpr {
                     .join(" | ");
                 write!(f, "({sequence})")
             }
-            OptimizedExpr::Opt(expr) => write!(f, "{expr}?"),
-            OptimizedExpr::Rep(expr) => write!(f, "{expr}*"),
+            OptimizedExpr::Opt(expr) => write!(f, "{}?", expr.as_postfix_operand()),
+            OptimizedExpr::Rep(expr) => write!(f, "{}*", expr.as_postfix_operand()),
             #[cfg(feature = "grammar-extras")]
-            OptimizedExpr::RepOnce(expr) => write!(f, "{expr}+"),
+            OptimizedExpr::RepOnce(expr) => write!(f, "{}+", expr.as_postfix_operand()),
             OptimizedExpr::Skip(strings) => {
-                let strings = strings
-                    .iter()
-                    .map(|s| format!("{s:?}"))
-                    .collect::<Vec<_>>()
-                    .join(" | ");
-                write!(f, "(!({strings}) ~ ANY)*")
+                write!(f, "(!(")?;
+                for (i, s) in strings.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " | ")?;
+                    }
+                    fmt_literal(f, s, '"')?;
+                }
+                write!(f, ") ~ ANY)*")
             }
             OptimizedExpr::Push(expr) => write!(f, "PUSH({expr})"),
             #[cfg(feature = "grammar-extras")]
-            OptimizedExpr::PushLiteral(s) => write!(f, "PUSH_LITERAL({s:?})"),
+            OptimizedExpr::PushLiteral(s) => {
+                write!(f, "PUSH_LITERAL(")?;
+                fmt_literal(f, s, '"')?;
+                write!(f, ")")
+            }
             #[cfg(feature = "grammar-extras")]
             OptimizedExpr::NodeTag(expr, tag) => {
                 write!(f, "(#{tag} = {expr})")
@@ -755,6 +785,143 @@ mod tests {
             );
 
             assert_ne!(OptimizedExpr::Str("\n".to_owned()).to_string(), "\"\n\"");
+        }
+
+        /// U+0001..=U+000F must not use the single-hex-digit form: pest's own rule is
+        /// `unicode = @{ "u" ~ "{" ~ hex_digit{2, 6} ~ "}" }`.
+        #[test]
+        fn control_character_below_u_0010() {
+            assert_eq!(
+                OptimizedExpr::Str("\u{1}".to_owned()).to_string(),
+                r#""\u{01}""#
+            );
+            assert_eq!(
+                OptimizedExpr::Range("\u{1}".to_owned(), "\u{f}".to_owned()).to_string(),
+                r#"('\u{01}'..'\u{0f}')"#,
+            );
+            assert_eq!(
+                OptimizedExpr::Skip(vec!["\u{b}".to_owned()]).to_string(),
+                r#"(!("\u{0b}") ~ ANY)*"#,
+            );
+        }
+
+        #[test]
+        fn postfix_over_predicate_is_parenthesised() {
+            let neg = || {
+                Box::new(OptimizedExpr::NegPred(Box::new(OptimizedExpr::Ident(
+                    "e".to_owned(),
+                ))))
+            };
+            let pos = || {
+                Box::new(OptimizedExpr::PosPred(Box::new(OptimizedExpr::Ident(
+                    "e".to_owned(),
+                ))))
+            };
+
+            assert_eq!(OptimizedExpr::Opt(neg()).to_string(), "(!e)?");
+            assert_eq!(OptimizedExpr::Rep(pos()).to_string(), "(&e)*");
+            assert_eq!(
+                OptimizedExpr::Opt(Box::new(OptimizedExpr::Ident("e".to_owned()))).to_string(),
+                "e?"
+            );
+        }
+
+        /// `RestoreOnErr` prints as its inner expression, so a predicate under one still
+        /// needs the parentheses. This is the shape the restorer produces for
+        /// `(!PUSH("a"))?`: without looking through the wrapper, `Opt` printed `!PUSH("a")?`,
+        /// which parses back as `NegPred(Opt(...))`.
+        #[test]
+        fn postfix_over_restored_predicate_is_parenthesised() {
+            let restored = |expr| Box::new(OptimizedExpr::RestoreOnErr(Box::new(expr)));
+            let e = || Box::new(OptimizedExpr::Ident("e".to_owned()));
+
+            assert_eq!(
+                OptimizedExpr::Opt(restored(OptimizedExpr::NegPred(e()))).to_string(),
+                "(!e)?"
+            );
+            assert_eq!(
+                OptimizedExpr::Rep(restored(OptimizedExpr::PosPred(e()))).to_string(),
+                "(&e)*"
+            );
+            // A restored non-predicate operand is still printed bare.
+            assert_eq!(
+                OptimizedExpr::Opt(restored(OptimizedExpr::Ident("e".to_owned()))).to_string(),
+                "e?"
+            );
+        }
+
+        /// Right-associates `Seq` and `Choice`, the way [`super::super::rotator`] does.
+        ///
+        /// `Display` flattens a `Seq`/`Choice` chain to `(a ~ b ~ c)`, so the nesting is not
+        /// recoverable from the printed form — and does not need to be, both operators are
+        /// associative. The rotator normalises the nesting but runs before the unroller,
+        /// which can put a left-nested `Seq` back (`"a"{2,} ~ "b"{,2}`), so the two sides of
+        /// the round trip below can differ in nesting alone.
+        fn right_associate(expr: OptimizedExpr) -> OptimizedExpr {
+            fn rotate(expr: OptimizedExpr) -> OptimizedExpr {
+                match expr {
+                    OptimizedExpr::Seq(lhs, rhs) => match *lhs {
+                        OptimizedExpr::Seq(ll, lr) => rotate(OptimizedExpr::Seq(
+                            ll,
+                            Box::new(OptimizedExpr::Seq(lr, rhs)),
+                        )),
+                        lhs => OptimizedExpr::Seq(Box::new(lhs), rhs),
+                    },
+                    OptimizedExpr::Choice(lhs, rhs) => match *lhs {
+                        OptimizedExpr::Choice(ll, lr) => rotate(OptimizedExpr::Choice(
+                            ll,
+                            Box::new(OptimizedExpr::Choice(lr, rhs)),
+                        )),
+                        lhs => OptimizedExpr::Choice(Box::new(lhs), rhs),
+                    },
+                    expr => expr,
+                }
+            }
+
+            expr.map_top_down(rotate)
+        }
+
+        /// The round trip of [`crate::ast::ROUND_TRIP_GRAMMARS`], one layer down: an
+        /// optimized grammar is printed, parsed back and optimized again, and has to come
+        /// out unchanged. `RestoreOnErr` only exists at this layer, so only this test sees
+        /// the shapes the restorer builds.
+        #[test]
+        fn display_round_trips_through_the_parser() {
+            use crate::ast::{print_rule, ROUND_TRIP_GRAMMARS};
+            use crate::parser::{consume_rules, parse, Rule as PRule};
+
+            for source in ROUND_TRIP_GRAMMARS {
+                let optimized =
+                    optimize(consume_rules(parse(PRule::grammar_rules, source).unwrap()).unwrap());
+                let printed = optimized
+                    .iter()
+                    .map(|rule| print_rule(&rule.name, rule.ty, &rule.expr))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                let reoptimized = optimize(
+                    consume_rules(
+                        parse(PRule::grammar_rules, &printed)
+                            .unwrap_or_else(|e| panic!("{printed} did not parse: {e}")),
+                    )
+                    .unwrap_or_else(|e| panic!("{printed} was rejected: {e:?}")),
+                );
+
+                let normalize = |rules: Vec<OptimizedRule>| {
+                    rules
+                        .into_iter()
+                        .map(|rule| OptimizedRule {
+                            name: rule.name,
+                            ty: rule.ty,
+                            expr: right_associate(rule.expr),
+                        })
+                        .collect::<Vec<_>>()
+                };
+                assert_eq!(
+                    normalize(optimized),
+                    normalize(reoptimized),
+                    "printed as {printed}"
+                );
+            }
         }
 
         #[test]
