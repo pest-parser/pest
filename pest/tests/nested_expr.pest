@@ -1,0 +1,9 @@
+// Example grammar from the issue demonstrating deep nesting
+// This grammar can cause stack overflow with deeply nested parentheses
+
+WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
+expression = { SOI ~ add_expr ~ EOI }
+add_expr = { mul_expr ~ ("+" ~ mul_expr)* }
+mul_expr = { primary ~ ("*" ~ primary)* }
+primary = { number | "(" ~ add_expr ~ ")" }
+number = @{ ASCII_DIGIT+ }
