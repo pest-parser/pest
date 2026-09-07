@@ -1048,6 +1048,35 @@ mod tests {
     }
 
     #[test]
+    fn display_custom_span_end_after_inner_newline() {
+        let input = "abcdef\nghi";
+        let start = Position::new(input, 0).unwrap();
+        let end = Position::new(input, 7).unwrap();
+        assert!(start.at_start());
+        assert!(!end.at_end());
+
+        let error: Error<u32> = Error::new_from_span(
+            ErrorVariant::CustomError {
+                message: "error: big one".to_owned(),
+            },
+            start.span(&end),
+        );
+
+        assert_eq!(
+            format!("{error}"),
+            [
+                " --> 1:1",
+                "  |",
+                "1 | abcdef␊",
+                "  | ^-----^",
+                "  |",
+                "  = error: big one"
+            ]
+            .join("\n")
+        );
+    }
+
+    #[test]
     fn display_custom_span_empty() {
         let input = "";
         let start = Position::new(input, 0).unwrap();
