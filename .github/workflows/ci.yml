@@ -2,6 +2,7 @@ name: pest Continuous Integration
 
 permissions:
   contents: read
+  actions: write
 
 on:
   push:
