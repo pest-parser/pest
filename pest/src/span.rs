@@ -364,7 +364,11 @@ pub struct LinesSpan<'i> {
 impl<'i> Iterator for LinesSpan<'i> {
     type Item = Span<'i>;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.pos > self.span.end {
+        // `pos` holds the start of the next line to yield, so every line the span
+        // covers has been yielded once `pos` has reached the end of the span. The
+        // exception is a zero-width span, which still sits on one line: that line is
+        // yielded by the first call, while `pos` is still the start of the span.
+        if self.pos >= self.span.end && self.pos > self.span.start {
             return None;
         }
         let pos = position::Position::new(self.span.input, self.pos)?;
@@ -490,6 +494,34 @@ mod tests {
         assert_eq!(lines[0], "def\n".to_owned());
         assert_eq!(lines[1], "ghi".to_owned());
         assert_eq!(lines, lines_span) // Verify parity with lines_span()
+    }
+
+    #[test]
+    fn lines_ending_on_line_break() {
+        let input = "abc\ndef\nghi";
+        let span = Span::new(input, 1, 4).unwrap();
+        assert_eq!(span.as_str(), "bc\n");
+        let lines: Vec<_> = span.lines().collect();
+        let lines_span: Vec<_> = span.lines_span().collect();
+
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0], "abc\n".to_owned());
+        assert_eq!(lines_span.len(), 1);
+        assert_eq!(lines_span[0], Span::new(input, 0, 4).unwrap());
+    }
+
+    #[test]
+    fn lines_of_empty_span() {
+        let input = "abc\ndef\nghi";
+        let span = Span::new(input, 5, 5).unwrap();
+        assert_eq!(span.as_str(), "");
+        let lines: Vec<_> = span.lines().collect();
+        let lines_span: Vec<_> = span.lines_span().collect();
+
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0], "def\n".to_owned());
+        assert_eq!(lines_span.len(), 1);
+        assert_eq!(lines_span[0], Span::new(input, 4, 8).unwrap());
     }
 
     #[test]
