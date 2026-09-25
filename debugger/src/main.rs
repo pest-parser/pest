@@ -412,6 +412,7 @@ fn main() -> rustyline::Result<()> {
 fn check_for_updates() -> Result<Option<String>, String> {
     let output = Command::new("curl")
         .args([
+            "--disable",
             "--silent",
             "--show-error",
             "--location",
