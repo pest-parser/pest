@@ -16,13 +16,13 @@
 )]
 #![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 use std::path::PathBuf;
+use std::process::Command;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
 
 use pest::error::{Error, ErrorVariant};
 
 use pest_debugger::{DebuggerContext, DebuggerError, DebuggerEvent};
-use reqwest::blocking::{Client, ClientBuilder};
 use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
@@ -348,21 +348,16 @@ fn main() -> rustyline::Result<()> {
     let cli_args = CliArgs::default();
 
     if !cli_args.no_update {
-        let client = ClientBuilder::new()
-            .user_agent(concat!(
-                env!("CARGO_PKG_NAME"),
-                "/",
-                env!("CARGO_PKG_VERSION")
-            ))
-            .timeout(Some(Duration::from_secs(5)))
-            .build()
-            .ok();
-
-        if let Some(client) = client {
-            if let Some(new_version) = check_for_updates(client) {
+        match check_for_updates() {
+            Ok(Some(new_version)) => {
                 println!("A new version of pest_debugger is available: v{new_version}");
-            } else {
-                println!("pest_debugger is up to date.");
+            }
+            Ok(None) => println!("pest_debugger is up to date."),
+            Err(e) => {
+                println!("Failed to fetch the latest version information: {e}");
+                println!(
+                    "You can check the latest version at https://crates.io/crates/pest_debugger/versions"
+                );
             }
         }
     }
@@ -409,22 +404,46 @@ fn main() -> rustyline::Result<()> {
     Ok(())
 }
 
-fn check_for_updates(client: Client) -> Option<String> {
-    let response = client
-        .get("https://crates.io/api/v1/crates/pest_debugger")
-        .send();
+/// Queries crates.io for the latest published version of `pest_debugger` using `curl`.
+///
+/// Returns `Ok(Some(version))` if a different version is available, `Ok(None)` if
+/// the current version is up to date, and `Err` if the version information could
+/// not be fetched (e.g. `curl` is not installed or the request failed).
+fn check_for_updates() -> Result<Option<String>, String> {
+    let output = Command::new("curl")
+        .args([
+            "--disable",
+            "--silent",
+            "--show-error",
+            "--location",
+            "--max-time",
+            "5",
+            "--user-agent",
+            concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")),
+            "https://crates.io/api/v1/crates/pest_debugger",
+        ])
+        .output()
+        .map_err(|e| format!("could not run `curl`: {e}"))?;
 
-    if let Ok(response) = response {
-        response.json::<serde_json::Value>().ok().and_then(|json| {
-            let version = json["crate"]["max_version"].as_str()?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = stderr.trim();
+        return Err(if stderr.is_empty() {
+            format!("`curl` exited with {}", output.status)
+        } else {
+            stderr.to_string()
+        });
+    }
 
-            if version != VERSION {
-                Some(version.to_string())
-            } else {
-                None
-            }
-        })
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout)
+        .map_err(|e| format!("could not parse the crates.io response: {e}"))?;
+    let version = json["crate"]["max_version"]
+        .as_str()
+        .ok_or_else(|| "unexpected crates.io response".to_string())?;
+
+    if version != VERSION {
+        Ok(Some(version.to_string()))
     } else {
-        None
+        Ok(None)
     }
 }
