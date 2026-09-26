@@ -25,4 +25,4 @@ pest = { path = "../pest", version = "2.9.2", default-features = false }
 pest_meta = { path = "../meta", version = "2.9.2" }
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = "2.0"
+syn = "3.0"
