@@ -680,7 +680,9 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
                         &mut vec![trace.last().unwrap().clone()],
                     )
                 {
-                    check_expr(rhs, rules, trace)
+                    // `lhs` can succeed without consuming input, so both `lhs`
+                    // and `rhs` are tried at the current position.
+                    check_expr(lhs, rules, trace).or_else(|| check_expr(rhs, rules, trace))
                 } else {
                     check_expr(lhs, rules, trace)
                 }
@@ -1854,6 +1856,61 @@ mod tests {
   = rule a is left-recursive (a -> a); pest::pratt_parser might be useful in this case")]
     fn non_progressing_left_recursion() {
         let input = "a = { !\"a\" ~ a }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap(),
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:8
+  |
+1 | a = { (a | \"\") ~ \".\" }
+  |        ^
+  |
+  = rule a is left-recursive (a -> a); pest::pratt_parser might be useful in this case")]
+    fn non_failing_lhs_left_recursion() {
+        let input = "a = { (a | \"\") ~ \".\" }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap(),
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | a = { a? ~ \"x\" }
+  |       ^
+  |
+  = rule a is left-recursive (a -> a); pest::pratt_parser might be useful in this case")]
+    fn optional_lhs_left_recursion() {
+        let input = "a = { a? ~ \"x\" }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap(),
+        ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | a = { b* ~ \"x\" } b = { a ~ \"y\" }
+  |       ^
+  |
+  = rule b is left-recursive (b -> a -> b); pest::pratt_parser might be useful in this case
+
+ --> 1:24
+  |
+1 | a = { b* ~ \"x\" } b = { a ~ \"y\" }
+  |                        ^
+  |
+  = rule a is left-recursive (a -> b -> a); pest::pratt_parser might be useful in this case")]
+    fn indirect_repeated_lhs_left_recursion() {
+        let input = "a = { b* ~ \"x\" } b = { a ~ \"y\" }";
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap(),
         ));
