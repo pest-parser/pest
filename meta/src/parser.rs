@@ -1834,6 +1834,17 @@ mod tests {
 
     #[test]
     fn handles_deep_nesting() {
+        use pest::error::ErrorVariant;
+
+        struct ResetCallLimit;
+
+        impl Drop for ResetCallLimit {
+            fn drop(&mut self) {
+                pest::set_call_limit(None);
+            }
+        }
+
+        let _reset = ResetCallLimit;
         let sample1 = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/resources/test/fuzzsample1.grammar"
@@ -1854,22 +1865,42 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/resources/test/fuzzsample5.grammar"
         ));
-        const ERROR: &str = "call limit reached";
+        let limit_error = ErrorVariant::CustomError {
+            message: "call limit reached".to_owned(),
+        };
         pest::set_call_limit(Some(5_000usize.try_into().unwrap()));
-        let s1 = parse(Rule::grammar_rules, sample1);
-        assert!(s1.is_err());
-        assert_eq!(s1.unwrap_err().variant.message(), ERROR);
-        let s2 = parse(Rule::grammar_rules, sample2);
-        assert!(s2.is_err());
-        assert_eq!(s2.unwrap_err().variant.message(), ERROR);
-        let s3 = parse(Rule::grammar_rules, sample3);
-        assert!(s3.is_err());
-        assert_eq!(s3.unwrap_err().variant.message(), ERROR);
-        let s4 = parse(Rule::grammar_rules, sample4);
-        assert!(s4.is_err());
-        assert_eq!(s4.unwrap_err().variant.message(), ERROR);
-        let s5 = parse(Rule::grammar_rules, sample5);
-        assert!(s5.is_err());
-        assert_eq!(s5.unwrap_err().variant.message(), ERROR);
+        let nested = std::format!(
+            "nested = {{ {}\"a\"{} }}",
+            "(".repeat(1_000),
+            ")".repeat(1_000)
+        );
+        assert_eq!(
+            parse(Rule::grammar_rules, &nested).unwrap_err().variant,
+            limit_error
+        );
+        for (input, expected) in [
+            (sample1, limit_error.clone()),
+            (
+                sample2,
+                ErrorVariant::ParsingError {
+                    positives: vec![Rule::EOI, Rule::grammar_rule, Rule::grammar_doc],
+                    negatives: vec![],
+                },
+            ),
+            (sample3, limit_error.clone()),
+            (
+                sample4,
+                ErrorVariant::ParsingError {
+                    positives: vec![Rule::number, Rule::comma],
+                    negatives: vec![],
+                },
+            ),
+            (sample5, limit_error),
+        ] {
+            assert_eq!(
+                parse(Rule::grammar_rules, input).unwrap_err().variant,
+                expected
+            );
+        }
     }
 }

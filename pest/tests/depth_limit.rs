@@ -11,6 +11,29 @@ use core::num::NonZeroUsize;
 use pest::error::Error;
 use pest::iterators::Pairs;
 use pest::{state, ParseResult, Parser, ParserState};
+use std::sync::{Mutex, MutexGuard};
+
+static CALL_LIMIT_LOCK: Mutex<()> = Mutex::new(());
+
+struct CallLimitGuard {
+    _lock: MutexGuard<'static, ()>,
+}
+
+impl CallLimitGuard {
+    fn new(limit: Option<NonZeroUsize>) -> Self {
+        let lock = CALL_LIMIT_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        pest::set_call_limit(limit);
+        Self { _lock: lock }
+    }
+}
+
+impl Drop for CallLimitGuard {
+    fn drop(&mut self) {
+        pest::set_call_limit(None);
+    }
+}
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -90,24 +113,16 @@ impl Parser<Rule> for TestParser {
 #[test]
 fn test_depth_limit_simple() {
     // Set a recursion depth limit
-    pest::set_call_limit(Some(NonZeroUsize::new(10).unwrap()));
+    let _guard = CallLimitGuard::new(NonZeroUsize::new(10));
 
     // This should parse successfully - depth is less than 10
     let result = TestParser::parse(Rule::expression, "1");
     assert!(result.is_ok());
-
-    // Reset limit
-    pest::set_call_limit(None);
 }
 
 #[test]
 fn test_depth_limit_nested_parens() {
-    // Make sure call limit is reset first
-    pest::set_call_limit(None);
-    // Set a very low recursion depth limit (lower than what "1" needs)
-    // Parsing "1" requires: expression -> add_expr -> mul_expr -> primary -> number
-    // That's 5 rule invocations, so limit of 4 should fail
-    pest::set_call_limit(Some(NonZeroUsize::new(4).unwrap()));
+    let _guard = CallLimitGuard::new(NonZeroUsize::new(4));
 
     // Simple expression should fail with this very low limit
     let result = TestParser::parse(Rule::expression, "1");
@@ -133,28 +148,22 @@ fn test_depth_limit_nested_parens() {
             }
         }
     }
-
-    // Reset limit
-    pest::set_call_limit(None);
 }
 
 #[test]
 fn test_depth_limit_allows_simple_parse() {
     // Set a reasonable recursion depth limit
-    pest::set_call_limit(Some(NonZeroUsize::new(50).unwrap()));
+    let _guard = CallLimitGuard::new(NonZeroUsize::new(50));
 
     // Simple expression should work with reasonable limit
     let result = TestParser::parse(Rule::expression, "1+2");
     assert!(result.is_ok());
-
-    // Reset limit
-    pest::set_call_limit(None);
 }
 
 #[test]
 fn test_no_depth_limit() {
     // Make sure no limit allows parsing
-    pest::set_call_limit(None);
+    let _guard = CallLimitGuard::new(None);
 
     // Even deeply nested expressions should work without a limit
     let nested = "((((((1))))))";
@@ -165,7 +174,7 @@ fn test_no_depth_limit() {
 #[test]
 fn test_depth_limit_reset() {
     // Set a limit, then remove it
-    pest::set_call_limit(Some(NonZeroUsize::new(5).unwrap()));
+    let _guard = CallLimitGuard::new(NonZeroUsize::new(5));
     pest::set_call_limit(None);
 
     // Should work after reset
@@ -173,20 +182,11 @@ fn test_depth_limit_reset() {
     assert!(result.is_ok());
 }
 
-/// This test demonstrates the issue from GitHub:
-/// Pest grammars can cause overflow within Pest itself with deeply nested structures.
-///
-/// The grammar from the issue can cause stack overflow with deeply
-/// nested parentheses. With set_call_limit (which now tracks recursion depth),
-/// we can prevent this.
+/// Checks depth rejection with the hand-written parser. The exact generated
+/// grammar and fixed-stack regression are covered by pest_derive's tests.
 #[test]
 fn test_prevents_stack_overflow_from_issue() {
-    // Make sure call limit is disabled initially
-    pest::set_call_limit(None);
-    // Set a recursion depth limit that's lower than what 30 nested parens would need
-    // Each level of parentheses requires several rule invocations
-    // (expression, add_expr, mul_expr, primary for opening, then recursion for content)
-    pest::set_call_limit(Some(NonZeroUsize::new(50).unwrap()));
+    let _guard = CallLimitGuard::new(NonZeroUsize::new(50));
 
     // Create a deeply nested expression with 30 levels of nesting
     // This would need more than 50 depth
@@ -215,7 +215,4 @@ fn test_prevents_stack_overflow_from_issue() {
             error_msg
         );
     }
-
-    // Reset limit
-    pest::set_call_limit(None);
 }

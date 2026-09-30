@@ -90,18 +90,21 @@ pub enum MatchDir {
 
 static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 
-/// Sets the maximum recursion depth limit for the parser state
-/// to prevent stack overflows caused by deeply nested grammars.
+/// Sets the maximum depth of nested parser-state calls.
 ///
-/// The depth is tracked across recursive rule invocations, incrementing
-/// when entering a rule and decrementing when exiting. This provides
-/// protection against stack overflow from deeply nested structures
-/// (like nested parentheses, nested function calls, etc.).
+/// Depth increases when entering a closure-taking helper such as
+/// [`ParserState::rule`] or [`ParserState::sequence`] and decreases when it
+/// returns, whether it succeeds or fails. Repetition and backtracking do not
+/// accumulate depth after their nested calls return. Exceeding the limit fails
+/// the parse with the custom error message "call limit reached", even if a
+/// grammar alternative or optional expression would otherwise recover.
+///
+/// This process-wide setting is read when each [`ParserState`] is created;
+/// changing it does not affect an existing state.
 ///
 /// # Arguments
 ///
-/// * `limit` - The maximum recursion depth. If None,
-///   the recursion depth is unlimited.
+/// * `limit` - The maximum parser-state call depth. `None` disables the limit.
 ///
 /// # Examples
 ///
@@ -109,30 +112,30 @@ static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 /// use pest;
 /// use core::num::NonZeroUsize;
 ///
-/// // Set a depth limit of 100 to prevent stack overflow
-/// // from deeply nested grammar rules
+/// // Choose a depth budget appropriate for the grammar and native stack.
 /// pest::set_call_limit(Some(NonZeroUsize::new(100).unwrap()));
-///
-/// // Parse your input...
-/// // If the depth exceeds 100, parsing will fail with
-/// // an error message "call limit reached"
 ///
 /// // Remove the limit when done
 /// pest::set_call_limit(None);
 /// ```
 ///
-/// # Use Cases
-///
-/// This is useful for:
-/// - Protecting against malicious input with excessive nesting
-/// - Preventing stack overflow in resource-constrained environments
-/// - Ensuring consistent behavior across platforms with different stack sizes
-///
 /// # Note
 ///
-/// Setting the limit too low may prevent parsing of legitimate deeply nested
-/// expressions. The appropriate limit depends on your grammar complexity
-/// and the expected depth of valid inputs.
+/// A conservative limit can help prevent stack overflows, but does not measure
+/// native stack usage. The appropriate value depends on the grammar, platform,
+/// build settings, and thread stack size. A limit that is too high may still
+/// allow a stack overflow; one that is too low may reject valid expressions.
+/// Parser-state call depth is not the same as the input's nesting depth.
+///
+/// This limits recursion depth, not total parsing work or input length.
+/// Unlike the earlier cumulative-call implementation, it does not bound work
+/// spent on repeated shallow attempts. For untrusted input requiring an enforced
+/// deadline, use a supervised worker process and terminate and reap it on timeout.
+/// A timeout around a thread or async task does not interrupt synchronous parsing.
+/// See the [resource-limit guidance and example] for lifecycle and cancellation
+/// requirements.
+///
+/// [resource-limit guidance and example]: https://github.com/pest-parser/pest/blob/master/SECURITY.md#parsing-untrusted-input
 pub fn set_call_limit(limit: Option<NonZeroUsize>) {
     CALL_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
 }
@@ -156,7 +159,7 @@ pub fn set_error_detail(enabled: bool) {
 #[derive(Debug)]
 struct CallLimitTracker {
     current_depth_limit: Option<(usize, usize)>,
-    /// When set, indicates depth tracking should stop at this value (limit was reached)
+    /// Depth at the first refused entry, retained while active calls unwind.
     depth_at_limit: Option<usize>,
 }
 
@@ -179,42 +182,30 @@ impl Default for CallLimitTracker {
 impl CallLimitTracker {
     fn limit_reached(&self) -> bool {
         self.depth_at_limit.is_some()
+    }
+
+    fn depth_limit_would_be_exceeded(&self) -> bool {
+        self.limit_reached()
             || self
                 .current_depth_limit
                 .is_some_and(|(current, limit)| current >= limit)
     }
 
-    fn depth_limit_would_be_exceeded(&self) -> bool {
-        // Check if we're already at the limit
-        // (incrementing would exceed it)
-        self.current_depth_limit
-            .is_some_and(|(current, limit)| current >= limit)
-    }
-
     fn increment_depth(&mut self) {
-        // Don't increment if we've already hit the limit
-        if self.depth_at_limit.is_some() {
-            return;
-        }
         if let Some((current, _)) = &mut self.current_depth_limit {
             *current += 1;
         }
     }
 
     fn decrement_depth(&mut self) {
-        // Don't decrement if limit was already reached - we want to preserve the error state
-        if self.depth_at_limit.is_some() {
-            return;
-        }
         if let Some((current, _)) = &mut self.current_depth_limit {
             *current = current.saturating_sub(1);
         }
     }
 
     fn mark_limit_reached(&mut self) {
-        // Record the current depth when limit is reached
         if let Some((current, _)) = self.current_depth_limit {
-            self.depth_at_limit = Some(current);
+            self.depth_at_limit.get_or_insert(current);
         }
     }
 }
@@ -546,7 +537,7 @@ pub struct ParserState<'i, R: RuleType> {
     /// Helper structure tracking `Stack` status (used in case grammar contains stack PUSH/POP
     /// invocations).
     stack: Stack<SpanOrLiteral<'i>>,
-    /// Used for setting max parser calls limit.
+    /// Tracks active parser-state calls and limit exhaustion.
     call_tracker: CallLimitTracker,
     /// Together with tracking of `pos_attempts` and `attempt_pos`
     /// as a pair of (list of rules that we've tried to parse but failed, max parsed position)
@@ -583,11 +574,11 @@ where
     let state = ParserState::new(input);
 
     match f(state) {
-        Ok(state) => {
+        Ok(state) if !state.call_tracker.limit_reached() => {
             let len = state.queue.len();
             Ok(new(Rc::new(state.queue), input, None, 0, len))
         }
-        Err(mut state) => {
+        Ok(mut state) | Err(mut state) => {
             let variant = if state.call_tracker.limit_reached() {
                 ErrorVariant::CustomError {
                     message: "call limit reached".to_owned(),
@@ -995,12 +986,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         let result = f(self.checkpoint());
 
         match result {
-            Ok(new_state) => Ok(new_state.checkpoint_ok()),
+            Ok(new_state) => Ok(new_state.checkpoint_ok().dec_depth()),
             Err(mut new_state) => {
                 // Restore the initial position and truncate the token queue.
                 new_state.position = initial_pos;
                 new_state.queue.truncate(token_index);
-                Err(new_state.restore())
+                Err(new_state.restore().dec_depth())
             }
         }
     }
@@ -1044,7 +1035,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         loop {
             match result {
                 Ok(state) => result = f(state),
-                Err(state) => return Ok(state),
+                Err(state) => return Ok(state.dec_depth()),
             };
         }
     }
@@ -1082,7 +1073,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     {
         self = self.inc_call_check_limit()?;
         match f(self) {
-            Ok(state) | Err(state) => Ok(state),
+            Ok(state) | Err(state) => Ok(state.dec_depth()),
         }
     }
 
@@ -1472,12 +1463,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             Ok(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
-                Ok(new_state.restore())
+                Ok(new_state.restore().dec_depth())
             }
             Err(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
-                Err(new_state.restore())
+                Err(new_state.restore().dec_depth())
             }
         };
 
@@ -1539,13 +1530,13 @@ impl<'i, R: RuleType> ParserState<'i, R> {
                 if should_toggle {
                     new_state.atomicity = initial_atomicity;
                 }
-                Ok(new_state)
+                Ok(new_state.dec_depth())
             }
             Err(mut new_state) => {
                 if should_toggle {
                     new_state.atomicity = initial_atomicity;
                 }
-                Err(new_state)
+                Err(new_state.dec_depth())
             }
         }
     }
@@ -1582,9 +1573,9 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             Ok(mut state) => {
                 let end = state.position;
                 state.stack.push(SpanOrLiteral::Span(start.span(&end)));
-                Ok(state)
+                Ok(state.dec_depth())
             }
-            Err(state) => Err(state),
+            Err(state) => Err(state.dec_depth()),
         }
     }
 
@@ -1885,6 +1876,133 @@ fn normalize_index(i: i32, len: usize) -> Option<usize> {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    type TestState = Box<ParserState<'static, ()>>;
+    type TestResult = ParseResult<TestState>;
+    type Combinator = fn(TestState, fn(TestState) -> TestResult) -> TestResult;
+
+    const COMBINATORS: [(&str, Combinator); 8] = [
+        ("rule", |state, inner| state.rule((), inner)),
+        ("sequence", ParserState::sequence),
+        ("repeat", ParserState::repeat),
+        ("optional", ParserState::optional),
+        ("positive lookahead", |state, inner| {
+            state.lookahead(true, inner)
+        }),
+        ("negative lookahead", |state, inner| {
+            state.lookahead(false, inner)
+        }),
+        ("atomic", |state, inner| {
+            state.atomic(Atomicity::Atomic, inner)
+        }),
+        ("stack_push", ParserState::stack_push),
+    ];
+
+    fn tracker_at_depth(depth: usize, limit: usize) -> CallLimitTracker {
+        CallLimitTracker {
+            current_depth_limit: Some((depth, limit)),
+            depth_at_limit: None,
+        }
+    }
+
+    #[test]
+    fn depth_limit_balances_combinators() {
+        for (name, combinator) in COMBINATORS {
+            for input in ["x", "y"] {
+                for initial_depth in [0, 2] {
+                    let mut state = ParserState::new(input);
+                    let limit = initial_depth + 1;
+                    state.call_tracker = tracker_at_depth(initial_depth, limit);
+                    let result = combinator(state, |state| {
+                        let (depth, limit) = state.call_tracker.current_depth_limit.unwrap();
+                        assert_eq!(depth, limit);
+                        state.match_string("x")
+                    });
+                    let should_succeed = match name {
+                        "repeat" | "optional" => true,
+                        "negative lookahead" => input != "x",
+                        _ => input == "x",
+                    };
+                    assert_eq!(result.is_ok(), should_succeed, "{name}");
+                    let state = result.unwrap_or_else(|state| state);
+                    assert_eq!(
+                        state.call_tracker.current_depth_limit,
+                        Some((initial_depth, limit)),
+                        "{name} on {input:?}"
+                    );
+                    assert!(!state.call_tracker.limit_reached(), "{name}");
+                    assert_eq!(state.lookahead, Lookahead::None, "{name}");
+                    assert_eq!(state.atomicity, Atomicity::NonAtomic, "{name}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn depth_limit_boundary() {
+        for limit in [1, 2] {
+            let mut state = ParserState::new("x");
+            state.call_tracker = tracker_at_depth(0, limit);
+            let mut called = false;
+            let result = state.sequence(|state| {
+                state.rule((), |state| {
+                    called = true;
+                    state.match_string("x")
+                })
+            });
+            assert_eq!(called, limit == 2);
+            assert_eq!(result.is_ok(), limit == 2);
+            let state = result.unwrap_or_else(|state| state);
+            assert_eq!(state.call_tracker.current_depth_limit, Some((0, limit)));
+            assert_eq!(state.call_tracker.limit_reached(), limit == 1);
+            if limit == 1 {
+                let state = state
+                    .rule((), |_| panic!("exhausted state must not reenter a rule"))
+                    .unwrap_err();
+                assert_eq!(state.call_tracker.current_depth_limit, Some((0, limit)));
+            }
+        }
+    }
+
+    #[test]
+    fn depth_limit_does_not_accumulate_on_backtracking() {
+        let input = "xxxxxxxxxxxxxxxx";
+        let mut state = ParserState::<()>::new(input);
+        state.call_tracker = tracker_at_depth(0, 2);
+        let state = state
+            .repeat(|state| {
+                state
+                    .sequence(|state| state.match_string("y"))
+                    .or_else(|state| state.sequence(|state| state.match_string("x")))
+            })
+            .unwrap();
+        assert_eq!(state.position.pos(), input.len());
+        assert_eq!(state.call_tracker.current_depth_limit, Some((0, 2)));
+        assert!(!state.call_tracker.limit_reached());
+    }
+
+    #[test]
+    fn depth_limit_cannot_be_swallowed() {
+        for (name, combinator) in COMBINATORS {
+            for error_detail in [false, true] {
+                let result = state::<(), _>("", |mut state| {
+                    state.call_tracker = tracker_at_depth(0, 1);
+                    state.parse_attempts.enabled = error_detail;
+                    combinator(state, |state| {
+                        state.rule((), |_| panic!("over-limit closure must not run"))
+                    })
+                    .or_else(Ok)
+                });
+                assert_eq!(
+                    result.expect_err(name).variant,
+                    ErrorVariant::CustomError {
+                        message: "call limit reached".to_owned(),
+                    },
+                    "{name}, error_detail={error_detail}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn normalize_index_pos() {

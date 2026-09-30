@@ -51,7 +51,7 @@ jobs:
       - name: cargo test
         run: FORCE_COLOR=1 cargo test --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --release
       - name: cargo test (ignored)
-        run: cargo test -p pest_grammars --lib --verbose --release -- --ignored tests::toml_handles_deep_nesting_unstable
+        run: cargo test -p pest_grammars --lib --verbose --release -- --ignored tests::toml_handles_deep_nesting_unstable && cargo test -p pest_derive --example parse_with_timeout --release
 
   check-grammar-sync:
     name: Ensure grammar.rs matches grammar.pest

@@ -30,6 +30,7 @@ The recommended way to start parsing with pest is to read the official [book].
 Other helpful resources:
 
 * API reference on [docs.rs]
+* [Resource limits and timeouts for untrusted input](SECURITY.md#parsing-untrusted-input)
 * play with grammars and share them on our [fiddle]
 * find previous common questions answered or ask questions on [GitHub Discussions]
 * leave feedback, ask questions, or greet us on [Gitter] or [Discord]
