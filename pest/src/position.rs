@@ -326,10 +326,10 @@ impl<'i> Position<'i> {
                         }
                     }
                 }
-                [s1, s2, s3] if !s1.is_empty() && !s2.is_empty() && s3.is_empty() => {
+                [s1, s2, s3] if !s1.is_empty() && !s2.is_empty() && !s3.is_empty() => {
                     let b1 = s1.as_bytes()[0];
                     let b2 = s2.as_bytes()[0];
-                    let b3 = s2.as_bytes()[0];
+                    let b3 = s3.as_bytes()[0];
                     let miter =
                         memchr::memchr3_iter(b1, b2, b3, &self.input.as_bytes()[self.pos..]);
                     for from in miter {
@@ -615,6 +615,31 @@ mod tests {
         test_pos = pos;
         assert!(!test_pos.skip_until(&["z"]));
         assert_eq!(test_pos.pos(), 5);
+    }
+
+    #[test]
+    fn skip_until_three_strings() {
+        let input = "xy ab cd";
+        let pos = Position::from_start(input);
+
+        // An empty string matches at once, so there is nothing to skip.
+        let mut test_pos = pos;
+        assert!(test_pos.skip_until(&["ab", "cd", ""]));
+        assert_eq!(test_pos.pos(), 0);
+
+        // Only the third string occurs.
+        test_pos = pos;
+        assert!(test_pos.skip_until(&["zz", "qq", "cd"]));
+        assert_eq!(test_pos.pos(), 6);
+
+        // The earliest of the three wins, whichever position it has in the list.
+        test_pos = pos;
+        assert!(test_pos.skip_until(&["cd", "zz", "ab"]));
+        assert_eq!(test_pos.pos(), 3);
+
+        test_pos = pos;
+        assert!(!test_pos.skip_until(&["zz", "qq", "ww"]));
+        assert_eq!(test_pos.pos(), 8);
     }
 
     #[test]
