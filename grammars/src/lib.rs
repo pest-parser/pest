@@ -10,6 +10,14 @@
 //! # pest grammars
 //!
 //! Contains a series of default grammars.
+//!
+//! # Resource Limits
+//! These grammars do not configure input-size, cumulative-call, or time limits.
+//! For untrusted input, bound input size and configure [`pest::set_call_limit`]
+//! as appropriate. Automatic native-stack checks in supported `std` builds are
+//! best-effort, not deadlines or memory bounds. See the [resource-limit guidance].
+//!
+//! [resource-limit guidance]: https://github.com/pest-parser/pest/blob/master/SECURITY.md#parsing-untrusted-input
 
 #![doc(
     html_root_url = "https://docs.rs/pest_grammars",
@@ -27,6 +35,8 @@ pub use pest::Parser;
 #[allow(missing_docs)]
 pub mod http {
     /// HTTP parser.
+    ///
+    /// For untrusted input, see the [crate's resource limits](crate#resource-limits).
     #[derive(Parser)]
     #[grammar = "grammars/http.pest"]
     pub struct HttpParser;
@@ -36,6 +46,8 @@ pub mod http {
 #[allow(missing_docs)]
 pub mod json {
     /// JSON parser.
+    ///
+    /// For untrusted input, see the [crate's resource limits](crate#resource-limits).
     #[derive(Parser)]
     #[grammar = "grammars/json.pest"]
     pub struct JsonParser;
@@ -45,6 +57,8 @@ pub mod json {
 #[allow(missing_docs)]
 pub mod toml {
     /// TOML parser.
+    ///
+    /// For untrusted input, see the [crate's resource limits](crate#resource-limits).
     #[derive(Parser)]
     #[grammar = "grammars/toml.pest"]
     pub struct TomlParser;
@@ -54,6 +68,8 @@ pub mod toml {
 #[allow(missing_docs)]
 pub mod sql {
     /// SQL parser.
+    ///
+    /// For untrusted input, see the [crate's resource limits](crate#resource-limits).
     /// Grammar is a tinkered version of the one used in distributed SQL executor module named
     /// [sbroad](https://git.picodata.io/picodata/picodata/sbroad/-/blob/main/sbroad-core/src/frontend/sql/query.pest).
     /// Being a submodule of [Picodata](https://git.picodata.io/picodata/picodata/picodata) (that
@@ -66,7 +82,6 @@ pub mod sql {
 
 #[cfg(test)]
 mod tests {
-    use core::num::NonZeroUsize;
     use pest::error::ErrorVariant;
     use pest::iterators::Pairs;
     use std::{env, process::Command, thread};
@@ -94,8 +109,11 @@ mod tests {
                 .stack_size(env::var(STACK).unwrap().parse().unwrap())
                 .spawn(move || {
                     let _reset = ResetCallLimit;
-                    pest::set_call_limit(NonZeroUsize::new(50));
-                    check();
+                    pest::set_call_limit(None);
+                    for details in [false, true] {
+                        pest::set_error_detail(details);
+                        check();
+                    }
                 })
                 .unwrap()
                 .join()
@@ -104,9 +122,9 @@ mod tests {
             return;
         }
 
-        for stack_size in [1024 * 1024, 8 * 1024 * 1024] {
+        for stack_size in [256 * 1024, 1024 * 1024, 8 * 1024 * 1024] {
             let output = Command::new(env::current_exe().unwrap())
-                .args(["--exact", test_name, "--include-ignored", "--nocapture"])
+                .args(["--exact", test_name, "--nocapture"])
                 .env(CHILD, test_name)
                 .env(STACK, stack_size.to_string())
                 .output()
@@ -122,12 +140,21 @@ mod tests {
     }
 
     fn test_toml_deep_nesting(input: &str) {
+        let error = toml::TomlParser::parse(toml::Rule::toml, input).unwrap_err();
+        assert!(
+            matches!(error.variant, ErrorVariant::ParsingError { .. })
+                || error.variant
+                    == ErrorVariant::CustomError {
+                        message: "stack limit reached".into()
+                    }
+        );
+        let nested = format!("value = {}0{}", "[".repeat(50_000), "]".repeat(50_000));
         assert_eq!(
-            toml::TomlParser::parse(toml::Rule::toml, input)
+            toml::TomlParser::parse(toml::Rule::toml, &nested)
                 .unwrap_err()
                 .variant,
             ErrorVariant::CustomError {
-                message: "call limit reached".into()
+                message: "stack limit reached".into()
             }
         );
         assert!(toml::TomlParser::parse(toml::Rule::toml, "a = 1").is_ok());
@@ -141,7 +168,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "this sometimes crashes in the debug mode"]
     fn toml_handles_deep_nesting_unstable() {
         on_fixed_stacks("tests::toml_handles_deep_nesting_unstable", || {
             test_toml_deep_nesting(include_str!("../resources/test/tomlfuzzsample2.toml"));
@@ -153,14 +179,23 @@ mod tests {
         on_fixed_stacks("tests::json_handles_deep_nesting", || {
             let sample1 = include_str!("../resources/test/jsonfuzzsample1.json");
             let sample2 = include_str!("../resources/test/jsonfuzzsample2.json");
-            let escapes = format!("\"{}\"", "\\\\".repeat(6000));
-            for input in [sample1, &escapes] {
+            let error = json::JsonParser::parse(json::Rule::json, sample1).unwrap_err();
+            assert!(
+                matches!(error.variant, ErrorVariant::ParsingError { .. })
+                    || error.variant
+                        == ErrorVariant::CustomError {
+                            message: "stack limit reached".into()
+                        }
+            );
+            let escapes = format!("\"{}\"", "\\\\".repeat(60_000));
+            let nested = format!("{}0{}", "[".repeat(50_000), "]".repeat(50_000));
+            for input in [&nested, &escapes] {
                 assert_eq!(
                     json::JsonParser::parse(json::Rule::json, input)
                         .unwrap_err()
                         .variant,
                     ErrorVariant::CustomError {
-                        message: "call limit reached".into()
+                        message: "stack limit reached".into()
                     }
                 );
                 assert!(

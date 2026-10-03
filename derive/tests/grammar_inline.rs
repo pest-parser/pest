@@ -31,7 +31,6 @@ fn inline_string() {
 
 #[cfg(feature = "std")]
 mod depth_limit {
-    use core::num::NonZeroUsize;
     use std::{env, process::Command, thread};
 
     use pest::{error::ErrorVariant, Parser};
@@ -63,16 +62,15 @@ mod depth_limit {
     fn check_depth() {
         assert_parses("1");
         assert_parses("(1 + 2) * 3");
-        for nesting in [300, 50_000] {
-            let nested = format!("{}1{}", "(".repeat(nesting), ")".repeat(nesting));
-            assert_eq!(
-                Calc::parse(Rule::expression, &nested).unwrap_err().variant,
-                ErrorVariant::CustomError {
-                    message: "call limit reached".into(),
-                }
-            );
-            assert_parses("1 + 2");
-        }
+        let nesting = 50_000;
+        let nested = format!("{}1{}", "(".repeat(nesting), ")".repeat(nesting));
+        assert_eq!(
+            Calc::parse(Rule::expression, &nested).unwrap_err().variant,
+            ErrorVariant::CustomError {
+                message: "stack limit reached".into(),
+            }
+        );
+        assert_parses("1 + 2");
     }
 
     fn check_width() {
@@ -97,8 +95,11 @@ mod depth_limit {
                 .stack_size(env::var(CHILD_STACK).unwrap().parse().unwrap())
                 .spawn(move || {
                     let _reset = ResetCallLimit;
-                    pest::set_call_limit(NonZeroUsize::new(50));
-                    check();
+                    pest::set_call_limit(None);
+                    for details in [false, true] {
+                        pest::set_error_detail(details);
+                        check();
+                    }
                 })
                 .unwrap()
                 .join()
@@ -107,7 +108,7 @@ mod depth_limit {
             return;
         }
 
-        for stack_size in [1024 * 1024, 8 * 1024 * 1024] {
+        for stack_size in [256 * 1024, 1024 * 1024, 8 * 1024 * 1024] {
             let output = Command::new(env::current_exe().unwrap())
                 .args(["--exact", test_name, "--nocapture"])
                 .env(CHILD_TEST, test_name)

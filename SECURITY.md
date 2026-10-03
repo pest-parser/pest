@@ -11,23 +11,40 @@ Only the most recent minor version is supported.
 
 ## Parsing Untrusted Input
 
-When parsing trusted inputs in controlled workflows, applications can choose
-resource limits based on their expected workloads. If an application accepts
-untrusted or attacker-controlled input, it must take the additional precautions
-described below. These precautions apply even when the grammar itself is trusted
-and developer-authored.
+Applications should choose resource limits based on their expected workloads.
+When accepting untrusted or attacker-controlled input, enforce suitable input,
+work, memory, and concurrency limits even if the grammar is trusted and
+developer-authored. Use supervised parsing when an elapsed-time deadline or
+cancellation must be enforced; process isolation is not required for every parse.
 
 Small inputs can require substantial parsing time when a grammar repeatedly
 backtracks. Limiting input size or recursion depth alone does not bound this work.
-Keep a conservative depth limit, but treat time, total work, memory, and request
-concurrency as separate resource limits.
+Treat time, counted parser calls, memory, and request concurrency as separate
+resource limits.
 
-The depth-based `pest::set_call_limit` counts simultaneously active parser-state
-calls, not cumulative calls or elapsed time. Applications upgrading from its
-earlier cumulative-call behavior must not rely on it as a total-work budget.
-The setting is captured when a parser state is created; changing it cannot cancel
-an existing parse. Pest's synchronous `Parser::parse` API does not expose a
-deadline or cooperative cancellation hook.
+`pest::set_call_limit` sets a cumulative budget for counted parser-state helper
+entries. Returning, backtracking, and stack restoration do not refund calls.
+Repetition counts its entry, not every iteration; primitive matching/scanning and
+arbitrary Rust callbacks may perform substantial work without another check.
+The budget defaults to unlimited and is captured when a parser state is created;
+changing it cannot cancel an existing parse. It is not a wall-clock deadline,
+instruction-work budget, or memory bound.
+
+Supported `std` builds automatically check native stack headroom at parser
+checkpoints, independently of the call budget. Insufficient measurable space
+returns "stack limit reached". This is best-effort: unknown stack bounds retain
+normal parsing behavior, and `no_std` builds have no native stack check. The
+probe is amortized while measured headroom exceeds 1 MiB; once a probe reports
+at most 1 MiB, subsequent entries are probed individually. The rejection reserve
+is 64 KiB. These are implementation
+parameters validated against supported builds, not portable depth guarantees. The
+reserve depends on supported runtime/build assumptions and cannot protect
+arbitrary callbacks, unusually large frames between checkpoints, or foreign stack
+switching. Do not treat it as a universal stack-overflow guarantee.
+
+Grammar validation, AST construction, optimization, and application processing
+are not all governed by parser-state limits. Pest's synchronous `Parser::parse`
+API does not expose a deadline or cooperative cancellation hook.
 
 ### Enforcing a Deadline
 
@@ -85,12 +102,14 @@ cargo run -p pest_derive --example parse_with_timeout -- expression.txt 1000
 The second argument is the timeout in milliseconds. The deadline starts before
 spawning the worker and covers opening and reading the file, parsing, and observing
 exit; it does not include Cargo compilation or creating the input file. The worker
-reads at most 128 KiB plus one byte, configures a depth budget of 50, and returns
-only an exit status. Its standard streams are disconnected, so there are no output
-pipes to fill or unbounded parse diagnostics to collect. Both example limits are
-illustrative, not universally appropriate defaults.
+reads at most 128 KiB plus one byte and returns only an exit status. It leaves the
+cumulative call budget disabled to demonstrate independent deadline supervision;
+automatic native-stack checking still applies where supported. Its standard
+streams are disconnected, so there are no output pipes to fill or unbounded parse
+diagnostics to collect. The input cap and chosen deadline are illustrative, not
+universally appropriate defaults.
 
-Exit codes are `0` for success, `2` for syntax error, `3` for depth exhaustion,
+Exit codes are `0` for success, `2` for syntax error, `3` for native stack shortage,
 `4` for oversized input, `5` for invalid UTF-8, `6` for an input I/O error,
 `124` for timeout after cleanup, and `125` for a supervisor or unexpected worker
 failure. The `--worker` mode is internal; expose only the supervised entry point
@@ -117,8 +136,8 @@ cleanup, repeated timeout recovery, distinct parse outcomes, and bounded input
 reads. When adapting the pattern, also test caller disconnects, queue saturation,
 bounded IPC, crashes, and process cleanup on each supported operating system.
 Retain adversarial grammar benchmarks: process supervision contains expensive work
-but does not improve the grammar's complexity. A separate total-work budget would
-be needed to bound repeated shallow work inside the parser.
+but does not improve the grammar's complexity. Cumulative call budgets constrain
+guarded backtracking, not every unit of computation or elapsed time.
 
 ## Reporting a Vulnerability
 

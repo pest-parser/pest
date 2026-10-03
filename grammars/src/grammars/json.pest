@@ -10,6 +10,14 @@
 //! A parser for JSON file.
 //!
 //! And this is a example for JSON parser.
+//!
+//! # Resource Limits
+//! This grammar does not configure input-size, cumulative-call, or time limits.
+//! For untrusted input, apply limits appropriate to your workload. Automatic
+//! native-stack checks in supported `std` builds are best-effort, not deadlines
+//! or memory bounds. See the [resource-limit guidance].
+//!
+//! [resource-limit guidance]: https://github.com/pest-parser/pest/blob/master/SECURITY.md#parsing-untrusted-input
 json = { SOI ~ value ~ EOI }
 
 /// Matches object, e.g.: `{ "foo": "bar" }`

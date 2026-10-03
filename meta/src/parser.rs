@@ -30,6 +30,8 @@ mod grammar {
 pub use self::grammar::*;
 
 /// A helper that will parse using the pest grammar
+///
+/// For untrusted grammar definitions, see the [crate's resource limits](crate#resource-limits).
 #[allow(clippy::perf)]
 pub fn parse(rule: Rule, data: &str) -> Result<Pairs<'_, Rule>, Error<Rule>> {
     PestParser::parse(rule, data)
@@ -1832,38 +1834,91 @@ mod tests {
 
     #[test]
     fn handles_deep_nesting() {
-        use std::{env, process::Command, thread};
+        on_fixed_stacks(
+            "parser::tests::handles_deep_nesting",
+            check_deep_nesting,
+            &[256 * 1024, 1024 * 1024, 8 * 1024 * 1024],
+        );
+    }
 
+    #[test]
+    fn call_limit_stops_comment_backtracking() {
+        fn check() {
+            pest::set_call_limit(core::num::NonZeroUsize::new(5_000));
+            let input =
+                std::str::from_utf8(include_bytes!("../resources/test/fuzzsample6.grammar"))
+                    .unwrap();
+            assert_eq!(
+                parse(Rule::grammar_rules, input).unwrap_err().variant,
+                ErrorVariant::CustomError {
+                    message: "call limit reached".into()
+                }
+            );
+            assert!(parse(Rule::grammar_rules, "normal = { \"a\" }").is_ok());
+            pest::set_call_limit(None);
+        }
+        on_fixed_stacks(
+            "parser::tests::call_limit_stops_comment_backtracking",
+            check,
+            &[8 * 1024 * 1024],
+        );
+    }
+
+    fn on_fixed_stacks(test_name: &str, check: fn(), stack_sizes: &[usize]) {
+        use std::{
+            env,
+            process::{Command, Stdio},
+            thread,
+            time::{Duration, Instant},
+        };
+
+        const CHILD_TEST: &str = "PEST_META_STACK_TEST";
         const CHILD_STACK: &str = "PEST_META_DEPTH_TEST_STACK";
-        const COMPLETED: &str = "meta depth checks completed";
+        const COMPLETED: i32 = 42;
 
-        if let Some(stack_size) = env::var_os(CHILD_STACK) {
+        if env::var(CHILD_TEST).as_deref() == Ok(test_name) {
             thread::Builder::new()
-                .stack_size(stack_size.to_str().unwrap().parse().unwrap())
-                .spawn(check_deep_nesting)
+                .stack_size(env::var(CHILD_STACK).unwrap().parse().unwrap())
+                .spawn(check)
                 .unwrap()
                 .join()
                 .unwrap();
-            println!("{COMPLETED}");
-            return;
+            std::process::exit(COMPLETED);
         }
 
-        for stack_size in [1024 * 1024, 8 * 1024 * 1024] {
-            let output = Command::new(env::current_exe().unwrap())
-                .args([
-                    "--exact",
-                    "parser::tests::handles_deep_nesting",
-                    "--nocapture",
-                ])
+        for stack_size in stack_sizes {
+            let deadline = Instant::now() + Duration::from_secs(10);
+            let mut child = Command::new(env::current_exe().unwrap())
+                .args(["--exact", test_name, "--nocapture"])
+                .env(CHILD_TEST, test_name)
                 .env(CHILD_STACK, stack_size.to_string())
-                .output()
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .spawn()
                 .unwrap();
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            assert!(
-                output.status.success() && stdout.contains(COMPLETED),
-                "meta depth checks on a {stack_size}-byte stack exited with {}\n{stdout}\n{stderr}",
-                output.status
+            let outcome = loop {
+                match child.try_wait() {
+                    Ok(Some(status)) => break Ok(status),
+                    Ok(None) => {}
+                    Err(error) => break Err(error),
+                }
+                if Instant::now() >= deadline {
+                    break Err(std::io::Error::new(
+                        std::io::ErrorKind::TimedOut,
+                        "meta test deadline exceeded",
+                    ));
+                }
+                thread::sleep(Duration::from_millis(5));
+            };
+            if outcome.is_err() {
+                let _ = child.kill();
+                child.wait().expect("failed to reap meta test worker");
+            }
+            let status = outcome.expect("supervised meta test failed");
+            assert_eq!(
+                status.code(),
+                Some(COMPLETED),
+                "{test_name} on a {stack_size}-byte stack exited with {status}"
             );
         }
     }
@@ -1903,16 +1958,20 @@ mod tests {
         let limit_error = ErrorVariant::CustomError {
             message: "call limit reached".to_owned(),
         };
-        pest::set_call_limit(core::num::NonZeroUsize::new(50));
+        let stack_error = ErrorVariant::CustomError {
+            message: "stack limit reached".to_owned(),
+        };
+        pest::set_call_limit(None);
         let nested = std::format!(
             "nested = {{ {}\"a\"{} }}",
-            "(".repeat(1_000),
-            ")".repeat(1_000)
+            "(".repeat(50_000),
+            ")".repeat(50_000)
         );
         assert_eq!(
             parse(Rule::grammar_rules, &nested).unwrap_err().variant,
-            limit_error
+            stack_error
         );
+        pest::set_call_limit(core::num::NonZeroUsize::new(5_000));
         for (input, expected) in [
             (sample1, limit_error.clone()),
             (
@@ -1933,7 +1992,7 @@ mod tests {
             (sample5, limit_error.clone()),
         ] {
             let actual = parse(Rule::grammar_rules, input).unwrap_err().variant;
-            if actual != limit_error {
+            if actual != limit_error && actual != stack_error {
                 assert_eq!(actual, expected);
             }
         }

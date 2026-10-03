@@ -300,6 +300,17 @@ fn generate_patterns(rules: &[OptimizedRule], uses_eoi: bool) -> TokenStream {
 
 fn generate_rule(rule: OptimizedRule) -> TokenStream {
     let name = format_ident!("r#{}", rule.name);
+    let needs_stack_check = match &rule.expr {
+        OptimizedExpr::Ident(_) | OptimizedExpr::Choice(_, _) => true,
+        #[cfg(feature = "grammar-extras")]
+        OptimizedExpr::NodeTag(_, _) => true,
+        _ => false,
+    };
+    let stack_check = if needs_stack_check && rule.name != "WHITESPACE" && rule.name != "COMMENT" {
+        quote! { let state = state.check_stack_limit()?; }
+    } else {
+        TokenStream::new()
+    };
     let expr = if rule.ty == RuleType::Atomic || rule.ty == RuleType::CompoundAtomic {
         generate_expr_atomic(rule.expr)
     } else if rule.name == "WHITESPACE" || rule.name == "COMMENT" {
@@ -330,6 +341,7 @@ fn generate_rule(rule: OptimizedRule) -> TokenStream {
             #[inline]
             #[allow(non_snake_case, unused_variables)]
             pub fn #name(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
+                #stack_check
                 #expr
             }
         },
@@ -1297,6 +1309,7 @@ mod tests {
                                 #[inline]
                                 #[allow(non_snake_case, unused_variables)]
                                 pub fn r#if(state: #box_ty<::pest::ParserState<'_, Rule>>) -> ::pest::ParseResult<#box_ty<::pest::ParserState<'_, Rule>>> {
+                                    let state = state.check_stack_limit()?;
                                     self::r#a(state)
                                 }
 

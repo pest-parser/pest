@@ -4,7 +4,6 @@ extern crate alloc;
 use std::env;
 use std::fs::File;
 use std::io::{self, Read};
-use std::num::NonZeroUsize;
 use std::path::Path;
 use std::process::{Child, Command, ExitCode, ExitStatus, Stdio};
 use std::time::{Duration, Instant};
@@ -23,7 +22,7 @@ mod parser {
 
 const MAX_INPUT_BYTES: usize = 128 * 1024;
 const SYNTAX_ERROR: u8 = 2;
-const DEPTH_LIMIT: u8 = 3;
+const STACK_LIMIT: u8 = 3;
 const INPUT_TOO_LARGE: u8 = 4;
 const INVALID_UTF8: u8 = 5;
 const IO_ERROR: u8 = 6;
@@ -93,14 +92,14 @@ fn read_input(reader: impl Read) -> Result<String, u8> {
 }
 
 fn parse_input(input: &str) -> u8 {
-    pest::set_call_limit(NonZeroUsize::new(50));
+    pest::set_call_limit(None);
     match parser::Calculator::parse(parser::Rule::program, input) {
         Ok(_) => 0,
         Err(error) => match error.variant {
             pest::error::ErrorVariant::CustomError { message }
-                if message == "call limit reached" =>
+                if message == "stack limit reached" =>
             {
-                DEPTH_LIMIT
+                STACK_LIMIT
             }
             _ => SYNTAX_ERROR,
         },
@@ -149,7 +148,7 @@ fn run() -> io::Result<u8> {
     let message = match code {
         0 => "parsed successfully",
         SYNTAX_ERROR => "invalid expression",
-        DEPTH_LIMIT => "parser depth limit reached",
+        STACK_LIMIT => "parser native stack limit reached",
         INPUT_TOO_LARGE => "input exceeds 128 KiB",
         INVALID_UTF8 => "input is not UTF-8",
         IO_ERROR => "could not read input",
@@ -203,7 +202,7 @@ mod tests {
         let code = match env::var(MODE).unwrap().as_str() {
             "valid" => parse_input("(1 + 2) * 3"),
             "invalid" => parse_input("1 +"),
-            "deep" => parse_input(&format!("{}1{}", "(".repeat(300), ")".repeat(300))),
+            "deep" => parse_input(&format!("{}1{}", "(".repeat(50_000), ")".repeat(50_000))),
             "failed" => WORKER_FAILED,
             "busy" => loop {
                 std::hint::spin_loop();
@@ -218,11 +217,15 @@ mod tests {
         for (mode, code) in [
             ("valid", 0),
             ("invalid", SYNTAX_ERROR),
-            ("deep", DEPTH_LIMIT),
             ("failed", WORKER_FAILED),
         ] {
             assert_completes(mode, code);
         }
+        #[cfg(all(
+            feature = "std",
+            any(windows, target_os = "linux", target_os = "macos")
+        ))]
+        assert_completes("deep", STACK_LIMIT);
     }
 
     #[test]

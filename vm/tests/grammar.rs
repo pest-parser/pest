@@ -25,6 +25,97 @@ fn vm() -> Vm {
 }
 
 #[test]
+fn silent_forwarding_checks_native_stack() {
+    use pest::error::ErrorVariant;
+    use pest_meta::{
+        ast::RuleType,
+        optimizer::{OptimizedExpr, OptimizedRule},
+    };
+    use std::{
+        env,
+        process::{Command, Stdio},
+        thread,
+        time::{Duration, Instant},
+    };
+
+    const CHILD: &str = "PEST_VM_STACK_TEST";
+    const COMPLETED: i32 = 42;
+    if env::var_os(CHILD).is_some() {
+        thread::Builder::new()
+            .stack_size(256 * 1024)
+            .spawn(|| {
+                pest::set_call_limit(None);
+                let rules = (0..10_000)
+                    .map(|index| OptimizedRule {
+                        name: format!("forward_{index}"),
+                        ty: if index == 9_999 {
+                            RuleType::Normal
+                        } else {
+                            RuleType::Silent
+                        },
+                        expr: if index == 9_999 {
+                            OptimizedExpr::Str("x".into())
+                        } else {
+                            OptimizedExpr::Ident(format!("forward_{}", index + 1))
+                        },
+                    })
+                    .collect();
+                let vm = Vm::new(rules);
+                for details in [false, true] {
+                    pest::set_error_detail(details);
+                    match vm.parse("forward_0", "x") {
+                        Ok(mut pairs) => assert_eq!(pairs.next().unwrap().as_str(), "x"),
+                        Err(error) => assert_eq!(
+                            error.variant,
+                            ErrorVariant::CustomError {
+                                message: "stack limit reached".into()
+                            }
+                        ),
+                    }
+                }
+            })
+            .unwrap()
+            .join()
+            .unwrap();
+        std::process::exit(COMPLETED);
+    }
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let mut child = Command::new(env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "silent_forwarding_checks_native_stack",
+            "--nocapture",
+        ])
+        .env(CHILD, "1")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .spawn()
+        .unwrap();
+    let outcome = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break Ok(status),
+            Ok(None) => {}
+            Err(error) => break Err(error),
+        }
+        if Instant::now() >= deadline {
+            break Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "VM stack test deadline exceeded",
+            ));
+        }
+        thread::sleep(Duration::from_millis(5));
+    };
+    if outcome.is_err() {
+        let _ = child.kill();
+        child.wait().expect("failed to reap VM stack test worker");
+    }
+    assert_eq!(
+        outcome.expect("supervised VM stack test failed").code(),
+        Some(COMPLETED)
+    );
+}
+
+#[test]
 fn string() {
     parses_to! {
         parser: vm(),
