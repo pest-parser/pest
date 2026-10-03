@@ -1815,13 +1815,14 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert!(catch_panic.is_err());
     /// ```
     #[inline]
-    pub fn restore_on_err<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    pub fn restore_on_err<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.inc_call_check_limit()?;
         match f(self.checkpoint()) {
-            Ok(state) => Ok(state.checkpoint_ok()),
-            Err(state) => Err(state.restore()),
+            Ok(state) => Ok(state.checkpoint_ok().dec_depth()),
+            Err(state) => Err(state.restore().dec_depth()),
         }
     }
 
@@ -1881,7 +1882,7 @@ mod test {
     type TestResult = ParseResult<TestState>;
     type Combinator = fn(TestState, fn(TestState) -> TestResult) -> TestResult;
 
-    const COMBINATORS: [(&str, Combinator); 8] = [
+    const COMBINATORS: [(&str, Combinator); 9] = [
         ("rule", |state, inner| state.rule((), inner)),
         ("sequence", ParserState::sequence),
         ("repeat", ParserState::repeat),
@@ -1896,6 +1897,7 @@ mod test {
             state.atomic(Atomicity::Atomic, inner)
         }),
         ("stack_push", ParserState::stack_push),
+        ("restore_on_err", ParserState::restore_on_err),
     ];
 
     fn tracker_at_depth(depth: usize, limit: usize) -> CallLimitTracker {
@@ -1940,26 +1942,89 @@ mod test {
 
     #[test]
     fn depth_limit_boundary() {
+        for (name, combinator) in COMBINATORS {
+            for initial_depth in [0, 2] {
+                for remaining in [1, 2] {
+                    let limit = initial_depth + remaining;
+                    let mut state = ParserState::new("x");
+                    state.call_tracker = tracker_at_depth(initial_depth, limit);
+                    let result = combinator(state, |state| {
+                        state.rule((), |state| state.match_string("x"))
+                    });
+                    let state = result.unwrap_or_else(|state| state);
+                    assert_eq!(
+                        state.call_tracker.current_depth_limit,
+                        Some((initial_depth, limit)),
+                        "{name}"
+                    );
+                    assert_eq!(state.call_tracker.limit_reached(), remaining == 1, "{name}");
+                    if remaining == 1 {
+                        let state = combinator(state, |_| {
+                            panic!("exhausted state must not reenter a helper")
+                        })
+                        .unwrap_err();
+                        assert_eq!(
+                            state.call_tracker.current_depth_limit,
+                            Some((initial_depth, limit)),
+                            "{name}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn depth_limit_restore_on_err_recursion() {
+        fn recurse(state: TestState) -> TestResult {
+            state.restore_on_err(recurse)
+        }
+
+        let mut state = ParserState::new("");
+        state.call_tracker = tracker_at_depth(0, 32);
+        let state = recurse(state).unwrap_err();
+        assert_eq!(state.call_tracker.current_depth_limit, Some((0, 32)));
+        assert_eq!(state.call_tracker.depth_at_limit, Some(32));
+        assert!(state.stack.is_empty());
+    }
+
+    #[test]
+    fn depth_limit_restore_on_err_checkpoints() {
         for limit in [1, 2] {
-            let mut state = ParserState::new("x");
-            state.call_tracker = tracker_at_depth(0, limit);
-            let mut called = false;
-            let result = state.sequence(|state| {
-                state.rule((), |state| {
-                    called = true;
-                    state.match_string("x")
-                })
-            });
-            assert_eq!(called, limit == 2);
-            assert_eq!(result.is_ok(), limit == 2);
-            let state = result.unwrap_or_else(|state| state);
-            assert_eq!(state.call_tracker.current_depth_limit, Some((0, limit)));
-            assert_eq!(state.call_tracker.limit_reached(), limit == 1);
-            if limit == 1 {
-                let state = state
-                    .rule((), |_| panic!("exhausted state must not reenter a rule"))
-                    .unwrap_err();
+            for succeeds in [false, true] {
+                let mut state = ParserState::<()>::new("xy");
+                state.call_tracker = tracker_at_depth(0, limit);
+                state
+                    .stack
+                    .push(SpanOrLiteral::Span(Span::new("xy", 0, 1).unwrap()));
+                let state = state.checkpoint();
+                let result = state.restore_on_err(|mut state| {
+                    state.stack.pop();
+                    state.restore_on_err(|mut state| {
+                        state
+                            .stack
+                            .push(SpanOrLiteral::Span(Span::new("xy", 1, 2).unwrap()));
+                        let state = state.match_string("x").unwrap();
+                        if succeeds {
+                            Ok(state)
+                        } else {
+                            Err(state)
+                        }
+                    })
+                });
+                assert_eq!(result.is_ok(), limit == 2 && succeeds);
+                let state = result.unwrap_or_else(|state| state);
                 assert_eq!(state.call_tracker.current_depth_limit, Some((0, limit)));
+                assert_eq!(state.call_tracker.limit_reached(), limit == 1);
+                assert_eq!(state.position.pos(), usize::from(limit == 2));
+                let top = state.stack.peek().unwrap().as_borrowed_or_rc();
+                assert_eq!(top.as_str(), if limit == 2 && succeeds { "y" } else { "x" });
+                let state = state.restore();
+                assert_eq!(state.stack.len(), 1);
+                assert_eq!(
+                    state.stack.peek().unwrap().as_borrowed_or_rc().as_str(),
+                    "x"
+                );
             }
         }
     }

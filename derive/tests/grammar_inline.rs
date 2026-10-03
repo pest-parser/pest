@@ -37,14 +37,7 @@ mod depth_limit {
     use pest::{error::ErrorVariant, Parser};
 
     #[derive(Parser)]
-    #[grammar_inline = r#"
-WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
-expression = { SOI ~ add_expr ~ EOI }
-add_expr = { mul_expr ~ ("+" ~ mul_expr)* }
-mul_expr = { primary ~ ("*" ~ primary)* }
-primary = { number | "(" ~ add_expr ~ ")" }
-number = @{ ASCII_DIGIT+ }
-"#]
+    #[grammar = "../pest/tests/nested_expr.pest"]
     struct Calc;
 
     struct ResetCallLimit;
@@ -67,16 +60,11 @@ number = @{ ASCII_DIGIT+ }
         assert_eq!(expression.as_span().end(), input.len());
     }
 
-    fn check_depth_and_width() {
-        let _reset = ResetCallLimit;
-        pest::set_call_limit(NonZeroUsize::new(50));
-
+    fn check_depth() {
         assert_parses("1");
         assert_parses("(1 + 2) * 3");
         for nesting in [300, 50_000] {
             let nested = format!("{}1{}", "(".repeat(nesting), ")".repeat(nesting));
-            let flat = format!("{}1", "1+".repeat(nesting));
-            assert_eq!(nested.len(), flat.len());
             assert_eq!(
                 Calc::parse(Rule::expression, &nested).unwrap_err().variant,
                 ErrorVariant::CustomError {
@@ -84,23 +72,34 @@ number = @{ ASCII_DIGIT+ }
                 }
             );
             assert_parses("1 + 2");
+        }
+    }
+
+    fn check_width() {
+        for nesting in [300, 50_000] {
+            let nested = format!("{}1{}", "(".repeat(nesting), ")".repeat(nesting));
+            let flat = format!("{}1", "1+".repeat(nesting));
+            assert_eq!(nested.len(), flat.len());
             assert_parses(&flat);
         }
-
         assert_parses(&vec!["1"; 10_000].join("*"));
         assert_parses(&vec!["12 * (3 + 45)"; 10_000].join(" +\t\r\n"));
         assert_parses(&"1".repeat(10_000));
     }
 
-    #[test]
-    fn issue_1129_depth_and_width() {
+    fn on_fixed_stacks(test_name: &str, check: fn()) {
+        const CHILD_TEST: &str = "PEST_DEPTH_LIMIT_TEST";
         const CHILD_STACK: &str = "PEST_DEPTH_LIMIT_TEST_STACK";
-        const COMPLETED: &str = "depth and width checks completed";
+        const COMPLETED: &str = "fixture depth checks completed";
 
-        if let Some(stack_size) = env::var_os(CHILD_STACK) {
+        if env::var(CHILD_TEST).as_deref() == Ok(test_name) {
             thread::Builder::new()
-                .stack_size(stack_size.to_str().unwrap().parse().unwrap())
-                .spawn(check_depth_and_width)
+                .stack_size(env::var(CHILD_STACK).unwrap().parse().unwrap())
+                .spawn(move || {
+                    let _reset = ResetCallLimit;
+                    pest::set_call_limit(NonZeroUsize::new(50));
+                    check();
+                })
                 .unwrap()
                 .join()
                 .unwrap();
@@ -110,11 +109,8 @@ number = @{ ASCII_DIGIT+ }
 
         for stack_size in [1024 * 1024, 8 * 1024 * 1024] {
             let output = Command::new(env::current_exe().unwrap())
-                .args([
-                    "--exact",
-                    "depth_limit::issue_1129_depth_and_width",
-                    "--nocapture",
-                ])
+                .args(["--exact", test_name, "--nocapture"])
+                .env(CHILD_TEST, test_name)
                 .env(CHILD_STACK, stack_size.to_string())
                 .output()
                 .unwrap();
@@ -122,9 +118,19 @@ number = @{ ASCII_DIGIT+ }
             let stderr = String::from_utf8_lossy(&output.stderr);
             assert!(
                 output.status.success() && stdout.contains(COMPLETED),
-                "depth checks on a {stack_size}-byte stack exited with {}\n{stdout}\n{stderr}",
+                "{test_name} on a {stack_size}-byte stack exited with {}\n{stdout}\n{stderr}",
                 output.status
             );
         }
+    }
+
+    #[test]
+    fn issue_1129_deep_nesting() {
+        on_fixed_stacks("depth_limit::issue_1129_deep_nesting", check_depth);
+    }
+
+    #[test]
+    fn issue_1129_flat_expressions() {
+        on_fixed_stacks("depth_limit::issue_1129_flat_expressions", check_width);
     }
 }

@@ -66,64 +66,118 @@ pub mod sql {
 
 #[cfg(test)]
 mod tests {
+    use core::num::NonZeroUsize;
+    use pest::error::ErrorVariant;
     use pest::iterators::Pairs;
-    use std::convert::TryInto;
+    use std::{env, process::Command, thread};
 
     use pest::pratt_parser::PrattParser;
     use pest::Parser;
 
     use crate::{json, sql, toml};
 
+    struct ResetCallLimit;
+
+    impl Drop for ResetCallLimit {
+        fn drop(&mut self) {
+            pest::set_call_limit(None);
+        }
+    }
+
+    fn on_fixed_stacks(test_name: &str, check: fn()) {
+        const CHILD: &str = "PEST_GRAMMAR_DEPTH_TEST";
+        const STACK: &str = "PEST_GRAMMAR_DEPTH_STACK";
+        const COMPLETED: &str = "grammar depth checks completed";
+
+        if env::var(CHILD).as_deref() == Ok(test_name) {
+            thread::Builder::new()
+                .stack_size(env::var(STACK).unwrap().parse().unwrap())
+                .spawn(move || {
+                    let _reset = ResetCallLimit;
+                    pest::set_call_limit(NonZeroUsize::new(50));
+                    check();
+                })
+                .unwrap()
+                .join()
+                .unwrap();
+            println!("{COMPLETED}");
+            return;
+        }
+
+        for stack_size in [1024 * 1024, 8 * 1024 * 1024] {
+            let output = Command::new(env::current_exe().unwrap())
+                .args(["--exact", test_name, "--include-ignored", "--nocapture"])
+                .env(CHILD, test_name)
+                .env(STACK, stack_size.to_string())
+                .output()
+                .unwrap();
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            assert!(
+                output.status.success() && stdout.contains(COMPLETED),
+                "{test_name} on a {stack_size}-byte stack exited with {}\n{stdout}\n{stderr}",
+                output.status
+            );
+        }
+    }
+
     fn test_toml_deep_nesting(input: &str) {
-        const ERROR: &str = "call limit reached";
-        pest::set_call_limit(Some(5_000usize.try_into().unwrap()));
-        let s = toml::TomlParser::parse(toml::Rule::toml, input);
-        assert!(s.is_err());
-        assert_eq!(s.unwrap_err().variant.message(), ERROR);
+        assert_eq!(
+            toml::TomlParser::parse(toml::Rule::toml, input)
+                .unwrap_err()
+                .variant,
+            ErrorVariant::CustomError {
+                message: "call limit reached".into()
+            }
+        );
+        assert!(toml::TomlParser::parse(toml::Rule::toml, "a = 1").is_ok());
     }
 
     #[test]
     fn toml_handles_deep_nesting() {
-        let sample1 = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/resources/test/tomlfuzzsample1.toml"
-        ));
-        test_toml_deep_nesting(sample1);
+        on_fixed_stacks("tests::toml_handles_deep_nesting", || {
+            test_toml_deep_nesting(include_str!("../resources/test/tomlfuzzsample1.toml"));
+        });
     }
 
     #[test]
     #[ignore = "this sometimes crashes in the debug mode"]
     fn toml_handles_deep_nesting_unstable() {
-        let sample2 = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/resources/test/tomlfuzzsample2.toml"
-        ));
-        test_toml_deep_nesting(sample2);
+        on_fixed_stacks("tests::toml_handles_deep_nesting_unstable", || {
+            test_toml_deep_nesting(include_str!("../resources/test/tomlfuzzsample2.toml"));
+        });
     }
 
     #[test]
     fn json_handles_deep_nesting() {
-        let sample1 = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/resources/test/jsonfuzzsample1.json"
-        ));
-        let sample2 = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/resources/test/jsonfuzzsample2.json"
-        ));
-        const ERROR: &str = "call limit reached";
-        pest::set_call_limit(Some(5_000usize.try_into().unwrap()));
-        let s1 = json::JsonParser::parse(json::Rule::json, sample1);
-        assert!(s1.is_err());
-        assert_eq!(s1.unwrap_err().variant.message(), ERROR);
-        // sample2 is still parsed to check it neither hangs nor panics, but the
-        // grammar now rejects it on an unescaped newline before it reaches the
-        // `escape ~ inner` recursion, so that recursion is covered explicitly.
-        let s2 = json::JsonParser::parse(json::Rule::json, sample2);
-        assert!(s2.is_err());
-        let escapes = format!("\"{}\"", "\\\\".repeat(6000));
-        let s3 = json::JsonParser::parse(json::Rule::json, &escapes);
-        assert_eq!(s3.unwrap_err().variant.message(), ERROR);
+        on_fixed_stacks("tests::json_handles_deep_nesting", || {
+            let sample1 = include_str!("../resources/test/jsonfuzzsample1.json");
+            let sample2 = include_str!("../resources/test/jsonfuzzsample2.json");
+            let escapes = format!("\"{}\"", "\\\\".repeat(6000));
+            for input in [sample1, &escapes] {
+                assert_eq!(
+                    json::JsonParser::parse(json::Rule::json, input)
+                        .unwrap_err()
+                        .variant,
+                    ErrorVariant::CustomError {
+                        message: "call limit reached".into()
+                    }
+                );
+                assert!(
+                    json::JsonParser::parse(json::Rule::json, r#"{"a": [1, true, null]}"#).is_ok()
+                );
+            }
+            assert!(matches!(
+                json::JsonParser::parse(json::Rule::json, sample2)
+                    .unwrap_err()
+                    .variant,
+                ErrorVariant::ParsingError { .. }
+            ));
+            let flat = format!("[{}0]", "0,".repeat(6000));
+            assert!(json::JsonParser::parse(json::Rule::json, &flat).is_ok());
+            let string = format!("\"{}\"", "a".repeat(12_000));
+            assert!(json::JsonParser::parse(json::Rule::json, &string).is_ok());
+        });
     }
 
     #[test]

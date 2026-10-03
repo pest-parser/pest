@@ -762,8 +762,6 @@ fn unescape(string: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-
     use super::super::unwrap_or_report;
     use super::*;
 
@@ -1834,6 +1832,43 @@ mod tests {
 
     #[test]
     fn handles_deep_nesting() {
+        use std::{env, process::Command, thread};
+
+        const CHILD_STACK: &str = "PEST_META_DEPTH_TEST_STACK";
+        const COMPLETED: &str = "meta depth checks completed";
+
+        if let Some(stack_size) = env::var_os(CHILD_STACK) {
+            thread::Builder::new()
+                .stack_size(stack_size.to_str().unwrap().parse().unwrap())
+                .spawn(check_deep_nesting)
+                .unwrap()
+                .join()
+                .unwrap();
+            println!("{COMPLETED}");
+            return;
+        }
+
+        for stack_size in [1024 * 1024, 8 * 1024 * 1024] {
+            let output = Command::new(env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "parser::tests::handles_deep_nesting",
+                    "--nocapture",
+                ])
+                .env(CHILD_STACK, stack_size.to_string())
+                .output()
+                .unwrap();
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            assert!(
+                output.status.success() && stdout.contains(COMPLETED),
+                "meta depth checks on a {stack_size}-byte stack exited with {}\n{stdout}\n{stderr}",
+                output.status
+            );
+        }
+    }
+
+    fn check_deep_nesting() {
         use pest::error::ErrorVariant;
 
         struct ResetCallLimit;
@@ -1868,7 +1903,7 @@ mod tests {
         let limit_error = ErrorVariant::CustomError {
             message: "call limit reached".to_owned(),
         };
-        pest::set_call_limit(Some(5_000usize.try_into().unwrap()));
+        pest::set_call_limit(core::num::NonZeroUsize::new(50));
         let nested = std::format!(
             "nested = {{ {}\"a\"{} }}",
             "(".repeat(1_000),
@@ -1895,12 +1930,34 @@ mod tests {
                     negatives: vec![],
                 },
             ),
-            (sample5, limit_error),
+            (sample5, limit_error.clone()),
+        ] {
+            let actual = parse(Rule::grammar_rules, input).unwrap_err().variant;
+            if actual != limit_error {
+                assert_eq!(actual, expected);
+            }
+        }
+        for (input, expected) in [
+            (
+                "?",
+                ErrorVariant::ParsingError {
+                    positives: vec![Rule::EOI, Rule::grammar_rule, Rule::grammar_doc],
+                    negatives: vec![],
+                },
+            ),
+            (
+                "f={f{",
+                ErrorVariant::ParsingError {
+                    positives: vec![Rule::number, Rule::comma],
+                    negatives: vec![],
+                },
+            ),
         ] {
             assert_eq!(
                 parse(Rule::grammar_rules, input).unwrap_err().variant,
                 expected
             );
         }
+        assert!(parse(Rule::grammar_rules, "normal = { \"a\" }").is_ok());
     }
 }
