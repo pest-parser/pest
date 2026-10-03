@@ -825,6 +825,62 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         Ok(self)
     }
 
+    /// Runs `f` and tags every top-level pair it produced. A tagged expression that produces
+    /// no pair (e.g. a string literal or an empty optional) tags nothing, and pairs produced
+    /// before `f` keep their tags. Used by the generated parsers and `pest_vm` for `#tag = e`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pest::{state, ParseResult, ParserState, iterators::Pair};
+    /// #[allow(non_camel_case_types)]
+    /// #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    /// enum Rule {
+    ///     character,
+    /// }
+    /// fn character(state: Box<ParserState<'_, Rule>>) -> ParseResult<Box<ParserState<'_, Rule>>> {
+    ///     state.rule(Rule::character, |state| state.match_range('a'..'z'))
+    /// }
+    ///
+    /// let input = "ab-cd";
+    /// let pairs = state(input, |state| {
+    ///     character(state)
+    ///         .and_then(|state| state.tag_nodes("pair", |state| {
+    ///             character(state).and_then(|state| state.match_string("-"))
+    ///                 .and_then(|state| character(state))
+    ///         }))
+    ///         .and_then(|state| state.tag_nodes("none", |state| state.match_string("")))
+    /// }).unwrap();
+    /// let tags: Vec<_> = pairs.map(|p| p.as_node_tag().map(str::to_owned)).collect();
+    /// assert_eq!(tags, [None, Some("pair".to_owned()), Some("pair".to_owned())]);
+    /// ```
+    #[inline]
+    pub fn tag_nodes<F>(self: Box<Self>, tag: &'i str, f: F) -> ParseResult<Box<Self>>
+    where
+        F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
+    {
+        let start = self.queue.len();
+        let mut state = f(self)?;
+        if state.lookahead != Lookahead::None {
+            return Ok(state);
+        }
+        let mut index = start;
+        while index < state.queue.len() {
+            let end = match state.queue[index] {
+                QueueableToken::Start {
+                    end_token_index, ..
+                } => end_token_index,
+                // Tokens after `start` come in Start/End pairs; a stray End cannot occur.
+                QueueableToken::End { .. } => break,
+            };
+            if let Some(QueueableToken::End { tag: old, .. }) = state.queue.get_mut(end) {
+                *old = Some(tag);
+            }
+            index = end + 1;
+        }
+        Ok(state)
+    }
+
     /// Get number of allowed rules attempts + prohibited rules attempts.
     fn attempts_at(&self, pos: usize) -> usize {
         if self.attempt_pos == pos {

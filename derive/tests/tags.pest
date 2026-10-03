@@ -1,0 +1,15 @@
+WHITESPACE = _{ " " }
+
+a = { "a" }
+
+rep         =  { #t = a* ~ "." }
+rep_atomic  = ${ #t = a* ~ "." }
+rep_once    =  { #t = a+ ~ "." }
+optional    =  { a ~ #t = a? ~ "." }
+literal     =  { a ~ #t = "q" }
+lookahead   =  { a ~ #t = &a ~ a }
+choice      =  { a ~ #t = (a | "q") }
+sequence    =  { #t = (a ~ a) ~ a }
+inner       = _{ #t = "q" }
+silent_leak =  { a ~ inner }
+prefix      =  { #p = a? ~ #s = "."? }

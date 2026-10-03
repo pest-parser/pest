@@ -245,9 +245,9 @@ impl Vm {
                     .collect::<Vec<&str>>(),
             ),
             #[cfg(feature = "grammar-extras")]
-            OptimizedExpr::NodeTag(ref expr, ref tag) => self
-                .parse_expr(expr, state)
-                .and_then(|state| state.tag_node(tag)),
+            OptimizedExpr::NodeTag(ref expr, ref tag) => {
+                state.tag_nodes(tag, |state| self.parse_expr(expr, state))
+            }
             OptimizedExpr::RestoreOnErr(ref expr) => {
                 state.restore_on_err(|state| self.parse_expr(expr, state))
             }
