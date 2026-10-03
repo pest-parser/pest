@@ -174,12 +174,7 @@ impl CallLimitTracker {
     }
 
     fn error_message(&self) -> Option<&'static str> {
-        let cause = self.limit_reached.or_else(|| {
-            self.current_call_limit
-                .is_some_and(|(current, limit)| current >= limit)
-                .then_some(LimitKind::Call)
-        });
-        cause.map(|cause| match cause {
+        self.limit_reached.map(|cause| match cause {
             LimitKind::Call => "call limit reached",
             LimitKind::Stack => "stack limit reached",
         })
