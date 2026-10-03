@@ -2132,7 +2132,7 @@ mod test {
             let result: TestResult = combinator(state, |state| {
                 state.rule((), |_| panic!("over-budget body must not run"))
             })
-            .and_then(|_| panic!("fatal resource rejection must stop continuations"));
+            .map(|_| panic!("fatal resource rejection must stop continuations"));
             assert!(result.is_err(), "{name}");
         }
     }
