@@ -132,13 +132,12 @@ fn test_depth_limit_nested_parens() {
             panic!("Expected call limit error with very low limit");
         }
         Err(e) => {
-            let _error_msg = format!("{}", e);
+            let _error_msg = format!("{e}");
             // Check specifically for call limit error
             if let pest::error::ErrorVariant::CustomError { message } = &e.variant {
                 assert_eq!(
                     message, "call limit reached",
-                    "Expected call limit error, got: {}",
-                    message
+                    "Expected call limit error, got: {message}"
                 );
             } else {
                 panic!(
@@ -208,11 +207,10 @@ fn test_prevents_stack_overflow_from_issue() {
     // Should fail with call limit reached (recursion depth limit), not stack overflow
     assert!(result.is_err());
     if let Err(e) = result {
-        let error_msg = format!("{}", e);
+        let error_msg = format!("{e}");
         assert!(
             error_msg.contains("call limit reached"),
-            "Expected call limit error, got: {}",
-            error_msg
+            "Expected call limit error, got: {error_msg}"
         );
     }
 }
