@@ -22,7 +22,7 @@ struct Calc;
 mod depth_limit {
     use std::{env, process::Command, thread};
 
-    use pest::{error::ErrorVariant};
+    use pest::error::ErrorVariant;
 
     use super::*;
 
