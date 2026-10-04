@@ -25,3 +25,8 @@ negative_match = _{ !a ~ b }
 mixed = _{ !d | a }
 mixed_progress = _{ (!d | a | b) ~ a }
 
+ab = { a ~ b ~ c? }
+lookahead_then = _{ &ab ~ b }
+lookahead_repeat_then = _{ &(a ~ b+) ~ a ~ c }
+failed_lookahead_after_progress = _{ a ~ &(b ~ c) }
+

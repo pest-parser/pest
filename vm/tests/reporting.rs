@@ -131,3 +131,43 @@ fn mixed_progress() {
         pos: 1
     };
 }
+
+// A positive lookahead that succeeds consumes nothing: the rules that failed inside it (`c?` in
+// `ab`, the end of `b+`) are not where the parse failed.
+#[test]
+fn lookahead_then() {
+    fails_with! {
+        parser: vm(),
+        input: "abx",
+        rule: "lookahead_then",
+        positives: vec!["b"],
+        negatives: vec![],
+        pos: 0
+    };
+}
+
+#[test]
+fn lookahead_repeat_then() {
+    fails_with! {
+        parser: vm(),
+        input: "abbx",
+        rule: "lookahead_repeat_then",
+        positives: vec!["c"],
+        negatives: vec![],
+        pos: 1
+    };
+}
+
+// A positive lookahead that fails is where the parse fails: what failed inside it, further on
+// than anything before it, is reported.
+#[test]
+fn failed_lookahead_after_progress() {
+    fails_with! {
+        parser: vm(),
+        input: "abx",
+        rule: "failed_lookahead_after_progress",
+        positives: vec!["c"],
+        negatives: vec![],
+        pos: 2
+    };
+}

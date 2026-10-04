@@ -19,6 +19,7 @@ use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Display, Formatter};
+use core::mem;
 use core::num::NonZeroUsize;
 use core::ops::Deref; // used in BorrowedOrRc.as_str
 use core::ops::Range;
@@ -435,7 +436,63 @@ impl<R: RuleType> ParseAttempts<R> {
         self.unexpected_tokens.clear();
         self.max_position = new_max_position;
     }
+
+    /// Starts a positive lookahead: moves out what was tracked so far and continues with the
+    /// empty records `spare` at the same `max_position`. The lookahead's own records then
+    /// either get dropped (it succeeded, see `end_successful_lookahead`) or joined (it failed,
+    /// see `end_failed_lookahead`) without copying.
+    fn start_lookahead(&mut self, spare: AttemptRecords<R>) -> Self {
+        let (call_stacks, expected_tokens, unexpected_tokens) = spare;
+        Self {
+            enabled: self.enabled,
+            call_stacks: mem::replace(&mut self.call_stacks, call_stacks),
+            expected_tokens: mem::replace(&mut self.expected_tokens, expected_tokens),
+            unexpected_tokens: mem::replace(&mut self.unexpected_tokens, unexpected_tokens),
+            max_position: self.max_position,
+        }
+    }
+
+    /// A positive lookahead succeeded: it consumed nothing, so what it matched is not progress
+    /// and what failed inside it (e.g. the end of a `+`) is not where the parse failed. Puts back
+    /// what was tracked before it and returns the lookahead's records, emptied, for reuse.
+    fn end_successful_lookahead(&mut self, before: Self) -> AttemptRecords<R> {
+        let inner = mem::replace(self, before);
+        inner.into_empty_records()
+    }
+
+    /// A positive lookahead failed, so the parse fails there: keeps what it recorded, as if it
+    /// had been recorded in place. If it reached further than `before`, that replaced `before`'s
+    /// records; otherwise its records come after them. Returns the records left over, emptied,
+    /// for reuse.
+    fn end_failed_lookahead(&mut self, mut before: Self) -> AttemptRecords<R> {
+        if self.max_position == before.max_position {
+            before.call_stacks.append(&mut self.call_stacks);
+            before.expected_tokens.append(&mut self.expected_tokens);
+            before.unexpected_tokens.append(&mut self.unexpected_tokens);
+            mem::swap(self, &mut before);
+        }
+        before.into_empty_records()
+    }
+
+    fn into_empty_records(mut self) -> AttemptRecords<R> {
+        self.call_stacks.clear();
+        self.expected_tokens.clear();
+        self.unexpected_tokens.clear();
+        (
+            self.call_stacks,
+            self.expected_tokens,
+            self.unexpected_tokens,
+        )
+    }
 }
+
+/// The record vectors of a `ParseAttempts`, kept empty for reuse by positive lookaheads.
+type AttemptRecords<R> = (Vec<RulesCallStack<R>>, Vec<ParsingToken>, Vec<ParsingToken>);
+
+/// Where the rule attempts stood when a positive lookahead started (see
+/// `ParserState::lookahead`): `attempt_pos`, the lengths of `pos_attempts` and `neg_attempts`,
+/// and of `stashed_attempts`.
+type AttemptsMark = (usize, usize, usize, usize);
 
 impl<R: RuleType> Default for ParseAttempts<R> {
     fn default() -> Self {
@@ -492,6 +549,21 @@ pub struct ParserState<'i, R: RuleType> {
     /// While parsing the query we'll update tracker position to the start of "Bobby", because we'd
     /// successfully parse "create" + "user" (and not "table").
     parse_attempts: ParseAttempts<R>,
+    /// Empty `parse_attempts` records for positive lookaheads to use, so that tracking them
+    /// apart (see `lookahead`) does not allocate each time.
+    spare_attempt_records: Vec<AttemptRecords<R>>,
+    /// Number of positive lookaheads being run. Inside one, rule attempts that a further
+    /// attempt would clear are moved to `stashed_attempts` instead, so they can be put back if
+    /// the lookahead succeeds.
+    positive_lookaheads: usize,
+    /// `(attempt_pos, pos_attempts, neg_attempts)` as they were before a further attempt inside
+    /// a positive lookahead replaced them.
+    stashed_attempts: Vec<(usize, Vec<R>, Vec<R>)>,
+    /// Empty `pos_attempts`/`neg_attempts` vectors for `stashed_attempts` to reuse.
+    spare_rule_attempts: Vec<(Vec<R>, Vec<R>)>,
+    /// With error detail, the `parse_attempts` records from before each positive lookahead
+    /// being run.
+    detailed_before: Vec<ParseAttempts<R>>,
 }
 
 /// Creates a `ParserState` from a `&str`, supplying it to a closure `f`.
@@ -570,6 +642,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             stack: Stack::new(),
             call_tracker: Default::default(),
             parse_attempts: ParseAttempts::new(),
+            spare_attempt_records: Vec::new(),
+            positive_lookaheads: 0,
+            stashed_attempts: Vec::new(),
+            spare_rule_attempts: Vec::new(),
+            detailed_before: Vec::new(),
         })
     }
 
@@ -834,6 +911,96 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
     }
 
+    /// Inside a positive lookahead, a further attempt replaces the rule attempts: keeps them for
+    /// `end_lookahead_attempts`, in case the lookahead succeeds, and continues with empty
+    /// vectors (reused, so this does not allocate once warmed up).
+    #[inline(never)]
+    fn stash_attempts(&mut self) {
+        let (pos_attempts, neg_attempts) = self.spare_rule_attempts.pop().unwrap_or_default();
+        let pos_attempts = mem::replace(&mut self.pos_attempts, pos_attempts);
+        let neg_attempts = mem::replace(&mut self.neg_attempts, neg_attempts);
+        self.stashed_attempts
+            .push((self.attempt_pos, pos_attempts, neg_attempts));
+    }
+
+    /// Starts a positive lookahead: marks where the rule attempts stand and, with error detail,
+    /// sets the detailed records aside (see `ParseAttempts::start_lookahead`).
+    fn start_lookahead_attempts(&mut self) -> AttemptsMark {
+        self.positive_lookaheads += 1;
+        if self.parse_attempts.enabled {
+            self.start_detailed_lookahead();
+        }
+        (
+            self.attempt_pos,
+            self.pos_attempts.len(),
+            self.neg_attempts.len(),
+            self.stashed_attempts.len(),
+        )
+    }
+
+    #[inline(never)]
+    fn start_detailed_lookahead(&mut self) {
+        let spare = self.spare_attempt_records.pop().unwrap_or_default();
+        let before = self.parse_attempts.start_lookahead(spare);
+        self.detailed_before.push(before);
+    }
+
+    #[inline(never)]
+    fn end_detailed_lookahead(&mut self, succeeded: bool) {
+        let before = self.detailed_before.pop().unwrap();
+        let spare = if succeeded {
+            self.parse_attempts.end_successful_lookahead(before)
+        } else {
+            self.parse_attempts.end_failed_lookahead(before)
+        };
+        self.spare_attempt_records.push(spare);
+    }
+
+    /// Ends a positive lookahead. If it succeeded, it consumed nothing, so what it matched is
+    /// not progress and what failed inside it (e.g. the end of a `+`) is not where the parse
+    /// failed: the rule attempts are put back as they were at `mark`. If it failed, the parse
+    /// fails there, so its attempts are kept as recorded.
+    fn end_lookahead_attempts(&mut self, mark: AttemptsMark, succeeded: bool) {
+        let (attempt_pos, pos_len, neg_len, stashed_len) = mark;
+        self.positive_lookaheads -= 1;
+        if self.parse_attempts.enabled {
+            self.end_detailed_lookahead(succeeded);
+        }
+        // A failed lookahead inside another positive lookahead keeps what it stashed: the first
+        // entry may hold the attempts from before the outer one, which it needs if it succeeds.
+        if self.stashed_attempts.len() > stashed_len && (succeeded || self.positive_lookaheads == 0)
+        {
+            self.unstash_attempts(stashed_len, succeeded);
+        }
+        if succeeded {
+            debug_assert_eq!(self.attempt_pos, attempt_pos);
+            self.pos_attempts.truncate(pos_len);
+            self.neg_attempts.truncate(neg_len);
+        }
+    }
+
+    /// Drops the attempts stashed since `stashed_len`, putting the first of them (the attempts
+    /// from before the lookahead) back if it `succeeded`. Their vectors are kept for reuse.
+    #[inline(never)]
+    fn unstash_attempts(&mut self, stashed_len: usize, succeeded: bool) {
+        while let Some((attempt_pos, mut pos_attempts, mut neg_attempts)) =
+            self.stashed_attempts.pop()
+        {
+            let first = self.stashed_attempts.len() == stashed_len;
+            if first && succeeded {
+                self.attempt_pos = attempt_pos;
+                mem::swap(&mut self.pos_attempts, &mut pos_attempts);
+                mem::swap(&mut self.neg_attempts, &mut neg_attempts);
+            }
+            pos_attempts.clear();
+            neg_attempts.clear();
+            self.spare_rule_attempts.push((pos_attempts, neg_attempts));
+            if first {
+                break;
+            }
+        }
+    }
+
     fn track(
         &mut self,
         rule: R,
@@ -860,8 +1027,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         }
 
         if pos > self.attempt_pos {
-            self.pos_attempts.clear();
-            self.neg_attempts.clear();
+            if self.positive_lookaheads > 0 {
+                self.stash_attempts();
+            } else {
+                self.pos_attempts.clear();
+                self.neg_attempts.clear();
+            }
             self.attempt_pos = pos;
         }
 
@@ -1391,17 +1562,31 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
         let initial_pos = self.position;
 
+        // Error tracking inside a positive lookahead is kept apart from what came before it, and
+        // only kept if the lookahead fails.
+        let attempts_mark = if self.lookahead == Lookahead::Positive {
+            Some(self.start_lookahead_attempts())
+        } else {
+            None
+        };
+
         let result = f(self.checkpoint());
 
         let result_state = match result {
             Ok(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
+                if let Some(mark) = attempts_mark {
+                    new_state.end_lookahead_attempts(mark, true);
+                }
                 Ok(new_state.restore())
             }
             Err(mut new_state) => {
                 new_state.position = initial_pos;
                 new_state.lookahead = initial_lookahead;
+                if let Some(mark) = attempts_mark {
+                    new_state.end_lookahead_attempts(mark, false);
+                }
                 Err(new_state.restore())
             }
         };
@@ -1810,6 +1995,39 @@ fn normalize_index(i: i32, len: usize) -> Option<usize> {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    // Rule attempts stashed inside a positive lookahead (a rule failing further on) are all
+    // gone once it ends, whether it succeeds or fails, and nothing is stashed outside one.
+    #[test]
+    fn lookaheads_leave_nothing_stashed() {
+        fn fail_at_2(s: Box<ParserState<'_, ()>>) -> ParseResult<Box<ParserState<'_, ()>>> {
+            s.rule((), |s| s.match_string("x"))
+        }
+        let mut state: Box<ParserState<'_, ()>> = ParserState::new("abc");
+        for succeed in [true, false] {
+            let result = state.lookahead(true, |s| {
+                s.match_string("ab").and_then(|s| {
+                    if succeed {
+                        s.optional(fail_at_2)
+                    } else {
+                        fail_at_2(s)
+                    }
+                })
+            });
+            assert_eq!(result.is_ok(), succeed);
+            state = match result {
+                Ok(s) | Err(s) => s,
+            };
+            assert_eq!(state.positive_lookaheads, 0);
+            assert!(state.stashed_attempts.is_empty());
+        }
+        let state = state
+            .match_string("abc")
+            .and_then(|s| s.rule((), |s| s.match_string("x")))
+            .unwrap_err();
+        assert_eq!(state.attempt_pos, 3);
+        assert!(state.stashed_attempts.is_empty());
+    }
 
     #[test]
     fn normalize_index_pos() {
