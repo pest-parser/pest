@@ -144,8 +144,13 @@ impl Vm {
                     RuleType::CompoundAtomic => state.atomic(Atomicity::CompoundAtomic, |state| {
                         state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
                     }),
-                    RuleType::NonAtomic => state.atomic(Atomicity::Atomic, |state| {
-                        state.rule(&rule.name, |state| self.parse_expr(&rule.expr, state))
+                    // As pest_derive generates it: the rule makes its pair, its body is atomic.
+                    RuleType::NonAtomic => state.atomic(Atomicity::NonAtomic, |state| {
+                        state.rule(&rule.name, |state| {
+                            state.atomic(Atomicity::Atomic, |state| {
+                                self.parse_expr(&rule.expr, state)
+                            })
+                        })
                     }),
                 }
             } else {
