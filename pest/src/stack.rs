@@ -22,12 +22,13 @@ pub struct Stack<T: Clone> {
     /// otherwise be dropped if the snapshot is cleared.
     ///
     /// Those elements from a sequence of snapshots are stacked in one [`Vec`], and
-    /// `popped.len() == lengths.iter().map(|(len, remained)| len - remained).sum()`
+    /// `popped.len() == lengths.iter().map(|(len, remained, _)| len - remained).sum()`
     popped: Vec<T>,
-    /// Every element corresponds to a snapshot, and each element has two fields:
+    /// Every element corresponds to a snapshot, and each element has three fields:
     /// - Length of `cache` when corresponding snapshot is taken (AKA `len`).
     /// - Count of elements that come from corresponding snapshot
     ///   and are still in next snapshot or current state (AKA `remained`).
+    /// - `changes` when the snapshot is taken, put back by `restore`.
     ///
     /// And `len` is never less than `remained`.
     ///
@@ -37,7 +38,11 @@ pub struct Stack<T: Clone> {
     ///   There's nothing to do with those elements. Just let them stay where they are.
     ///
     /// - `remained..cache.len()` are pushed after the snapshot is taken.
-    lengths: Vec<(usize, usize)>,
+    lengths: Vec<(usize, usize, usize)>,
+    /// Counts pushes and pops, so callers can tell whether the stack was modified between two
+    /// points (an unchanged count means the same contents). `restore` puts back the count
+    /// saved by the matching `snapshot`, so changes undone by a failed branch leave no trace.
+    changes: usize,
 }
 
 impl<T: Clone> Default for Stack<T> {
@@ -53,6 +58,7 @@ impl<T: Clone> Stack<T> {
             cache: vec![],
             popped: vec![],
             lengths: vec![],
+            changes: 0,
         }
     }
 
@@ -69,6 +75,7 @@ impl<T: Clone> Stack<T> {
 
     /// Pushes a `T` onto the `Stack`.
     pub fn push(&mut self, elem: T) {
+        self.changes = self.changes.wrapping_add(1);
         self.cache.push(elem);
     }
 
@@ -77,7 +84,8 @@ impl<T: Clone> Stack<T> {
         let len = self.cache.len();
         let popped = self.cache.pop();
         if let Some(popped) = &popped {
-            if let Some((_, remained_count)) = self.lengths.last_mut() {
+            self.changes = self.changes.wrapping_add(1);
+            if let Some((_, remained_count, _)) = self.lengths.last_mut() {
                 // `len >= *unpopped_count`
                 if len == *remained_count {
                     *remained_count -= 1;
@@ -93,16 +101,24 @@ impl<T: Clone> Stack<T> {
         self.cache.len()
     }
 
+    /// A counter that changes whenever an element is pushed or popped, and returns to its
+    /// earlier value when `restore` undoes them. Equal values at two points mean the stack
+    /// holds the same elements.
+    pub(crate) fn changes(&self) -> usize {
+        self.changes
+    }
+
     /// Takes a snapshot of the current `Stack`.
     pub fn snapshot(&mut self) {
-        self.lengths.push((self.cache.len(), self.cache.len()))
+        self.lengths
+            .push((self.cache.len(), self.cache.len(), self.changes))
     }
 
     /// The parsing after the last snapshot was successful so clearing it.
     pub fn clear_snapshot(&mut self) {
-        if let Some((len, remained)) = self.lengths.pop() {
+        if let Some((len, remained, _)) = self.lengths.pop() {
             let popped_count = len - remained;
-            if let Some((_, parent_remained)) = self.lengths.last_mut() {
+            if let Some((_, parent_remained, _)) = self.lengths.last_mut() {
                 let merged_remained = (*parent_remained).min(remained);
                 let parent_popped = *parent_remained - merged_remained;
                 *parent_remained = merged_remained;
@@ -122,7 +138,8 @@ impl<T: Clone> Stack<T> {
     /// function return the stack to its initial state.
     pub fn restore(&mut self) {
         match self.lengths.pop() {
-            Some((len_stack, remained)) => {
+            Some((len_stack, remained, changes)) => {
+                self.changes = changes;
                 if remained < self.cache.len() {
                     // Remove those elements that are pushed after the snapshot.
                     self.cache.truncate(remained);
@@ -136,6 +153,10 @@ impl<T: Clone> Stack<T> {
                 }
             }
             None => {
+                // no snapshot: the stack is cleared, which is a change if it held anything
+                if !self.cache.is_empty() {
+                    self.changes = self.changes.wrapping_add(1);
+                }
                 self.cache.clear();
                 // As `self.popped` and `self.lengths` should already be empty,
                 // there is no need to clear it.
@@ -192,6 +213,20 @@ mod test {
         stack.restore();
 
         assert_eq!(stack[0..stack.len()], [0; 0]);
+    }
+
+    #[test]
+    fn restore_without_snapshot_counts_a_change_only_if_it_clears_something() {
+        let mut stack = Stack::new();
+
+        stack.push(0);
+        let before = stack.changes();
+        stack.restore();
+        assert_ne!(stack.changes(), before);
+
+        let before = stack.changes();
+        stack.restore();
+        assert_eq!(stack.changes(), before);
     }
 
     #[test]

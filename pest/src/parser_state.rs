@@ -958,17 +958,83 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap().position().pos(), 0);
     /// ```
+    ///
+    /// Repetition also stops when an iteration succeeds without consuming input and leaves the
+    /// stack as it was before (for example `PEEK_ALL*` on an empty stack): every further
+    /// iteration would start from the same state and repeat forever.
     #[inline]
     pub fn repeat<F>(mut self: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
     where
         F: FnMut(Box<Self>) -> ParseResult<Box<Self>>,
     {
         self = self.inc_call_check_limit()?;
+        let mut pos = self.position.pos();
+        let mut changes = self.stack.changes();
         let mut result = f(self);
 
         loop {
             match result {
-                Ok(state) => result = f(state),
+                Ok(state) => {
+                    if state.position.pos() == pos {
+                        if state.stack.changes() == changes {
+                            return Ok(state);
+                        }
+                        // Consumed nothing but changed the stack: rare, handled out of line.
+                        return Self::repeat_without_input(state, f);
+                    }
+                    pos = state.position.pos();
+                    changes = state.stack.changes();
+                    result = f(state);
+                }
+                Err(state) => return Ok(state),
+            };
+        }
+    }
+
+    /// The rest of `repeat` after an iteration that consumed no input but changed the stack.
+    /// Iterations that consume nothing are a function of the stack alone, so if the stack
+    /// ever comes back to an earlier state at the same position, the iterations cycle forever:
+    /// stop there. Brent's cycle detection keeps a single saved stack (the comparison point is
+    /// moved at powers of two), so each iteration costs at most one stack comparison and the
+    /// cycle is found within twice its length after it starts. Consuming input resets it.
+    #[cold]
+    #[inline(never)]
+    fn repeat_without_input<F>(state: Box<Self>, mut f: F) -> ParseResult<Box<Self>>
+    where
+        F: FnMut(Box<Self>) -> ParseResult<Box<Self>>,
+    {
+        let mut saved: Vec<SpanOrLiteral<'i>> = state.stack[0..state.stack.len()].to_vec();
+        let mut steps: usize = 0;
+        let mut power: usize = 1;
+        let mut pos = state.position.pos();
+        let mut changes = state.stack.changes();
+        let mut result = f(state);
+
+        loop {
+            match result {
+                Ok(state) => {
+                    if state.position.pos() == pos {
+                        if state.stack.changes() == changes {
+                            return Ok(state);
+                        }
+                        steps += 1;
+                        if stack_contents_eq(&saved, &state.stack[0..state.stack.len()]) {
+                            return Ok(state);
+                        }
+                        if steps == power {
+                            saved = state.stack[0..state.stack.len()].to_vec();
+                            power *= 2;
+                            steps = 0;
+                        }
+                    } else {
+                        saved = state.stack[0..state.stack.len()].to_vec();
+                        power = 1;
+                        steps = 0;
+                    }
+                    pos = state.position.pos();
+                    changes = state.stack.changes();
+                    result = f(state);
+                }
                 Err(state) => return Ok(state),
             };
         }
@@ -1782,6 +1848,14 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     }
 }
 
+/// Whether two stack snapshots hold the same strings (what PEEK/POP would match).
+fn stack_contents_eq(a: &[SpanOrLiteral<'_>], b: &[SpanOrLiteral<'_>]) -> bool {
+    a.len() == b.len()
+        && a.iter()
+            .zip(b)
+            .all(|(x, y)| x.as_borrowed_or_rc().as_str() == y.as_borrowed_or_rc().as_str())
+}
+
 /// Helper function used only in case stack operations (PUSH/POP) are used in grammar.
 fn constrain_idxs(start: i32, end: Option<i32>, len: usize) -> Option<Range<usize>> {
     let start_norm = normalize_index(start, len)?;
@@ -1823,5 +1897,114 @@ mod test {
         assert_eq!(normalize_index(-4, 6), Some(2));
         assert_eq!(normalize_index(-5, 5), Some(0));
         assert_eq!(normalize_index(-6, 3), None);
+    }
+
+    // `repeat` over an expression that succeeds without consuming input and without changing
+    // the stack must stop instead of looping forever (`PEEK_ALL*` on an empty stack).
+    #[test]
+    fn repeat_stops_without_progress() {
+        let state: Box<ParserState<'_, ()>> = ParserState::new("ab");
+        let state = state.repeat(|s| s.stack_match_peek()).unwrap();
+        assert_eq!(state.position().pos(), 0);
+
+        let state: Box<ParserState<'_, ()>> = ParserState::new("ab");
+        let state = state.repeat(|s| s.stack_match_pop()).unwrap();
+        assert_eq!(state.position().pos(), 0);
+
+        let state: Box<ParserState<'_, ()>> = ParserState::new("ab");
+        let state = state
+            .repeat(|s| s.stack_match_peek_slice(0, None, MatchDir::BottomToTop))
+            .unwrap();
+        assert_eq!(state.position().pos(), 0);
+    }
+
+    // Popping and pushing back the same string leaves the stack as it was: no progress either.
+    #[test]
+    fn repeat_stops_when_stack_returns_to_same_contents() {
+        let state: Box<ParserState<'_, ()>> = ParserState::new("ab");
+        let state = state
+            .stack_push(|s| s.match_string(""))
+            .unwrap()
+            .repeat(|s| {
+                s.sequence(|s| {
+                    s.stack_drop()
+                        .and_then(|s| s.stack_push(|s| s.match_string("")))
+                })
+            })
+            .unwrap();
+        assert_eq!(state.position().pos(), 0);
+        assert_eq!(state.stack.len(), 1);
+    }
+
+    // Iterations that change the stack without consuming input still run until they fail.
+    #[test]
+    fn repeat_continues_while_stack_changes() {
+        let mut state: Box<ParserState<'_, ()>> = ParserState::new("ab");
+        for _ in 0..3 {
+            state = state.stack_push(|s| s.match_string("")).unwrap();
+        }
+        let state = state.repeat(|s| s.stack_drop()).unwrap();
+        assert_eq!(state.stack.len(), 0);
+
+        let state: Box<ParserState<'_, ()>> = ParserState::new("aaab");
+        let state = state.repeat(|s| s.match_string("a")).unwrap();
+        assert_eq!(state.position().pos(), 3);
+    }
+
+    // A longer cycle through stack states (drop two, push two back) is also detected.
+    #[test]
+    fn repeat_stops_on_longer_stack_cycle() {
+        let mut state: Box<ParserState<'_, ()>> = ParserState::new("ab");
+        for _ in 0..2 {
+            state = state.stack_push(|s| s.match_string("")).unwrap();
+        }
+        let mut odd = false;
+        let state = state
+            .repeat(|s| {
+                odd = !odd;
+                if odd {
+                    s.stack_drop().and_then(|s| s.stack_drop())
+                } else {
+                    s.stack_push(|s| s.match_string(""))
+                        .and_then(|s| s.stack_push(|s| s.match_string("")))
+                }
+            })
+            .unwrap();
+        assert_eq!(state.position().pos(), 0);
+    }
+
+    // A cycle of 40 stack states that starts after 3 others: the iterations push 3 times, then
+    // repeat (push 39 times, drop 39). The stack states before the cycle never come back, so
+    // the cycle is only found by moving the saved state forward, and it has to be found within
+    // a bound linear in the cycle length.
+    #[test]
+    fn repeat_finds_a_cycle_after_a_prefix_in_linear_iterations() {
+        const PREFIX: usize = 3;
+        const CYCLE: usize = 40;
+        let state: Box<ParserState<'_, ()>> = ParserState::new("ab");
+        let mut calls = 0;
+        let state = state
+            .repeat(|s| {
+                calls += 1;
+                if calls > 10_000 {
+                    // not found: stop the loop so the assertion below reports it
+                    return Err(s);
+                }
+                if calls > PREFIX && (calls - PREFIX) % CYCLE == 0 {
+                    (1..CYCLE).try_fold(s, |s, _| s.stack_drop())
+                } else {
+                    s.stack_push(|s| s.match_string(""))
+                }
+            })
+            .unwrap();
+        assert_eq!(state.position().pos(), 0);
+        assert!(
+            calls > PREFIX + CYCLE,
+            "stopped after {calls} iterations, before a full cycle"
+        );
+        assert!(
+            calls <= 4 * CYCLE,
+            "cycle found only after {calls} iterations"
+        );
     }
 }
