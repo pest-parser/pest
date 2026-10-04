@@ -6,16 +6,14 @@
 // license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
-#![cfg_attr(not(feature = "std"), no_std)]
-extern crate alloc;
-use alloc::{format, vec::Vec};
 
-#[macro_use]
-extern crate pest;
+#[cfg(feature = "std")]
 use pest::Parser;
+#[cfg(feature = "std")]
 #[macro_use]
 extern crate pest_derive;
 
+#[cfg(feature = "std")]
 #[derive(Parser)]
 #[grammar = "tests/nested_expr.pest"]
 struct Calc;
@@ -24,7 +22,7 @@ struct Calc;
 mod depth_limit {
     use std::{env, process::Command, thread};
 
-    use pest::{error::ErrorVariant, Parser};
+    use pest::{error::ErrorVariant};
 
     use super::*;
 
