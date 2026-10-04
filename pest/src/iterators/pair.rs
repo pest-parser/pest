@@ -313,7 +313,8 @@ impl<'i, R: RuleType> Pair<'i, R> {
 impl<'i, R: RuleType> Pairs<'i, R> {
     /// Create a new `Pairs` iterator containing just the single `Pair`.
     pub fn single(pair: Pair<'i, R>) -> Self {
-        let end = pair.pair();
+        // `end` is exclusive: one past the pair's `End` token.
+        let end = pair.pair() + 1;
         pairs::new(
             pair.queue,
             pair.input,
@@ -412,6 +413,7 @@ impl<R: RuleType> ::serde::Serialize for Pair<'_, R> {
 
 #[cfg(test)]
 mod tests {
+    use super::Pairs;
     use crate::alloc::{borrow::ToOwned, format, string::ToString};
     use crate::macros::tests::*;
     use crate::parser::Parser;
@@ -446,6 +448,21 @@ mod tests {
 }"#;
 
         assert_eq!(expected, pair.to_json());
+    }
+
+    #[test]
+    fn pairs_single() {
+        let pair = AbcParser::parse(Rule::a, "abcde").unwrap().next().unwrap(); // the tokens a(b())
+
+        let single = Pairs::single(pair.clone());
+
+        assert_eq!(single.as_str(), pair.as_str());
+        assert_eq!(
+            single.clone().tokens().count(),
+            pair.clone().tokens().count()
+        );
+        assert_eq!(single.clone().count(), 1);
+        assert_eq!(single.peek(), Some(pair));
     }
 
     #[test]
