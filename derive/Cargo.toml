@@ -26,6 +26,3 @@ grammar-extras = ["pest_generator/grammar-extras"]
 # for tests, included transitively anyway
 pest = { path = "../pest", version = "2.9.2", default-features = false }
 pest_generator = { path = "../generator", version = "2.9.2", default-features = false }
-
-[dev-dependencies]
-wait-timeout = "0.2"

@@ -33,10 +33,7 @@ instruction-work budget, or memory bound.
 Supported `std` builds automatically check native stack headroom at parser
 checkpoints, independently of the call budget. Insufficient measurable space
 returns "stack limit reached". This is best-effort: unknown stack bounds retain
-normal parsing behavior, and `no_std` builds have no native stack check. The
-probe is amortized while measured headroom exceeds 1 MiB; once a probe reports
-at most 1 MiB, subsequent entries are probed individually. The rejection reserve
-is 64 KiB. These are implementation
+normal parsing behavior, and `no_std` builds have no native stack check. These are implementation
 parameters validated against supported builds, not portable depth guarantees. The
 reserve depends on supported runtime/build assumptions and cannot protect
 arbitrary callbacks, unusually large frames between checkpoints, or foreign stack
@@ -91,16 +88,10 @@ and [blocking-task cancellation documentation](https://docs.rs/tokio/latest/toki
 
 ### Runnable Example
 
-The [supervised parser example](derive/examples/parse_with_timeout.rs) reuses the
-calculator grammar. From a repository checkout:
+The [supervised parser example](https://gist.github.com/tomtau/b58e3086f6b6e9a19cf0b106b2d81a67) reuses the
+calculator grammar.
 
-```sh
-printf '%s\n' '(1 + 2) * 3' > expression.txt
-cargo run -p pest_derive --example parse_with_timeout -- expression.txt 1000
-```
-
-The second argument is the timeout in milliseconds. The deadline starts before
-spawning the worker and covers opening and reading the file, parsing, and observing
+The deadline starts before spawning the worker and covers opening and reading the file, parsing, and observing
 exit; it does not include Cargo compilation or creating the input file. The worker
 reads at most 128 KiB plus one byte and returns only an exit status. It leaves the
 cumulative call budget disabled to demonstrate independent deadline supervision;
@@ -123,13 +114,6 @@ The example uses [wait-timeout](https://docs.rs/wait-timeout/) as a dev dependen
 only; on Unix it installs a `SIGCHLD` handler, which can conflict with an
 application's own signal handling. It does not belong inside an async executor
 thread; use the executor's process API for an async supervisor.
-
-Run its lifecycle tests in both build modes:
-
-```sh
-cargo test -p pest_derive --example parse_with_timeout
-cargo test -p pest_derive --example parse_with_timeout --release
-```
 
 The tests use isolated, non-cooperative workers to check timeout and cancellation
 cleanup, repeated timeout recovery, distinct parse outcomes, and bounded input
