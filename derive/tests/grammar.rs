@@ -867,6 +867,31 @@ fn checkpoint_restore() {
 }
 
 #[test]
+fn separated_list() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "abc, abc",
+        rule: Rule::separated_list,
+        tokens: [
+            separated_list(0, 8, [string(0, 3), string(5, 8)])
+        ]
+    };
+}
+
+#[test]
+fn separated_list_trailing_separator() {
+    // The repetition consumes "abc,", then the final `string` has nothing left to match.
+    fails_with! {
+        parser: GrammarParser,
+        input: "abc,",
+        rule: Rule::separated_list,
+        positives: vec![Rule::string],
+        negatives: vec![],
+        pos: 4
+    };
+}
+
+#[test]
 fn clear_nested_snapshot() {
     parses_to! {
         parser: GrammarParser,

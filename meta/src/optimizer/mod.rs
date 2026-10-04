@@ -22,7 +22,6 @@ macro_rules! box_tree {
 
 mod concatenator;
 mod factorizer;
-mod lister;
 mod restorer;
 mod rotator;
 mod skipper;
@@ -38,7 +37,6 @@ pub fn optimize(rules: Vec<Rule>) -> Vec<OptimizedRule> {
         .map(unroller::unroll)
         .map(concatenator::concatenate)
         .map(factorizer::factor)
-        .map(lister::list)
         .map(rule_to_optimized_rule)
         .collect();
 
@@ -718,7 +716,9 @@ mod tests {
     }
 
     #[test]
-    fn lister() {
+    fn separated_list_is_not_rewritten() {
+        // `(a ~ b)* ~ a` must stay as written: `a ~ (b ~ a)*` accepts inputs ending in
+        // `a ~ b` (the repetition stops before the trailing `b`), where the original fails.
         let rules = {
             use crate::ast::Expr::*;
             vec![Rule {
@@ -736,8 +736,8 @@ mod tests {
                 name: "rule".to_owned(),
                 ty: RuleType::Silent,
                 expr: box_tree!(Seq(
-                    Ident(String::from("a")),
-                    Rep(Seq(Ident(String::from("b")), Ident(String::from("a"))))
+                    Rep(Seq(Ident(String::from("a")), Ident(String::from("b")))),
+                    Ident(String::from("a"))
                 )),
             }]
         };

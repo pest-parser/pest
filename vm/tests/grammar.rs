@@ -791,6 +791,31 @@ fn repeat_mutate_stack() {
 }
 
 #[test]
+fn separated_list() {
+    parses_to! {
+        parser: vm(),
+        input: "abc, abc",
+        rule: "separated_list",
+        tokens: [
+            separated_list(0, 8, [string(0, 3), string(5, 8)])
+        ]
+    };
+}
+
+#[test]
+fn separated_list_trailing_separator() {
+    // The repetition consumes "abc,", then the final `string` has nothing left to match.
+    fails_with! {
+        parser: vm(),
+        input: "abc,",
+        rule: "separated_list",
+        positives: vec!["string"],
+        negatives: vec![],
+        pos: 4
+    };
+}
+
+#[test]
 fn checkpoint_restore() {
     parses_to! {
         parser: vm(),
