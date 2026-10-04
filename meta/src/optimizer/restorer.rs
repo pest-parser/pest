@@ -62,8 +62,12 @@ fn child_modifies_state(
 ) -> bool {
     expr.iter_top_down().any(|expr| match expr {
         OptimizedExpr::Push(_) => true,
+        #[cfg(feature = "grammar-extras")]
+        OptimizedExpr::PushLiteral(_) => true,
         OptimizedExpr::Ident(ref name) if name == "DROP" => true,
         OptimizedExpr::Ident(ref name) if name == "POP" => true,
+        // pops while matching: on a failed match the stack is left partly emptied
+        OptimizedExpr::Ident(ref name) if name == "POP_ALL" => true,
         OptimizedExpr::Ident(ref name) => match cache.get(name).cloned() {
             Some(option) => match option {
                 Some(cached) => cached,

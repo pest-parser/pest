@@ -798,6 +798,24 @@ fn pop() {
     };
 }
 
+// POP_ALL pops "1", matches it, pops "0" and fails on "x": the second branch must see the
+// stack as before the first, so PEEK_ALL has to match "10" and fails too. With the stack
+// left empty, PEEK_ALL matched nothing and the rule succeeded.
+#[test]
+fn pop_all_fail_then_peek_all() {
+    assert!(GrammarParser::parse(Rule::pop_all_fail_then_peek_all, "011x").is_err());
+    parses_to! {
+        parser: GrammarParser,
+        input: "0110",
+        rule: Rule::pop_all_fail_then_peek_all,
+        tokens: [
+            pop_all_fail_then_peek_all(0, 4, [
+                push_two(0, 2, [range(0, 1), range(1, 2)])
+            ])
+        ]
+    };
+}
+
 #[test]
 fn pop_all() {
     parses_to! {

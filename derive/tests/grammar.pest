@@ -48,6 +48,10 @@ peek_all = { PUSH(range) ~ PUSH(range) ~ PEEK_ALL }
 peek_slice_23 = { PUSH(range) ~ PUSH(range) ~ PUSH(range) ~ PUSH(range) ~ PUSH(range) ~ PEEK[1..-2] }
 pop_ = { PUSH(range) ~ PUSH(range) ~ POP ~ POP }
 pop_all = { PUSH(range) ~ PUSH(range) ~ POP_ALL }
+// the optimizer factors `push_two` out of the two branches; POP_ALL failing partway in the
+// first must not leave the stack emptied for the second
+push_two = { PUSH(range) ~ PUSH(range) }
+pop_all_fail_then_peek_all = { push_two ~ POP_ALL | push_two ~ PEEK_ALL }
 pop_fail = { PUSH(range) ~ !POP ~ range ~ POP }
 clear_nested_snapshot = { PUSH("a") ~ ( POP? ~ "X" )? ~ POP ~ EOI }
 checkpoint_restore = ${

@@ -748,6 +748,22 @@ fn pop() {
     };
 }
 
+// See derive/tests/grammar.rs: a failed POP_ALL must not leave the stack emptied.
+#[test]
+fn pop_all_fail_then_peek_all() {
+    assert!(vm().parse("pop_all_fail_then_peek_all", "011x").is_err());
+    parses_to! {
+        parser: vm(),
+        input: "0110",
+        rule: "pop_all_fail_then_peek_all",
+        tokens: [
+            pop_all_fail_then_peek_all(0, 4, [
+                push_two(0, 2, [range(0, 1), range(1, 2)])
+            ])
+        ]
+    };
+}
+
 #[test]
 fn pop_all() {
     parses_to! {
