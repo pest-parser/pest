@@ -23,8 +23,8 @@
 //!   and a choice's right side from the stack its left side fails with (restored when the
 //!   optimizer wraps the branch in `RestoreOnErr`; a bare failed `POP_ALL` keeps what it
 //!   removed);
-//! - bounded repetitions are followed for their bound only, at most `UNROLL` iterations one
-//!   by one whatever the bounds, the rest summarised;
+//! - bounded repetitions are followed as the optimizer unrolls them, copy by copy, never past
+//!   their bound (the stacks repeat with some period, so huge bounds are cheap);
 //! - a sequence or a repetition is not known to consume nothing when `WHITESPACE` or
 //!   `COMMENT` is defined, since implicit whitespace may run between its parts;
 //! - if `WHITESPACE` or `COMMENT` can change the stack, nothing is reported.
@@ -334,10 +334,6 @@ fn expr_modifies_stack(
     }
 }
 
-/// Most iterations a bounded repetition is followed one by one; beyond that its iterations are
-/// summarised like an unbounded repetition's.
-const UNROLL: u32 = 8;
-
 struct StackAnalysis<'a, 'i> {
     rules: &'a HashMap<String, &'a ParserNode<'i>>,
     /// `WHITESPACE` or `COMMENT` is defined, so implicit whitespace may be consumed between
@@ -630,8 +626,10 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
     }
 
     /// A repetition of `inner` between `min` and `max` times (unbounded if `None`), entered
-    /// with `s`. While walking, the body is visited from every stack an iteration can start
-    /// with, and an unbounded repetition that loops forever is reported.
+    /// with `s`, as the optimizer unrolls it (`unroller.rs`): `min` copies of `inner` in
+    /// sequence, then `inner*` if unbounded, or `max - min` copies of `inner?`. While walking,
+    /// the body is visited from every stack an iteration can start with, and an unbounded
+    /// repetition that loops forever is reported.
     fn repeat(
         &mut self,
         node: &'a ParserNode<'i>,
@@ -643,61 +641,104 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
         if max.is_none() && self.walking && self.loops_forever(inner, s) {
             self.report(node, inner);
         }
-        // Iteration k + 1 starts where iteration k succeeded. The first UNROLL iterations are
-        // followed one by one, whatever `min` and `max` say; the rest are summarised by a fixed
-        // point, which is reached within a few steps (the stack lattice is finite).
-        let mut start = Some(s);
-        let mut ok = if min == 0 { Some(s) } else { None };
-        let mut err = None;
         // implicit whitespace may be consumed between iterations
         let mut empty = !self.skips || max.is_some_and(|m| m <= 1);
-        let mut k: u32 = 0;
-        while let Some(at) = start {
-            if k >= UNROLL || max.is_some_and(|m| k >= m) {
-                break;
+        // the required copies: one failing fails the whole sequence, which restores the stack
+        let (mid, fails) = self.steps(inner, s, u64::from(min), true, &mut empty);
+        let err = fails.then_some(s);
+        let Some(mid) = mid else {
+            return Outcome {
+                ok: None,
+                err,
+                empty: true,
+            };
+        };
+        let ok = match max {
+            Some(m) => {
+                let optional = u64::from(m.saturating_sub(min));
+                self.steps(inner, mid, optional, false, &mut empty).0
             }
-            let o = self.visit(inner, at);
-            k += 1;
-            if o.err.is_some() {
-                if k <= min {
-                    // fewer than `min` iterations: the repetition fails, restoring the stack
-                    err = Some(s);
-                } else {
-                    ok = join(ok, o.err);
-                }
-            }
-            if o.ok.is_some() {
-                empty &= o.empty;
-                if k >= min {
-                    ok = join(ok, o.ok);
-                }
-            }
-            start = o.ok;
-        }
-        if let Some(mut at) = start {
-            if max.is_none_or(|m| k < m) {
-                // More iterations than unrolled: every state an iteration can start with from
-                // here, and whether one can fail. Iterations up to `min` failing fail the
-                // repetition; after that they end it.
-                let mut fails = false;
-                loop {
-                    let o = self.visit(inner, at);
-                    empty &= o.ok.is_none() || o.empty;
-                    fails |= o.err.is_some();
-                    ok = join(ok, join(o.ok, o.err));
-                    let next = join(Some(at), o.ok).unwrap_or(at);
-                    if next == at {
-                        break;
-                    }
-                    at = next;
-                }
-                if fails && k < min {
-                    err = Some(s);
-                }
-            }
-            ok = join(ok, Some(at));
-        }
+            None => self.greedy(inner, mid, &mut empty),
+        };
         Outcome { ok, err, empty }
+    }
+
+    /// `count` copies of `inner` from `s`, each starting where the previous one ended:
+    /// `required` ones in sequence (each must succeed), or optional ones (`inner?`, which go
+    /// on from the stack a failure leaves). Returns the stack after the last copy (`None` if a
+    /// required copy cannot succeed) and whether a required copy can fail.
+    ///
+    /// The stack a copy starts with is a function of the stack the previous one started with,
+    /// over a finite set of stacks, so the stacks repeat with some period: they are followed
+    /// until one repeats, never past `count`, and the stack after `count` copies is read off
+    /// the period. So huge bounds cost no more than small ones.
+    fn steps(
+        &mut self,
+        inner: &'a ParserNode<'i>,
+        s: AbsStack,
+        count: u64,
+        required: bool,
+        empty: &mut bool,
+    ) -> (Maybe, bool) {
+        let mut trace: Vec<AbsStack> = vec![];
+        let mut seen: HashMap<AbsStack, usize> = HashMap::new();
+        let mut at = s;
+        let mut fails = false;
+        let mut t: u64 = 0;
+        while t < count {
+            if let Some(&j) = seen.get(&at) {
+                // the stack before copy t is the one before copy j: from here they repeat
+                // with period t - j, and every stack of the period has been visited already
+                let period = t - j as u64;
+                let end = trace[j + ((count - t) % period) as usize];
+                return (Some(end), fails);
+            }
+            let _ = seen.insert(at, trace.len());
+            trace.push(at);
+            let o = self.visit(inner, at);
+            if o.ok.is_some() {
+                *empty &= o.empty;
+            }
+            t += 1;
+            let next = if required {
+                fails |= o.err.is_some();
+                o.ok
+            } else {
+                join(o.ok, self.failed(inner, o.err, at))
+            };
+            match next {
+                Some(n) => at = n,
+                None => return (None, fails),
+            }
+        }
+        (Some(at), fails)
+    }
+
+    /// `inner*` from `s`: copies run until one fails, which ends the repetition. Returns every
+    /// stack it can end with (`None` if no copy can fail: it never ends).
+    fn greedy(&mut self, inner: &'a ParserNode<'i>, s: AbsStack, empty: &mut bool) -> Maybe {
+        let mut seen = HashSet::new();
+        let mut ok = None;
+        let mut at = s;
+        let mut first = true;
+        while seen.insert(at) {
+            let o = self.visit(inner, at);
+            if o.ok.is_some() {
+                *empty &= o.empty;
+            }
+            if o.err.is_some() {
+                // The first copy runs in an optional, the later ones in a sequence that
+                // restores the stack (in non-atomic rules), unless wrapped in RestoreOnErr.
+                let restored = if first { None } else { Some(at) };
+                ok = join(ok, join(self.failed(inner, o.err, at), restored));
+            }
+            first = false;
+            match o.ok {
+                Some(n) => at = n,
+                None => break,
+            }
+        }
+        ok
     }
 
     /// A repetition of `body` entered with stack `s` never ends: from every stack `s` allows,
@@ -860,6 +901,11 @@ mod tests {
             "a = { POP_ALL ~ PUSH(\"a\") ~ DROP ~ DROP ~ POP_ALL ~ PEEK_ALL* }",
             // the only iteration allowed fails at DROP and takes the second alternative
             "a = { POP_ALL ~ ((DROP ~ PUSH(\"\") ~ PEEK*) | PUSH(\"\")){,1} }",
+            // the ninth DROP always fails, so PEEK_ALL* is never reached
+            "a = { (POP_ALL ~ PUSH(\"\"){8} ~ DROP{9} ~ PEEK_ALL*)? }",
+            // eight iterations take the first alternative, the ninth pushes a blank: there is no
+            // tenth iteration to run PEEK_ALL* on it
+            "a = { POP_ALL ~ PUSH(\"x\"){8} ~ ((&DROP ~ PEEK_ALL* ~ DROP) | PUSH(\"\")){9} }",
             // a failed POP_ALL keeps the entries it removed: after PUSH(\"y\") ~ PUSH(\"x\"),
             // on \"yxy!\" it removes the blank and \"x\", then PEEK* matches \"y\" once
             "a = { PUSH(\"\") ~ (POP_ALL | PEEK*) } b = { PUSH(\"y\") ~ PUSH(\"x\") ~ a }",
