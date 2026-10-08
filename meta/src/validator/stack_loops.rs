@@ -273,6 +273,7 @@ pub(super) fn validate_stack_repetition<'a, 'i: 'a>(
         errors: vec![],
         reported: HashSet::new(),
         walking: false,
+        walked: HashSet::new(),
     };
     let entry = AbsStack {
         base: StackBase::Any,
@@ -350,6 +351,9 @@ struct StackAnalysis<'a, 'i> {
     reported: HashSet<*const ParserNode<'i>>,
     /// Inside `walk`: repetitions reached are checked and reported.
     walking: bool,
+    /// Nodes already walked with a stack: what they report depends only on the node and the
+    /// stack, and is already in `errors`, so they are not walked again.
+    walked: HashSet<(*const ParserExpr<'i>, AbsStack)>,
 }
 
 impl<'a, 'i> StackAnalysis<'a, 'i> {
@@ -361,9 +365,9 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
     }
 
     /// The outcome of `node` entered with `s`; while walking, also reports the looping
-    /// repetitions it reaches. Walking is not cached: every reachable node is visited.
+    /// repetitions it reaches. Each node is walked once per stack.
     fn visit(&mut self, node: &'a ParserNode<'i>, s: AbsStack) -> Outcome {
-        if self.walking {
+        if self.walking && self.walked.insert((&node.expr as *const ParserExpr<'i>, s)) {
             self.step(node, s)
         } else {
             self.outcome(node, s)
@@ -742,24 +746,35 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
     }
 
     /// A repetition of `body` entered with stack `s` never ends: from every stack `s` allows,
-    /// `body` succeeds without consuming input, and within a few iterations it leaves the
-    /// stack unchanged, so every later iteration repeats the same step.
+    /// `body` succeeds without consuming input, and the iterations come back to a stack an
+    /// earlier iteration started with (after any number of steps), so they cycle forever.
+    ///
+    /// Pushed entries that can be non-blank are ones present before the cycle (an iteration
+    /// that consumes nothing only pushes empty strings), so the same entries with the base
+    /// untouched since the first of those iterations is the same concrete stack.
     fn loops_forever(&mut self, body: &'a ParserNode<'i>, s: AbsStack) -> bool {
-        let mut cur = AbsStack {
+        // each step lands in a finite set of states; this is more than enough to see a repeat
+        const MAX_STEPS: usize = 64;
+        let fresh = |st: AbsStack| AbsStack {
             base_intact: true,
-            ..s
+            ..st
         };
-        for _ in 0..4 {
-            match self.outcome(body, cur).exact() {
-                None => return false,
-                Some(out) if out.base_intact && out.same_top(cur) => return true,
-                Some(out) => {
-                    cur = AbsStack {
-                        base_intact: true,
-                        ..out
-                    }
+        let mut cur = fresh(s);
+        let mut seen = vec![cur];
+        for _ in 0..MAX_STEPS {
+            let Some(out) = self.outcome(body, cur).exact() else {
+                return false;
+            };
+            if out.base_intact {
+                if seen.iter().any(|earlier| out.same_top(*earlier)) {
+                    return true;
                 }
+            } else {
+                // the base changed: look for a cycle from here on
+                seen.clear();
             }
+            cur = fresh(out);
+            seen.push(cur);
         }
         false
     }
@@ -857,6 +872,8 @@ mod tests {
             "a = { POP_ALL ~ (DROP | PEEK_ALL*) }",
             // an empty slice is always in range and matches nothing
             "a = { PEEK[0..0]* }",
+            // the stack alternates between empty and one empty string: a two-step cycle
+            "a = { POP_ALL ~ (DROP | (PUSH(\"\") ~ PEEK))* }",
             // implicit whitespace between iterations only delays the loop
             "WHITESPACE = _{ \" \" } a = { POP_ALL ~ PEEK_ALL* }",
         ] {
@@ -968,6 +985,19 @@ mod tests {
             stack_loop_errors("a = { POP_ALL ~ (PUSH(\"\") ~ DROP){4294967295} ~ \"x\" }").len(),
             0
         );
+        assert!(start.elapsed().as_secs() < 2, "{:?}", start.elapsed());
+    }
+
+    #[test]
+    fn nested_bounded_repetitions_are_linear() {
+        // every level revisits the same few stacks: each node is walked once per stack
+        let mut body = "(DROP | PUSH(\"\"))".to_owned();
+        for _ in 0..24 {
+            body = format!("({body}){{3}}");
+        }
+        let input = format!("a = {{ POP_ALL ~ {body} }}");
+        let start = std::time::Instant::now();
+        assert_eq!(stack_loop_errors(&input), Vec::<String>::new());
         assert!(start.elapsed().as_secs() < 2, "{:?}", start.elapsed());
     }
 
