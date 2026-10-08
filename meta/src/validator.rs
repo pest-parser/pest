@@ -693,9 +693,15 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
             ParserExpr::Rep(ref node) => check_expr(node, rules, trace),
             ParserExpr::RepOnce(ref node) => check_expr(node, rules, trace),
             ParserExpr::Opt(ref node) => check_expr(node, rules, trace),
+            ParserExpr::RepExact(ref node, _)
+            | ParserExpr::RepMin(ref node, _)
+            | ParserExpr::RepMax(ref node, _)
+            | ParserExpr::RepMinMax(ref node, ..) => check_expr(node, rules, trace),
             ParserExpr::PosPred(ref node) => check_expr(node, rules, trace),
             ParserExpr::NegPred(ref node) => check_expr(node, rules, trace),
             ParserExpr::Push(ref node) => check_expr(node, rules, trace),
+            #[cfg(feature = "grammar-extras")]
+            ParserExpr::NodeTag(ref node, _) => check_expr(node, rules, trace),
             _ => None,
         }
     }
@@ -1914,6 +1920,58 @@ mod tests {
         unwrap_or_report(consume_rules(
             PestParser::parse(Rule::grammar_rules, input).unwrap(),
         ));
+    }
+
+    #[test]
+    #[should_panic(expected = "grammar error
+
+ --> 1:7
+  |
+1 | r = { r{,1} ~ \"x\" }
+  |       ^
+  |
+  = rule r is left-recursive (r -> r); pest::pratt_parser might be useful in this case")]
+    fn bounded_repeat_lhs_left_recursion() {
+        let input = "r = { r{,1} ~ \"x\" }";
+        unwrap_or_report(consume_rules(
+            PestParser::parse(Rule::grammar_rules, input).unwrap(),
+        ));
+    }
+
+    #[test]
+    fn bounded_repeat_lhs_left_recursion_all_forms() {
+        for input in [
+            "r = { r{,1} ~ \"x\" }",
+            "r = { r{0,} ~ \"x\" }",
+            "r = { r{0, 2} ~ \"x\" }",
+            "r = { r{2} ~ \"x\" }",
+            "r = { r{1,} ~ \"x\" }",
+            "r = { r{1, 2} ~ \"x\" }",
+            "r = { (\"a\"{,1} ~ r) ~ \"x\" }",
+        ] {
+            let errors = consume_rules(PestParser::parse(Rule::grammar_rules, input).unwrap())
+                .expect_err(input);
+            assert!(
+                errors
+                    .iter()
+                    .any(|e| e.to_string().contains("rule r is left-recursive (r -> r)")),
+                "{input}: {errors:?}"
+            );
+        }
+    }
+
+    #[cfg(feature = "grammar-extras")]
+    #[test]
+    fn tagged_lhs_left_recursion() {
+        let input = "r = { #t = r? ~ \"x\" }";
+        let errors =
+            consume_rules(PestParser::parse(Rule::grammar_rules, input).unwrap()).expect_err(input);
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.to_string().contains("rule r is left-recursive (r -> r)")),
+            "{errors:?}"
+        );
     }
 
     #[test]
