@@ -18,11 +18,16 @@
 //! It only reports what is certain, so a grammar that can terminate is never rejected:
 //! - every rule is analysed as if entered with an unknown stack, so a bare `PEEK_ALL*` is not
 //!   reported (it terminates when the stack holds a non-empty string);
-//! - repetitions that cannot be reached are not reported (after a choice alternative that
-//!   always succeeds, or after an expression that never succeeds);
+//! - each expression yields the stack after it succeeds and the stack after it fails, each
+//!   possibly "cannot happen": a repetition is only analysed from stacks that can reach it,
+//!   and a choice's right side from the stacks its left side fails with (a failed `POP_ALL`
+//!   keeps what it removed);
+//! - bounded repetitions are followed for their bound only;
 //! - a sequence is not known to consume nothing when `WHITESPACE` or `COMMENT` is defined,
 //!   since implicit whitespace may run between its operands;
 //! - if `WHITESPACE` or `COMMENT` can change the stack, nothing is reported.
+//!
+//! Results are cached per expression node and stack, so each node is analysed once per stack.
 
 use std::collections::{HashMap, HashSet};
 
@@ -42,28 +47,37 @@ enum StackBase {
     Any,
 }
 
-/// What is known about the stack at a point of a rule: an unknown `base` with `top`
-/// empty-string entries pushed on it.
+/// What is known about the stack at a point of a rule: an unknown `base` with `len` entries
+/// pushed on it, each known to be an empty string or not.
 ///
-/// Only empty strings are tracked on top because they are the only entries that `PEEK`,
-/// `POP`, `PEEK_ALL` and `POP_ALL` can match without consuming input.
+/// Empty strings matter because they are the only entries that `PEEK`, `POP`, `PEEK_ALL` and
+/// `POP_ALL` can match without consuming input; the other entries are tracked so that `DROP`,
+/// `POP` and `PEEK` are known to find something to remove or match.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct AbsStack {
     base: StackBase,
-    top: u8,
+    /// Entries pushed on `base`.
+    len: u8,
+    /// Bit `i` set: entry `i` (from the bottom of the pushed ones) is certainly an empty string.
+    blank: u8,
     /// `base` still holds what it held when the current repetition iteration started.
     base_intact: bool,
 }
 
 impl AbsStack {
-    /// Most empty-string entries tracked on top; beyond that the state is given up.
-    const MAX_TOP: u8 = 8;
+    /// Most entries tracked on top of the base; beyond that the state is given up.
+    const MAX_LEN: u8 = 8;
 
     const UNKNOWN: AbsStack = AbsStack {
         base: StackBase::Any,
-        top: 0,
+        len: 0,
+        blank: 0,
         base_intact: false,
     };
+
+    fn mask(len: u8) -> u8 {
+        ((1u16 << len) - 1) as u8
+    }
 
     fn join(self, other: AbsStack) -> AbsStack {
         if self == other {
@@ -74,57 +88,161 @@ impl AbsStack {
             (StackBase::Any, _) | (_, StackBase::Any) => StackBase::Any,
             _ => StackBase::Blank,
         };
-        if self.top == other.top {
+        if self.len == other.len {
             AbsStack {
                 base,
-                top: self.top,
+                len: self.len,
+                // an entry is known blank only if it is in both
+                blank: self.blank & other.blank,
                 base_intact: self.base_intact && other.base_intact,
             }
-        } else if base == StackBase::Any {
-            AbsStack::UNKNOWN
-        } else {
-            // Different numbers of empty strings on a blank base: all entries are blank.
+        } else if base != StackBase::Any && self.all_blank() && other.all_blank() {
+            // different numbers of entries, all empty strings
             AbsStack {
                 base: StackBase::Blank,
-                top: 0,
+                len: 0,
+                blank: 0,
                 base_intact: false,
             }
+        } else {
+            AbsStack::UNKNOWN
         }
     }
 
-    fn push_blank(self) -> Option<AbsStack> {
-        (self.top < AbsStack::MAX_TOP).then_some(AbsStack {
-            top: self.top + 1,
-            ..self
-        })
+    /// The state after pushing an entry that is certainly an empty string (`blank`) or not.
+    fn push(self, blank: bool) -> AbsStack {
+        if self.len < AbsStack::MAX_LEN {
+            AbsStack {
+                len: self.len + 1,
+                blank: self.blank | (u8::from(blank) << self.len),
+                ..self
+            }
+        } else {
+            AbsStack::UNKNOWN
+        }
     }
 
     /// Every entry is an empty string.
     fn all_blank(self) -> bool {
-        self.base != StackBase::Any
+        self.base != StackBase::Any && self.blank == AbsStack::mask(self.len)
     }
 
     /// Certainly no entries.
     fn is_empty(self) -> bool {
-        self.base == StackBase::Empty && self.top == 0
+        self.base == StackBase::Empty && self.len == 0
+    }
+
+    /// Certainly at least one entry.
+    fn non_empty(self) -> bool {
+        self.len > 0
+    }
+
+    /// The top entry is certainly an empty string.
+    fn top_blank(self) -> bool {
+        self.len > 0 && self.blank >> (self.len - 1) & 1 == 1
     }
 
     /// The state after `POP_ALL` succeeds.
     fn popped_all(self) -> AbsStack {
         AbsStack {
             base: StackBase::Empty,
-            top: 0,
+            len: 0,
+            blank: 0,
             base_intact: self.base_intact && self.base == StackBase::Empty,
         }
     }
+
+    /// The state after one entry is removed (`POP`, `DROP`).
+    fn popped_one(self) -> AbsStack {
+        if self.len > 0 {
+            AbsStack {
+                len: self.len - 1,
+                blank: self.blank & AbsStack::mask(self.len - 1),
+                ..self
+            }
+        } else {
+            match self.base {
+                StackBase::Empty => self,
+                StackBase::Blank => AbsStack {
+                    base: StackBase::Blank,
+                    len: 0,
+                    blank: 0,
+                    base_intact: false,
+                },
+                StackBase::Any => AbsStack::UNKNOWN,
+            }
+        }
+    }
+
+    /// The same pushed entries as `other` (the base is compared through `base_intact`).
+    fn same_top(self, other: AbsStack) -> bool {
+        self.len == other.len && self.blank == other.blank
+    }
 }
 
-/// Joins two possibly unreachable states (`None` = the point cannot be reached).
-fn join(a: Option<AbsStack>, b: Option<AbsStack>) -> Option<AbsStack> {
+/// A possibly impossible state (`None`: that outcome cannot happen).
+type Maybe = Option<AbsStack>;
+
+/// Joins two possibly impossible states.
+fn join(a: Maybe, b: Maybe) -> Maybe {
     match (a, b) {
         (Some(a), Some(b)) => Some(a.join(b)),
         (a, None) => a,
         (None, b) => b,
+    }
+}
+
+/// What an expression does when entered with a given stack.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Outcome {
+    /// The stack after it succeeds, or `None` if it never succeeds.
+    ok: Maybe,
+    /// The stack after it fails, or `None` if it never fails.
+    err: Maybe,
+    /// When it succeeds it consumes no input, whatever the input (only meaningful with `ok`).
+    empty: bool,
+}
+
+impl Outcome {
+    /// Nothing is known except the stack it was entered with, which it may have changed.
+    const UNKNOWN: Outcome = Outcome {
+        ok: Some(AbsStack::UNKNOWN),
+        err: Some(AbsStack::UNKNOWN),
+        empty: false,
+    };
+
+    fn succeeds(s: AbsStack, empty: bool) -> Outcome {
+        Outcome {
+            ok: Some(s),
+            err: None,
+            empty,
+        }
+    }
+
+    fn fails(s: AbsStack) -> Outcome {
+        Outcome {
+            ok: None,
+            err: Some(s),
+            empty: false,
+        }
+    }
+
+    /// May succeed (consuming input, or not) or fail, leaving the stack as `s`.
+    fn either(s: AbsStack) -> Outcome {
+        Outcome {
+            ok: Some(s),
+            err: Some(s),
+            empty: false,
+        }
+    }
+
+    /// Certainly succeeds without consuming input, whatever the input: `Some(stack after)`.
+    fn exact(self) -> Maybe {
+        if self.err.is_none() && self.empty {
+            self.ok
+        } else {
+            None
+        }
     }
 }
 
@@ -146,23 +264,24 @@ pub(super) fn validate_stack_repetition<'a, 'i: 'a>(
     let mut analysis = StackAnalysis {
         rules: &map,
         skips: map.contains_key("WHITESPACE") || map.contains_key("COMMENT"),
-        post_memo: HashMap::new(),
-        exact_memo: HashMap::new(),
-        never_memo: HashMap::new(),
-        post_active: HashSet::new(),
-        exact_active: HashSet::new(),
-        never_active: HashSet::new(),
+        memo: HashMap::new(),
+        active: HashSet::new(),
+        rule_memo: HashMap::new(),
+        rule_active: HashSet::new(),
+        errors: vec![],
+        reported: HashSet::new(),
+        walking: false,
     };
-    let mut errors = vec![];
     let entry = AbsStack {
         base: StackBase::Any,
-        top: 0,
+        len: 0,
+        blank: 0,
         base_intact: true,
     };
     for rule in rules {
-        analysis.walk(&rule.node, Some(entry), &mut errors);
+        analysis.walk(&rule.node, entry);
     }
-    errors
+    analysis.errors
 }
 
 fn rule_modifies_stack(
@@ -213,105 +332,321 @@ fn expr_modifies_stack(
     }
 }
 
-type Memo<T> = HashMap<(String, AbsStack), T>;
+/// Most iterations a bounded repetition is followed one by one; beyond that its iterations are
+/// summarised like an unbounded repetition's.
+const UNROLL: u32 = 8;
 
 struct StackAnalysis<'a, 'i> {
     rules: &'a HashMap<String, &'a ParserNode<'i>>,
     /// `WHITESPACE` or `COMMENT` is defined, so implicit whitespace may be consumed between
     /// the operands of a sequence (in non-atomic rules, which are not tracked).
     skips: bool,
-    post_memo: Memo<AbsStack>,
-    exact_memo: Memo<Option<AbsStack>>,
-    never_memo: Memo<bool>,
-    post_active: HashSet<(String, AbsStack)>,
-    exact_active: HashSet<(String, AbsStack)>,
-    never_active: HashSet<(String, AbsStack)>,
+    /// Outcome of an expression node (by address) entered with a stack.
+    memo: HashMap<(*const ParserExpr<'i>, AbsStack), Outcome>,
+    active: HashSet<(*const ParserExpr<'i>, AbsStack)>,
+    /// Outcome of a rule entered with a stack.
+    rule_memo: HashMap<(String, AbsStack), Outcome>,
+    rule_active: HashSet<(String, AbsStack)>,
+    errors: Vec<Error<Rule>>,
+    /// Repetition nodes already reported, so one is not reported twice.
+    reported: HashSet<*const ParserNode<'i>>,
+    /// Inside `walk`: repetitions reached are checked and reported.
+    walking: bool,
 }
 
-impl<'i> StackAnalysis<'_, 'i> {
-    /// Visits `node` entered with stack `s` (`None`: it cannot be reached), reports looping
-    /// repetitions in it, and returns the stack after `node` succeeds.
-    fn walk(
-        &mut self,
-        node: &ParserNode<'i>,
-        s: Option<AbsStack>,
-        errors: &mut Vec<Error<Rule>>,
-    ) -> Option<AbsStack> {
-        let s = s?;
+impl<'a, 'i> StackAnalysis<'a, 'i> {
+    /// Analyses a rule's body entered with `s`, reporting the looping repetitions reached.
+    fn walk(&mut self, node: &'a ParserNode<'i>, s: AbsStack) {
+        self.walking = true;
+        let _ = self.visit(node, s);
+        self.walking = false;
+    }
+
+    /// The outcome of `node` entered with `s`; while walking, also reports the looping
+    /// repetitions it reaches. Walking is not cached: every reachable node is visited.
+    fn visit(&mut self, node: &'a ParserNode<'i>, s: AbsStack) -> Outcome {
+        if self.walking {
+            self.step(node, s)
+        } else {
+            self.outcome(node, s)
+        }
+    }
+
+    /// The outcome of `node` entered with `s`, cached; never reports.
+    fn outcome(&mut self, node: &'a ParserNode<'i>, s: AbsStack) -> Outcome {
+        let key = (&node.expr as *const ParserExpr<'i>, s);
+        if let Some(&o) = self.memo.get(&key) {
+            return o;
+        }
+        if !self.active.insert(key) {
+            return Outcome::UNKNOWN;
+        }
+        let walking = std::mem::replace(&mut self.walking, false);
+        let o = self.step(node, s);
+        self.walking = walking;
+        let _ = self.active.remove(&key);
+        let _ = self.memo.insert(key, o);
+        o
+    }
+
+    fn step(&mut self, node: &'a ParserNode<'i>, s: AbsStack) -> Outcome {
         match &node.expr {
-            ParserExpr::Seq(lhs, rhs) => {
-                let mid = self.walk(lhs, Some(s), errors);
-                let mid = if self.never_succeeds(&lhs.expr, s) {
-                    None
+            ParserExpr::Str(string) | ParserExpr::Insens(string) => {
+                if string.is_empty() {
+                    Outcome::succeeds(s, true)
                 } else {
-                    mid
+                    Outcome::either(s)
+                }
+            }
+            ParserExpr::Range(_, _) => Outcome::either(s),
+            ParserExpr::Ident(name) => self.ident(name, s),
+            // `PEEK[..]` is `PEEK_ALL` matched bottom to top; other slices can be out of range
+            // or consume input.
+            ParserExpr::PeekSlice(0, None) => self.ident("PEEK_ALL", s),
+            ParserExpr::PeekSlice(_, _) => Outcome::either(s),
+            ParserExpr::PosPred(inner) => {
+                let o = self.visit(inner, s);
+                Outcome {
+                    ok: o.ok.map(|_| s),
+                    err: o.err.map(|_| s),
+                    empty: true,
+                }
+            }
+            ParserExpr::NegPred(inner) => {
+                let o = self.visit(inner, s);
+                Outcome {
+                    ok: o.err.map(|_| s),
+                    err: o.ok.map(|_| s),
+                    empty: true,
+                }
+            }
+            ParserExpr::Seq(lhs, rhs) => {
+                let l = self.visit(lhs, s);
+                let r = match l.ok {
+                    Some(mid) => self.visit(rhs, mid),
+                    None => Outcome {
+                        ok: None,
+                        err: None,
+                        empty: true,
+                    },
                 };
-                self.walk(rhs, mid, errors)
+                Outcome {
+                    ok: r.ok,
+                    // a failed sequence restores the stack (`state.sequence`)
+                    err: if l.err.is_some() || r.err.is_some() {
+                        Some(s)
+                    } else {
+                        None
+                    },
+                    // implicit whitespace may be consumed between the operands
+                    empty: l.empty && r.empty && !self.skips,
+                }
             }
             ParserExpr::Choice(lhs, rhs) => {
-                let l = self.walk(lhs, Some(s), errors);
-                // `rhs` is only tried when `lhs` fails.
-                let lhs_always_succeeds = self.exact(&lhs.expr, s).is_some()
-                    || is_non_failing(&lhs.expr, self.rules, &mut vec![]);
-                let r = if lhs_always_succeeds {
-                    None
-                } else {
-                    self.walk(rhs, Some(s), errors)
+                let l = self.visit(lhs, s);
+                // `rhs` is only tried when `lhs` fails, from the stack `lhs` failed with.
+                let r = match l.err {
+                    Some(failed) => self.visit(rhs, failed),
+                    None => Outcome {
+                        ok: None,
+                        err: None,
+                        empty: true,
+                    },
                 };
-                join(l, r)
-            }
-            ParserExpr::Opt(inner) => join(Some(s), self.walk(inner, Some(s), errors)),
-            ParserExpr::Rep(inner) | ParserExpr::RepOnce(inner) | ParserExpr::RepMin(inner, _) => {
-                if self.loops_forever(&inner.expr, s)
-                    && !is_non_failing(&inner.expr, self.rules, &mut vec![])
-                    && !is_non_progressing(&inner.expr, self.rules, &mut vec![])
-                {
-                    errors.push(Error::new_from_span(
-                        ErrorVariant::CustomError {
-                            message: "expression inside repetition is non-progressing and will \
-                                      repeat infinitely"
-                                .to_owned(),
-                        },
-                        node.span,
-                    ));
+                Outcome {
+                    ok: join(l.ok, r.ok),
+                    err: r.err,
+                    empty: (l.ok.is_none() || l.empty) && (r.ok.is_none() || r.empty),
                 }
-                let every = self.post_repeated(&inner.expr, s);
-                self.walk(inner, Some(every), errors);
-                Some(every)
             }
-            ParserExpr::RepExact(inner, _)
-            | ParserExpr::RepMax(inner, _)
-            | ParserExpr::RepMinMax(inner, _, _) => {
-                let every = self.post_repeated(&inner.expr, s);
-                self.walk(inner, Some(every), errors);
-                Some(every)
+            ParserExpr::Opt(inner) => {
+                let o = self.visit(inner, s);
+                Outcome {
+                    ok: join(o.ok, o.err),
+                    err: None,
+                    empty: o.ok.is_none() || o.empty,
+                }
             }
-            ParserExpr::PosPred(inner) | ParserExpr::NegPred(inner) => {
-                self.walk(inner, Some(s), errors);
-                Some(s)
-            }
+            ParserExpr::Rep(inner) => self.repeat(node, inner, s, 0, None),
+            ParserExpr::RepOnce(inner) => self.repeat(node, inner, s, 1, None),
+            ParserExpr::RepMin(inner, min) => self.repeat(node, inner, s, *min, None),
+            ParserExpr::RepExact(inner, n) => self.repeat(node, inner, s, *n, Some(*n)),
+            ParserExpr::RepMax(inner, max) => self.repeat(node, inner, s, 0, Some(*max)),
+            ParserExpr::RepMinMax(inner, min, max) => self.repeat(node, inner, s, *min, Some(*max)),
             ParserExpr::Push(inner) => {
-                self.walk(inner, Some(s), errors);
-                Some(self.post(&node.expr, s))
+                let o = self.visit(inner, s);
+                Outcome {
+                    // pushes what it matched: an empty string if it certainly matched nothing
+                    ok: o.ok.map(|after| after.push(o.empty)),
+                    err: o.err,
+                    empty: o.empty,
+                }
             }
             #[cfg(feature = "grammar-extras")]
-            ParserExpr::NodeTag(inner, _) => self.walk(inner, Some(s), errors),
-            _ => Some(self.post(&node.expr, s)),
+            ParserExpr::PushLiteral(string) => Outcome::succeeds(s.push(string.is_empty()), true),
+            #[cfg(feature = "grammar-extras")]
+            ParserExpr::NodeTag(inner, _) => self.visit(inner, s),
         }
+    }
+
+    fn ident(&mut self, name: &str, s: AbsStack) -> Outcome {
+        match name {
+            // matches every entry, top to bottom; nothing to match when all are empty strings
+            "PEEK_ALL" => {
+                if s.all_blank() {
+                    Outcome::succeeds(s, true)
+                } else {
+                    Outcome::either(s)
+                }
+            }
+            "POP_ALL" => {
+                if s.all_blank() {
+                    Outcome::succeeds(s.popped_all(), true)
+                } else {
+                    // A failed POP_ALL keeps the entries it removed before the mismatch
+                    // (it is not restored), so after a failure only "unknown" is safe.
+                    Outcome {
+                        ok: Some(s.popped_all()),
+                        err: Some(AbsStack::UNKNOWN),
+                        empty: false,
+                    }
+                }
+            }
+            // On an empty stack POP and PEEK panic and DROP fails: none of them succeeds.
+            "PEEK" | "POP" => {
+                if s.is_empty() {
+                    Outcome {
+                        ok: None,
+                        err: None,
+                        empty: true,
+                    }
+                } else {
+                    let after = if name == "POP" { s.popped_one() } else { s };
+                    if s.top_blank() {
+                        Outcome::succeeds(after, true)
+                    } else {
+                        // matches the top entry: may consume input or fail
+                        Outcome {
+                            ok: Some(after),
+                            err: Some(after),
+                            empty: false,
+                        }
+                    }
+                }
+            }
+            "DROP" => {
+                if s.is_empty() {
+                    Outcome::fails(s)
+                } else if s.non_empty() {
+                    Outcome::succeeds(s.popped_one(), true)
+                } else {
+                    Outcome {
+                        ok: Some(s.popped_one()),
+                        err: Some(s),
+                        empty: true,
+                    }
+                }
+            }
+            _ => match self.rules.get(name) {
+                Some(&node) => self.rule(name, node, s),
+                // other builtins (ANY, SOI, EOI, ...) do not touch the stack
+                None => Outcome::either(s),
+            },
+        }
+    }
+
+    fn rule(&mut self, name: &str, node: &'a ParserNode<'i>, s: AbsStack) -> Outcome {
+        let key = (name.to_owned(), s);
+        if let Some(&o) = self.rule_memo.get(&key) {
+            return o;
+        }
+        if !self.rule_active.insert(key.clone()) {
+            // recursion: give up
+            return Outcome::UNKNOWN;
+        }
+        let walking = std::mem::replace(&mut self.walking, false);
+        let o = self.outcome(node, s);
+        self.walking = walking;
+        let _ = self.rule_active.remove(&key);
+        let _ = self.rule_memo.insert(key, o);
+        o
+    }
+
+    /// A repetition of `inner` between `min` and `max` times (unbounded if `None`), entered
+    /// with `s`. While walking, the body is visited from every stack an iteration can start
+    /// with, and an unbounded repetition that loops forever is reported.
+    fn repeat(
+        &mut self,
+        node: &'a ParserNode<'i>,
+        inner: &'a ParserNode<'i>,
+        s: AbsStack,
+        min: u32,
+        max: Option<u32>,
+    ) -> Outcome {
+        if max.is_none() && self.walking && self.loops_forever(inner, s) {
+            self.report(node, inner);
+        }
+        // The stacks iterations start with: iteration k + 1 starts where iteration k succeeded.
+        // Followed one by one up to the bound (or UNROLL), then summarised by a fixed point.
+        let limit = max.unwrap_or(u32::MAX).min(UNROLL.max(min));
+        let mut start = Some(s);
+        let mut ok = if min == 0 { Some(s) } else { None };
+        let mut err = None;
+        let mut empty = true;
+        let mut k = 0;
+        while let Some(at) = start {
+            if k >= limit {
+                break;
+            }
+            let o = self.visit(inner, at);
+            k += 1;
+            if o.err.is_some() {
+                if k <= min {
+                    // fewer than `min` iterations: the repetition fails, restoring the stack
+                    err = Some(s);
+                } else {
+                    ok = join(ok, o.err);
+                }
+            }
+            if o.ok.is_some() {
+                empty &= o.empty;
+                if k >= min {
+                    ok = join(ok, o.ok);
+                }
+            }
+            start = o.ok;
+        }
+        if let Some(mut at) = start {
+            // more iterations than unrolled: summarise them
+            if max.is_none_or(|m| k < m) {
+                loop {
+                    let o = self.visit(inner, at);
+                    empty &= o.ok.is_none() || o.empty;
+                    ok = join(ok, join(o.ok, o.err));
+                    let next = join(Some(at), o.ok).unwrap_or(at);
+                    if next == at {
+                        break;
+                    }
+                    at = next;
+                }
+            }
+            ok = join(ok, Some(at));
+        }
+        Outcome { ok, err, empty }
     }
 
     /// A repetition of `body` entered with stack `s` never ends: from every stack `s` allows,
     /// `body` succeeds without consuming input, and within a few iterations it leaves the
     /// stack unchanged, so every later iteration repeats the same step.
-    fn loops_forever(&mut self, body: &ParserExpr<'i>, s: AbsStack) -> bool {
+    fn loops_forever(&mut self, body: &'a ParserNode<'i>, s: AbsStack) -> bool {
         let mut cur = AbsStack {
             base_intact: true,
             ..s
         };
         for _ in 0..4 {
-            match self.exact(body, cur) {
+            match self.outcome(body, cur).exact() {
                 None => return false,
-                Some(out) if out.base_intact && out.top == cur.top => return true,
+                Some(out) if out.base_intact && out.same_top(cur) => return true,
                 Some(out) => {
                     cur = AbsStack {
                         base_intact: true,
@@ -323,222 +658,23 @@ impl<'i> StackAnalysis<'_, 'i> {
         false
     }
 
-    /// The stack at the start of any iteration of a repetition of `body` entered with `s`
-    /// (also covers zero iterations).
-    fn post_repeated(&mut self, body: &ParserExpr<'i>, s: AbsStack) -> AbsStack {
-        let mut cur = s;
-        loop {
-            let next = cur.join(self.post(body, cur));
-            if next == cur {
-                return cur;
-            }
-            cur = next;
+    fn report(&mut self, node: &'a ParserNode<'i>, inner: &'a ParserNode<'i>) {
+        // the existing check already reports these
+        if is_non_failing(&inner.expr, self.rules, &mut vec![])
+            || is_non_progressing(&inner.expr, self.rules, &mut vec![])
+        {
+            return;
         }
-    }
-
-    /// The stack after `expr` succeeds when entered with `s` (an over-approximation).
-    fn post(&mut self, expr: &ParserExpr<'i>, s: AbsStack) -> AbsStack {
-        match expr {
-            ParserExpr::Str(_)
-            | ParserExpr::Insens(_)
-            | ParserExpr::Range(_, _)
-            | ParserExpr::PeekSlice(_, _)
-            | ParserExpr::PosPred(_)
-            | ParserExpr::NegPred(_) => s,
-            ParserExpr::Ident(name) => match name.as_str() {
-                "POP_ALL" => s.popped_all(),
-                "PEEK" | "PEEK_ALL" => s,
-                "POP" | "DROP" => {
-                    if s.top > 0 {
-                        AbsStack {
-                            top: s.top - 1,
-                            ..s
-                        }
-                    } else {
-                        match s.base {
-                            // POP panics and DROP fails on an empty stack.
-                            StackBase::Empty => s,
-                            StackBase::Blank => AbsStack {
-                                base: StackBase::Blank,
-                                top: 0,
-                                base_intact: false,
-                            },
-                            StackBase::Any => AbsStack::UNKNOWN,
-                        }
-                    }
-                }
-                _ => {
-                    if self.rules.contains_key(name) {
-                        self.post_rule(name, s)
-                    } else {
-                        // other builtins do not touch the stack
-                        s
-                    }
-                }
-            },
-            ParserExpr::Seq(lhs, rhs) => {
-                let mid = self.post(&lhs.expr, s);
-                self.post(&rhs.expr, mid)
-            }
-            ParserExpr::Choice(lhs, rhs) => {
-                let l = self.post(&lhs.expr, s);
-                l.join(self.post(&rhs.expr, s))
-            }
-            ParserExpr::Opt(inner) => s.join(self.post(&inner.expr, s)),
-            ParserExpr::Rep(inner)
-            | ParserExpr::RepOnce(inner)
-            | ParserExpr::RepExact(inner, _)
-            | ParserExpr::RepMin(inner, _)
-            | ParserExpr::RepMax(inner, _)
-            | ParserExpr::RepMinMax(inner, _, _) => self.post_repeated(&inner.expr, s),
-            ParserExpr::Push(inner) => match self.exact(&inner.expr, s) {
-                // `inner` matched nothing, so an empty string was pushed.
-                Some(after) => after.push_blank().unwrap_or(AbsStack::UNKNOWN),
-                None => AbsStack::UNKNOWN,
-            },
-            #[cfg(feature = "grammar-extras")]
-            ParserExpr::PushLiteral(string) if string.is_empty() => {
-                s.push_blank().unwrap_or(AbsStack::UNKNOWN)
-            }
-            #[cfg(feature = "grammar-extras")]
-            ParserExpr::PushLiteral(_) => AbsStack::UNKNOWN,
-            #[cfg(feature = "grammar-extras")]
-            ParserExpr::NodeTag(inner, _) => self.post(&inner.expr, s),
+        if self.reported.insert(node as *const ParserNode<'i>) {
+            self.errors.push(Error::new_from_span(
+                ErrorVariant::CustomError {
+                    message: "expression inside repetition is non-progressing and will repeat \
+                              infinitely"
+                        .to_owned(),
+                },
+                node.span,
+            ));
         }
-    }
-
-    fn post_rule(&mut self, name: &str, s: AbsStack) -> AbsStack {
-        let key = (name.to_owned(), s);
-        if let Some(&memo) = self.post_memo.get(&key) {
-            return memo;
-        }
-        if !self.post_active.insert(key.clone()) {
-            // recursion: give up on what the stack holds
-            return AbsStack::UNKNOWN;
-        }
-        let node = self.rules[name];
-        let result = self.post(&node.expr, s);
-        let _ = self.post_active.remove(&key);
-        let _ = self.post_memo.insert(key, result);
-        result
-    }
-
-    /// `Some(stack after)` if, from every stack `s` allows and on any input, `expr` succeeds
-    /// without consuming input; `None` if that is not certain.
-    fn exact(&mut self, expr: &ParserExpr<'i>, s: AbsStack) -> Option<AbsStack> {
-        match expr {
-            ParserExpr::Str(string) | ParserExpr::Insens(string) => string.is_empty().then_some(s),
-            ParserExpr::Range(_, _) | ParserExpr::NegPred(_) => None,
-            ParserExpr::Ident(name) => match name.as_str() {
-                "PEEK_ALL" => s.all_blank().then_some(s),
-                "POP_ALL" => s.all_blank().then(|| s.popped_all()),
-                "PEEK" => (s.top > 0).then_some(s),
-                "POP" | "DROP" => (s.top > 0).then(|| AbsStack {
-                    top: s.top - 1,
-                    ..s
-                }),
-                _ => {
-                    if self.rules.contains_key(name) {
-                        self.exact_rule(name, s)
-                    } else {
-                        // other builtins (ANY, SOI, EOI, ...) can fail or consume
-                        None
-                    }
-                }
-            },
-            // `PEEK[..]` is `PEEK_ALL` matched bottom to top; other slices can be out of range.
-            ParserExpr::PeekSlice(0, None) => s.all_blank().then_some(s),
-            ParserExpr::PeekSlice(_, _) => None,
-            ParserExpr::PosPred(inner) => self.exact(&inner.expr, s).map(|_| s),
-            // Implicit whitespace may be consumed between the operands.
-            ParserExpr::Seq(_, _) if self.skips => None,
-            ParserExpr::Seq(lhs, rhs) => {
-                let mid = self.exact(&lhs.expr, s)?;
-                self.exact(&rhs.expr, mid)
-            }
-            // `lhs` always succeeds, so `rhs` is never tried.
-            ParserExpr::Choice(lhs, _) => self.exact(&lhs.expr, s),
-            ParserExpr::Opt(inner) => self.exact(&inner.expr, s),
-            ParserExpr::Rep(_)
-            | ParserExpr::RepOnce(_)
-            | ParserExpr::RepExact(_, _)
-            | ParserExpr::RepMin(_, _)
-            | ParserExpr::RepMax(_, _)
-            | ParserExpr::RepMinMax(_, _, _) => None,
-            ParserExpr::Push(inner) => self.exact(&inner.expr, s)?.push_blank(),
-            #[cfg(feature = "grammar-extras")]
-            ParserExpr::PushLiteral(string) => {
-                if string.is_empty() {
-                    s.push_blank()
-                } else {
-                    None
-                }
-            }
-            #[cfg(feature = "grammar-extras")]
-            ParserExpr::NodeTag(inner, _) => self.exact(&inner.expr, s),
-        }
-    }
-
-    fn exact_rule(&mut self, name: &str, s: AbsStack) -> Option<AbsStack> {
-        let key = (name.to_owned(), s);
-        if let Some(&memo) = self.exact_memo.get(&key) {
-            return memo;
-        }
-        if !self.exact_active.insert(key.clone()) {
-            // recursion: not certain
-            return None;
-        }
-        let node = self.rules[name];
-        let result = self.exact(&node.expr, s);
-        let _ = self.exact_active.remove(&key);
-        let _ = self.exact_memo.insert(key, result);
-        result
-    }
-
-    /// From every stack `s` allows and on any input, `expr` never succeeds: it fails, or
-    /// panics (`POP` or `PEEK` on an empty stack). What follows it in a sequence cannot run.
-    fn never_succeeds(&mut self, expr: &ParserExpr<'i>, s: AbsStack) -> bool {
-        match expr {
-            ParserExpr::Ident(name) => match name.as_str() {
-                "DROP" | "POP" | "PEEK" => s.is_empty(),
-                _ => self.rules.contains_key(name) && self.never_succeeds_rule(name, s),
-            },
-            ParserExpr::Seq(lhs, rhs) => {
-                self.never_succeeds(&lhs.expr, s) || {
-                    let mid = self.post(&lhs.expr, s);
-                    self.never_succeeds(&rhs.expr, mid)
-                }
-            }
-            ParserExpr::Choice(lhs, rhs) => {
-                self.never_succeeds(&lhs.expr, s) && self.never_succeeds(&rhs.expr, s)
-            }
-            ParserExpr::RepOnce(inner)
-            | ParserExpr::RepExact(inner, 1..)
-            | ParserExpr::RepMin(inner, 1..)
-            | ParserExpr::RepMinMax(inner, 1.., _)
-            | ParserExpr::PosPred(inner)
-            | ParserExpr::Push(inner) => self.never_succeeds(&inner.expr, s),
-            ParserExpr::NegPred(inner) => self.exact(&inner.expr, s).is_some(),
-            #[cfg(feature = "grammar-extras")]
-            ParserExpr::NodeTag(inner, _) => self.never_succeeds(&inner.expr, s),
-            _ => false,
-        }
-    }
-
-    fn never_succeeds_rule(&mut self, name: &str, s: AbsStack) -> bool {
-        let key = (name.to_owned(), s);
-        if let Some(&memo) = self.never_memo.get(&key) {
-            return memo;
-        }
-        if !self.never_active.insert(key.clone()) {
-            // recursion: not certain
-            return false;
-        }
-        let node = self.rules[name];
-        let result = self.never_succeeds(&node.expr, s);
-        let _ = self.never_active.remove(&key);
-        let _ = self.never_memo.insert(key, result);
-        result
     }
 }
 
@@ -546,7 +682,10 @@ impl<'i> StackAnalysis<'_, 'i> {
 mod tests {
     use pest::Parser;
 
-    use crate::parser::{consume_rules, PestParser, Rule};
+    use pest::Span;
+
+    use crate::ast::RuleType;
+    use crate::parser::{consume_rules, ParserExpr, ParserNode, ParserRule, PestParser, Rule};
     use crate::unwrap_or_report;
 
     fn stack_loop_errors(input: &str) -> Vec<String> {
@@ -647,8 +786,16 @@ mod tests {
             "a = { POP_ALL ~ PEEK* }",
             // the repetition is never reached: the first alternative always succeeds
             "a = { POP_ALL ~ (PEEK_ALL | PEEK_ALL*) }",
+            "WHITESPACE = _{ \" \" } a = { POP_ALL ~ ((PEEK_ALL ~ PEEK_ALL) | PEEK_ALL*) }",
             // the repetition is never reached: DROP fails on the empty stack
             "a = { POP_ALL ~ (DROP ~ PEEK_ALL*)? }",
+            "a = { POP_ALL ~ (DROP ~ PUSH(\"\") ~ PEEK*)* }",
+            "a = { POP_ALL ~ PUSH(\"a\") ~ DROP ~ DROP ~ POP_ALL ~ PEEK_ALL* }",
+            // the only iteration allowed fails at DROP and takes the second alternative
+            "a = { POP_ALL ~ ((DROP ~ PUSH(\"\") ~ PEEK*) | PUSH(\"\")){,1} }",
+            // a failed POP_ALL keeps the entries it removed: after PUSH(\"y\") ~ PUSH(\"x\"),
+            // on \"yxy!\" it removes the blank and \"x\", then PEEK* matches \"y\" once
+            "a = { PUSH(\"\") ~ (POP_ALL | PEEK*) } b = { PUSH(\"y\") ~ PUSH(\"x\") ~ a }",
             // implicit whitespace inside the PUSH is captured, so POP fails at the end
             "WHITESPACE = _{ \" \" } a = { (PUSH(\"\" ~ \"\") ~ POP)* }",
             // the same through a non-atomic rule called from an atomic one
@@ -687,5 +834,44 @@ mod tests {
             assert!(errors.len() <= 1, "{input}: {errors:?}");
         }
         assert_eq!(stack_loop_errors("a = { \"\"* }").len(), 1);
+    }
+
+    #[test]
+    fn long_sequences_are_linear() {
+        // Every prefix of a left-nested sequence is analysed once, not once per longer prefix
+        // (rescanning prefixes took about 691,000 steps for 128 operands). Built directly, as
+        // the parser's call limit stops a grammar this deep.
+        let span = Span::new("a", 0, 1).unwrap();
+        let node = |expr| ParserNode { expr, span };
+        let mut seq = node(ParserExpr::Ident("POP_ALL".to_owned()));
+        for _ in 0..4096 {
+            seq = node(ParserExpr::Seq(
+                Box::new(seq),
+                Box::new(node(ParserExpr::Str("a".to_owned()))),
+            ));
+        }
+        let peek_all = node(ParserExpr::Ident("PEEK_ALL".to_owned()));
+        let body = node(ParserExpr::Seq(
+            Box::new(seq),
+            Box::new(node(ParserExpr::Rep(Box::new(peek_all)))),
+        ));
+        let rules = vec![ParserRule {
+            name: "a".to_owned(),
+            span,
+            ty: RuleType::Normal,
+            node: body,
+        }];
+        // the tree nests 4096 deep, so analyse it on a thread with a large stack
+        let elapsed = std::thread::Builder::new()
+            .stack_size(512 * 1024 * 1024)
+            .spawn(move || {
+                let start = std::time::Instant::now();
+                assert_eq!(super::validate_stack_repetition(&rules).len(), 1);
+                start.elapsed()
+            })
+            .unwrap()
+            .join()
+            .unwrap();
+        assert!(elapsed.as_secs() < 2, "{elapsed:?}");
     }
 }
