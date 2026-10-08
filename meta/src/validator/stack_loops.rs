@@ -20,11 +20,13 @@
 //!   reported (it terminates when the stack holds a non-empty string);
 //! - each expression yields the stack after it succeeds and the stack after it fails, each
 //!   possibly "cannot happen": a repetition is only analysed from stacks that can reach it,
-//!   and a choice's right side from the stacks its left side fails with (a failed `POP_ALL`
-//!   keeps what it removed);
-//! - bounded repetitions are followed for their bound only;
-//! - a sequence is not known to consume nothing when `WHITESPACE` or `COMMENT` is defined,
-//!   since implicit whitespace may run between its operands;
+//!   and a choice's right side from the stack its left side fails with (restored when the
+//!   optimizer wraps the branch in `RestoreOnErr`; a bare failed `POP_ALL` keeps what it
+//!   removed);
+//! - bounded repetitions are followed for their bound only, at most `UNROLL` iterations one
+//!   by one whatever the bounds, the rest summarised;
+//! - a sequence or a repetition is not known to consume nothing when `WHITESPACE` or
+//!   `COMMENT` is defined, since implicit whitespace may run between its parts;
 //! - if `WHITESPACE` or `COMMENT` can change the stack, nothing is reported.
 //!
 //! Results are cached per expression node and stack, so each node is analysed once per stack.
@@ -400,9 +402,11 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
             }
             ParserExpr::Range(_, _) => Outcome::either(s),
             ParserExpr::Ident(name) => self.ident(name, s),
-            // `PEEK[..]` is `PEEK_ALL` matched bottom to top; other slices can be out of range
+            // `PEEK[..]` is `PEEK_ALL` matched bottom to top. `PEEK[0..0]` is always in range
+            // (0 is never past the end) and matches nothing. Other slices can be out of range
             // or consume input.
             ParserExpr::PeekSlice(0, None) => self.ident("PEEK_ALL", s),
+            ParserExpr::PeekSlice(0, Some(0)) => Outcome::succeeds(s, true),
             ParserExpr::PeekSlice(_, _) => Outcome::either(s),
             ParserExpr::PosPred(inner) => {
                 let o = self.visit(inner, s);
@@ -445,7 +449,7 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
             ParserExpr::Choice(lhs, rhs) => {
                 let l = self.visit(lhs, s);
                 // `rhs` is only tried when `lhs` fails, from the stack `lhs` failed with.
-                let r = match l.err {
+                let r = match self.failed(lhs, l.err, s) {
                     Some(failed) => self.visit(rhs, failed),
                     None => Outcome {
                         ok: None,
@@ -455,14 +459,14 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
                 };
                 Outcome {
                     ok: join(l.ok, r.ok),
-                    err: r.err,
+                    err: self.failed(rhs, r.err, s),
                     empty: (l.ok.is_none() || l.empty) && (r.ok.is_none() || r.empty),
                 }
             }
             ParserExpr::Opt(inner) => {
                 let o = self.visit(inner, s);
                 Outcome {
-                    ok: join(o.ok, o.err),
+                    ok: join(o.ok, self.failed(inner, o.err, s)),
                     err: None,
                     empty: o.ok.is_none() || o.empty,
                 }
@@ -572,6 +576,59 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
         o
     }
 
+    /// The stack after `inner` failed with `err`, as a choice or an optional sees it. The
+    /// optimizer wraps a choice branch or an optional body that changes the stack (`PUSH`,
+    /// `POP`, `DROP`, also through rules) in `RestoreOnErr`, so its failure restores the stack
+    /// it started with (`restorer.rs`). It does not count `POP_ALL`, whose failure keeps what
+    /// it removed: both stacks are possible then.
+    fn failed(&mut self, inner: &'a ParserNode<'i>, err: Maybe, s: AbsStack) -> Maybe {
+        let err = err?;
+        if self.restored_on_err(&inner.expr) {
+            Some(s)
+        } else {
+            Some(err)
+        }
+    }
+
+    /// `restorer::child_modifies_state` on the validator's AST: `PUSH`, `POP` or `DROP` occurs
+    /// in `expr` or in a rule it calls.
+    fn restored_on_err(&self, expr: &ParserExpr<'i>) -> bool {
+        fn go<'i>(
+            expr: &ParserExpr<'i>,
+            rules: &HashMap<String, &ParserNode<'i>>,
+            seen: &mut HashSet<String>,
+        ) -> bool {
+            match expr {
+                ParserExpr::Push(_) => true,
+                #[cfg(feature = "grammar-extras")]
+                ParserExpr::PushLiteral(_) => true,
+                ParserExpr::Ident(name) => match name.as_str() {
+                    "POP" | "DROP" => true,
+                    _ => match rules.get(name) {
+                        Some(node) if seen.insert(name.clone()) => go(&node.expr, rules, seen),
+                        _ => false,
+                    },
+                },
+                ParserExpr::Seq(lhs, rhs) | ParserExpr::Choice(lhs, rhs) => {
+                    go(&lhs.expr, rules, seen) || go(&rhs.expr, rules, seen)
+                }
+                ParserExpr::PosPred(inner)
+                | ParserExpr::NegPred(inner)
+                | ParserExpr::Opt(inner)
+                | ParserExpr::Rep(inner)
+                | ParserExpr::RepOnce(inner)
+                | ParserExpr::RepExact(inner, _)
+                | ParserExpr::RepMin(inner, _)
+                | ParserExpr::RepMax(inner, _)
+                | ParserExpr::RepMinMax(inner, _, _) => go(&inner.expr, rules, seen),
+                #[cfg(feature = "grammar-extras")]
+                ParserExpr::NodeTag(inner, _) => go(&inner.expr, rules, seen),
+                _ => false,
+            }
+        }
+        go(expr, self.rules, &mut HashSet::new())
+    }
+
     /// A repetition of `inner` between `min` and `max` times (unbounded if `None`), entered
     /// with `s`. While walking, the body is visited from every stack an iteration can start
     /// with, and an unbounded repetition that loops forever is reported.
@@ -586,16 +643,17 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
         if max.is_none() && self.walking && self.loops_forever(inner, s) {
             self.report(node, inner);
         }
-        // The stacks iterations start with: iteration k + 1 starts where iteration k succeeded.
-        // Followed one by one up to the bound (or UNROLL), then summarised by a fixed point.
-        let limit = max.unwrap_or(u32::MAX).min(UNROLL.max(min));
+        // Iteration k + 1 starts where iteration k succeeded. The first UNROLL iterations are
+        // followed one by one, whatever `min` and `max` say; the rest are summarised by a fixed
+        // point, which is reached within a few steps (the stack lattice is finite).
         let mut start = Some(s);
         let mut ok = if min == 0 { Some(s) } else { None };
         let mut err = None;
-        let mut empty = true;
-        let mut k = 0;
+        // implicit whitespace may be consumed between iterations
+        let mut empty = !self.skips || max.is_some_and(|m| m <= 1);
+        let mut k: u32 = 0;
         while let Some(at) = start {
-            if k >= limit {
+            if k >= UNROLL || max.is_some_and(|m| k >= m) {
                 break;
             }
             let o = self.visit(inner, at);
@@ -617,17 +675,24 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
             start = o.ok;
         }
         if let Some(mut at) = start {
-            // more iterations than unrolled: summarise them
             if max.is_none_or(|m| k < m) {
+                // More iterations than unrolled: every state an iteration can start with from
+                // here, and whether one can fail. Iterations up to `min` failing fail the
+                // repetition; after that they end it.
+                let mut fails = false;
                 loop {
                     let o = self.visit(inner, at);
                     empty &= o.ok.is_none() || o.empty;
+                    fails |= o.err.is_some();
                     ok = join(ok, join(o.ok, o.err));
                     let next = join(Some(at), o.ok).unwrap_or(at);
                     if next == at {
                         break;
                     }
                     at = next;
+                }
+                if fails && k < min {
+                    err = Some(s);
                 }
             }
             ok = join(ok, Some(at));
@@ -749,6 +814,8 @@ mod tests {
             "a = { POP_ALL ~ PUSH(\"\") ~ PEEK_ALL* }",
             // DROP fails on the empty stack, so the second alternative is tried
             "a = { POP_ALL ~ (DROP | PEEK_ALL*) }",
+            // an empty slice is always in range and matches nothing
+            "a = { PEEK[0..0]* }",
             // implicit whitespace between iterations only delays the loop
             "WHITESPACE = _{ \" \" } a = { POP_ALL ~ PEEK_ALL* }",
         ] {
@@ -796,6 +863,12 @@ mod tests {
             // a failed POP_ALL keeps the entries it removed: after PUSH(\"y\") ~ PUSH(\"x\"),
             // on \"yxy!\" it removes the blank and \"x\", then PEEK* matches \"y\" once
             "a = { PUSH(\"\") ~ (POP_ALL | PEEK*) } b = { PUSH(\"y\") ~ PUSH(\"x\") ~ a }",
+            // a failed POP in a choice or an optional is restored: \"x\" stays, PEEK_ALL* stops
+            "a = { POP_ALL ~ PUSH(\"x\") ~ (POP | PEEK_ALL*) }",
+            "a = { POP_ALL ~ PUSH(\"x\") ~ POP? ~ PEEK_ALL* }",
+            // implicit whitespace between the iterations of a bounded repetition is captured
+            "WHITESPACE = _{ \" \" } a = { PUSH(\"\"{2}) ~ PEEK* }",
+            "WHITESPACE = _{ \" \" } b = !{ PEEK_ALL{2} } a = @{ POP_ALL ~ PUSH(b) ~ PEEK_ALL* }",
             // implicit whitespace inside the PUSH is captured, so POP fails at the end
             "WHITESPACE = _{ \" \" } a = { (PUSH(\"\" ~ \"\") ~ POP)* }",
             // the same through a non-atomic rule called from an atomic one
@@ -834,6 +907,22 @@ mod tests {
             assert!(errors.len() <= 1, "{input}: {errors:?}");
         }
         assert_eq!(stack_loop_errors("a = { \"\"* }").len(), 1);
+    }
+
+    #[test]
+    fn large_repetition_bounds_are_cheap() {
+        // bounds are u32: iterations are not followed one by one up to the bound
+        let start = std::time::Instant::now();
+        assert_eq!(stack_loop_errors("a = { \"\"{1000000000,} }").len(), 1);
+        assert_eq!(
+            stack_loop_errors("a = { (PUSH(\"\") ~ POP){4294967295,} }").len(),
+            1
+        );
+        assert_eq!(
+            stack_loop_errors("a = { POP_ALL ~ (PUSH(\"\") ~ DROP){4294967295} ~ \"x\" }").len(),
+            0
+        );
+        assert!(start.elapsed().as_secs() < 2, "{:?}", start.elapsed());
     }
 
     #[test]
