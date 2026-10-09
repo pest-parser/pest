@@ -19,6 +19,7 @@ export BASELINE_GIT_SHA="8c602d832e625a0965701618626166e2ffbd94bb"
 git fetch origin
 git checkout "$BASELINE_GIT_SHA"
 cargo clean
+cargo update -p pest --precise 2.5.0
 cargo build --package pest_bootstrap
 cargo run --package pest_bootstrap
 for crate in "pest_derive" "pest_generator" "pest_grammars" "pest_meta" "pest" "pest_vm" "pest_debugger"; do
