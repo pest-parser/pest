@@ -20,8 +20,8 @@ git fetch origin
 git checkout "$BASELINE_GIT_SHA"
 cargo clean
 cargo update -p pest --precise 2.5.0
-cargo build --package pest_bootstrap
-cargo run --package pest_bootstrap
+cargo build --package pest_bootstrap --locked
+cargo run --package pest_bootstrap --locked
 for crate in "pest_derive" "pest_generator" "pest_grammars" "pest_meta" "pest" "pest_vm" "pest_debugger"; do
     cargo +nightly-2026-06-20 rustdoc -p $crate -- $RUSTDOC_LATE_FLAGS
     mv target/doc/$crate.json /tmp/baseline-$crate.json
