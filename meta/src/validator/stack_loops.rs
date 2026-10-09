@@ -88,6 +88,7 @@ impl AbsStack {
         let base = match (self.base, other.base) {
             (a, b) if a == b => a,
             (StackBase::Any, _) | (_, StackBase::Any) => StackBase::Any,
+            // one base empty and the other all blank (in either order): all blank
             _ => StackBase::Blank,
         };
         if self.len == other.len {
@@ -938,6 +939,26 @@ mod tests {
         // the second DROP fails after the one-entry branch, so this repetition ends
         let errors = stack_loop_errors(&format!("a = {{ {blanks} ~ (DROP ~ DROP)* }}"));
         assert_eq!(errors, Vec::<String>::new());
+    }
+
+    #[test]
+    fn stack_of_empty_strings_replaced_by_an_empty_stack() {
+        let blanks = "POP_ALL ~ ((&\"x\" ~ PUSH(\"\")) | (PUSH(\"\") ~ PUSH(\"\")))";
+        // the first iteration changes the base (empty strings, then nothing), so the stacks
+        // before it are not compared with the ones after it; from there the iterations cycle
+        for body in ["POP_ALL ~ PUSH(\"\")", "PUSH(\"\") ~ POP_ALL"] {
+            let errors = stack_loop_errors(&format!("a = {{ {blanks} ~ ({body})* }}"));
+            assert_eq!(errors.len(), 1, "{body}: {errors:?}");
+        }
+        // a choice whose branches leave an empty stack and a stack of empty strings, in either
+        // order: PEEK_ALL matches nothing on both, but two DROPs fail on the empty one
+        for choice in ["(&\"x\" ~ POP_ALL) | \"y\"", "\"y\" | (&\"x\" ~ POP_ALL)"] {
+            let errors = stack_loop_errors(&format!("a = {{ {blanks} ~ ({choice}) ~ PEEK_ALL* }}"));
+            assert_eq!(errors.len(), 1, "{choice}: {errors:?}");
+            let errors =
+                stack_loop_errors(&format!("a = {{ {blanks} ~ ({choice}) ~ (DROP ~ DROP)* }}"));
+            assert_eq!(errors, Vec::<String>::new(), "{choice}");
+        }
     }
 
     #[test]
