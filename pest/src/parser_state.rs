@@ -90,19 +90,34 @@ pub enum MatchDir {
 
 static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 
-/// Sets the maximum call limit for the parser state
-/// to prevent stack overflows or excessive execution times
-/// in some grammars.
-/// If set, the calls are tracked as a running total
-/// over all non-terminal rules that can nest closures
-/// (which are passed to transform the parser state).
+/// Sets the maximum cumulative number of counted parser-state calls.
 ///
-/// # Arguments
+/// Invocations of [`ParserState::rule`], [`ParserState::sequence`],
+/// [`ParserState::repeat`], [`ParserState::optional`], [`ParserState::lookahead`],
+/// [`ParserState::atomic`], and [`ParserState::stack_push`] consume this budget.
+/// Calls are not refunded after returning or backtracking. Repetition counts
+/// its entry, not each iteration of its closure. Primitive matches and
+/// [`ParserState::restore_on_err`] do not consume this cumulative budget.
+/// A refused entry fails the parse with "call limit reached", even if an
+/// alternative or optional expression would otherwise recover.
 ///
-/// * `limit` - The maximum number of calls. If None,
-///             the number of calls is unlimited.
+/// This process-wide setting is captured when each [`ParserState`] is created.
+/// `None` disables the cumulative budget. Available native stack space is
+/// checked automatically in supported `std` builds, independently of this
+/// setting; insufficient space fails parsing with "stack limit reached".
+/// Stack checking is best-effort when native stack bounds cannot be determined
+/// and is not available in `no_std` builds. It cannot protect arbitrary user
+/// callbacks or work outside the parser's guarded entry points.
+/// It is not an elapsed-time or memory limit: individual operations and
+/// user closures may perform work without additional counted calls.
+/// See the [resource-limit guidance] for enforcing deadlines.
+///
+/// [resource-limit guidance]: https://github.com/pest-parser/pest/blob/master/SECURITY.md#parsing-untrusted-input
 pub fn set_call_limit(limit: Option<NonZeroUsize>) {
-    CALL_LIMIT.store(limit.map(|f| f.get()).unwrap_or(0), Ordering::Relaxed);
+    CALL_LIMIT.store(
+        limit.map(|limit| limit.get()).unwrap_or(0),
+        Ordering::Relaxed,
+    );
 }
 
 static ERROR_DETAIL: AtomicBool = AtomicBool::new(false);
@@ -116,34 +131,96 @@ static ERROR_DETAIL: AtomicBool = AtomicBool::new(false);
 /// # Arguments
 ///
 /// * `enabled` - Whether to enable the collection for
-///               more error details.
+///   more error details.
 pub fn set_error_detail(enabled: bool) {
     ERROR_DETAIL.store(enabled, Ordering::Relaxed);
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum LimitKind {
+    Call,
+    Stack,
+}
+
+const REQUIRED_STACK_SPACE: usize = 64 * 1024;
+
+#[inline]
+fn remaining_stack() -> Option<usize> {
+    #[cfg(feature = "std")]
+    return stacker::remaining_stack();
+    #[cfg(not(feature = "std"))]
+    return None;
 }
 
 #[derive(Debug)]
 struct CallLimitTracker {
     current_call_limit: Option<(usize, usize)>,
+    limit_reached: Option<LimitKind>,
 }
 
 impl Default for CallLimitTracker {
     fn default() -> Self {
-        let limit = CALL_LIMIT.load(Ordering::Relaxed);
-        let current_call_limit = if limit > 0 { Some((0, limit)) } else { None };
-        Self { current_call_limit }
+        let call_limit = CALL_LIMIT.load(Ordering::Relaxed);
+        Self {
+            current_call_limit: (call_limit > 0).then_some((0, call_limit)),
+            limit_reached: None,
+        }
     }
 }
 
 impl CallLimitTracker {
     fn limit_reached(&self) -> bool {
-        self.current_call_limit
-            .is_some_and(|(current, limit)| current >= limit)
+        self.limit_reached.is_some()
     }
 
-    fn increment_depth(&mut self) {
-        if let Some((current, _)) = &mut self.current_call_limit {
-            *current += 1;
+    fn error_message(&self) -> Option<&'static str> {
+        self.limit_reached.map(|cause| match cause {
+            LimitKind::Call => "call limit reached",
+            LimitKind::Stack => "stack limit reached",
+        })
+    }
+
+    fn enter(&mut self, count_call: bool) -> bool {
+        if self.limit_reached() {
+            return false;
         }
+        if count_call
+            && self
+                .current_call_limit
+                .is_some_and(|(current, limit)| current >= limit)
+        {
+            self.limit_reached = Some(LimitKind::Call);
+            return false;
+        }
+        let remaining = remaining_stack();
+        self.enter_with_stack(count_call, remaining)
+    }
+
+    fn enter_with_stack(&mut self, count_call: bool, stack_space: Option<usize>) -> bool {
+        if self.limit_reached() {
+            return false;
+        }
+        let cause = if count_call
+            && self
+                .current_call_limit
+                .is_some_and(|(current, limit)| current >= limit)
+        {
+            Some(LimitKind::Call)
+        } else if stack_space.is_some_and(|remaining| remaining < REQUIRED_STACK_SPACE) {
+            Some(LimitKind::Stack)
+        } else {
+            None
+        };
+        if let Some(cause) = cause {
+            self.limit_reached = Some(cause);
+            return false;
+        }
+        if count_call {
+            if let Some((current, _)) = &mut self.current_call_limit {
+                *current += 1;
+            }
+        }
+        true
     }
 }
 
@@ -474,7 +551,7 @@ pub struct ParserState<'i, R: RuleType> {
     /// Helper structure tracking `Stack` status (used in case grammar contains stack PUSH/POP
     /// invocations).
     stack: Stack<SpanOrLiteral<'i>>,
-    /// Used for setting max parser calls limit.
+    /// Tracks cumulative parser-state calls and call/stack limit exhaustion.
     call_tracker: CallLimitTracker,
     /// Together with tracking of `pos_attempts` and `attempt_pos`
     /// as a pair of (list of rules that we've tried to parse but failed, max parsed position)
@@ -511,14 +588,14 @@ where
     let state = ParserState::new(input);
 
     match f(state) {
-        Ok(state) => {
+        Ok(state) if !state.call_tracker.limit_reached() => {
             let len = state.queue.len();
             Ok(new(Rc::new(state.queue), input, None, 0, len))
         }
-        Err(mut state) => {
-            let variant = if state.reached_call_limit() {
+        Ok(mut state) | Err(mut state) => {
+            let variant = if let Some(message) = state.call_tracker.error_message() {
                 ErrorVariant::CustomError {
-                    message: "call limit reached".to_owned(),
+                    message: message.to_owned(),
                 }
             } else {
                 state.pos_attempts.sort();
@@ -623,16 +700,20 @@ impl<'i, R: RuleType> ParserState<'i, R> {
 
     #[inline]
     fn inc_call_check_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
-        if self.call_tracker.limit_reached() {
+        if !self.call_tracker.enter(true) {
             return Err(self);
         }
-        self.call_tracker.increment_depth();
         Ok(self)
     }
 
+    /// Checks native stack headroom without consuming a counted parser call.
+    #[doc(hidden)]
     #[inline]
-    fn reached_call_limit(&self) -> bool {
-        self.call_tracker.limit_reached()
+    pub fn check_stack_limit(mut self: Box<Self>) -> ParseResult<Box<Self>> {
+        if !self.call_tracker.enter(false) {
+            return Err(self);
+        }
+        Ok(self)
     }
 
     /// Wrapper needed to generate tokens. This will associate the `R` type rule to the closure
@@ -969,6 +1050,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         loop {
             match result {
                 Ok(state) => result = f(state),
+                Err(state) if state.call_tracker.limit_reached() => return Err(state),
                 Err(state) => return Ok(state),
             };
         }
@@ -1007,6 +1089,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     {
         self = self.inc_call_check_limit()?;
         match f(self) {
+            Err(state) if state.call_tracker.limit_reached() => Err(state),
             Ok(state) | Err(state) => Ok(state),
         }
     }
@@ -1406,6 +1489,12 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             }
         };
 
+        let exhausted = match &result_state {
+            Ok(state) | Err(state) => state.call_tracker.limit_reached(),
+        };
+        if exhausted {
+            return Err(result_state.unwrap_or_else(|state| state));
+        }
         if is_positive {
             result_state
         } else {
@@ -1749,10 +1838,11 @@ impl<'i, R: RuleType> ParserState<'i, R> {
     /// assert!(catch_panic.is_err());
     /// ```
     #[inline]
-    pub fn restore_on_err<F>(self: Box<Self>, f: F) -> ParseResult<Box<Self>>
+    pub fn restore_on_err<F>(mut self: Box<Self>, f: F) -> ParseResult<Box<Self>>
     where
         F: FnOnce(Box<Self>) -> ParseResult<Box<Self>>,
     {
+        self = self.check_stack_limit()?;
         match f(self.checkpoint()) {
             Ok(state) => Ok(state.checkpoint_ok()),
             Err(state) => Err(state.restore()),
@@ -1810,6 +1900,237 @@ fn normalize_index(i: i32, len: usize) -> Option<usize> {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    type TestState = Box<ParserState<'static, ()>>;
+    type TestResult = ParseResult<TestState>;
+    type Combinator = fn(TestState, fn(TestState) -> TestResult) -> TestResult;
+
+    const COMBINATORS: [(&str, Combinator); 9] = [
+        ("rule", |state, inner| state.rule((), inner)),
+        ("sequence", ParserState::sequence),
+        ("repeat", ParserState::repeat),
+        ("optional", ParserState::optional),
+        ("positive lookahead", |state, inner| {
+            state.lookahead(true, inner)
+        }),
+        ("negative lookahead", |state, inner| {
+            state.lookahead(false, inner)
+        }),
+        ("atomic", |state, inner| {
+            state.atomic(Atomicity::Atomic, inner)
+        }),
+        ("stack_push", ParserState::stack_push),
+        ("restore_on_err", ParserState::restore_on_err),
+    ];
+
+    fn tracker_at_calls(calls: usize, limit: usize) -> CallLimitTracker {
+        CallLimitTracker {
+            current_call_limit: Some((calls, limit)),
+            limit_reached: None,
+        }
+    }
+
+    #[test]
+    fn stack_limit_probe_boundary_and_unknown_bounds() {
+        for stack_space in [
+            None,
+            Some(REQUIRED_STACK_SPACE),
+            Some(REQUIRED_STACK_SPACE - 1),
+        ] {
+            let mut tracker = tracker_at_calls(0, 10);
+            let allowed = stack_space != Some(REQUIRED_STACK_SPACE - 1);
+            assert_eq!(tracker.enter_with_stack(true, stack_space), allowed);
+            assert_eq!(tracker.current_call_limit, Some((usize::from(allowed), 10)));
+            if !allowed {
+                assert_eq!(tracker.error_message(), Some("stack limit reached"));
+                assert!(!tracker.enter_with_stack(true, None));
+            }
+        }
+    }
+
+    #[test]
+    fn call_limit_counts_shallow_work() {
+        let result = state::<(), _>("xxxxxxxxxxxxxxxx", |mut state| {
+            state.call_tracker = CallLimitTracker {
+                current_call_limit: Some((0, 3)),
+                limit_reached: None,
+            };
+            state.repeat(|state| state.sequence(|state| state.match_string("x")))
+        });
+        assert_eq!(
+            result.unwrap_err().variant,
+            ErrorVariant::CustomError {
+                message: "call limit reached".to_owned()
+            }
+        );
+    }
+
+    #[test]
+    fn call_limit_preserves_combinator_charges() {
+        for (name, combinator) in COMBINATORS {
+            for input in ["x", "y"] {
+                for initial_calls in [0, 2] {
+                    let mut state = ParserState::new(input);
+                    state.call_tracker = tracker_at_calls(initial_calls, 10);
+                    let result = combinator(state, |state| state.match_string("x"));
+                    let should_succeed = match name {
+                        "repeat" | "optional" => true,
+                        "negative lookahead" => input != "x",
+                        _ => input == "x",
+                    };
+                    assert_eq!(result.is_ok(), should_succeed, "{name}");
+                    let state = result.unwrap_or_else(|state| state);
+                    assert_eq!(
+                        state.call_tracker.current_call_limit,
+                        Some((initial_calls + usize::from(name != "restore_on_err"), 10)),
+                        "{name} on {input:?}"
+                    );
+                    assert!(!state.call_tracker.limit_reached(), "{name}");
+                    assert_eq!(state.lookahead, Lookahead::None, "{name}");
+                    assert_eq!(state.atomicity, Atomicity::NonAtomic, "{name}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn call_limit_boundary() {
+        for (name, combinator) in COMBINATORS {
+            if name == "restore_on_err" {
+                continue;
+            }
+            for initial_calls in [0, 2] {
+                for remaining in [1, 2] {
+                    let limit = initial_calls + remaining;
+                    let mut state = ParserState::new("x");
+                    state.call_tracker = tracker_at_calls(initial_calls, limit);
+                    let result = combinator(state, |state| {
+                        state.rule((), |state| state.match_string("x"))
+                    });
+                    let state = result.unwrap_or_else(|state| state);
+                    assert_eq!(
+                        state.call_tracker.current_call_limit,
+                        Some((limit, limit)),
+                        "{name}"
+                    );
+                    let exhausted = remaining == 1 || name == "repeat";
+                    assert_eq!(state.call_tracker.limit_reached(), exhausted, "{name}");
+                    if exhausted {
+                        let state = combinator(state, |_| {
+                            panic!("exhausted state must not reenter a helper")
+                        })
+                        .unwrap_err();
+                        assert_eq!(
+                            state.call_tracker.current_call_limit,
+                            Some((limit, limit)),
+                            "{name}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn call_limit_restore_on_err_checkpoints() {
+        for limit in [1, 2] {
+            for succeeds in [false, true] {
+                let mut state = ParserState::<()>::new("xy");
+                state.call_tracker = tracker_at_calls(0, limit);
+                state
+                    .stack
+                    .push(SpanOrLiteral::Span(Span::new("xy", 0, 1).unwrap()));
+                let state = state.checkpoint();
+                let result = state.restore_on_err(|mut state| {
+                    state.stack.pop();
+                    state.restore_on_err(|state| {
+                        state.sequence(|mut state| {
+                            state
+                                .stack
+                                .push(SpanOrLiteral::Span(Span::new("xy", 1, 2).unwrap()));
+                            let state = state.match_string("x").unwrap();
+                            if succeeds {
+                                Ok(state)
+                            } else {
+                                Err(state)
+                            }
+                        })
+                    })
+                });
+                assert_eq!(result.is_ok(), succeeds);
+                let state = result.unwrap_or_else(|state| state);
+                assert_eq!(state.call_tracker.current_call_limit, Some((1, limit)));
+                assert!(!state.call_tracker.limit_reached());
+                assert_eq!(state.position.pos(), usize::from(succeeds));
+                let top = state.stack.peek().unwrap().as_borrowed_or_rc();
+                assert_eq!(top.as_str(), if succeeds { "y" } else { "x" });
+                let state = state.restore();
+                assert_eq!(state.stack.len(), 1);
+                assert_eq!(
+                    state.stack.peek().unwrap().as_borrowed_or_rc().as_str(),
+                    "x"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn call_limit_accumulates_on_backtracking() {
+        let input = "xxxxxxxxxxxxxxxx";
+        let mut state = ParserState::<()>::new(input);
+        state.call_tracker = tracker_at_calls(0, 100);
+        let state = state
+            .repeat(|state| {
+                state
+                    .sequence(|state| state.match_string("y"))
+                    .or_else(|state| state.sequence(|state| state.match_string("x")))
+            })
+            .unwrap();
+        assert_eq!(state.position.pos(), input.len());
+        assert_eq!(state.call_tracker.current_call_limit, Some((35, 100)));
+        assert!(!state.call_tracker.limit_reached());
+    }
+
+    #[test]
+    fn call_limit_cannot_be_swallowed() {
+        for (name, combinator) in COMBINATORS {
+            for error_detail in [false, true] {
+                let result = state::<(), _>("", |mut state| {
+                    state.call_tracker = tracker_at_calls(0, 1);
+                    state.parse_attempts.enabled = error_detail;
+                    combinator(state, |state| {
+                        state.rule((), |state| {
+                            state.rule((), |_| panic!("over-limit closure must not run"))
+                        })
+                    })
+                    .or_else(Ok)
+                });
+                assert_eq!(
+                    result.expect_err(name).variant,
+                    ErrorVariant::CustomError {
+                        message: "call limit reached".to_owned(),
+                    },
+                    "{name}, error_detail={error_detail}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn call_limit_stops_recovering_combinator_continuations() {
+        for (name, combinator) in COMBINATORS {
+            if !matches!(name, "optional" | "repeat" | "negative lookahead") {
+                continue;
+            }
+            let mut state = ParserState::new("");
+            state.call_tracker = tracker_at_calls(0, 1);
+            let result: TestResult = combinator(state, |state| {
+                state.rule((), |_| panic!("over-budget body must not run"))
+            })
+            .map(|_| panic!("fatal resource rejection must stop continuations"));
+            assert!(result.is_err(), "{name}");
+        }
+    }
 
     #[test]
     fn normalize_index_pos() {

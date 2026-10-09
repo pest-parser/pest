@@ -78,6 +78,7 @@ impl Vm {
         rule: &'a str,
         state: Box<ParserState<'a, &'a str>>,
     ) -> ParseResult<Box<ParserState<'a, &'a str>>> {
+        let state = state.check_stack_limit()?;
         if let Some(ref listener) = self.listener {
             if listener(rule.to_owned(), state.position()) {
                 return Err(ParserState::new(state.position().line_of()));
@@ -184,6 +185,7 @@ impl Vm {
         expr: &'a OptimizedExpr,
         state: Box<ParserState<'a, &'a str>>,
     ) -> ParseResult<Box<ParserState<'a, &'a str>>> {
+        let state = state.check_stack_limit()?;
         match *expr {
             OptimizedExpr::Str(ref string) => state.match_string(string),
             OptimizedExpr::Insens(ref string) => state.match_insensitive(string),

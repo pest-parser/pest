@@ -50,8 +50,6 @@ jobs:
         run: cargo clippy --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --all-targets -- -Dwarnings
       - name: cargo test
         run: FORCE_COLOR=1 cargo test --all --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --release
-      - name: cargo test (ignored)
-        run: cargo test -p pest_grammars --lib --verbose --release -- --ignored tests::toml_handles_deep_nesting_unstable
 
   check-grammar-sync:
     name: Ensure grammar.rs matches grammar.pest
@@ -123,7 +121,9 @@ jobs:
       - name: Generate code coverage
         run: FORCE_COLOR=1 cargo llvm-cov --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --workspace --lcov --output-path lcov.info
       - name: Upload Results to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           file: lcov.info
           flags: unittests

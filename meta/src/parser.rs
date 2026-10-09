@@ -30,6 +30,8 @@ mod grammar {
 pub use self::grammar::*;
 
 /// A helper that will parse using the pest grammar
+///
+/// For untrusted grammar definitions, see the [crate's resource limits](crate#resource-limits).
 #[allow(clippy::perf)]
 pub fn parse(rule: Rule, data: &str) -> Result<Pairs<'_, Rule>, Error<Rule>> {
     PestParser::parse(rule, data)
@@ -762,8 +764,6 @@ fn unescape(string: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-
     use super::super::unwrap_or_report;
     use super::*;
 
@@ -1834,6 +1834,107 @@ mod tests {
 
     #[test]
     fn handles_deep_nesting() {
+        on_fixed_stacks(
+            "parser::tests::handles_deep_nesting",
+            check_deep_nesting,
+            &[256 * 1024, 1024 * 1024, 8 * 1024 * 1024],
+        );
+    }
+
+    #[test]
+    fn call_limit_stops_comment_backtracking() {
+        fn check() {
+            pest::set_call_limit(core::num::NonZeroUsize::new(5_000));
+            let input =
+                std::str::from_utf8(include_bytes!("../resources/test/fuzzsample6.grammar"))
+                    .unwrap();
+            assert_eq!(
+                parse(Rule::grammar_rules, input).unwrap_err().variant,
+                ErrorVariant::CustomError {
+                    message: "call limit reached".into()
+                }
+            );
+            assert!(parse(Rule::grammar_rules, "normal = { \"a\" }").is_ok());
+            pest::set_call_limit(None);
+        }
+        on_fixed_stacks(
+            "parser::tests::call_limit_stops_comment_backtracking",
+            check,
+            &[8 * 1024 * 1024],
+        );
+    }
+
+    fn on_fixed_stacks(test_name: &str, check: fn(), stack_sizes: &[usize]) {
+        use std::{
+            env,
+            process::{Command, Stdio},
+            thread,
+            time::{Duration, Instant},
+        };
+
+        const CHILD_TEST: &str = "PEST_META_STACK_TEST";
+        const CHILD_STACK: &str = "PEST_META_DEPTH_TEST_STACK";
+        const COMPLETED: i32 = 42;
+
+        if env::var(CHILD_TEST).as_deref() == Ok(test_name) {
+            thread::Builder::new()
+                .stack_size(env::var(CHILD_STACK).unwrap().parse().unwrap())
+                .spawn(check)
+                .unwrap()
+                .join()
+                .unwrap();
+            std::process::exit(COMPLETED);
+        }
+
+        for stack_size in stack_sizes {
+            let deadline = Instant::now() + Duration::from_secs(10);
+            let mut child = Command::new(env::current_exe().unwrap())
+                .args(["--exact", test_name, "--nocapture"])
+                .env(CHILD_TEST, test_name)
+                .env(CHILD_STACK, stack_size.to_string())
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .spawn()
+                .unwrap();
+            let outcome = loop {
+                match child.try_wait() {
+                    Ok(Some(status)) => break Ok(status),
+                    Ok(None) => {}
+                    Err(error) => break Err(error),
+                }
+                if Instant::now() >= deadline {
+                    break Err(std::io::Error::new(
+                        std::io::ErrorKind::TimedOut,
+                        "meta test deadline exceeded",
+                    ));
+                }
+                thread::sleep(Duration::from_millis(5));
+            };
+            if outcome.is_err() {
+                let _ = child.kill();
+                child.wait().expect("failed to reap meta test worker");
+            }
+            let status = outcome.expect("supervised meta test failed");
+            assert_eq!(
+                status.code(),
+                Some(COMPLETED),
+                "{test_name} on a {stack_size}-byte stack exited with {status}"
+            );
+        }
+    }
+
+    fn check_deep_nesting() {
+        use pest::error::ErrorVariant;
+
+        struct ResetCallLimit;
+
+        impl Drop for ResetCallLimit {
+            fn drop(&mut self) {
+                pest::set_call_limit(None);
+            }
+        }
+
+        let _reset = ResetCallLimit;
         let sample1 = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/resources/test/fuzzsample1.grammar"
@@ -1854,22 +1955,68 @@ mod tests {
             env!("CARGO_MANIFEST_DIR"),
             "/resources/test/fuzzsample5.grammar"
         ));
-        const ERROR: &str = "call limit reached";
-        pest::set_call_limit(Some(5_000usize.try_into().unwrap()));
-        let s1 = parse(Rule::grammar_rules, sample1);
-        assert!(s1.is_err());
-        assert_eq!(s1.unwrap_err().variant.message(), ERROR);
-        let s2 = parse(Rule::grammar_rules, sample2);
-        assert!(s2.is_err());
-        assert_eq!(s2.unwrap_err().variant.message(), ERROR);
-        let s3 = parse(Rule::grammar_rules, sample3);
-        assert!(s3.is_err());
-        assert_eq!(s3.unwrap_err().variant.message(), ERROR);
-        let s4 = parse(Rule::grammar_rules, sample4);
-        assert!(s4.is_err());
-        assert_eq!(s4.unwrap_err().variant.message(), ERROR);
-        let s5 = parse(Rule::grammar_rules, sample5);
-        assert!(s5.is_err());
-        assert_eq!(s5.unwrap_err().variant.message(), ERROR);
+        let limit_error = ErrorVariant::CustomError {
+            message: "call limit reached".to_owned(),
+        };
+        let stack_error = ErrorVariant::CustomError {
+            message: "stack limit reached".to_owned(),
+        };
+        pest::set_call_limit(None);
+        let nested = std::format!(
+            "nested = {{ {}\"a\"{} }}",
+            "(".repeat(50_000),
+            ")".repeat(50_000)
+        );
+        assert_eq!(
+            parse(Rule::grammar_rules, &nested).unwrap_err().variant,
+            stack_error
+        );
+        pest::set_call_limit(core::num::NonZeroUsize::new(5_000));
+        for (input, expected) in [
+            (sample1, limit_error.clone()),
+            (
+                sample2,
+                ErrorVariant::ParsingError {
+                    positives: vec![Rule::EOI, Rule::grammar_rule, Rule::grammar_doc],
+                    negatives: vec![],
+                },
+            ),
+            (sample3, limit_error.clone()),
+            (
+                sample4,
+                ErrorVariant::ParsingError {
+                    positives: vec![Rule::number, Rule::comma],
+                    negatives: vec![],
+                },
+            ),
+            (sample5, limit_error.clone()),
+        ] {
+            let actual = parse(Rule::grammar_rules, input).unwrap_err().variant;
+            if actual != limit_error && actual != stack_error {
+                assert_eq!(actual, expected);
+            }
+        }
+        for (input, expected) in [
+            (
+                "?",
+                ErrorVariant::ParsingError {
+                    positives: vec![Rule::EOI, Rule::grammar_rule, Rule::grammar_doc],
+                    negatives: vec![],
+                },
+            ),
+            (
+                "f={f{",
+                ErrorVariant::ParsingError {
+                    positives: vec![Rule::number, Rule::comma],
+                    negatives: vec![],
+                },
+            ),
+        ] {
+            assert_eq!(
+                parse(Rule::grammar_rules, input).unwrap_err().variant,
+                expected
+            );
+        }
+        assert!(parse(Rule::grammar_rules, "normal = { \"a\" }").is_ok());
     }
 }

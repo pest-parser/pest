@@ -9,6 +9,15 @@
 //! # pest meta
 //!
 //! This crate parses, validates, optimizes, and converts pest's own grammars to ASTs.
+//!
+//! # Resource Limits
+//! When grammar definitions are untrusted, bound their size and configure
+//! [`pest::set_call_limit`] as appropriate. Automatic native-stack checks in
+//! supported `std` builds are best-effort. Parser-state limits do not govern all
+//! validation, AST processing, or optimization work; supervise the entire pipeline
+//! when a deadline must be enforced. See the [resource-limit guidance].
+//!
+//! [resource-limit guidance]: https://github.com/pest-parser/pest/blob/master/SECURITY.md#parsing-untrusted-input
 
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/pest-parser/pest/master/pest-logo.svg",
@@ -56,6 +65,9 @@ where
 type UsedBuiltinAndOptimized<'i> = (Vec<&'i str>, Vec<optimizer::OptimizedRule>);
 
 /// Parses, validates, processes and optimizes the provided grammar.
+///
+/// For untrusted grammar definitions, apply the [crate's resource-limit guidance](crate#resource-limits)
+/// to the entire pipeline, not just the initial parse.
 pub fn parse_and_optimize(
     grammar: &str,
 ) -> Result<UsedBuiltinAndOptimized<'_>, Vec<Error<parser::Rule>>> {

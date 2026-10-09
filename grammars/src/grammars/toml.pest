@@ -7,6 +7,16 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! TOML grammar.
+//!
+//! # Resource Limits
+//! This grammar does not configure input-size, cumulative-call, or time limits.
+//! For untrusted input, apply limits appropriate to your workload. Automatic
+//! native-stack checks in supported `std` builds are best-effort, not deadlines
+//! or memory bounds. See the [resource-limit guidance].
+//!
+//! [resource-limit guidance]: https://github.com/pest-parser/pest/blob/master/SECURITY.md#parsing-untrusted-input
+
 toml = { SOI ~ (table | array_table | pair)* ~ EOI }
 
 table       = { "[" ~ key ~ ("." ~ key)* ~ "]" ~ pair* }

@@ -16,7 +16,7 @@ rust-version = "1.83"
 [features]
 default = ["std", "memchr"]
 # Implements `std::error::Error` for the `Error` type
-std = ["ucd-trie/std"]
+std = ["ucd-trie/std", "dep:stacker", "dep:psm"]
 # Enables the `to_json` function for `Pair` and `Pairs`
 pretty-print = ["dep:serde", "dep:serde_json"]
 # Enable const fn constructor for `PrecClimber`
@@ -30,6 +30,8 @@ serde = { version = "1.0.145", optional = true }
 serde_json = { version = "1.0.85", optional = true }
 memchr = { version = "2.4.0", optional = true }
 miette = { version = "7.2.0", optional = true, features = ["fancy"] }
+stacker = { version = "0.1.25", optional = true }
+psm = { version = "=0.1.24", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["html_reports"] }
