@@ -12,7 +12,6 @@ for crate in "pest_derive" "pest_generator" "pest_grammars" "pest_meta" "pest" "
     mv target/doc/$crate.json /tmp/current-$crate.json
 done
 
-mv Cargo.lock Cargo.lock.current
 # the 2.5.7 release
 export BASELINE_GIT_SHA="f668fcc865965b0eeae6f19ee907bc4c9ce17967"
 # baseline
