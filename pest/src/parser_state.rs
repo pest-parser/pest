@@ -551,7 +551,7 @@ pub struct ParserState<'i, R: RuleType> {
     /// Helper structure tracking `Stack` status (used in case grammar contains stack PUSH/POP
     /// invocations).
     stack: Stack<SpanOrLiteral<'i>>,
-    /// Tracks active parser-state calls and limit exhaustion.
+    /// Tracks cumulative parser-state calls and call/stack limit exhaustion.
     call_tracker: CallLimitTracker,
     /// Together with tracking of `pos_attempts` and `attempt_pos`
     /// as a pair of (list of rules that we've tried to parse but failed, max parsed position)
