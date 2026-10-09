@@ -916,6 +916,24 @@ mod tests {
         }
     }
 
+    /// After `POP_ALL`, the alternatives push one or two empty strings, depending on the input:
+    /// afterwards the stack holds only empty strings, but how many is not known (the join of
+    /// two all-blank stacks of different heights).
+    #[test]
+    fn stack_of_unknown_blank_height() {
+        let blanks = "POP_ALL ~ ((&\"x\" ~ PUSH(\"\")) | (PUSH(\"\") ~ PUSH(\"\")))";
+        // every entry is an empty string, so PEEK_ALL matches nothing: still a loop
+        let errors = stack_loop_errors(&format!("a = {{ {blanks} ~ PEEK_ALL* }}"));
+        assert_eq!(errors.len(), 1, "{errors:?}");
+        // DROP on that stack (it holds at least one entry) leaves an all-blank stack of
+        // unknown height again, so this is still a loop
+        let errors = stack_loop_errors(&format!("a = {{ {blanks} ~ DROP ~ PEEK_ALL* }}"));
+        assert_eq!(errors.len(), 1, "{errors:?}");
+        // the second DROP fails after the one-entry branch, so this repetition ends
+        let errors = stack_loop_errors(&format!("a = {{ {blanks} ~ (DROP ~ DROP)* }}"));
+        assert_eq!(errors, Vec::<String>::new());
+    }
+
     #[test]
     fn stack_repetition_is_not_reported_when_whitespace_changes_the_stack() {
         let input = "WHITESPACE = _{ PUSH(\" \") } a = { POP_ALL ~ PEEK_ALL* }";
