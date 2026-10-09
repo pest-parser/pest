@@ -13,8 +13,8 @@ for crate in "pest_derive" "pest_generator" "pest_grammars" "pest_meta" "pest" "
 done
 
 mv Cargo.lock Cargo.lock.current
-# the 2.5.0 release
-export BASELINE_GIT_SHA="8c602d832e625a0965701618626166e2ffbd94bb"
+# the 2.5.7 release
+export BASELINE_GIT_SHA="f668fcc865965b0eeae6f19ee907bc4c9ce17967"
 # baseline
 git fetch origin
 git checkout "$BASELINE_GIT_SHA"
@@ -29,4 +29,5 @@ for crate in "pest_derive" "pest_generator" "pest_grammars" "pest_meta" "pest" "
     echo "Checking $crate"
     cargo semver-checks check-release --current /tmp/current-$crate.json --baseline /tmp/baseline-$crate.json
 done
+git checkout bootstrap/Cargo.toml
 git checkout "$CURRENT_GIT_SHA"
