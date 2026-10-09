@@ -12,16 +12,17 @@ for crate in "pest_derive" "pest_generator" "pest_grammars" "pest_meta" "pest" "
     mv target/doc/$crate.json /tmp/current-$crate.json
 done
 
-rm Cargo.lock
+mv Cargo.lock Cargo.lock.current
 # the 2.5.0 release
 export BASELINE_GIT_SHA="8c602d832e625a0965701618626166e2ffbd94bb"
 # baseline
 git fetch origin
 git checkout "$BASELINE_GIT_SHA"
 cargo clean
-cargo update -p pest --precise 2.5.0
-cargo build --package pest_bootstrap --locked
-cargo run --package pest_bootstrap --locked
+perl -pi -e 's/^pest_generator = "[^"]+"/pest_generator = "= 2.5.0"/' bootstrap/Cargo.toml
+cargo update
+cargo build --package pest_bootstrap
+cargo run --package pest_bootstrap
 for crate in "pest_derive" "pest_generator" "pest_grammars" "pest_meta" "pest" "pest_vm" "pest_debugger"; do
     cargo +nightly-2026-06-20 rustdoc -p $crate -- $RUSTDOC_LATE_FLAGS
     mv target/doc/$crate.json /tmp/baseline-$crate.json
