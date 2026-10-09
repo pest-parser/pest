@@ -19,7 +19,7 @@ export BASELINE_GIT_SHA="8c602d832e625a0965701618626166e2ffbd94bb"
 git fetch origin
 git checkout "$BASELINE_GIT_SHA"
 cargo clean
-perl -pi -e 's/^pest_generator = "[^"]+"/pest_generator = "= 2.5.0"/' bootstrap/Cargo.toml
+perl -pi -e 's/^pest_generator = "[^"]+"/pest_generator = "= 2.5.7"/' bootstrap/Cargo.toml
 cargo update
 cargo build --package pest_bootstrap
 cargo run --package pest_bootstrap
