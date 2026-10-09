@@ -20,7 +20,6 @@ git fetch origin
 git checkout "$BASELINE_GIT_SHA"
 cargo clean
 perl -pi -e 's/^pest_generator = "[^"]+"/pest_generator = "= 2.5.7"/' bootstrap/Cargo.toml
-cargo update
 cargo build --package pest_bootstrap
 cargo run --package pest_bootstrap
 for crate in "pest_derive" "pest_generator" "pest_grammars" "pest_meta" "pest" "pest_vm" "pest_debugger"; do
