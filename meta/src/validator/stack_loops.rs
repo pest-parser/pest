@@ -476,7 +476,11 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
             ParserExpr::RepMin(inner, min) => self.repeat(node, inner, s, *min, None),
             ParserExpr::RepExact(inner, n) => self.repeat(node, inner, s, *n, Some(*n)),
             ParserExpr::RepMax(inner, max) => self.repeat(node, inner, s, 0, Some(*max)),
-            ParserExpr::RepMinMax(inner, min, max) => self.repeat(node, inner, s, *min, Some(*max)),
+            // `{min, max}` with `min > max` is accepted, and the optimizer then builds `max`
+            // required copies (`unroller.rs`)
+            ParserExpr::RepMinMax(inner, min, max) => {
+                self.repeat(node, inner, s, (*min).min(*max), Some(*max))
+            }
             ParserExpr::Push(inner) => {
                 let o = self.visit(inner, s);
                 Outcome {
@@ -880,6 +884,8 @@ mod tests {
             // eight iterations take the first alternative, the ninth pushes a blank: there is no
             // tenth iteration to run PEEK_ALL* on it
             "a = { POP_ALL ~ PUSH(\"x\"){8} ~ ((&DROP ~ PEEK_ALL* ~ DROP) | PUSH(\"\")){9} }",
+            // the same with `{10,9}`: the optimizer runs nine copies, not ten
+            "a = { POP_ALL ~ PUSH(\"x\"){8} ~ ((&DROP ~ PEEK_ALL* ~ DROP) | PUSH(\"\")){10,9} }",
             // a failed POP_ALL keeps the entries it removed: after PUSH(\"y\") ~ PUSH(\"x\"),
             // on \"yxy!\" it removes the blank and \"x\", then PEEK* matches \"y\" once
             "a = { PUSH(\"\") ~ (POP_ALL | PEEK*) } b = { PUSH(\"y\") ~ PUSH(\"x\") ~ a }",
