@@ -449,7 +449,7 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
             ParserExpr::Choice(lhs, rhs) => {
                 let l = self.visit(lhs, s);
                 // `rhs` is only tried when `lhs` fails, from the stack `lhs` failed with.
-                let r = match self.failed(lhs, l.err, s) {
+                let r = match self.failed(l.err, s) {
                     Some(failed) => self.visit(rhs, failed),
                     None => Outcome {
                         ok: None,
@@ -459,14 +459,14 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
                 };
                 Outcome {
                     ok: join(l.ok, r.ok),
-                    err: self.failed(rhs, r.err, s),
+                    err: self.failed(r.err, s),
                     empty: (l.ok.is_none() || l.empty) && (r.ok.is_none() || r.empty),
                 }
             }
             ParserExpr::Opt(inner) => {
                 let o = self.visit(inner, s);
                 Outcome {
-                    ok: join(o.ok, self.failed(inner, o.err, s)),
+                    ok: join(o.ok, self.failed(o.err, s)),
                     err: None,
                     empty: o.ok.is_none() || o.empty,
                 }
@@ -576,57 +576,14 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
         o
     }
 
-    /// The stack after `inner` failed with `err`, as a choice or an optional sees it. The
-    /// optimizer wraps a choice branch or an optional body that changes the stack (`PUSH`,
-    /// `POP`, `DROP`, also through rules) in `RestoreOnErr`, so its failure restores the stack
-    /// it started with (`restorer.rs`). It does not count `POP_ALL`, whose failure keeps what
-    /// it removed: both stacks are possible then.
-    fn failed(&mut self, inner: &'a ParserNode<'i>, err: Maybe, s: AbsStack) -> Maybe {
-        let err = err?;
-        if self.restored_on_err(&inner.expr) {
-            Some(s)
-        } else {
-            Some(err)
-        }
-    }
-
-    /// `restorer::child_modifies_state` on the validator's AST: `PUSH`, `POP` or `DROP` occurs
-    /// in `expr` or in a rule it calls.
-    fn restored_on_err(&self, expr: &ParserExpr<'i>) -> bool {
-        fn go<'i>(
-            expr: &ParserExpr<'i>,
-            rules: &HashMap<String, &ParserNode<'i>>,
-            seen: &mut HashSet<String>,
-        ) -> bool {
-            match expr {
-                ParserExpr::Push(_) => true,
-                #[cfg(feature = "grammar-extras")]
-                ParserExpr::PushLiteral(_) => true,
-                ParserExpr::Ident(name) => match name.as_str() {
-                    "POP" | "DROP" => true,
-                    _ => match rules.get(name) {
-                        Some(node) if seen.insert(name.clone()) => go(&node.expr, rules, seen),
-                        _ => false,
-                    },
-                },
-                ParserExpr::Seq(lhs, rhs) | ParserExpr::Choice(lhs, rhs) => {
-                    go(&lhs.expr, rules, seen) || go(&rhs.expr, rules, seen)
-                }
-                ParserExpr::PosPred(inner)
-                | ParserExpr::NegPred(inner)
-                | ParserExpr::Opt(inner)
-                | ParserExpr::Rep(inner)
-                | ParserExpr::RepOnce(inner)
-                | ParserExpr::RepExact(inner, _)
-                | ParserExpr::RepMin(inner, _)
-                | ParserExpr::RepMax(inner, _)
-                | ParserExpr::RepMinMax(inner, _, _) => go(&inner.expr, rules, seen),
-                #[cfg(feature = "grammar-extras")]
-                ParserExpr::NodeTag(inner, _) => go(&inner.expr, rules, seen),
-                _ => false,
-            }
-        }
-        go(expr, self.rules, &mut HashSet::new())
+    /// The stack after `inner` failed with `err` (`s`: the stack it started with), as the
+    /// alternative or optional around it sees it. The optimizer wraps some branches in
+    /// `RestoreOnErr`, which restores `s` on failure, and leaves others as they are, which
+    /// keep what a failed `POP_ALL` removed. Which branches are wrapped depends on the
+    /// optimized shape of the grammar (choices are rotated, `PUSH_LITERAL` doesn't count), so
+    /// both stacks are taken as possible.
+    fn failed(&mut self, err: Maybe, s: AbsStack) -> Maybe {
+        err.map(|err| err.join(s))
     }
 
     /// A repetition of `inner` between `min` and `max` times (unbounded if `None`), entered
@@ -708,7 +665,7 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
                 fails |= o.err.is_some();
                 o.ok
             } else {
-                join(o.ok, self.failed(inner, o.err, at))
+                join(o.ok, self.failed(o.err, at))
             };
             match next {
                 Some(n) => at = n,
@@ -734,7 +691,7 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
                 // The first copy runs in an optional, the later ones in a sequence that
                 // restores the stack (in non-atomic rules), unless wrapped in RestoreOnErr.
                 let restored = if first { None } else { Some(at) };
-                ok = join(ok, join(self.failed(inner, o.err, at), restored));
+                ok = join(ok, join(self.failed(o.err, at), restored));
             }
             first = false;
             match o.ok {
@@ -929,6 +886,9 @@ mod tests {
             // a failed POP in a choice or an optional is restored: \"x\" stays, PEEK_ALL* stops
             "a = { POP_ALL ~ PUSH(\"x\") ~ (POP | PEEK_ALL*) }",
             "a = { POP_ALL ~ PUSH(\"x\") ~ POP? ~ PEEK_ALL* }",
+            // the optimizer rotates choices, so only the bare `POP_ALL` branch is unwrapped: its
+            // failure leaves the stack empty and the first DROP stops the last branch
+            "a = { POP_ALL ~ PUSH(\"x\") ~ PUSH(\"\") ~ (!PUSH(\"\") | POP_ALL | (DROP ~ DROP ~ PEEK_ALL*)) }",
             // implicit whitespace between the iterations of a bounded repetition is captured
             "WHITESPACE = _{ \" \" } a = { PUSH(\"\"{2}) ~ PEEK* }",
             "WHITESPACE = _{ \" \" } b = !{ PEEK_ALL{2} } a = @{ POP_ALL ~ PUSH(b) ~ PEEK_ALL* }",
@@ -970,6 +930,22 @@ mod tests {
             assert!(errors.len() <= 1, "{input}: {errors:?}");
         }
         assert_eq!(stack_loop_errors("a = { \"\"* }").len(), 1);
+    }
+
+    /// Like `validate_repetition`, this pass looks at a repetition's body, not at whether the
+    /// input can reach it: the second branch below never runs, since the same "x" just failed,
+    /// yet `validate_repetition` already rejects the `""*` form. The stack form is rejected the
+    /// same way.
+    #[test]
+    fn unreachable_repetitions_are_reported_like_validate_repetition() {
+        assert_eq!(
+            stack_loop_errors("a = { \"x\" | (\"x\" ~ \"\"*) }").len(),
+            1
+        );
+        assert_eq!(
+            stack_loop_errors("a = { POP_ALL ~ (\"x\" | (\"x\" ~ PEEK_ALL*)) }").len(),
+            1
+        );
     }
 
     #[test]
