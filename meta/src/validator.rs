@@ -22,6 +22,8 @@ use pest::Span;
 
 use crate::parser::{ParserExpr, ParserNode, ParserRule, Rule};
 
+mod stack_loops;
+
 static RUST_KEYWORDS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     [
         "abstract", "alignof", "as", "become", "box", "break", "const", "continue", "crate", "do",
@@ -211,7 +213,7 @@ pub fn validate_undefined<'i>(
 }
 
 /// Validates the abstract syntax tree for common mistakes:
-/// - infinite repetitions
+/// - infinite repetitions, including ones caused by the stack (e.g. `POP_ALL ~ PEEK_ALL*`)
 /// - choices that cannot be reached
 /// - left recursion
 #[allow(clippy::ptr_arg)]
@@ -225,6 +227,7 @@ pub fn validate_ast<'a, 'i: 'a>(rules: &'a Vec<ParserRule<'i>>) -> Vec<Error<Rul
     // - left recursion was not checked
     // - Every expression might not be checked
     errors.extend(validate_repetition(rules));
+    errors.extend(stack_loops::validate_stack_repetition(rules));
     errors.extend(validate_choices(rules));
     errors.extend(validate_whitespace_comment(rules));
     errors.extend(validate_left_recursion(rules));
