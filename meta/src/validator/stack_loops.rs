@@ -32,6 +32,7 @@
 //! Results are cached per expression node and stack, so each node is analysed once per stack.
 
 use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 
 use pest::error::{Error, ErrorVariant};
 
@@ -336,25 +337,52 @@ fn expr_modifies_stack(
     }
 }
 
+/// A reference compared and hashed by address: one node of the grammar tree, not every node
+/// equal to it. Equal subexpressions in different places are different nodes (each is reported
+/// at its own span), and hashing by address costs O(1) where hashing the subtree would not.
+struct ByAddr<'a, T>(&'a T);
+
+impl<T> Clone for ByAddr<'_, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for ByAddr<'_, T> {}
+
+impl<T> PartialEq for ByAddr<'_, T> {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self.0, other.0)
+    }
+}
+
+impl<T> Eq for ByAddr<'_, T> {}
+
+impl<T> Hash for ByAddr<'_, T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self.0, state)
+    }
+}
+
 struct StackAnalysis<'a, 'i> {
     rules: &'a HashMap<String, &'a ParserNode<'i>>,
     /// `WHITESPACE` or `COMMENT` is defined, so implicit whitespace may be consumed between
     /// the operands of a sequence (in non-atomic rules, which are not tracked).
     skips: bool,
     /// Outcome of an expression node (by address) entered with a stack.
-    memo: HashMap<(*const ParserExpr<'i>, AbsStack), Outcome>,
-    active: HashSet<(*const ParserExpr<'i>, AbsStack)>,
+    memo: HashMap<(ByAddr<'a, ParserExpr<'i>>, AbsStack), Outcome>,
+    active: HashSet<(ByAddr<'a, ParserExpr<'i>>, AbsStack)>,
     /// Outcome of a rule entered with a stack.
     rule_memo: HashMap<(String, AbsStack), Outcome>,
     rule_active: HashSet<(String, AbsStack)>,
     errors: Vec<Error<Rule>>,
     /// Repetition nodes already reported, so one is not reported twice.
-    reported: HashSet<*const ParserNode<'i>>,
+    reported: HashSet<ByAddr<'a, ParserNode<'i>>>,
     /// Inside `walk`: repetitions reached are checked and reported.
     walking: bool,
     /// Nodes already walked with a stack: what they report depends only on the node and the
     /// stack, and is already in `errors`, so they are not walked again.
-    walked: HashSet<(*const ParserExpr<'i>, AbsStack)>,
+    walked: HashSet<(ByAddr<'a, ParserExpr<'i>>, AbsStack)>,
 }
 
 impl<'a, 'i> StackAnalysis<'a, 'i> {
@@ -368,7 +396,7 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
     /// The outcome of `node` entered with `s`; while walking, also reports the looping
     /// repetitions it reaches. Each node is walked once per stack.
     fn visit(&mut self, node: &'a ParserNode<'i>, s: AbsStack) -> Outcome {
-        if self.walking && self.walked.insert((&node.expr as *const ParserExpr<'i>, s)) {
+        if self.walking && self.walked.insert((ByAddr(&node.expr), s)) {
             self.step(node, s)
         } else {
             self.outcome(node, s)
@@ -377,7 +405,7 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
 
     /// The outcome of `node` entered with `s`, cached; never reports.
     fn outcome(&mut self, node: &'a ParserNode<'i>, s: AbsStack) -> Outcome {
-        let key = (&node.expr as *const ParserExpr<'i>, s);
+        let key = (ByAddr(&node.expr), s);
         if let Some(&o) = self.memo.get(&key) {
             return o;
         }
@@ -748,7 +776,7 @@ impl<'a, 'i> StackAnalysis<'a, 'i> {
         {
             return;
         }
-        if self.reported.insert(node as *const ParserNode<'i>) {
+        if self.reported.insert(ByAddr(node)) {
             self.errors.push(Error::new_from_span(
                 ErrorVariant::CustomError {
                     message: "expression inside repetition is non-progressing and will repeat \
