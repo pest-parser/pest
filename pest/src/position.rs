@@ -326,10 +326,10 @@ impl<'i> Position<'i> {
                         }
                     }
                 }
-                [s1, s2, s3] if !s1.is_empty() && !s2.is_empty() && s3.is_empty() => {
+                [s1, s2, s3] if !s1.is_empty() && !s2.is_empty() && !s3.is_empty() => {
                     let b1 = s1.as_bytes()[0];
                     let b2 = s2.as_bytes()[0];
-                    let b3 = s2.as_bytes()[0];
+                    let b3 = s3.as_bytes()[0];
                     let miter =
                         memchr::memchr3_iter(b1, b2, b3, &self.input.as_bytes()[self.pos..]);
                     for from in miter {
@@ -615,6 +615,47 @@ mod tests {
         test_pos = pos;
         assert!(!test_pos.skip_until(&["z"]));
         assert_eq!(test_pos.pos(), 5);
+    }
+
+    #[test]
+    fn skip_until_three_strings() {
+        let input = "xx yy b";
+        let pos = Position::from_start(input);
+
+        // All three strings non-empty: the three-string fast path must find "b".
+        let mut test_pos = pos;
+        assert!(test_pos.skip_until(&["a", "c", "b"]));
+        assert_eq!(test_pos.pos(), 6);
+
+        // A string that does not occur: nothing matches, position goes to the end.
+        test_pos = pos;
+        assert!(!test_pos.skip_until(&["q", "r", "z"]));
+        assert_eq!(test_pos.pos(), input.len());
+    }
+
+    #[test]
+    fn skip_until_empty_third_string() {
+        // The empty string matches at the current position, so skip_until must
+        // return true without advancing. Regression test for the inverted guard
+        // and the wrong `b3` binding in the three-string fast path.
+        let input = "xyb";
+        let pos = Position::from_start(input);
+
+        let mut test_pos = pos;
+        assert!(test_pos.skip_until(&["a", "b", ""]));
+        assert_eq!(test_pos.pos(), 0);
+
+        // Empty string first: still matches immediately.
+        test_pos = pos;
+        assert!(test_pos.skip_until(&["", "a", "b"]));
+        assert_eq!(test_pos.pos(), 0);
+
+        // Only the third string is empty, no "a"/"b" present: still matches at once.
+        let input2 = "xyz";
+        let pos2 = Position::from_start(input2);
+        let mut test_pos = pos2;
+        assert!(test_pos.skip_until(&["a", "b", ""]));
+        assert_eq!(test_pos.pos(), 0);
     }
 
     #[test]
