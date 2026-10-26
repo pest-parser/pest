@@ -1,7 +1,7 @@
 [package]
 name = "pest"
 description = "The Elegant Parser"
-version = "2.9.4"
+version = "2.9.5"
 edition = "2021"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest.rs/"
@@ -16,7 +16,9 @@ rust-version = "1.83"
 [features]
 default = ["std", "memchr"]
 # Implements `std::error::Error` for the `Error` type
-std = ["ucd-trie/std", "dep:stacker", "dep:psm"]
+std = ["ucd-trie/std", "dep:pest_stack_guard"]
+# Opt into native stack checks on targets where they are not automatic.
+stack-guard = ["std", "pest_stack_guard/stack-guard"]
 # Enables the `to_json` function for `Pair` and `Pairs`
 pretty-print = ["dep:serde", "dep:serde_json"]
 # Enable const fn constructor for `PrecClimber`
@@ -30,8 +32,7 @@ serde = { version = "1.0.145", optional = true }
 serde_json = { version = "1.0.85", optional = true }
 memchr = { version = "2.4.0", optional = true }
 miette = { version = "7.2.0", optional = true, features = ["fancy"] }
-stacker = { version = "0.1.25", optional = true }
-psm = { version = "=0.1.24", optional = true }
+pest_stack_guard = { version = "1", optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["html_reports"] }

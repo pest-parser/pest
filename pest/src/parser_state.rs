@@ -103,8 +103,10 @@ static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 ///
 /// This process-wide setting is captured when each [`ParserState`] is created.
 /// `None` disables the cumulative budget. Available native stack space is
-/// checked automatically in supported `std` builds, independently of this
-/// setting; insufficient space fails parsing with "stack limit reached".
+/// checked automatically in `std` builds on the [default native targets].
+/// Other targets require the `stack-guard` feature (which enables `std`).
+/// These checks are independent of this setting; insufficient space fails
+/// parsing with "stack limit reached".
 /// Stack checking is best-effort when native stack bounds cannot be determined
 /// and is not available in `no_std` builds. It cannot protect arbitrary user
 /// callbacks or work outside the parser's guarded entry points.
@@ -113,6 +115,7 @@ static CALL_LIMIT: AtomicUsize = AtomicUsize::new(0);
 /// See the [resource-limit guidance] for enforcing deadlines.
 ///
 /// [resource-limit guidance]: https://github.com/pest-parser/pest/blob/master/SECURITY.md#parsing-untrusted-input
+/// [default native targets]: https://github.com/pest-parser/pest/blob/master/README.md#native-stack-guard
 pub fn set_call_limit(limit: Option<NonZeroUsize>) {
     CALL_LIMIT.store(
         limit.map(|limit| limit.get()).unwrap_or(0),
@@ -147,7 +150,7 @@ const REQUIRED_STACK_SPACE: usize = 64 * 1024;
 #[inline]
 fn remaining_stack() -> Option<usize> {
     #[cfg(feature = "std")]
-    return stacker::remaining_stack();
+    return pest_stack_guard::remaining_stack();
     #[cfg(not(feature = "std"))]
     return None;
 }

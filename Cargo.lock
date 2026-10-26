@@ -614,15 +614,14 @@ dependencies = [
 
 [[package]]
 name = "pest"
-version = "2.9.4"
+version = "2.9.5"
 dependencies = [
  "criterion",
  "memchr",
  "miette",
- "psm",
+ "pest_stack_guard",
  "serde",
  "serde_json",
- "stacker",
  "ucd-trie",
 ]
 
@@ -636,10 +635,10 @@ dependencies = [
 
 [[package]]
 name = "pest_debugger"
-version = "2.9.4"
+version = "2.9.5"
 dependencies = [
- "pest 2.9.4",
- "pest_meta 2.9.4",
+ "pest 2.9.5",
+ "pest_meta 2.9.5",
  "pest_vm",
  "rustyline",
  "serde_json",
@@ -648,10 +647,10 @@ dependencies = [
 
 [[package]]
 name = "pest_derive"
-version = "2.9.4"
+version = "2.9.5"
 dependencies = [
- "pest 2.9.4",
- "pest_generator 2.9.4",
+ "pest 2.9.5",
+ "pest_generator 2.9.5",
 ]
 
 [[package]]
@@ -669,10 +668,10 @@ dependencies = [
 
 [[package]]
 name = "pest_generator"
-version = "2.9.4"
+version = "2.9.5"
 dependencies = [
- "pest 2.9.4",
- "pest_meta 2.9.4",
+ "pest 2.9.5",
+ "pest_meta 2.9.5",
  "proc-macro2",
  "quote",
  "syn 3.0.6",
@@ -680,11 +679,11 @@ dependencies = [
 
 [[package]]
 name = "pest_grammars"
-version = "2.9.4"
+version = "2.9.5"
 dependencies = [
  "criterion",
  "lazy_static",
- "pest 2.9.4",
+ "pest 2.9.5",
  "pest_derive",
  "pretty_assertions",
 ]
@@ -700,17 +699,27 @@ dependencies = [
 
 [[package]]
 name = "pest_meta"
-version = "2.9.4"
+version = "2.9.5"
 dependencies = [
- "pest 2.9.4",
+ "pest 2.9.5",
+]
+
+[[package]]
+name = "pest_stack_guard"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97e6cd2217057fa86b6eaa512917e58089d875b957a31e35e7ab729977e0a5f2"
+dependencies = [
+ "psm",
+ "stacker",
 ]
 
 [[package]]
 name = "pest_vm"
-version = "2.9.4"
+version = "2.9.5"
 dependencies = [
- "pest 2.9.4",
- "pest_meta 2.9.4",
+ "pest 2.9.5",
+ "pest_meta 2.9.5",
 ]
 
 [[package]]
