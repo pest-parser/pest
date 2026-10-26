@@ -14,7 +14,7 @@ readme = "_README.md"
 rust-version = "1.83"
 
 [dependencies]
-pest = { path = "../pest", version = "2.9.5" }
+pest = { path = "../pest", version = "2.9.5", features = ["stack-guard"] }
 pest_derive = { path = "../derive", version = "2.9.5" }
 
 [dev-dependencies]
