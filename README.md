@@ -42,6 +42,34 @@ Other helpful resources:
 [Discord]: https://discord.gg/XEGACtWpT2
 [GitHub Discussions]: https://github.com/pest-parser/pest/discussions
 
+## Native stack guard
+
+With the default `std` feature, pest automatically checks native stack headroom
+on these targets:
+
+* `x86_64-unknown-linux-gnu`
+* `aarch64-unknown-linux-gnu`
+* `x86_64-apple-darwin`
+* `aarch64-apple-darwin`
+* `x86_64-pc-windows-msvc`
+* `aarch64-pc-windows-msvc`
+
+Other targets do not build `stacker` or `psm` by default. To opt into stack
+checking on another target, enable `stack-guard`:
+
+```toml
+pest = { version = "2.9.5", features = ["stack-guard"] }
+```
+
+This feature enables `std` and requires a toolchain supported by `stacker` and
+`psm`, including any required C/assembly compiler. Cross-compiling to one of the
+default native targets may also require a cross C toolchain.
+
+Stack checks are best-effort when stack bounds are unavailable; they are not
+deadlines or portable stack-overflow guarantees. The cumulative
+`pest::set_call_limit` budget works independently, including without the stack
+guard. See the [resource-limit guidance](SECURITY.md#parsing-untrusted-input).
+
 ## Example
 
 The following is an example of a grammar for a list of alphanumeric identifiers

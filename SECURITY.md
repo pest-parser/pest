@@ -30,11 +30,14 @@ The budget defaults to unlimited and is captured when a parser state is created;
 changing it cannot cancel an existing parse. It is not a wall-clock deadline,
 instruction-work budget, or memory bound.
 
-Supported `std` builds automatically check native stack headroom at parser
-checkpoints, independently of the call budget. Insufficient measurable space
-returns "stack limit reached". This is best-effort: unknown stack bounds retain
-normal parsing behavior, and `no_std` builds have no native stack check. These are implementation
-parameters validated against supported builds, not portable depth guarantees. The
+On the [default native targets](README.md#native-stack-guard), `std` builds
+automatically check native stack headroom at parser checkpoints, independently
+of the call budget. Other targets require the `stack-guard` feature, which
+enables `std` and the `stacker`/`psm` dependencies. Insufficient measurable space
+returns "stack limit reached". This is best-effort: disabled checks or unknown
+stack bounds retain normal parsing behavior, and `no_std` builds have no native
+stack check. These are implementation parameters validated against supported
+builds, not portable depth guarantees. The
 reserve depends on supported runtime/build assumptions and cannot protect
 arbitrary callbacks, unusually large frames between checkpoints, or foreign stack
 switching. Do not treat it as a universal stack-overflow guarantee.
