@@ -352,8 +352,8 @@ fn is_non_progressing<'i>(
 
                 return result;
             }
-            // else
-            // the ident is
+            // else if rules.get(ident) returned None:
+            // then ident is
             // - "POP","PEEK" => false
             //      the slice being checked is not non_progressing since every
             //      PUSH is being checked (assumption 4) and the expr
@@ -364,7 +364,9 @@ fn is_non_progressing<'i>(
             // - "DROP" => false doesn't consume the input but consumes the stack,
             // - "ANY", "ASCII_*", UNICODE categories, "NEWLINE" => false
             // - referring to another rule that is undefined (breaks assumption)
-            // else referring to another rule that was already seen.
+            //
+            // else if trace.contains(ident):
+            // then referring to another rule that was already seen.
             //    this happens only if there is a left-recursion
             //    that is only if an assumption is broken,
             //    WARNING: we can choose to return false, but that might

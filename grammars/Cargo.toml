@@ -1,7 +1,7 @@
 [package]
 name = "pest_grammars"
 description = "pest popular grammar implementations"
-version = "2.9.5"
+version = "2.9.6"
 edition = "2024"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest.rs/"
@@ -14,8 +14,8 @@ readme = "_README.md"
 rust-version = "1.88"
 
 [dependencies]
-pest = { path = "../pest", version = "2.9.5", features = ["stack-guard"] }
-pest_derive = { path = "../derive", version = "2.9.5" }
+pest = { path = "../pest", version = "2.9.6", features = ["stack-guard"] }
+pest_derive = { path = "../derive", version = "2.9.6" }
 
 [dev-dependencies]
 criterion = "0.5"
