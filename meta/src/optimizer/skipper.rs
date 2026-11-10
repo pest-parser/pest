@@ -55,16 +55,13 @@ pub fn skip(rule: Rule, map: &HashMap<String, Expr>) -> Rule {
         ty,
         expr: if ty == RuleType::Atomic {
             expr.map_top_down(|expr| {
-                if let Expr::Rep(expr) = expr.clone() {
-                    if let Expr::Seq(lhs, rhs) = *expr {
-                        if let (Expr::NegPred(expr), Expr::Ident(ident)) = (*lhs, *rhs) {
-                            if ident == "ANY" {
-                                if let Some(expr) = populate_choices(*expr, map, vec![]) {
-                                    return expr;
-                                }
-                            }
-                        }
-                    }
+                if let Expr::Rep(expr) = expr.clone()
+                    && let Expr::Seq(lhs, rhs) = *expr
+                    && let (Expr::NegPred(expr), Expr::Ident(ident)) = (*lhs, *rhs)
+                    && ident == "ANY"
+                    && let Some(expr) = populate_choices(*expr, map, vec![])
+                {
+                    return expr;
                 };
 
                 expr

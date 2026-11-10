@@ -62,7 +62,7 @@ jobs:
         uses: ./.github/actions/setup
         with:
           kind: check
-          toolchain: 1.83.0 # needed for the `icu` crates in pest_meta
+          toolchain: 1.88.0 # MSRV
       - name: Regenerate grammar.rs
         run: cargo bootstrap
       - name: Check for uncommitted changes
@@ -97,7 +97,7 @@ jobs:
         with:
           kind: msrv
           tools: cargo-msrv
-          toolchain: 1.83.0 # validates the 1.83.0 MSRV with minimal dependency versions
+          toolchain: 1.88.0 # validates the 1.88.0 MSRV with minimal dependency versions
       - name: Check msrv
         shell: sh
         run: for crate in "derive" "generator" "grammars" "meta" "pest" "vm"; do cd "$crate" && cargo minimal-versions check && cd ..; done

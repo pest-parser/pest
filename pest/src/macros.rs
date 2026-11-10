@@ -315,7 +315,7 @@ macro_rules! fails_with {
 pub mod tests {
     use super::super::error::Error;
     use super::super::iterators::Pairs;
-    use super::super::{state, Parser};
+    use super::super::{Parser, state};
     use alloc::format;
     use alloc::vec;
     use alloc::vec::Vec;

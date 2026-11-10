@@ -438,11 +438,12 @@ impl<'i> Position<'i> {
     /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
     pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
-        if let Some(c) = self.input[self.pos..].chars().next() {
-            if range.start <= c && c <= range.end {
-                self.pos += c.len_utf8();
-                return true;
-            }
+        if let Some(c) = self.input[self.pos..].chars().next()
+            && range.start <= c
+            && c <= range.end
+        {
+            self.pos += c.len_utf8();
+            return true;
         }
 
         false
@@ -567,11 +568,7 @@ mod tests {
 
     fn measure_skip(input: &str, pos: usize, n: usize) -> Option<usize> {
         let mut p = Position::new(input, pos).unwrap();
-        if p.skip(n) {
-            Some(p.pos - pos)
-        } else {
-            None
-        }
+        if p.skip(n) { Some(p.pos - pos) } else { None }
     }
 
     #[test]

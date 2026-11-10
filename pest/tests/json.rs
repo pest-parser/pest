@@ -14,7 +14,7 @@ use std::collections::HashMap;
 
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
-use pest::{state, ParseResult, Parser, ParserState, Span};
+use pest::{ParseResult, Parser, ParserState, Span, state};
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

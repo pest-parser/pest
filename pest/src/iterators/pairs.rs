@@ -519,8 +519,8 @@ impl<R: RuleType> ::serde::Serialize for Pairs<'_, R> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::macros::tests::*;
     use super::super::super::Parser;
+    use super::super::super::macros::tests::*;
     use alloc::borrow::ToOwned;
     use alloc::boxed::Box;
     use alloc::format;
@@ -686,7 +686,7 @@ mod tests {
     // false positive: pest uses `..` as a complete range (historically)
     #[allow(clippy::almost_complete_range)]
     fn test_tag_node_branch() {
-        use crate::{state, ParseResult, ParserState};
+        use crate::{ParseResult, ParserState, state};
         #[allow(non_camel_case_types)]
         #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
         enum Rule {

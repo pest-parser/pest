@@ -48,8 +48,8 @@ pub mod parse_derive;
 #[cfg(not(feature = "export-internal"))]
 mod parse_derive;
 
-use crate::parse_derive::{parse_derive, GrammarSource};
-use pest_meta::parser::{self, rename_meta_rule, Rule};
+use crate::parse_derive::{GrammarSource, parse_derive};
+use pest_meta::parser::{self, Rule, rename_meta_rule};
 use pest_meta::{optimizer, unwrap_or_report, validator};
 
 /// Processes the derive/proc macro input and generates the corresponding parser based

@@ -25,8 +25,8 @@ use super::line_index::LineIndex;
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
-use crate::span::Span;
 use crate::RuleType;
+use crate::span::Span;
 
 /// A matching pair of [`Token`]s and everything between them.
 ///

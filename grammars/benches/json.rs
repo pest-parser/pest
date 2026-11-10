@@ -10,7 +10,7 @@
 extern crate criterion;
 extern crate pest;
 extern crate pest_grammars;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 
 use pest::Parser;
 

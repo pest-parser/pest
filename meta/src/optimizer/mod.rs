@@ -887,8 +887,8 @@ mod tests {
         /// the shapes the restorer builds.
         #[test]
         fn display_round_trips_through_the_parser() {
-            use crate::ast::{print_rule, ROUND_TRIP_GRAMMARS};
-            use crate::parser::{consume_rules, parse, Rule as PRule};
+            use crate::ast::{ROUND_TRIP_GRAMMARS, print_rule};
+            use crate::parser::{Rule as PRule, consume_rules, parse};
 
             for source in ROUND_TRIP_GRAMMARS {
                 let optimized =

@@ -18,8 +18,8 @@
 
 use pest::error::Error;
 use pest::iterators::Pairs;
-use pest::{unicode, Position};
 use pest::{Atomicity, MatchDir, ParseResult, ParserState};
+use pest::{Position, unicode};
 use pest_meta::ast::RuleType;
 use pest_meta::optimizer::{OptimizedExpr, OptimizedRule};
 
@@ -79,10 +79,10 @@ impl Vm {
         state: Box<ParserState<'a, &'a str>>,
     ) -> ParseResult<Box<ParserState<'a, &'a str>>> {
         let state = state.check_stack_limit()?;
-        if let Some(ref listener) = self.listener {
-            if listener(rule.to_owned(), state.position()) {
-                return Err(ParserState::new(state.position().line_of()));
-            }
+        if let Some(ref listener) = self.listener
+            && listener(rule.to_owned(), state.position())
+        {
+            return Err(ParserState::new(state.position().line_of()));
         }
         match rule {
             "ANY" => return state.skip(1),

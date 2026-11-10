@@ -86,8 +86,8 @@ mod tests {
     use pest::iterators::Pairs;
     use std::{env, process::Command, thread};
 
-    use pest::pratt_parser::PrattParser;
     use pest::Parser;
+    use pest::pratt_parser::PrattParser;
 
     use crate::{json, sql, toml};
 

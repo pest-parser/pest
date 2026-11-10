@@ -15,10 +15,10 @@ use std::{
     sync::LazyLock,
 };
 
+use pest::Span;
 use pest::error::{Error, ErrorVariant, InputLocation};
 use pest::iterators::Pairs;
 use pest::unicode::unicode_property_names;
-use pest::Span;
 
 use crate::parser::{ParserExpr, ParserNode, ParserRule, Rule};
 
@@ -343,27 +343,27 @@ fn is_non_progressing<'i>(
                 return true;
             }
 
-            if !trace.contains(ident) {
-                if let Some(node) = rules.get(ident) {
-                    trace.push(ident.clone());
-                    let result = is_non_progressing(&node.expr, rules, trace);
-                    trace.pop().unwrap();
+            if !trace.contains(ident)
+                && let Some(node) = rules.get(ident)
+            {
+                trace.push(ident.clone());
+                let result = is_non_progressing(&node.expr, rules, trace);
+                trace.pop().unwrap();
 
-                    return result;
-                }
-                // else
-                // the ident is
-                // - "POP","PEEK" => false
-                //      the slice being checked is not non_progressing since every
-                //      PUSH is being checked (assumption 4) and the expr
-                //      of a PUSH has to be non_progressing.
-                // - "POPALL", "PEEKALL" => false
-                //      same as "POP", "PEEK" unless the following:
-                //      BUG: if the stack is empty they are non_progressing
-                // - "DROP" => false doesn't consume the input but consumes the stack,
-                // - "ANY", "ASCII_*", UNICODE categories, "NEWLINE" => false
-                // - referring to another rule that is undefined (breaks assumption)
+                return result;
             }
+            // else
+            // the ident is
+            // - "POP","PEEK" => false
+            //      the slice being checked is not non_progressing since every
+            //      PUSH is being checked (assumption 4) and the expr
+            //      of a PUSH has to be non_progressing.
+            // - "POPALL", "PEEKALL" => false
+            //      same as "POP", "PEEK" unless the following:
+            //      BUG: if the stack is empty they are non_progressing
+            // - "DROP" => false doesn't consume the input but consumes the stack,
+            // - "ANY", "ASCII_*", UNICODE categories, "NEWLINE" => false
+            // - referring to another rule that is undefined (breaks assumption)
             // else referring to another rule that was already seen.
             //    this happens only if there is a left-recursion
             //    that is only if an assumption is broken,
@@ -657,20 +657,20 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
                                  in this case",
                                 node.span.as_str(),
                                 chain
-                            )
+                            ),
                         },
-                        node.span
+                        node.span,
                     ));
                 }
 
-                if !trace.contains(&other) {
-                    if let Some(node) = rules.get(&other) {
-                        trace.push(other);
-                        let result = check_expr(node, rules, trace);
-                        trace.pop().unwrap();
+                if !trace.contains(&other)
+                    && let Some(node) = rules.get(&other)
+                {
+                    trace.push(other);
+                    let result = check_expr(node, rules, trace);
+                    trace.pop().unwrap();
 
-                        return result;
-                    }
+                    return result;
                 }
 
                 None
@@ -724,7 +724,7 @@ fn left_recursion<'a, 'i: 'a>(rules: HashMap<String, &'a ParserNode<'i>>) -> Vec
 
 #[cfg(test)]
 mod tests {
-    use super::super::parser::{consume_rules, PestParser};
+    use super::super::parser::{PestParser, consume_rules};
     use super::super::unwrap_or_report;
     use super::*;
     use pest::Parser;

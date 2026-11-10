@@ -9,11 +9,11 @@ mod parser {
 
 use parser::Rule;
 use pest::{
+    Parser,
     iterators::Pairs,
     pratt_parser::{Assoc::*, Op, PrattParser},
-    Parser,
 };
-use std::io::{stdin, stdout, Write};
+use std::io::{Write, stdin, stdout};
 
 fn parse_to_str(pairs: Pairs<Rule>, pratt: &PrattParser<Rule>) -> String {
     pratt

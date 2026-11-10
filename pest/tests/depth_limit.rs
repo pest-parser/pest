@@ -10,7 +10,7 @@
 use core::num::NonZeroUsize;
 use pest::error::Error;
 use pest::iterators::Pairs;
-use pest::{state, ParseResult, Parser, ParserState};
+use pest::{ParseResult, Parser, ParserState, state};
 use std::sync::{Mutex, MutexGuard};
 
 static CALL_LIMIT_LOCK: Mutex<()> = Mutex::new(());
@@ -229,10 +229,14 @@ fn test_call_limit_is_captured_per_state() {
     let before = ParserState::<Rule>::new("x");
     pest::set_call_limit(None);
     let after = ParserState::<Rule>::new("x");
-    assert!(before
-        .sequence(|state| state.sequence(|state| state.match_string("x")))
-        .is_err());
-    assert!(after
-        .sequence(|state| state.sequence(|state| state.match_string("x")))
-        .is_ok());
+    assert!(
+        before
+            .sequence(|state| state.sequence(|state| state.match_string("x")))
+            .is_err()
+    );
+    assert!(
+        after
+            .sequence(|state| state.sequence(|state| state.match_string("x")))
+            .is_ok()
+    );
 }
