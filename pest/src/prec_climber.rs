@@ -15,8 +15,8 @@ use alloc::vec::Vec;
 use core::iter::Peekable;
 use core::ops::BitOr;
 
-use crate::iterators::Pair;
 use crate::RuleType;
+use crate::iterators::Pair;
 
 /// Macro for more convenient const fn definition of `prec_climber::PrecClimber`.
 ///

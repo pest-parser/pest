@@ -321,23 +321,23 @@ impl Default for CliArgs {
 
 impl CliArgs {
     fn init(self, context: &mut Cli) {
-        if let Some(grammar_file) = self.grammar_file {
-            if let Err(e) = context.grammar(grammar_file) {
-                eprintln!("Error: {e}");
-            }
+        if let Some(grammar_file) = self.grammar_file
+            && let Err(e) = context.grammar(grammar_file)
+        {
+            eprintln!("Error: {e}");
         }
-        if let Some(input_file) = self.input_file {
-            if let Err(e) = context.input(input_file) {
-                eprintln!("Error: {e}");
-            }
+        if let Some(input_file) = self.input_file
+            && let Err(e) = context.input(input_file)
+        {
+            eprintln!("Error: {e}");
         }
         for breakpoint in self.breakpoints {
             context.breakpoint(&breakpoint);
         }
-        if let Some(rule) = self.rule {
-            if let Err(e) = context.run(&rule) {
-                eprintln!("Error: {e}");
-            }
+        if let Some(rule) = self.rule
+            && let Err(e) = context.run(&rule)
+        {
+            eprintln!("Error: {e}");
         }
     }
 }
@@ -396,10 +396,10 @@ fn main() -> rustyline::Result<()> {
             }
         }
     }
-    if let Some(historyfile) = historyfile {
-        if let Err(e) = rl.save_history(&historyfile) {
-            eprintln!("Error saving history file: {e}");
-        }
+    if let Some(historyfile) = historyfile
+        && let Err(e) = rl.save_history(&historyfile)
+    {
+        eprintln!("Error saving history file: {e}");
     }
     Ok(())
 }

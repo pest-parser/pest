@@ -63,18 +63,18 @@ use std::{
     io::{self, Read},
     path::Path,
     sync::{
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
         mpsc::SyncSender as Sender,
-        Arc, Mutex,
     },
     thread::{self, JoinHandle},
 };
 
-use pest::{error::Error, Position};
+use pest::{Position, error::Error};
 use pest_meta::{
     optimizer::OptimizedRule,
     parse_and_optimize,
-    parser::{rename_meta_rule, Rule},
+    parser::{Rule, rename_meta_rule},
 };
 use pest_vm::Vm;
 

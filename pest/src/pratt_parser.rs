@@ -18,8 +18,8 @@ use core::ops::BitOr;
 use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 
-use crate::iterators::Pair;
 use crate::RuleType;
+use crate::iterators::Pair;
 
 pub use crate::pratt_precedence;
 

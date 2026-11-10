@@ -76,13 +76,13 @@ impl<T: Clone> Stack<T> {
     pub fn pop(&mut self) -> Option<T> {
         let len = self.cache.len();
         let popped = self.cache.pop();
-        if let Some(popped) = &popped {
-            if let Some((_, remained_count)) = self.lengths.last_mut() {
-                // `len >= *unpopped_count`
-                if len == *remained_count {
-                    *remained_count -= 1;
-                    self.popped.push(popped.clone());
-                }
+        if let Some(popped) = &popped
+            && let Some((_, remained_count)) = self.lengths.last_mut()
+        {
+            // `len >= *unpopped_count`
+            if len == *remained_count {
+                *remained_count -= 1;
+                self.popped.push(popped.clone());
             }
         }
         popped

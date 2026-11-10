@@ -24,13 +24,13 @@ use core::ops::Deref; // used in BorrowedOrRc.as_str
 use core::ops::Range;
 use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
+use crate::RuleType;
 use crate::error::{Error, ErrorVariant};
 use crate::iterators::pairs::new;
-use crate::iterators::{pairs, QueueableToken};
+use crate::iterators::{QueueableToken, pairs};
 use crate::position::Position;
 use crate::span::Span;
 use crate::stack::Stack;
-use crate::RuleType;
 
 /// The current lookahead status of a [`ParserState`].
 ///
@@ -218,10 +218,8 @@ impl CallLimitTracker {
             self.limit_reached = Some(cause);
             return false;
         }
-        if count_call {
-            if let Some((current, _)) = &mut self.current_call_limit {
-                *current += 1;
-            }
+        if count_call && let Some((current, _)) = &mut self.current_call_limit {
+            *current += 1;
         }
         true
     }
@@ -1157,11 +1155,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             let token = ParsingToken::BuiltInRule;
             self.handle_token_parse_result(start_position, token, succeeded);
         }
-        if succeeded {
-            Ok(self)
-        } else {
-            Err(self)
-        }
+        if succeeded { Ok(self) } else { Err(self) }
     }
 
     /// Attempts to match the given string. Returns `Ok` with the updated `Box<ParserState>` if
@@ -1196,11 +1190,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             };
             self.handle_token_parse_result(start_position, token, succeeded);
         }
-        if succeeded {
-            Ok(self)
-        } else {
-            Err(self)
-        }
+        if succeeded { Ok(self) } else { Err(self) }
     }
 
     /// Pushes the given literal to the stack, and always returns `Ok(Box<ParserState>)`.
@@ -1267,11 +1257,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
             };
             self.handle_token_parse_result(start_position, token, succeeded);
         }
-        if succeeded {
-            Ok(self)
-        } else {
-            Err(self)
-        }
+        if succeeded { Ok(self) } else { Err(self) }
     }
 
     /// Attempts to match a single character from the given range. Returns `Ok` with the updated
@@ -1310,11 +1296,7 @@ impl<'i, R: RuleType> ParserState<'i, R> {
         if self.parse_attempts.enabled {
             self.handle_token_parse_result(start_position, token, succeeded);
         }
-        if succeeded {
-            Ok(self)
-        } else {
-            Err(self)
-        }
+        if succeeded { Ok(self) } else { Err(self) }
     }
 
     /// Attempts to skip `n` characters forward. Returns `Ok` with the updated `Box<ParserState>`
@@ -2052,11 +2034,7 @@ mod test {
                                 .stack
                                 .push(SpanOrLiteral::Span(Span::new("xy", 1, 2).unwrap()));
                             let state = state.match_string("x").unwrap();
-                            if succeeds {
-                                Ok(state)
-                            } else {
-                                Err(state)
-                            }
+                            if succeeds { Ok(state) } else { Err(state) }
                         })
                     })
                 });

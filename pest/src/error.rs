@@ -23,9 +23,9 @@ use core::cmp;
 use core::fmt;
 use core::mem;
 
+use crate::RuleType;
 use crate::position::Position;
 use crate::span::Span;
-use crate::RuleType;
 
 /// Parse-related error type.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -473,11 +473,11 @@ impl<R: RuleType> Error<R> {
                         }
                     ));
                     for call_stack in group {
-                        if let Some(r) = call_stack.deepest.get_rule() {
-                            if let Some(message) = rule_to_message(r) {
-                                contains_meaningful_info = true;
-                                help_lines.push(format!("{spacing}      - {message}"));
-                            }
+                        if let Some(r) = call_stack.deepest.get_rule()
+                            && let Some(message) = rule_to_message(r)
+                        {
+                            contains_meaningful_info = true;
+                            help_lines.push(format!("{spacing}      - {message}"));
                         }
                     }
                     if !contains_meaningful_info {
@@ -489,11 +489,10 @@ impl<R: RuleType> Error<R> {
                         // Note that `deepest` rule may be `None`. E.g. in case it corresponds
                         // to WHITESPACE expected token which has no parent rule (on the top level
                         // parsing).
-                        if let Some(r) = call_stack.deepest.get_rule() {
-                            let helper_message = rule_to_message(r);
-                            if let Some(helper_message) = helper_message {
-                                help_lines.push(format!("{spacing}help: {helper_message}"));
-                            }
+                        if let Some(r) = call_stack.deepest.get_rule()
+                            && let Some(helper_message) = rule_to_message(r)
+                        {
+                            help_lines.push(format!("{spacing}help: {helper_message}"));
                         }
                     }
                 }
@@ -623,7 +622,7 @@ impl<R: RuleType> Error<R> {
             .unwrap_or_default();
 
         let pair = (self.line_col.clone(), &self.inner.continued_line);
-        if let (LineColLocation::Span(_, end), Some(ref continued_line)) = pair {
+        if let (LineColLocation::Span(_, end), Some(continued_line)) = pair {
             let has_line_gap = end.0 - self.start().0 > 1;
             if has_line_gap {
                 format!(
@@ -719,12 +718,12 @@ impl<R: RuleType> ErrorVariant<R> {
     pub fn message(&self) -> Cow<'_, str> {
         match self {
             ErrorVariant::ParsingError {
-                ref positives,
-                ref negatives,
+                positives,
+                negatives,
             } => Cow::Owned(Error::parsing_error_message(positives, negatives, |r| {
                 format!("{r:?}")
             })),
-            ErrorVariant::CustomError { ref message } => Cow::Borrowed(message),
+            ErrorVariant::CustomError { message } => Cow::Borrowed(message),
         }
     }
 }
@@ -1211,10 +1210,6 @@ mod tests {
     #[cfg(feature = "miette-error")]
     #[test]
     fn miette_error() {
-        // Force color output so the test passes regardless of TTY availability
-        let prev_force_color = std::env::var_os("FORCE_COLOR");
-        std::env::set_var("FORCE_COLOR", "1");
-
         let input = "abc\ndef";
         let pos = Position::new(input, 4).unwrap();
         let error: Error<u32> = Error::new_from_pos(
@@ -1225,10 +1220,15 @@ mod tests {
             pos,
         );
 
-        let miette_error = miette::Error::new(error.into_miette());
+        // Use an explicit colored theme instead of terminal auto-detection, so the output is
+        // deterministic without mutating process-global environment variables.
+        let mut rendered = String::new();
+        miette::GraphicalReportHandler::new_themed(miette::GraphicalTheme::unicode())
+            .render_report(&mut rendered, &error.into_miette())
+            .unwrap();
 
         assert_eq!(
-            format!("{miette_error:?}"),
+            rendered,
             [
                 "  \u{1b}[31m×\u{1b}[0m Failure to parse at Pos((2, 1))",
                 "   ╭────",
@@ -1240,12 +1240,5 @@ mod tests {
             ]
             .join("\n")
         );
-
-        // Restore previous FORCE_COLOR state to avoid cross-test leakage
-        if let Some(prev) = prev_force_color {
-            std::env::set_var("FORCE_COLOR", prev);
-        } else {
-            std::env::remove_var("FORCE_COLOR");
-        }
     }
 }

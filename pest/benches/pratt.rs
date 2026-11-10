@@ -9,7 +9,7 @@
 
 use std::array::from_fn;
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use pest::pratt_parser::{Assoc, ConstPrattParser, Op, PrattParser, PrattParserOps};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

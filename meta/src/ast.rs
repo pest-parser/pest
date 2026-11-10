@@ -623,7 +623,7 @@ mod tests {
         /// the AST has to survive.
         #[test]
         fn display_round_trips_through_the_parser() {
-            use crate::parser::{consume_rules, parse, Rule as PRule};
+            use crate::parser::{Rule as PRule, consume_rules, parse};
 
             for source in ROUND_TRIP_GRAMMARS {
                 let rules = consume_rules(parse(PRule::grammar_rules, source).unwrap()).unwrap();

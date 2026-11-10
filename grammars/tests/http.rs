@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate pest;
-use pest_grammars::{http::*, Parser};
+use pest_grammars::{Parser, http::*};
 
 #[test]
 fn method() {

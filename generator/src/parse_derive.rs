@@ -41,7 +41,9 @@ pub(crate) fn parse_derive(ast: DeriveInput) -> (ParsedDerive, Vec<GrammarSource
         .collect();
 
     if grammar.is_empty() {
-        panic!("a grammar file needs to be provided with the #[grammar = \"PATH\"] or #[grammar_inline = \"GRAMMAR CONTENTS\"] attribute");
+        panic!(
+            "a grammar file needs to be provided with the #[grammar = \"PATH\"] or #[grammar_inline = \"GRAMMAR CONTENTS\"] attribute"
+        );
     }
 
     let mut grammar_sources = Vec::with_capacity(grammar.len());
@@ -85,8 +87,8 @@ fn get_attribute(attr: &Attribute) -> GrammarSource {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_derive;
     use super::GrammarSource;
+    use super::parse_derive;
 
     #[test]
     fn derive_inline_file() {

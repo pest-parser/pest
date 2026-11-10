@@ -13,9 +13,9 @@ use core::fmt;
 use core::str;
 
 use super::queueable_token::QueueableToken;
+use crate::RuleType;
 use crate::position;
 use crate::token::Token;
-use crate::RuleType;
 
 /// An iterator over [`Token`]s. It is created by [`Pair::tokens`] and [`Pairs::tokens`].
 ///
@@ -133,8 +133,8 @@ impl<R: RuleType> fmt::Debug for Tokens<'_, R> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::macros::tests::*;
     use super::super::super::Parser;
+    use super::super::super::macros::tests::*;
     use super::Token;
     use alloc::vec::Vec;
 

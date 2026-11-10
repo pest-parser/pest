@@ -796,7 +796,7 @@ mod tests {
     use pest::Span;
 
     use crate::ast::RuleType;
-    use crate::parser::{consume_rules, ParserExpr, ParserNode, ParserRule, PestParser, Rule};
+    use crate::parser::{ParserExpr, ParserNode, ParserRule, PestParser, Rule, consume_rules};
     use crate::unwrap_or_report;
 
     fn stack_loop_errors(input: &str) -> Vec<String> {

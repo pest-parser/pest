@@ -13,7 +13,7 @@ extern crate pest;
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::{Assoc, ConstPrattParser, Op, PrattParser};
-use pest::{state, ParseResult, Parser, ParserState};
+use pest::{ParseResult, Parser, ParserState, state};
 
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

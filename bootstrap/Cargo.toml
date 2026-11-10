@@ -2,14 +2,14 @@
 name = "pest_bootstrap"
 description = "update grammar.rs from grammar.pest"
 version = "0.0.0"
-edition = "2021"
+edition = "2024"
 authors = ["Dragoș Tiselice <dragostiselice@gmail.com>"]
 homepage = "https://pest.rs/"
 repository = "https://github.com/pest-parser/pest"
 documentation = "https://docs.rs/pest"
 publish = false
 license = "MIT OR Apache-2.0"
-rust-version = "1.83"
+rust-version = "1.88"
 
 [dependencies]
 pest_generator = "2.1.1" # Use the crates-io version, which (should be) known-good
