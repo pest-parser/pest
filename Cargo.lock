@@ -614,7 +614,7 @@ dependencies = [
 
 [[package]]
 name = "pest"
-version = "2.9.5"
+version = "2.9.6"
 dependencies = [
  "criterion",
  "memchr",
@@ -635,10 +635,10 @@ dependencies = [
 
 [[package]]
 name = "pest_debugger"
-version = "2.9.5"
+version = "2.9.6"
 dependencies = [
- "pest 2.9.5",
- "pest_meta 2.9.5",
+ "pest 2.9.6",
+ "pest_meta 2.9.6",
  "pest_vm",
  "rustyline",
  "serde_json",
@@ -647,10 +647,10 @@ dependencies = [
 
 [[package]]
 name = "pest_derive"
-version = "2.9.5"
+version = "2.9.6"
 dependencies = [
- "pest 2.9.5",
- "pest_generator 2.9.5",
+ "pest 2.9.6",
+ "pest_generator 2.9.6",
 ]
 
 [[package]]
@@ -668,10 +668,10 @@ dependencies = [
 
 [[package]]
 name = "pest_generator"
-version = "2.9.5"
+version = "2.9.6"
 dependencies = [
- "pest 2.9.5",
- "pest_meta 2.9.5",
+ "pest 2.9.6",
+ "pest_meta 2.9.6",
  "proc-macro2",
  "quote",
  "syn 3.0.6",
@@ -679,11 +679,11 @@ dependencies = [
 
 [[package]]
 name = "pest_grammars"
-version = "2.9.5"
+version = "2.9.6"
 dependencies = [
  "criterion",
  "lazy_static",
- "pest 2.9.5",
+ "pest 2.9.6",
  "pest_derive",
  "pretty_assertions",
 ]
@@ -699,9 +699,9 @@ dependencies = [
 
 [[package]]
 name = "pest_meta"
-version = "2.9.5"
+version = "2.9.6"
 dependencies = [
- "pest 2.9.5",
+ "pest 2.9.6",
 ]
 
 [[package]]
@@ -716,10 +716,10 @@ dependencies = [
 
 [[package]]
 name = "pest_vm"
-version = "2.9.5"
+version = "2.9.6"
 dependencies = [
- "pest 2.9.5",
- "pest_meta 2.9.5",
+ "pest 2.9.6",
+ "pest_meta 2.9.6",
 ]
 
 [[package]]
