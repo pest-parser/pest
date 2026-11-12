@@ -21,9 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         with:
           kind: check
           toolchain: 1.88.0 # needed for the `icu_*` crates in pest_debugger
@@ -36,9 +38,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         id: setup
         with:
           kind: check
@@ -57,9 +61,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         with:
           kind: check
           toolchain: 1.88.0 # MSRV
@@ -74,9 +80,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         id: setup
         with:
           kind: check
@@ -90,9 +98,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         id: setup
         with:
           kind: msrv
@@ -108,9 +118,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         id: setup
         with:
           kind: check
@@ -121,7 +133,7 @@ jobs:
       - name: Generate code coverage
         run: FORCE_COLOR=1 cargo llvm-cov --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --workspace --lcov --output-path lcov.info
       - name: Upload Results to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v4.6.0
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
@@ -137,9 +149,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         id: setup
         with:
           kind: check
@@ -153,9 +167,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         id: setup
         with:
           kind: check
@@ -170,9 +186,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup
-        uses: ./.github/actions/setup
+        uses: $/.github/actions/setup
         id: setup
         with:
           kind: check
