@@ -20,7 +20,6 @@ workflows:
         - 'rust-lang/crates-io-auth-action@v1.0.6'
     '.github/workflows/verify-lockfile.yml':
         - 'actions/checkout@v7.0.1'
-        - 'j178/prek-action@v3.1.0'
 dependencies:
     'actions/checkout@v7.0.1':
         ref: 'v7.0.1'
@@ -57,11 +56,6 @@ dependencies:
         commit: 'sha1-9c0f1229b74e908026991c9f7d9efbb1db75f5c3'
         owner_id: 1342004
         repo_id: 63809205
-    'j178/prek-action@v3.1.0':
-        ref: 'v3.1.0'
-        commit: 'sha1-44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d'
-        owner_id: 10510431
-        repo_id: 1052387486
     'rust-lang/crates-io-auth-action@v1.0.6':
         ref: 'v1.0.6'
         commit: 'sha1-3268eb413133e2960fa4ae0e963ca76380c54cd9'

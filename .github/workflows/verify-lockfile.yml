@@ -1,30 +1,22 @@
-name: Lint
+# Fails when .github/workflows/actions.lock is out of sync with the
+# workflows or a locked pin no longer verifies upstream.
 
-on: [push, pull_request, workflow_dispatch]
+name: verify-lockfile
 
-permissions: {}
+on:
+  pull_request:
+  push:
+    branches:
+      - main
 
-env:
-  FORCE_COLOR: 1
-  RUFF_OUTPUT_FORMAT: github
+permissions:
+  contents: read
 
 jobs:
-  lint:
+  verify:
     runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v7.0.1
-        with:
-          persist-credentials: false
-      - uses: j178/prek-action@v3.1.0
-
-  # Fails when .github/workflows/actions.lock is out of sync with the
-  # workflows or a locked pin no longer verifies upstream.
-  lockfile:
-    runs-on: ubuntu-slim
     env:
       GH_TOKEN: ${{ github.token }}
-
     steps:
       - uses: actions/checkout@v7.0.1
         with:
