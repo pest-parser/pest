@@ -37,11 +37,11 @@ runs:
         components: ${{inputs.components}}
         targets: ${{inputs.targets}}
     - name: Install cargo-hack,cargo-minimal-versions
-      uses: taiki-e/install-action@v2
+      uses: taiki-e/install-action@v2.90.3
       with:
         tool: cargo-hack,cargo-minimal-versions
     - name: Install ${{inputs.tools}}
-      uses: taiki-e/install-action@v2
+      uses: taiki-e/install-action@v2.90.3
       if: ${{inputs.tools}}
       with:
         tool: ${{inputs.tools}}
@@ -49,6 +49,6 @@ runs:
       run: cargo minimal-versions generate-lockfile
       shell: sh
     - name: Set up cache
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@v2.9.3
       with:
         shared-key: ${{inputs.kind}}-${{runner.os}}-${{steps.toolchain.outputs.cachekey}}
