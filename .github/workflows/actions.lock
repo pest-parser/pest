@@ -3,20 +3,24 @@
 # Docs: https://gh.io/actions-lockfile
 version: 'v0.0.3'
 workflows:
+    '.github/workflows/benchmarks.yml':
+        - 'actions/checkout@v7.0.1'
+        - 'bencherdev/bencher@main'
+        - 'dtolnay/rust-toolchain@master'
+        - 'swatinem/rust-cache@v2.9.3'
+        - 'taiki-e/install-action@v2.90.3'
     '.github/workflows/ci.yml':
         - 'actions/checkout@v7.0.1'
         - 'codecov/codecov-action@v4.6.0'
         - 'dtolnay/rust-toolchain@master'
-        - 'dtolnay/rust-toolchain@nightly'
         - 'swatinem/rust-cache@v2.9.3'
-        - 'taiki-e/install-action@cargo-llvm-cov'
         - 'taiki-e/install-action@v2.90.3'
     '.github/workflows/cifuzz.yml':
         - 'actions/upload-artifact@v4.6.2'
         - 'google/oss-fuzz@master'
     '.github/workflows/release.yml':
         - 'actions/checkout@v7.0.1'
-        - 'dtolnay/rust-toolchain@1.88.0'
+        - 'dtolnay/rust-toolchain@master'
         - 'rust-lang/crates-io-auth-action@v1.0.6'
     '.github/workflows/verify-lockfile.yml':
         - 'actions/checkout@v7.0.1'
@@ -31,24 +35,19 @@ dependencies:
         commit: 'sha1-ea165f8d65b6e75b540449e92b4886f43607fa02'
         owner_id: 44036562
         repo_id: 192625955
+    'bencherdev/bencher@main':
+        ref: 'main'
+        commit: 'sha1-a39a1f4fb7d2a0bffcfc2d4d044852072ce98358'
+        owner_id: 68773954
+        repo_id: 282416261
     'codecov/codecov-action@v4.6.0':
         ref: 'v4.6.0'
         commit: 'sha1-b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238'
         owner_id: 8226205
         repo_id: 200299178
-    'dtolnay/rust-toolchain@1.88.0':
-        ref: '1.88.0'
-        commit: 'sha1-360a4e93673de6630fac2478bc9e35244b01a759'
-        owner_id: 1940490
-        repo_id: 260749683
     'dtolnay/rust-toolchain@master':
         ref: 'master'
         commit: 'sha1-683b588c487a69d01f6c6ddf40f036ff682cc2c8'
-        owner_id: 1940490
-        repo_id: 260749683
-    'dtolnay/rust-toolchain@nightly':
-        ref: 'nightly'
-        commit: 'sha1-2c76c034f9e32a5d6e2c104dc4df23a22476db04'
         owner_id: 1940490
         repo_id: 260749683
     'google/oss-fuzz@master':
@@ -66,11 +65,6 @@ dependencies:
         commit: 'sha1-d1527c8f67ef9af357290475d4af4b0fab8f12e0'
         owner_id: 580492
         repo_id: 298565987
-    'taiki-e/install-action@cargo-llvm-cov':
-        ref: 'cargo-llvm-cov'
-        commit: 'sha1-3f7c3597aa4e6da3f315e128de702ce61e7b2877'
-        owner_id: 43724913
-        repo_id: 442947557
     'taiki-e/install-action@v2.90.3':
         ref: 'v2.90.3'
         commit: 'sha1-cfdb7ed4ccc7c7dce37759eae89dc5674b469b39'

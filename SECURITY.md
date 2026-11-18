@@ -34,13 +34,18 @@ On the [default native targets](README.md#native-stack-guard), `std` builds
 automatically check native stack headroom at parser checkpoints, independently
 of the call budget. Other targets require the `stack-guard` feature, which
 enables `std` and the `stacker`/`psm` dependencies. Insufficient measurable space
-returns "stack limit reached". This is best-effort: disabled checks or unknown
+returns "stack limit reached". Headroom is measured at a parser state's first
+checkpoint, and each measurement is then reused for a number of later checkpoints
+bounded by the space it found beyond the reserve. Measuring therefore becomes
+more frequent as the stack fills up and happens at every checkpoint near the
+limit. This is best-effort: disabled checks or unknown
 stack bounds retain normal parsing behavior, and `no_std` builds have no native
 stack check. These are implementation parameters validated against supported
 builds, not portable depth guarantees. The
-reserve depends on supported runtime/build assumptions and cannot protect
-arbitrary callbacks, unusually large frames between checkpoints, or foreign stack
-switching. Do not treat it as a universal stack-overflow guarantee.
+reserve and the reuse of measurements depend on supported runtime/build
+assumptions and cannot protect arbitrary callbacks, unusually large frames
+between checkpoints, or foreign stack switching. Do not treat it as a universal
+stack-overflow guarantee.
 
 Grammar validation, AST construction, optimization, and application processing
 are not all governed by parser-state limits. Pest's synchronous `Parser::parse`

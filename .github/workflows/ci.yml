@@ -129,7 +129,9 @@ jobs:
           components: llvm-tools-preview
           toolchain: stable
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+        uses: taiki-e/install-action@v2.90.3
+        with:
+          tool: cargo-llvm-cov
       - name: Generate code coverage
         run: FORCE_COLOR=1 cargo llvm-cov --features pretty-print,const_prec_climber,memchr,grammar-extras,miette-error --workspace --lcov --output-path lcov.info
       - name: Upload Results to Codecov
