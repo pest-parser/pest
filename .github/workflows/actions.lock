@@ -3,6 +3,13 @@
 # Docs: https://gh.io/actions-lockfile
 version: 'v0.0.3'
 workflows:
+    '.github/workflows/benchmarks.yml':
+        - 'actions/checkout@v7.0.1'
+        - 'bencherdev/bencher@main'
+        - 'dtolnay/rust-toolchain@master'
+        - 'dtolnay/rust-toolchain@nightly'
+        - 'swatinem/rust-cache@v2.9.3'
+        - 'taiki-e/install-action@v2.90.3'
     '.github/workflows/ci.yml':
         - 'actions/checkout@v7.0.1'
         - 'codecov/codecov-action@v4.6.0'
@@ -31,6 +38,11 @@ dependencies:
         commit: 'sha1-ea165f8d65b6e75b540449e92b4886f43607fa02'
         owner_id: 44036562
         repo_id: 192625955
+    'bencherdev/bencher@main':
+        ref: 'main'
+        commit: 'sha1-a39a1f4fb7d2a0bffcfc2d4d044852072ce98358'
+        owner_id: 68773954
+        repo_id: 282416261
     'codecov/codecov-action@v4.6.0':
         ref: 'v4.6.0'
         commit: 'sha1-b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238'

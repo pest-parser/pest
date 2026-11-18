@@ -1,0 +1,47 @@
+name: pest Benchmarks
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  benchmark:
+    name: Continuous Benchmarking with Bencher
+    # The Bencher API key is not available in forks.
+    if: github.repository == 'pest-parser/pest'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup
+        uses: $/.github/actions/setup
+        with:
+          kind: bench
+          toolchain: 1.88.0 # fixed, so that results stay comparable between runs
+      - name: Install Bencher CLI
+        uses: bencherdev/bencher@main
+      # `--bench '*'` selects every bench target in the workspace and skips the
+      # unit test harnesses that `cargo bench --workspace` would also build and run.
+      - name: Track base branch benchmarks with Bencher
+        run: |
+          bencher run \
+          --project pest \
+          --branch master \
+          --testbed ubuntu-latest \
+          --threshold-measure latency \
+          --threshold-test t_test \
+          --threshold-max-sample-size 64 \
+          --threshold-upper-boundary 0.99 \
+          --thresholds-reset \
+          --error-on-alert \
+          --adapter rust_criterion \
+          cargo bench --workspace --bench '*'
+        env:
+          # The Bencher CLI reads its API key (`bencher_run_*` or `bencher_user_*`) from this variable.
+          BENCHER_API_KEY: ${{ secrets.BENCHER_API_TOKEN }}
