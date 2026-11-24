@@ -44,4 +44,4 @@ jobs:
           cargo bench --workspace --bench '*'
         env:
           # The Bencher CLI reads its API key (`bencher_run_*` or `bencher_user_*`) from this variable.
-          BENCHER_API_KEY: ${{ secrets.BENCHER_API_TOKEN }}
+          BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
