@@ -145,7 +145,14 @@ enum LimitKind {
     Stack,
 }
 
+/// Native stack space that must be available at every parser checkpoint,
+/// because a parser may use that much before it reaches its next checkpoint.
 const REQUIRED_STACK_SPACE: usize = 64 * 1024;
+
+/// Most checkpoints that may rely on a single stack measurement, however much
+/// space it found. A parser state that continues on another stack therefore
+/// measures again before long.
+const MAX_ENTRIES_PER_STACK_PROBE: usize = 127;
 
 #[inline]
 fn remaining_stack() -> Option<usize> {
@@ -155,10 +162,32 @@ fn remaining_stack() -> Option<usize> {
     return None;
 }
 
+/// Returns how many checkpoints after the measuring one may rely on its stack
+/// measurement.
+///
+/// A parser is assumed to use at most `REQUIRED_STACK_SPACE` between two
+/// checkpoints, which measuring at every checkpoint relies on as well. Each
+/// covered checkpoint may therefore lower the measured space by that much and
+/// must still find the reserve available. As a result, measurements become
+/// more frequent as the stack fills up, and every checkpoint measures once
+/// fewer than two reserves remain. Unknown stack bounds are queried again
+/// after the maximum interval.
+fn entries_covered_by(stack_space: Option<usize>) -> usize {
+    stack_space.map_or(MAX_ENTRIES_PER_STACK_PROBE, |remaining| {
+        (remaining / REQUIRED_STACK_SPACE)
+            .saturating_sub(1)
+            .min(MAX_ENTRIES_PER_STACK_PROBE)
+    })
+}
+
 #[derive(Debug)]
 struct CallLimitTracker {
     current_call_limit: Option<(usize, usize)>,
     limit_reached: Option<LimitKind>,
+    /// Checkpoints that may still rely on the last stack measurement. This is
+    /// zero once a limit is reached, so that later entries take the slow path
+    /// and are rejected there.
+    entries_before_stack_probe: usize,
 }
 
 impl Default for CallLimitTracker {
@@ -167,11 +196,13 @@ impl Default for CallLimitTracker {
         Self {
             current_call_limit: (call_limit > 0).then_some((0, call_limit)),
             limit_reached: None,
+            entries_before_stack_probe: 0,
         }
     }
 }
 
 impl CallLimitTracker {
+    #[inline]
     fn limit_reached(&self) -> bool {
         self.limit_reached.is_some()
     }
@@ -183,7 +214,36 @@ impl CallLimitTracker {
         })
     }
 
+    /// Records the limit that stops the parse and ends any stack measurement
+    /// reuse, so that every later entry is rejected as well.
+    fn reject(&mut self, cause: LimitKind) {
+        self.limit_reached = Some(cause);
+        self.entries_before_stack_probe = 0;
+    }
+
+    /// Admits a parser checkpoint, charging the call budget if `count_call`.
+    ///
+    /// This runs on every rule and combinator entry, so it only does the
+    /// bookkeeping inline and leaves measuring the stack to `enter_probing_stack`.
+    #[inline]
     fn enter(&mut self, count_call: bool) -> bool {
+        if self.entries_before_stack_probe == 0 {
+            return self.enter_probing_stack(count_call);
+        }
+        if count_call && let Some((current, limit)) = &mut self.current_call_limit {
+            if *current >= *limit {
+                self.reject(LimitKind::Call);
+                return false;
+            }
+            *current += 1;
+        }
+        self.entries_before_stack_probe -= 1;
+        true
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn enter_probing_stack(&mut self, count_call: bool) -> bool {
         if self.limit_reached() {
             return false;
         }
@@ -192,7 +252,7 @@ impl CallLimitTracker {
                 .current_call_limit
                 .is_some_and(|(current, limit)| current >= limit)
         {
-            self.limit_reached = Some(LimitKind::Call);
+            self.reject(LimitKind::Call);
             return false;
         }
         let remaining = remaining_stack();
@@ -215,12 +275,13 @@ impl CallLimitTracker {
             None
         };
         if let Some(cause) = cause {
-            self.limit_reached = Some(cause);
+            self.reject(cause);
             return false;
         }
         if count_call && let Some((current, _)) = &mut self.current_call_limit {
             *current += 1;
         }
+        self.entries_before_stack_probe = entries_covered_by(stack_space);
         true
     }
 }
@@ -1912,6 +1973,7 @@ mod test {
         CallLimitTracker {
             current_call_limit: Some((calls, limit)),
             limit_reached: None,
+            entries_before_stack_probe: 0,
         }
     }
 
@@ -1929,17 +1991,75 @@ mod test {
             if !allowed {
                 assert_eq!(tracker.error_message(), Some("stack limit reached"));
                 assert!(!tracker.enter_with_stack(true, None));
+                for count_call in [false, true] {
+                    assert!(!tracker.enter(count_call));
+                }
+                assert_eq!(tracker.current_call_limit, Some((0, 10)));
             }
         }
     }
 
     #[test]
+    fn stack_measurement_covers_entries_that_keep_the_reserve() {
+        assert_eq!(entries_covered_by(None), MAX_ENTRIES_PER_STACK_PROBE);
+        for (reserves, covered) in [
+            (1, 0),
+            (2, 1),
+            (3, 2),
+            (MAX_ENTRIES_PER_STACK_PROBE + 1, MAX_ENTRIES_PER_STACK_PROBE),
+            (MAX_ENTRIES_PER_STACK_PROBE + 2, MAX_ENTRIES_PER_STACK_PROBE),
+        ] {
+            for partial_reserve in [0, REQUIRED_STACK_SPACE - 1] {
+                let remaining = reserves * REQUIRED_STACK_SPACE + partial_reserve;
+                assert_eq!(entries_covered_by(Some(remaining)), covered, "{remaining}");
+            }
+        }
+        assert_eq!(
+            entries_covered_by(Some(usize::MAX)),
+            MAX_ENTRIES_PER_STACK_PROBE
+        );
+    }
+
+    #[test]
+    fn stack_measurement_is_reused_for_covered_entries() {
+        for count_call in [false, true] {
+            let mut tracker = tracker_at_calls(0, 10);
+            assert!(tracker.enter_with_stack(count_call, Some(3 * REQUIRED_STACK_SPACE)));
+            for covered in [1, 0] {
+                assert!(tracker.enter(count_call));
+                assert_eq!(tracker.entries_before_stack_probe, covered);
+            }
+            assert_eq!(
+                tracker.current_call_limit,
+                Some((3 * usize::from(count_call), 10))
+            );
+            assert!(!tracker.limit_reached());
+        }
+    }
+
+    #[test]
+    fn call_limit_applies_to_covered_entries() {
+        let mut tracker = tracker_at_calls(1, 2);
+        assert!(tracker.enter_with_stack(true, None));
+        assert_eq!(
+            tracker.entries_before_stack_probe,
+            MAX_ENTRIES_PER_STACK_PROBE
+        );
+        assert!(tracker.enter(false));
+        assert!(!tracker.limit_reached());
+        assert!(!tracker.enter(true));
+        assert_eq!(tracker.error_message(), Some("call limit reached"));
+        assert_eq!(tracker.entries_before_stack_probe, 0);
+        for count_call in [false, true] {
+            assert!(!tracker.enter(count_call));
+        }
+        assert_eq!(tracker.current_call_limit, Some((2, 2)));
+    }
+
+    #[test]
     fn call_limit_counts_shallow_work() {
         let result = state::<(), _>("xxxxxxxxxxxxxxxx", |mut state| {
-            state.call_tracker = CallLimitTracker {
-                current_call_limit: Some((0, 3)),
-                limit_reached: None,
-            };
+            state.call_tracker = tracker_at_calls(0, 3);
             state.repeat(|state| state.sequence(|state| state.match_string("x")))
         });
         assert_eq!(

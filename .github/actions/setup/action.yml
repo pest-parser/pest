@@ -28,7 +28,9 @@ runs:
   using: composite
   steps:
     - name: Install Rust nightly # for minimal-versions
-      uses: dtolnay/rust-toolchain@nightly
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: nightly
     - name: Install Rust ${{inputs.toolchain}}
       uses: dtolnay/rust-toolchain@master
       id: toolchain
