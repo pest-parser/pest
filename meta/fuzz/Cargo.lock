@@ -71,7 +71,7 @@ dependencies = [
 
 [[package]]
 name = "pest"
-version = "2.9.6"
+version = "2.9.7"
 dependencies = [
  "memchr",
  "pest_stack_guard",
@@ -80,7 +80,7 @@ dependencies = [
 
 [[package]]
 name = "pest_meta"
-version = "2.9.6"
+version = "2.9.7"
 dependencies = [
  "pest",
 ]

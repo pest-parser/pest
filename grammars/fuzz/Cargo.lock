@@ -71,7 +71,7 @@ dependencies = [
 
 [[package]]
 name = "pest"
-version = "2.9.6"
+version = "2.9.7"
 dependencies = [
  "memchr",
  "pest_stack_guard",
@@ -80,7 +80,7 @@ dependencies = [
 
 [[package]]
 name = "pest_derive"
-version = "2.9.6"
+version = "2.9.7"
 dependencies = [
  "pest",
  "pest_generator",
@@ -88,7 +88,7 @@ dependencies = [
 
 [[package]]
 name = "pest_generator"
-version = "2.9.6"
+version = "2.9.7"
 dependencies = [
  "pest",
  "pest_meta",
@@ -99,7 +99,7 @@ dependencies = [
 
 [[package]]
 name = "pest_grammars"
-version = "2.9.6"
+version = "2.9.7"
 dependencies = [
  "pest",
  "pest_derive",
@@ -116,7 +116,7 @@ dependencies = [
 
 [[package]]
 name = "pest_meta"
-version = "2.9.6"
+version = "2.9.7"
 dependencies = [
  "pest",
 ]
